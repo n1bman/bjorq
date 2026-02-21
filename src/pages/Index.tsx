@@ -1,13 +1,17 @@
 import Scene3D from '@/components/Scene3D';
 import BottomNav from '@/components/BottomNav';
 import ModeHeader from '@/components/ModeHeader';
+import BuildMode from '@/components/build/BuildMode';
+import { useAppStore } from '@/store/useAppStore';
 
 const Index = () => {
+  const appMode = useAppStore((s) => s.appMode);
+
   return (
     <div className="fixed inset-0 bg-background overflow-hidden">
       <ModeHeader />
       <div className="absolute inset-0 pt-14 pb-16">
-        <Scene3D />
+        {appMode === 'build' ? <BuildMode /> : <Scene3D />}
       </div>
       <BottomNav />
     </div>

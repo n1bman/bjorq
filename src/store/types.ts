@@ -2,7 +2,7 @@
 export interface WallOpening {
   id: string;
   type: 'door' | 'window';
-  offset: number; // distance along wall segment
+  offset: number;
   width: number;
   height: number;
   materialId?: string;
@@ -33,7 +33,7 @@ export interface Floor {
   gridSize: number;
   walls: WallSegment[];
   rooms: Room[];
-  floorplanImage?: string; // data URL or blob URL
+  floorplanImage?: string;
   pixelsPerMeter?: number;
 }
 
@@ -41,6 +41,29 @@ export interface LayoutState {
   floors: Floor[];
   activeFloorId: string | null;
   scaleCalibrated: boolean;
+}
+
+// ─── Build Mode State ───
+export type BuildTool = 'select' | 'wall' | 'calibrate' | 'pan';
+
+export interface BuildState {
+  activeTool: BuildTool;
+  wallDrawing: {
+    isDrawing: boolean;
+    nodes: [number, number][];
+  };
+  calibration: {
+    isCalibrating: boolean;
+    point1: [number, number] | null;
+    point2: [number, number] | null;
+    realMeters: number | null;
+  };
+  selectedWallId: string | null;
+  selectedNodeIndex: number | null;
+  undoStack: LayoutState[];
+  redoStack: LayoutState[];
+  canvasOffset: [number, number];
+  canvasZoom: number;
 }
 
 // ─── Devices Layer ───
@@ -66,7 +89,7 @@ export interface DevicesState {
 export interface PropItem {
   id: string;
   floorId: string;
-  url: string; // GLB/GLTF URL
+  url: string;
   position: [number, number, number];
   rotation: [number, number, number];
   scale: [number, number, number];
@@ -83,7 +106,7 @@ export interface EnvironmentState {
   source: 'ha' | 'manual';
   location: { lat: number; lon: number; timezone: string };
   timeMode: 'live' | 'preview';
-  previewDateTime: string; // ISO string
+  previewDateTime: string;
   weather: { condition: WeatherCondition; temperature: number };
 }
 
@@ -114,6 +137,7 @@ export interface AppState {
   setAppMode: (mode: AppMode) => void;
 
   layout: LayoutState;
+  build: BuildState;
   devices: DevicesState;
   props: PropsState;
   environment: EnvironmentState;
@@ -122,7 +146,27 @@ export interface AppState {
   // Layout actions
   addFloor: (name: string) => void;
   removeFloor: (id: string) => void;
+  renameFloor: (id: string, name: string) => void;
   setActiveFloor: (id: string) => void;
+  setFloorplanImage: (floorId: string, image: string) => void;
+  setPixelsPerMeter: (floorId: string, ppm: number) => void;
+  setGridSize: (floorId: string, size: number) => void;
+
+  // Wall actions
+  addWall: (floorId: string, wall: WallSegment) => void;
+  updateWallNode: (floorId: string, wallId: string, endpoint: 'from' | 'to', pos: [number, number]) => void;
+  deleteWall: (floorId: string, wallId: string) => void;
+
+  // Build actions
+  setBuildTool: (tool: BuildTool) => void;
+  setWallDrawing: (drawing: Partial<BuildState['wallDrawing']>) => void;
+  setCalibration: (cal: Partial<BuildState['calibration']>) => void;
+  setSelectedWall: (wallId: string | null) => void;
+  setCanvasOffset: (offset: [number, number]) => void;
+  setCanvasZoom: (zoom: number) => void;
+  pushUndo: () => void;
+  undo: () => void;
+  redo: () => void;
 
   // Environment actions
   setTimeMode: (mode: 'live' | 'preview') => void;
