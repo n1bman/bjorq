@@ -1,30 +1,44 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { AppState } from './types';
+import type { AppState, BuildState, LayoutState } from './types';
 
 const generateId = () => Math.random().toString(36).slice(2, 10);
 
+const initialBuild: BuildState = {
+  activeTool: 'select',
+  wallDrawing: { isDrawing: false, nodes: [] },
+  calibration: { isCalibrating: false, point1: null, point2: null, realMeters: null },
+  selectedWallId: null,
+  selectedNodeIndex: null,
+  undoStack: [],
+  redoStack: [],
+  canvasOffset: [0, 0],
+  canvasZoom: 1,
+};
+
+const initialLayout: LayoutState = {
+  floors: [
+    {
+      id: 'floor-1',
+      name: 'Våning 1',
+      elevation: 0,
+      gridSize: 0.5,
+      walls: [],
+      rooms: [],
+    },
+  ],
+  activeFloorId: 'floor-1',
+  scaleCalibrated: false,
+};
+
 export const useAppStore = create<AppState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       appMode: 'dashboard',
       setAppMode: (mode) => set({ appMode: mode }),
 
-      layout: {
-        floors: [
-          {
-            id: 'floor-1',
-            name: 'Våning 1',
-            elevation: 0,
-            gridSize: 0.5,
-            walls: [],
-            rooms: [],
-          },
-        ],
-        activeFloorId: 'floor-1',
-        scaleCalibrated: false,
-      },
-
+      layout: initialLayout,
+      build: initialBuild,
       devices: { markers: [] },
       props: { items: [] },
 
@@ -70,26 +84,166 @@ export const useAppStore = create<AppState>()(
             floors: s.layout.floors.filter((f) => f.id !== id),
             activeFloorId:
               s.layout.activeFloorId === id
-                ? s.layout.floors[0]?.id ?? null
+                ? (s.layout.floors.find((f) => f.id !== id)?.id ?? null)
                 : s.layout.activeFloorId,
           },
         })),
 
-      setActiveFloor: (id) =>
+      renameFloor: (id, name) =>
         set((s) => ({
-          layout: { ...s.layout, activeFloorId: id },
+          layout: {
+            ...s.layout,
+            floors: s.layout.floors.map((f) => (f.id === id ? { ...f, name } : f)),
+          },
         })),
+
+      setActiveFloor: (id) =>
+        set((s) => ({ layout: { ...s.layout, activeFloorId: id } })),
+
+      setFloorplanImage: (floorId, image) =>
+        set((s) => ({
+          layout: {
+            ...s.layout,
+            floors: s.layout.floors.map((f) =>
+              f.id === floorId ? { ...f, floorplanImage: image } : f
+            ),
+          },
+        })),
+
+      setPixelsPerMeter: (floorId, ppm) =>
+        set((s) => ({
+          layout: {
+            ...s.layout,
+            scaleCalibrated: true,
+            floors: s.layout.floors.map((f) =>
+              f.id === floorId ? { ...f, pixelsPerMeter: ppm } : f
+            ),
+          },
+        })),
+
+      setGridSize: (floorId, size) =>
+        set((s) => ({
+          layout: {
+            ...s.layout,
+            floors: s.layout.floors.map((f) =>
+              f.id === floorId ? { ...f, gridSize: size } : f
+            ),
+          },
+        })),
+
+      // Wall actions
+      addWall: (floorId, wall) =>
+        set((s) => ({
+          layout: {
+            ...s.layout,
+            floors: s.layout.floors.map((f) =>
+              f.id === floorId ? { ...f, walls: [...f.walls, wall] } : f
+            ),
+          },
+        })),
+
+      updateWallNode: (floorId, wallId, endpoint, pos) =>
+        set((s) => ({
+          layout: {
+            ...s.layout,
+            floors: s.layout.floors.map((f) =>
+              f.id === floorId
+                ? {
+                    ...f,
+                    walls: f.walls.map((w) =>
+                      w.id === wallId ? { ...w, [endpoint]: pos } : w
+                    ),
+                  }
+                : f
+            ),
+          },
+        })),
+
+      deleteWall: (floorId, wallId) =>
+        set((s) => ({
+          layout: {
+            ...s.layout,
+            floors: s.layout.floors.map((f) =>
+              f.id === floorId
+                ? { ...f, walls: f.walls.filter((w) => w.id !== wallId) }
+                : f
+            ),
+          },
+        })),
+
+      // Build actions
+      setBuildTool: (tool) =>
+        set((s) => ({
+          build: {
+            ...s.build,
+            activeTool: tool,
+            wallDrawing: { isDrawing: false, nodes: [] },
+            selectedWallId: null,
+          },
+        })),
+
+      setWallDrawing: (drawing) =>
+        set((s) => ({
+          build: { ...s.build, wallDrawing: { ...s.build.wallDrawing, ...drawing } },
+        })),
+
+      setCalibration: (cal) =>
+        set((s) => ({
+          build: { ...s.build, calibration: { ...s.build.calibration, ...cal } },
+        })),
+
+      setSelectedWall: (wallId) =>
+        set((s) => ({ build: { ...s.build, selectedWallId: wallId } })),
+
+      setCanvasOffset: (offset) =>
+        set((s) => ({ build: { ...s.build, canvasOffset: offset } })),
+
+      setCanvasZoom: (zoom) =>
+        set((s) => ({ build: { ...s.build, canvasZoom: Math.max(0.1, Math.min(5, zoom)) } })),
+
+      pushUndo: () =>
+        set((s) => ({
+          build: {
+            ...s.build,
+            undoStack: [...s.build.undoStack.slice(-19), { ...s.layout }],
+            redoStack: [],
+          },
+        })),
+
+      undo: () => {
+        const s = get();
+        if (s.build.undoStack.length === 0) return;
+        const prev = s.build.undoStack[s.build.undoStack.length - 1];
+        set({
+          layout: prev,
+          build: {
+            ...s.build,
+            undoStack: s.build.undoStack.slice(0, -1),
+            redoStack: [...s.build.redoStack, { ...s.layout }],
+          },
+        });
+      },
+
+      redo: () => {
+        const s = get();
+        if (s.build.redoStack.length === 0) return;
+        const next = s.build.redoStack[s.build.redoStack.length - 1];
+        set({
+          layout: next,
+          build: {
+            ...s.build,
+            redoStack: s.build.redoStack.slice(0, -1),
+            undoStack: [...s.build.undoStack, { ...s.layout }],
+          },
+        });
+      },
 
       // Environment actions
       setTimeMode: (mode) =>
-        set((s) => ({
-          environment: { ...s.environment, timeMode: mode },
-        })),
+        set((s) => ({ environment: { ...s.environment, timeMode: mode } })),
 
       setPreviewDateTime: (dt) =>
-        set((s) => ({
-          environment: { ...s.environment, previewDateTime: dt },
-        })),
+        set((s) => ({ environment: { ...s.environment, previewDateTime: dt } })),
     }),
     {
       name: 'hometwin-store',
