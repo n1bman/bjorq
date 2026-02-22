@@ -80,9 +80,13 @@ export type BuildTool =
   | 'erase'
   | 'copy'
   | 'measure'
-  | 'calibrate';
+  | 'calibrate'
+  | 'place-light'
+  | 'place-switch'
+  | 'place-sensor'
+  | 'place-climate';
 
-export type BuildTab = 'structure' | 'import' | 'furnish';
+export type BuildTab = 'structure' | 'import' | 'furnish' | 'devices';
 export type SnapMode = 'strict' | 'soft' | 'off';
 export type CameraMode = 'topdown' | '3d' | 'floor-isolate';
 
@@ -240,8 +244,16 @@ export interface RoomTemplate {
 // ─── Home View ───
 export type CameraPreset = 'free' | 'topdown' | 'angle' | 'front';
 
+export interface VisibleWidgets {
+  clock: boolean;
+  weather: boolean;
+  temperature: boolean;
+  energy: boolean;
+}
+
 export interface HomeViewState {
   cameraPreset: CameraPreset;
+  visibleWidgets: VisibleWidgets;
 }
 
 // ─── App State ───
@@ -262,6 +274,12 @@ export interface AppState {
 
   // Home View actions
   setCameraPreset: (preset: CameraPreset) => void;
+  toggleHomeWidget: (widget: keyof VisibleWidgets) => void;
+
+  // Device actions
+  addDevice: (marker: DeviceMarker) => void;
+  removeDevice: (id: string) => void;
+  updateDevice: (id: string, changes: Partial<DeviceMarker>) => void;
 
   // Layout actions
   addFloor: (name: string) => void;

@@ -1,12 +1,13 @@
 import { useAppStore } from '@/store/useAppStore';
 import type { BuildTab } from '@/store/types';
-import { Hammer, Upload, Sofa } from 'lucide-react';
+import { Hammer, Upload, Sofa, Lightbulb } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const tabs: { key: BuildTab; label: string; icon: typeof Hammer }[] = [
   { key: 'structure', label: 'Struktur', icon: Hammer },
   { key: 'import', label: 'Importera', icon: Upload },
   { key: 'furnish', label: 'Möblera', icon: Sofa },
+  { key: 'devices', label: 'Enheter', icon: Lightbulb },
 ];
 
 export default function BuildTabBar() {

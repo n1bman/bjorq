@@ -40,8 +40,24 @@ export const useAppStore = create<AppState>()(
       appMode: 'home',
       setAppMode: (mode) => set({ appMode: mode }),
 
-      homeView: { cameraPreset: 'angle' },
+      homeView: {
+        cameraPreset: 'angle',
+        visibleWidgets: { clock: true, weather: true, temperature: true, energy: true },
+      },
       setCameraPreset: (preset) => set((s) => ({ homeView: { ...s.homeView, cameraPreset: preset } })),
+      toggleHomeWidget: (widget) => set((s) => ({
+        homeView: {
+          ...s.homeView,
+          visibleWidgets: { ...s.homeView.visibleWidgets, [widget]: !s.homeView.visibleWidgets[widget] },
+        },
+      })),
+
+      // Device actions
+      addDevice: (marker) => set((s) => ({ devices: { ...s.devices, markers: [...s.devices.markers, marker] } })),
+      removeDevice: (id) => set((s) => ({ devices: { ...s.devices, markers: s.devices.markers.filter((m) => m.id !== id) } })),
+      updateDevice: (id, changes) => set((s) => ({
+        devices: { ...s.devices, markers: s.devices.markers.map((m) => m.id === id ? { ...m, ...changes } : m) },
+      })),
 
       layout: initialLayout,
       build: initialBuild,
@@ -702,7 +718,7 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: 'hometwin-store',
-      version: 5,
+      version: 6,
       migrate: () => {
         // V5: Unified home view, force-clear stale state
         return undefined as any;
