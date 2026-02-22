@@ -41,23 +41,6 @@ export default function Stairs3D() {
         );
       }
 
-      // Side rails
-      const railHeight = floorHeight + 0.9;
-      treadElements.push(
-        <mesh key={`${stair.id}-rail-l`}
-          position={[-stair.width / 2 - 0.02, railHeight / 2, 0]} castShadow>
-          <boxGeometry args={[0.04, railHeight, stair.length]} />
-          <meshStandardMaterial color="#5a4a35" roughness={0.6} />
-        </mesh>
-      );
-      treadElements.push(
-        <mesh key={`${stair.id}-rail-r`}
-          position={[stair.width / 2 + 0.02, railHeight / 2, 0]} castShadow>
-          <boxGeometry args={[0.04, railHeight, stair.length]} />
-          <meshStandardMaterial color="#5a4a35" roughness={0.6} />
-        </mesh>
-      );
-
       return (
         <group
           key={stair.id}

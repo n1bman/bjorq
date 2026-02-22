@@ -1,6 +1,6 @@
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Grid, Environment } from '@react-three/drei';
-import { Suspense, useRef, useState, useCallback } from 'react';
+import { Suspense, useRef, useState, useCallback, useMemo } from 'react';
 import * as THREE from 'three';
 import GroundPlane from './GroundPlane';
 import WallDrawing3D from './WallDrawing3D';
@@ -10,6 +10,7 @@ import Ceilings3D from './Ceilings3D';
 import Stairs3D from './Stairs3D';
 import ImportedHome3D from './ImportedHome3D';
 import Props3D from './Props3D';
+import WeatherEffects3D from './WeatherEffects3D';
 import { useAppStore } from '@/store/useAppStore';
 import type { WallSegment } from '@/store/types';
 
@@ -21,6 +22,23 @@ function SceneContent() {
   const activeFloorId = useAppStore((s) => s.layout.activeFloorId);
   const activeFloor = useAppStore((s) => s.layout.floors.find((f) => f.id === s.layout.activeFloorId));
   const gridState = useAppStore((s) => s.build.grid);
+  const sunAzimuth = useAppStore((s) => s.environment.sunAzimuth);
+  const sunElevation = useAppStore((s) => s.environment.sunElevation);
+  const weatherCondition = useAppStore((s) => s.environment.weather.condition);
+
+  // Calculate sun position from azimuth and elevation
+  const sunPos = useMemo(() => {
+    const azRad = (sunAzimuth * Math.PI) / 180;
+    const elRad = (sunElevation * Math.PI) / 180;
+    const dist = 20;
+    return [
+      dist * Math.cos(elRad) * Math.sin(azRad),
+      dist * Math.sin(elRad),
+      dist * Math.cos(elRad) * Math.cos(azRad),
+    ] as [number, number, number];
+  }, [sunAzimuth, sunElevation]);
+
+  const sunIntensity = weatherCondition === 'cloudy' ? 0.4 : weatherCondition === 'rain' ? 0.2 : weatherCondition === 'snow' ? 0.3 : 1.2;
 
   const setWallDrawing = useAppStore((s) => s.setWallDrawing);
   const addWall = useAppStore((s) => s.addWall);
@@ -90,8 +108,8 @@ function SceneContent() {
 
   return (
     <>
-      <ambientLight intensity={0.35} color="#b8c4d4" />
-      <directionalLight position={[10, 15, 8]} intensity={1.2} color="#ffd699" castShadow
+      <ambientLight intensity={weatherCondition === 'cloudy' || weatherCondition === 'rain' ? 0.5 : 0.35} color="#b8c4d4" />
+      <directionalLight position={sunPos} intensity={sunIntensity} color="#ffd699" castShadow
         shadow-mapSize-width={2048} shadow-mapSize-height={2048}
         shadow-camera-far={50} shadow-camera-left={-20} shadow-camera-right={20}
         shadow-camera-top={20} shadow-camera-bottom={-20} />
@@ -120,6 +138,7 @@ function SceneContent() {
       <ImportedHome3D />
       <Props3D />
       <WallDrawing3D cursorPos={cursorPos} />
+      <WeatherEffects3D />
 
       <Environment preset="night" />
       <OrbitControls

@@ -10,51 +10,105 @@ export default function BuildInspector() {
   const selection = useAppStore((s) => s.build.selection);
   const activeFloorId = useAppStore((s) => s.layout.activeFloorId);
   const floors = useAppStore((s) => s.layout.floors);
-  const setSelection = useAppStore((s) => s.setSelection);
-  const addOpening = useAppStore((s) => s.addOpening);
-  const removeOpening = useAppStore((s) => s.removeOpening);
-  const pushUndo = useAppStore((s) => s.pushUndo);
-  const deleteWall = useAppStore((s) => s.deleteWall);
-  const items = useAppStore((s) => s.props.items);
-  const updateProp = useAppStore((s) => s.updateProp);
-  const removeProp = useAppStore((s) => s.removeProp);
-  const removeStair = useAppStore((s) => s.removeStair);
-  const removeRoom = useAppStore((s) => s.removeRoom);
-  const renameRoom = useAppStore((s) => s.renameRoom);
-  const setRoomMaterial = useAppStore((s) => s.setRoomMaterial);
-
   const floor = floors.find((f) => f.id === activeFloorId);
 
-  if (!selection.id || !selection.type || !floor) return null;
-
   const closeBtn = (
-    <button onClick={() => setSelection({ type: null, id: null })}
+    <button onClick={() => useAppStore.getState().setSelection({ type: null, id: null })}
       className="p-1 rounded hover:bg-secondary/30 text-muted-foreground">
       <X size={14} />
     </button>
   );
 
-  // ─── Wall Inspector ───
-  if (selection.type === 'wall') {
-    return <WallInspector floorId={activeFloorId!} wallId={selection.id} floor={floor} close={closeBtn} />;
-  }
+  if (!selection.id || !selection.type || !floor) return null;
 
-  // ─── Prop Inspector ───
-  if (selection.type === 'prop') {
-    return <PropInspector propId={selection.id} close={closeBtn} />;
-  }
-
-  // ─── Stair Inspector ───
-  if (selection.type === 'stair') {
-    return <StairInspector floorId={activeFloorId!} stairId={selection.id} floor={floor} close={closeBtn} />;
-  }
-
-  // ─── Room Inspector ───
-  if (selection.type === 'room') {
-    return <RoomInspector floorId={activeFloorId!} roomId={selection.id} floor={floor} close={closeBtn} />;
-  }
+  if (selection.type === 'wall') return <WallInspector floorId={activeFloorId!} wallId={selection.id} floor={floor} close={closeBtn} />;
+  if (selection.type === 'prop') return <PropInspector propId={selection.id} close={closeBtn} />;
+  if (selection.type === 'stair') return <StairInspector floorId={activeFloorId!} stairId={selection.id} floor={floor} close={closeBtn} />;
+  if (selection.type === 'room') return <RoomInspector floorId={activeFloorId!} roomId={selection.id} floor={floor} close={closeBtn} />;
+  if (selection.type === 'opening') return <OpeningInspector floorId={activeFloorId!} openingId={selection.id} floor={floor} close={closeBtn} />;
 
   return null;
+}
+
+// ─── Opening Inspector ───
+function OpeningInspector({ floorId, openingId, floor, close }: { floorId: string; openingId: string; floor: any; close: React.ReactNode }) {
+  const updateOpening = useAppStore((s) => s.updateOpening);
+  const removeOpening = useAppStore((s) => s.removeOpening);
+  const pushUndo = useAppStore((s) => s.pushUndo);
+  const setSelection = useAppStore((s) => s.setSelection);
+
+  // Find the opening across all walls
+  let foundWall: any = null;
+  let foundOpening: any = null;
+  for (const wall of floor.walls) {
+    const op = wall.openings.find((o: any) => o.id === openingId);
+    if (op) { foundWall = wall; foundOpening = op; break; }
+  }
+
+  if (!foundWall || !foundOpening) return null;
+
+  const handleChange = (changes: Record<string, number>) => {
+    pushUndo();
+    updateOpening(floorId, foundWall.id, openingId, changes);
+  };
+
+  const handleDelete = () => {
+    pushUndo();
+    removeOpening(floorId, foundWall.id, openingId);
+    setSelection({ type: null, id: null });
+  };
+
+  const isWindow = foundOpening.type === 'window';
+
+  return (
+    <div className="absolute top-3 right-3 w-56 glass-panel rounded-xl p-3 space-y-3 text-xs z-10">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-foreground font-display flex items-center gap-1">
+          <DoorOpen size={14} /> {isWindow ? 'Fönster' : 'Dörr'}
+        </h3>
+        {close}
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-muted-foreground text-[10px]">Bredd (m)</label>
+        <div className="flex items-center gap-2">
+          <Slider min={0.3} max={3} step={0.05} value={[foundOpening.width]}
+            onValueChange={([v]) => handleChange({ width: v })} className="flex-1" />
+          <span className="text-[10px] text-foreground w-8 text-right">{foundOpening.width.toFixed(2)}</span>
+        </div>
+
+        <label className="text-muted-foreground text-[10px]">Höjd (m)</label>
+        <div className="flex items-center gap-2">
+          <Slider min={0.3} max={3} step={0.05} value={[foundOpening.height]}
+            onValueChange={([v]) => handleChange({ height: v })} className="flex-1" />
+          <span className="text-[10px] text-foreground w-8 text-right">{foundOpening.height.toFixed(2)}</span>
+        </div>
+
+        {isWindow && (
+          <>
+            <label className="text-muted-foreground text-[10px]">Bröstningshöjd (m)</label>
+            <div className="flex items-center gap-2">
+              <Slider min={0} max={2} step={0.05} value={[foundOpening.sillHeight]}
+                onValueChange={([v]) => handleChange({ sillHeight: v })} className="flex-1" />
+              <span className="text-[10px] text-foreground w-8 text-right">{foundOpening.sillHeight.toFixed(2)}</span>
+            </div>
+          </>
+        )}
+
+        <label className="text-muted-foreground text-[10px]">Position längs vägg</label>
+        <div className="flex items-center gap-2">
+          <Slider min={0.05} max={0.95} step={0.01} value={[foundOpening.offset]}
+            onValueChange={([v]) => handleChange({ offset: v })} className="flex-1" />
+          <span className="text-[10px] text-foreground w-8 text-right">{(foundOpening.offset * 100).toFixed(0)}%</span>
+        </div>
+      </div>
+
+      <button onClick={handleDelete}
+        className="w-full py-2 rounded-lg bg-destructive/20 text-destructive text-xs font-medium hover:bg-destructive/30 transition-colors min-h-[44px] flex items-center justify-center gap-1">
+        <Trash2 size={14} /> Ta bort
+      </button>
+    </div>
+  );
 }
 
 // ─── Wall Inspector Component ───
@@ -120,10 +174,13 @@ function WallInspector({ floorId, wallId, floor, close }: { floorId: string; wal
 
         {wall.openings.map((op: any) => (
           <div key={op.id} className="bg-secondary/30 rounded-lg p-2 mb-1.5 flex items-center justify-between">
-            <span className="flex items-center gap-1 text-foreground">
+            <button
+              onClick={() => setSelection({ type: 'opening', id: op.id })}
+              className="flex items-center gap-1 text-foreground hover:text-primary transition-colors"
+            >
               <DoorOpen size={12} />
               {op.type === 'door' ? 'Dörr' : 'Fönster'}
-            </span>
+            </button>
             <button
               onClick={() => { pushUndo(); removeOpening(floorId, wall.id, op.id); }}
               className="p-0.5 rounded hover:bg-destructive/20 text-destructive">
@@ -165,7 +222,6 @@ function PropInspector({ propId, close }: { propId: string; close: React.ReactNo
 
       <div className="text-muted-foreground truncate">{prop.url.split('/').pop()}</div>
 
-      {/* Position */}
       <div className="space-y-1.5">
         <div className="flex items-center gap-1 text-muted-foreground"><Move size={12} /> Position</div>
         {(['X', 'Y', 'Z'] as const).map((axis, i) => (
@@ -184,7 +240,6 @@ function PropInspector({ propId, close }: { propId: string; close: React.ReactNo
         ))}
       </div>
 
-      {/* Rotation Y */}
       <div className="space-y-1.5">
         <div className="flex items-center gap-1 text-muted-foreground"><RotateCcw size={12} /> Rotation</div>
         <div className="flex items-center gap-2">
@@ -197,7 +252,6 @@ function PropInspector({ propId, close }: { propId: string; close: React.ReactNo
         </div>
       </div>
 
-      {/* Scale */}
       <div className="space-y-1.5">
         <span className="text-muted-foreground text-[10px]">Skala</span>
         <div className="flex items-center gap-2">
@@ -220,6 +274,7 @@ function PropInspector({ propId, close }: { propId: string; close: React.ReactNo
 // ─── Stair Inspector Component ───
 function StairInspector({ floorId, stairId, floor, close }: { floorId: string; stairId: string; floor: any; close: React.ReactNode }) {
   const removeStair = useAppStore((s) => s.removeStair);
+  const updateStair = useAppStore((s) => s.updateStair);
   const pushUndo = useAppStore((s) => s.pushUndo);
   const setSelection = useAppStore((s) => s.setSelection);
 
@@ -232,6 +287,11 @@ function StairInspector({ floorId, stairId, floor, close }: { floorId: string; s
     setSelection({ type: null, id: null });
   };
 
+  const handleChange = (changes: Record<string, any>) => {
+    pushUndo();
+    updateStair(floorId, stair.id, changes);
+  };
+
   return (
     <div className="absolute top-3 right-3 w-56 glass-panel rounded-xl p-3 space-y-3 text-xs z-10">
       <div className="flex items-center justify-between">
@@ -241,9 +301,32 @@ function StairInspector({ floorId, stairId, floor, close }: { floorId: string; s
         {close}
       </div>
 
+      <div className="space-y-2">
+        <label className="text-muted-foreground text-[10px]">Bredd (m)</label>
+        <div className="flex items-center gap-2">
+          <Slider min={0.5} max={3} step={0.1} value={[stair.width]}
+            onValueChange={([v]) => handleChange({ width: v })} className="flex-1" />
+          <span className="text-[10px] text-foreground w-8 text-right">{stair.width.toFixed(1)}</span>
+        </div>
+
+        <label className="text-muted-foreground text-[10px]">Längd (m)</label>
+        <div className="flex items-center gap-2">
+          <Slider min={1} max={5} step={0.1} value={[stair.length]}
+            onValueChange={([v]) => handleChange({ length: v })} className="flex-1" />
+          <span className="text-[10px] text-foreground w-8 text-right">{stair.length.toFixed(1)}</span>
+        </div>
+
+        <label className="text-muted-foreground text-[10px]">Rotation</label>
+        <div className="flex items-center gap-2">
+          <Slider min={0} max={360} step={1} value={[stair.rotation * (180 / Math.PI)]}
+            onValueChange={([v]) => handleChange({ rotation: v * (Math.PI / 180) })} className="flex-1" />
+          <span className="text-[10px] text-foreground w-8 text-right">{Math.round(stair.rotation * (180 / Math.PI))}°</span>
+        </div>
+      </div>
+
       <div className="grid grid-cols-2 gap-2 text-muted-foreground">
-        <span>Bredd:</span><span className="text-foreground">{stair.width} m</span>
-        <span>Längd:</span><span className="text-foreground">{stair.length} m</span>
+        <span>X:</span><span className="text-foreground">{stair.position[0].toFixed(1)} m</span>
+        <span>Z:</span><span className="text-foreground">{stair.position[1].toFixed(1)} m</span>
       </div>
 
       <button onClick={handleDelete}
@@ -265,7 +348,6 @@ function RoomInspector({ floorId, roomId, floor, close }: { floorId: string; roo
   const room = floor.rooms.find((r: any) => r.id === roomId);
   if (!room) return null;
 
-  // Calculate area from polygon
   let area = 0;
   if (room.polygon && room.polygon.length >= 3) {
     for (let i = 0; i < room.polygon.length; i++) {
@@ -294,7 +376,6 @@ function RoomInspector({ floorId, roomId, floor, close }: { floorId: string; roo
         {close}
       </div>
 
-      {/* Name */}
       <input
         type="text"
         value={room.name}
@@ -308,7 +389,6 @@ function RoomInspector({ floorId, roomId, floor, close }: { floorId: string; roo
         <span>Väggar:</span><span className="text-foreground">{room.wallIds.length}</span>
       </div>
 
-      {/* Floor material */}
       <div className="space-y-1">
         <span className="text-muted-foreground text-[10px]">Golvmaterial</span>
         <div className="flex flex-wrap gap-1">
@@ -324,7 +404,6 @@ function RoomInspector({ floorId, roomId, floor, close }: { floorId: string; roo
         </div>
       </div>
 
-      {/* Wall material */}
       <div className="space-y-1">
         <span className="text-muted-foreground text-[10px]">Väggfärg</span>
         <div className="flex flex-wrap gap-1">

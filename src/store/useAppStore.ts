@@ -64,6 +64,8 @@ export const useAppStore = create<AppState>()(
         timeMode: 'live',
         previewDateTime: new Date().toISOString(),
         weather: { condition: 'clear', temperature: 18 },
+        sunAzimuth: 135,
+        sunElevation: 45,
       },
 
       homeAssistant: {
@@ -549,6 +551,45 @@ export const useAppStore = create<AppState>()(
 
       setPreviewDateTime: (dt) =>
         set((s) => ({ environment: { ...s.environment, previewDateTime: dt } })),
+
+      setSunPosition: (azimuth, elevation) =>
+        set((s) => ({ environment: { ...s.environment, sunAzimuth: azimuth, sunElevation: elevation } })),
+
+      setWeather: (condition) =>
+        set((s) => ({ environment: { ...s.environment, weather: { ...s.environment.weather, condition } } })),
+
+      // Opening update
+      updateOpening: (floorId, wallId, openingId, changes) =>
+        set((s) => ({
+          layout: {
+            ...s.layout,
+            floors: s.layout.floors.map((f) =>
+              f.id === floorId
+                ? {
+                    ...f,
+                    walls: f.walls.map((w) =>
+                      w.id === wallId
+                        ? { ...w, openings: w.openings.map((o) => (o.id === openingId ? { ...o, ...changes } : o)) }
+                        : w
+                    ),
+                  }
+                : f
+            ),
+          },
+        })),
+
+      // Stair update
+      updateStair: (floorId, stairId, changes) =>
+        set((s) => ({
+          layout: {
+            ...s.layout,
+            floors: s.layout.floors.map((f) =>
+              f.id === floorId
+                ? { ...f, stairs: f.stairs.map((st) => (st.id === stairId ? { ...st, ...changes } : st)) }
+                : f
+            ),
+          },
+        })),
 
       // Clear actions
       clearFloor: (floorId) =>

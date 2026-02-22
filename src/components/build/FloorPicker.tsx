@@ -52,7 +52,19 @@ export default function FloorPicker() {
             </button>
           ))}
           <button
-            onClick={() => { addFloor(`Våning ${floors.length + 1}`); setOpen(false); }}
+            onClick={() => {
+              const name = `Våning ${floors.length + 1}`;
+              addFloor(name);
+              setTimeout(() => {
+                const state = useAppStore.getState();
+                const newFloor = state.layout.floors[state.layout.floors.length - 1];
+                if (newFloor) {
+                  setActiveFloor(newFloor.id);
+                  setView({ floorFilter: newFloor.id });
+                }
+              }, 0);
+              setOpen(false);
+            }}
             className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/20 transition-colors min-h-[44px]"
           >
             <Plus size={14} /> Lägg till

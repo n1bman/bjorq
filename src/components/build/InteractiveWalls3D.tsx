@@ -131,95 +131,20 @@ export default function InteractiveWalls3D() {
             .add(new THREE.Vector3(cx, opCenterY + elevation, cz));
 
           if (op.type === 'door') {
-            // Door frame
-            const frameThick = 0.04;
-            // Left frame
-            segments.push(
-              <mesh key={`${wall.id}-door-fl-${i}`} position={[
-                opPos.x + Math.cos(angle + Math.PI/2) * (op.width/2),
-                opBottom + op.height / 2 + elevation,
-                opPos.z - Math.sin(angle + Math.PI/2) * (op.width/2)
-              ]} rotation={[0, -angle, 0]} castShadow>
-                <boxGeometry args={[frameThick, op.height, wall.thickness + 0.02]} />
-                <meshStandardMaterial color="#5a3a1a" roughness={0.6} />
-              </mesh>
-            );
-            // Right frame
-            segments.push(
-              <mesh key={`${wall.id}-door-fr-${i}`} position={[
-                opPos.x - Math.cos(angle + Math.PI/2) * (op.width/2),
-                opBottom + op.height / 2 + elevation,
-                opPos.z + Math.sin(angle + Math.PI/2) * (op.width/2)
-              ]} rotation={[0, -angle, 0]} castShadow>
-                <boxGeometry args={[frameThick, op.height, wall.thickness + 0.02]} />
-                <meshStandardMaterial color="#5a3a1a" roughness={0.6} />
-              </mesh>
-            );
-            // Top frame
-            segments.push(
-              <mesh key={`${wall.id}-door-ft-${i}`} position={[opPos.x, opBottom + op.height + elevation, opPos.z]}
-                rotation={[0, -angle, 0]} castShadow>
-                <boxGeometry args={[op.width + frameThick * 2, frameThick, wall.thickness + 0.02]} />
-                <meshStandardMaterial color="#5a3a1a" roughness={0.6} />
-              </mesh>
-            );
-            // Door panel (slightly offset)
+            // Simple door panel
             segments.push(
               <mesh key={`${wall.id}-door-panel-${i}`} position={[opPos.x, opBottom + op.height / 2 + elevation, opPos.z]}
                 rotation={[0, -angle, 0]}>
-                <boxGeometry args={[op.width - 0.04, op.height - 0.04, 0.04]} />
+                <boxGeometry args={[op.width - 0.02, op.height - 0.02, 0.04]} />
                 <meshStandardMaterial color="#7a5a35" roughness={0.5} />
               </mesh>
             );
           } else {
-            // Window frame
-            const frameThick = 0.03;
-            // Frame border (4 pieces)
-            const halfW = op.width / 2;
-            const halfH = op.height / 2;
-            // Left
-            segments.push(
-              <mesh key={`${wall.id}-win-fl-${i}`} position={[
-                opPos.x + Math.cos(angle + Math.PI/2) * halfW,
-                opCenterY + elevation,
-                opPos.z - Math.sin(angle + Math.PI/2) * halfW
-              ]} rotation={[0, -angle, 0]}>
-                <boxGeometry args={[frameThick, op.height, wall.thickness + 0.01]} />
-                <meshStandardMaterial color="#d0d0d0" roughness={0.3} />
-              </mesh>
-            );
-            // Right
-            segments.push(
-              <mesh key={`${wall.id}-win-fr-${i}`} position={[
-                opPos.x - Math.cos(angle + Math.PI/2) * halfW,
-                opCenterY + elevation,
-                opPos.z + Math.sin(angle + Math.PI/2) * halfW
-              ]} rotation={[0, -angle, 0]}>
-                <boxGeometry args={[frameThick, op.height, wall.thickness + 0.01]} />
-                <meshStandardMaterial color="#d0d0d0" roughness={0.3} />
-              </mesh>
-            );
-            // Top
-            segments.push(
-              <mesh key={`${wall.id}-win-ft-${i}`} position={[opPos.x, opCenterY + halfH + elevation, opPos.z]}
-                rotation={[0, -angle, 0]}>
-                <boxGeometry args={[op.width, frameThick, wall.thickness + 0.01]} />
-                <meshStandardMaterial color="#d0d0d0" roughness={0.3} />
-              </mesh>
-            );
-            // Bottom
-            segments.push(
-              <mesh key={`${wall.id}-win-fb-${i}`} position={[opPos.x, opCenterY - halfH + elevation, opPos.z]}
-                rotation={[0, -angle, 0]}>
-                <boxGeometry args={[op.width, frameThick, wall.thickness + 0.01]} />
-                <meshStandardMaterial color="#d0d0d0" roughness={0.3} />
-              </mesh>
-            );
-            // Glass panel
+            // Glass panel only with thin frame
             segments.push(
               <mesh key={`${wall.id}-win-glass-${i}`} position={[opPos.x, opCenterY + elevation, opPos.z]}
                 rotation={[0, -angle, 0]}>
-                <boxGeometry args={[op.width - 0.04, op.height - 0.04, 0.01]} />
+                <boxGeometry args={[op.width - 0.02, op.height - 0.02, 0.01]} />
                 <meshStandardMaterial
                   color="#88ccff"
                   transparent
@@ -227,6 +152,14 @@ export default function InteractiveWalls3D() {
                   roughness={0.05}
                   metalness={0.1}
                 />
+              </mesh>
+            );
+            // Thin frame around glass
+            segments.push(
+              <mesh key={`${wall.id}-win-frame-${i}`} position={[opPos.x, opCenterY + elevation, opPos.z]}
+                rotation={[0, -angle, 0]}>
+                <boxGeometry args={[op.width, op.height, 0.02]} />
+                <meshStandardMaterial color="#c0c0c0" roughness={0.3} wireframe />
               </mesh>
             );
           }

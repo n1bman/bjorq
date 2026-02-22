@@ -30,10 +30,8 @@ export default function Ceilings3D() {
             castShadow
           >
             <shapeGeometry args={[shape]} />
-            <meshStandardMaterial
-              color="#1a1d25"
-              transparent
-              opacity={0}
+            <meshBasicMaterial
+              colorWrite={false}
               side={THREE.DoubleSide}
             />
           </mesh>
