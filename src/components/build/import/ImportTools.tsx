@@ -17,8 +17,19 @@ export default function ImportTools() {
     const file = e.target.files?.[0];
     if (!file) return;
     const url = URL.createObjectURL(file);
-    setImportedModel({ url });
-    setHomeGeometrySource('imported');
+    // Also read as base64 for persistence across page reloads
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = (reader.result as string).split(',')[1]; // strip data:...;base64,
+      setImportedModel({ url, fileData: base64 });
+      setHomeGeometrySource('imported');
+    };
+    reader.onerror = () => {
+      // Fallback: save without fileData
+      setImportedModel({ url });
+      setHomeGeometrySource('imported');
+    };
+    reader.readAsDataURL(file);
     e.target.value = '';
   };
 

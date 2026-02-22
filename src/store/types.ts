@@ -150,6 +150,7 @@ export interface FloorBand {
 
 export interface ImportedHomeSettings {
   url: string | null;
+  fileData?: string; // base64-encoded GLB/GLTF for persistence
   position: [number, number, number];
   rotation: [number, number, number];
   scale: [number, number, number];
@@ -211,11 +212,11 @@ export interface PropsState {
 export type WeatherCondition = 'clear' | 'cloudy' | 'rain' | 'snow';
 
 export interface EnvironmentState {
-  source: 'ha' | 'manual';
+  source: 'ha' | 'manual' | 'auto';
   location: { lat: number; lon: number; timezone: string };
   timeMode: 'live' | 'preview';
   previewDateTime: string;
-  weather: { condition: WeatherCondition; temperature: number };
+  weather: { condition: WeatherCondition; temperature: number; windSpeed?: number; humidity?: number };
   sunAzimuth: number;
   sunElevation: number;
 }
@@ -355,6 +356,8 @@ export interface AppState {
   setPreviewDateTime: (dt: string) => void;
   setSunPosition: (azimuth: number, elevation: number) => void;
   setWeather: (condition: WeatherCondition) => void;
+  setWeatherData: (data: { condition: WeatherCondition; temperature: number; windSpeed?: number; humidity?: number }) => void;
+  setWeatherSource: (source: 'manual' | 'auto' | 'ha') => void;
   setLocation: (lat: number, lon: number) => void;
 
   // Opening/Stair update actions

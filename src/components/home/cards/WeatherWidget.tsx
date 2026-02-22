@@ -18,6 +18,8 @@ const conditionLabels: Record<string, string> = {
 export default function WeatherWidget() {
   const condition = useAppStore((s) => s.environment.weather.condition);
   const temperature = useAppStore((s) => s.environment.weather.temperature);
+  const windSpeed = useAppStore((s) => s.environment.weather.windSpeed);
+  const humidity = useAppStore((s) => s.environment.weather.humidity);
 
   return (
     <div className="glass-panel rounded-2xl p-4 min-w-[160px]">
@@ -34,11 +36,11 @@ export default function WeatherWidget() {
       <div className="flex items-center gap-3 mt-2 pt-2 border-t border-border/30">
         <div className="flex items-center gap-1">
           <Wind size={12} className="text-muted-foreground" />
-          <span className="text-[10px] text-muted-foreground">3.2 m/s</span>
+          <span className="text-[10px] text-muted-foreground">{windSpeed ?? 3.2} m/s</span>
         </div>
         <div className="flex items-center gap-1">
           <Droplets size={12} className="text-muted-foreground" />
-          <span className="text-[10px] text-muted-foreground">62%</span>
+          <span className="text-[10px] text-muted-foreground">{humidity ?? 62}%</span>
         </div>
       </div>
     </div>

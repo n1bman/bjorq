@@ -1,8 +1,10 @@
 import Scene3D from '@/components/Scene3D';
 import DashboardGrid from './DashboardGrid';
 import HomeNav from './HomeNav';
+import { useWeatherSync } from '@/hooks/useWeatherSync';
 
 export default function DashboardView() {
+  useWeatherSync();
   return (
     <div className="fixed inset-0 bg-background">
       {/* Dimmed 3D background */}
