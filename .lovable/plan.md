@@ -1,67 +1,111 @@
 
-# Fix: Ta bort TransformControls, anvand pointer-drag istallet
+# Forbattringar: Enhetslista-markering, vader-begransning, 2D-modell, live-synk
 
-## Rotorsak
+## 1. Klickbar enhetslista i sidomenyn
 
-`TransformControls` fran drei konfliktar med `OrbitControls` som har `LEFT: undefined`. Nar gizmon mountas kapas alla pointer-events, vilket laser bade kameran och gizmon. Detta ar ett kant dokumenterat problem med dessa tva kontroller i kombination.
+I `DevicePlacementTools.tsx` -- listan under "PLACERADE" visar enheter men klick markerar dem inte i 3D/2D. Fix: gor varje rad klickbar sa den anropar `setSelection({ type: 'device', id: m.id })`. Lagg aven till visuell markering (highlight) for den valda enheten.
 
-## Losning
+## 2. Vader-partiklar bara runt huset (inte over/i)
 
-Byt helt fran `TransformControls` till en **egen pointer-baserad drag** -- samma monster som redan fungerar perfekt i `Props3D.tsx`. Det innebar:
+I `WeatherEffects3D.tsx` -- partiklarna spawnar i en ring (MIN_RADIUS=6 till 20m), men de faller fran Y=20 ned till Y=0 -- de passerar genom taket. Fix:
+- Begr ansa max-hojden till husets takhojd (t.ex. aktiva vaningens elevation + heightMeters, default ~3m)
+- Partiklar spawnar bara upp till 5-6 meter over marken sa de ser ut att falla utanfor vaggarna
+- Halla MIN_RADIUS sa de inte dyker upp inne i huset
 
-1. Nar en enhet ar vald i bygglaaget, klicka-och-dra pa markoren for att flytta den langs golv-planet (Y fast)
-2. Rotation hanteras via inspektorns sliders (redan implementerat)
-3. Ta bort `TransformControls`-importen helt
+## 3. Importerad modell i 2D-planvyn
 
-## Andringar
+I `BuildCanvas2D.tsx` -- importerade 3D-modeller visas inte i 2D-vyn. Fix:
+- Nar `homeGeometry.source === 'imported'` och modellen har en bounding box, rita en rektangel/kontur i 2D-planvyn som representerar modellens fotavtryck
+- Anvand `imported.position` och `imported.scale` for att berakna storleken
+- Rita som en streckad rektangel med label "Importerad modell"
 
-### `DeviceMarkers3D.tsx` -- Ersatt SelectedDeviceWithGizmo
+## 4. Live-synkronisering av vaderintensitet
 
-- **Ta bort** hela `SelectedDeviceWithGizmo`-komponenten och `TransformControls`-importen
-- **Ta bort** modul-globala `_transformMode` / `setDeviceTransformMode` (behovs inte langre)
-- **Istallet**: gor varje marker-komponent draggbar nar den ar `selected` och `buildMode` ar aktivt
-- Implementera drag via `onPointerDown` pa marker-gruppen:
-  - Skapa en horisontell `THREE.Plane` pa enhetens Y-hojd
-  - Lyssna pa `pointermove` och `pointerup` via `window`
-  - Vid move: raycast mot planet, uppdatera position via `updateDevice`
-  - Vid up: sluta lyssna
-- Visuell feedback: andra cursor till `grabbing` under drag
+I `useWeatherSync.ts` -- WMO-koder mappas bara till 4 kategorier (clear/cloudy/rain/snow), men intensiteten skiljer sig inte. For att regn/sno ska "matcha" verkligheten behovs en intensitetsfaktor.
 
-### `BuildInspector.tsx` -- Forenkla DeviceInspector
+### Andringar i typer och store:
+- Lagg till `intensity: number` (0-1) i `weather`-objektet i `EnvironmentState`
+- Latt regn (WMO 51) = 0.3, mattligt (61) = 0.6, kraftigt (65) = 1.0
+- Latt sno (71) = 0.3, mattlig (73) = 0.6, kraftig (75) = 1.0
 
-- **Ta bort** "Gizmo-lage" sektionen (Flytta/Rotera-knapparna)
-- Behall position X/Y/Z sliders for fininjustering
-- Behall rotation som en enkel Y-rotation slider (0-360 grader)
-- Ta bort import av `setDeviceTransformMode`
+### Andringar i WeatherEffects3D:
+- Anvand `intensity` for att skala antalet partiklar: `count = baseCount * intensity`
+- Regn: baseCount 3000 * intensity
+- Sno: baseCount 1500 * intensity
 
-### 2D-laaget (`BuildCanvas2D.tsx`)
+## 5. Sol-position baserad pa tid och plats
 
-- Enheter i 2D behover ingen `TransformControls`. Drag-flytt i 2D ar redan hanterat via canvas pointer events -- kontrollera att det fungerar, annars lagg till pointer-drag for enhetsmarkorerna i 2D-canvas drawDevice/hitDevice.
+I `BuildScene3D.tsx` -- solen styrs manuellt via azimuth/elevation sliders. For live-lage:
+- Nar `timeMode === 'live'`, berakna solens position fran aktuell tid + lat/lon
+- Enkel solpositionsberakning baserad pa timme pa dygnet och latitud
+- Natt = mycket lag elevation (negativ) = morkt
 
-## Teknisk implementation
+### Andringar:
+- Skapa en hjalp-funktion `calculateSunPosition(lat, lon, date): { azimuth, elevation }`
+- I `useWeatherSync` eller ett nytt `useSunSync` hook: uppdatera `setSunPosition` var minut nar source ar 'auto'
+- Nar elevation ar negativ: reducera sunIntensity till 0 (natt)
 
-### Pointer-drag i DeviceMarkers3D (samma monster som Props3D)
+## Tekniska detaljer
 
-```text
-onPointerDown (pa markoren):
-  1. stopPropagation()
-  2. Skapa Plane(Vector3(0,1,0), -position.y)
-  3. Berakna offset = clickPoint - devicePos
-  4. window.addEventListener('pointermove', onMove)
-  5. window.addEventListener('pointerup', onUp)
+### DevicePlacementTools.tsx -- klickbar lista
+Rad 80: Lagg till `onClick` pa varje enhetsrad:
+```tsx
+<div onClick={() => setSelection({ type: 'device', id: m.id })}
+  className={cn(
+    "flex items-center justify-between px-2 py-1.5 rounded text-xs cursor-pointer",
+    selectedId === m.id ? "bg-primary/20 text-primary" : "text-muted-foreground hover:bg-secondary/20"
+  )}>
+```
 
-onMove:
-  1. Raycast fran mouse mot planet
-  2. newPos = intersect - offset
-  3. updateDevice(id, { position: [newPos.x, device.y, newPos.z] })
+### WeatherEffects3D.tsx -- hojdbegransning
+Andra max spawn-hojd fran 20 till ~6 meter. Andra respawn-hojd fran 20 till samma. Partiklar faller bara fran takniva ned till mark.
 
-onUp:
-  1. Ta bort lyssnare
-  2. Aterstall cursor
+### BuildCanvas2D.tsx -- importerad modell-kontur
+Lagg till en draw-funktion som ritar modellens fotavtryck som en streckad rektangel i 2D-vyn nar source ar 'imported'. Storleken baseras pa `imported.scale` och en default bounding box (t.ex. 10x10m skalat).
+
+### types.ts -- intensity
+```typescript
+weather: {
+  condition: WeatherCondition;
+  temperature: number;
+  windSpeed?: number;
+  humidity?: number;
+  intensity: number; // 0-1, hur kraftigt regn/sno
+}
+```
+
+### useWeatherSync.ts -- intensitetsmappning
+```typescript
+function wmoToIntensity(code: number): number {
+  // Latt: 0.3, Mattlig: 0.6, Kraftig: 1.0
+  if ([51, 56, 71, 85, 80].includes(code)) return 0.3;
+  if ([53, 57, 73, 61, 81].includes(code)) return 0.6;
+  if ([55, 67, 75, 65, 82, 77, 86].includes(code)) return 1.0;
+  return 0;
+}
+```
+
+### Solpositionsberakning
+Enkel approximation baserad pa timme och latitud:
+```typescript
+function calculateSunPosition(lat: number, lon: number, date: Date) {
+  const hour = date.getHours() + date.getMinutes() / 60;
+  const dayOfYear = /* ... */;
+  const declination = 23.45 * Math.sin((360/365) * (dayOfYear - 81) * Math.PI/180);
+  const hourAngle = (hour - 12) * 15;
+  const elevation = Math.asin(
+    Math.sin(lat*D2R)*Math.sin(declination*D2R) +
+    Math.cos(lat*D2R)*Math.cos(declination*D2R)*Math.cos(hourAngle*D2R)
+  ) * R2D;
+  const azimuth = /* atan2-berakning */;
+  return { azimuth, elevation };
+}
 ```
 
 ### Implementationsordning
-
-1. Rensa `DeviceMarkers3D.tsx`: ta bort TransformControls, SelectedDeviceWithGizmo, modul-globaler. Gor marker-komponenterna draggbara med pointer-events nar `selected && buildMode`
-2. Rensa `BuildInspector.tsx`: ta bort Gizmo-lage-sektionen, lagg till Y-rotation slider
-3. Verifiera att 2D-lagets enhetsinteraktion fungerar
+1. Lagg till `intensity` i `EnvironmentState` och `setWeatherData` i types/store
+2. Uppdatera `useWeatherSync.ts` med intensitetsmappning och solpositionsberakning
+3. Uppdatera `WeatherEffects3D.tsx` med intensitetsbaserat partikelantal och hojdbegransning
+4. Uppdatera `BuildScene3D.tsx` for att anvanda live-solposition nar source ar 'auto'
+5. Uppdatera `DevicePlacementTools.tsx` med klickbar enhetslista
+6. Uppdatera `BuildCanvas2D.tsx` med importerad modell-kontur i 2D
