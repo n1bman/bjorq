@@ -6,7 +6,9 @@ import type { DeviceKind, DeviceMarker } from '@/store/types';
 import * as THREE from 'three';
 
 // Extracted component that uses dragging-changed event instead of onObjectChange
-// to prevent re-render loops that freeze the browser
+// to prevent re-render loops that freeze the browser.
+// Key: use refs for callbacks to avoid useEffect re-runs, and don't pass
+// reactive `position` to TransformControls (it fights with the gizmo).
 function SelectedDeviceWithGizmo({
   marker,
   transformMode,
@@ -21,6 +23,20 @@ function SelectedDeviceWithGizmo({
   Component: React.FC<MarkerProps>;
 }) {
   const tcRef = useRef<any>(null);
+  const groupRef = useRef<THREE.Group>(null);
+  // Keep stable refs so useEffect never re-runs
+  const updateRef = useRef(updateDevice);
+  updateRef.current = updateDevice;
+  const idRef = useRef(marker.id);
+  idRef.current = marker.id;
+
+  // Set initial position once via ref, not via reactive prop
+  useEffect(() => {
+    if (groupRef.current) {
+      groupRef.current.position.set(...marker.position);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // only on mount
 
   useEffect(() => {
     const tc = tcRef.current;
@@ -28,7 +44,7 @@ function SelectedDeviceWithGizmo({
     const handler = (event: { value: boolean }) => {
       if (!event.value && tc.object) {
         const obj = tc.object;
-        updateDevice(marker.id, {
+        updateRef.current(idRef.current, {
           position: [obj.position.x, obj.position.y, obj.position.z],
           rotation: [obj.rotation.x, obj.rotation.y, obj.rotation.z],
         });
@@ -36,16 +52,15 @@ function SelectedDeviceWithGizmo({
     };
     tc.addEventListener('dragging-changed', handler);
     return () => tc.removeEventListener('dragging-changed', handler);
-  }, [marker.id, updateDevice]);
+  }, []); // stable — no deps needed thanks to refs
 
   return (
     <TransformControls
       ref={tcRef}
       mode={transformMode}
       size={0.6}
-      position={marker.position}
     >
-      <group>
+      <group ref={groupRef}>
         <Component
           position={[0, 0, 0]}
           id={marker.id}
