@@ -1,104 +1,99 @@
 
 
-# Fix Build Mode v2 -- Missing Features and Interactions
+# Fix Build Mode v2 -- Round 2
 
-## Problem Summary
-Build Mode v2 has the shell and UI in place but is missing critical interactive functionality. Walls and rooms are visible but cannot be moved, dragged, or interactively edited. Several tools (door/window placement, room rectangle drawing) don't work in the 2D canvas. There's also stale data persisting and no way to clear everything.
+## Issues Found and Solutions
 
-## What Will Be Fixed
+### 1. Floor rendered outside rooms (3D coordinate bug)
+**Root cause**: In `Floors3D.tsx`, the room polygon uses `[x, z]` coordinates to create a `THREE.Shape` in the XY plane. When rotated `-PI/2` around the X axis, the Y values get negated, so world Z = -polygon_z. This causes the floor to appear mirrored/offset.
 
-### 1. Clear All / Reset Button
-- Add a "Rensa allt" (Clear All) button to the top toolbar
-- Clears all walls, rooms, stairs, and props for the active floor (or all floors)
-- Bump persist migration version to 3 to force-clear any stale localStorage data on load
+**Fix**: In `Floors3D.tsx`, negate the Z coordinates when building the shape: use `shape.moveTo(polygon[0][0], -polygon[0][1])` and `shape.lineTo(polygon[i][0], -polygon[i][1])`.
 
-### 2. Wall Node Dragging (Select Tool)
-- When select tool is active and user clicks near a wall endpoint (node), start dragging that node
-- On pointer move, update the wall's `from` or `to` via `updateWallNode`
-- Snap to grid during drag
-- Connected walls (sharing the same node) move together
+### 2. Wall materials not applied from room settings
+**Root cause**: The Room Inspector sets `room.wallMaterialId`, but `InteractiveWalls3D.tsx` only reads `wall.materialId` (per-wall property). There is no connection between a room's wall material setting and the actual wall rendering.
 
-### 3. Wall Segment Dragging
-- When select tool is active and user clicks on the middle of a wall (not near endpoints), start dragging the entire wall segment
-- Both endpoints move by the same delta
-- Snap to grid
+**Fix**: In `InteractiveWalls3D.tsx`, look up which room each wall belongs to (by checking `room.wallIds`). If the room has a `wallMaterialId` and the wall has no own `materialId`, use the room's material. Same fix needed in the non-interactive `Walls3D.tsx`.
 
-### 4. Wall Splitting
-- When select tool is active and user double-clicks on a wall segment, split it at that point using `splitWall`
+### 3. Invisible roof/ceiling for shadow control
+**Problem**: Light passes through the top of rooms unrealistically. Need an invisible ceiling that blocks light (casts shadows) but is not visually opaque.
 
-### 5. Door/Window Placement Tool
-- When door or window tool is active, clicking on a wall places an opening at the click position
-- Calculate the offset (0-1) along the wall from the click point
-- Use `addOpening` with default dimensions
-- Push undo before placement
+**Fix**: Create a new `Ceilings3D.tsx` component that renders a flat mesh at the top of each room (at `elevation + heightMeters`). Use `meshStandardMaterial` with `visible={false}` but `castShadow={true}` -- or use a `shadowMaterial` approach. The ceiling mesh uses the same polygon shape as the floor but positioned at ceiling height. Add it to `BuildScene3D.tsx`.
 
-### 6. Room Rectangle Drag Tool
-- When room tool is active, pointer down starts the rectangle, pointer move updates end point, pointer up creates the room
-- Draw rectangle preview while dragging (dashed outline)
-- On release, call `addRoomFromRect` with the snapped coordinates
-- Push undo
+### 4. Simple 3D door/window/stair models
+**Problem**: Doors and windows are just gaps in walls. No visual indicator in 3D view.
 
-### 7. Room Selection in 2D Canvas
-- When select tool is active, clicking inside a room polygon selects it
-- Show room inspector with rename, material, and delete options
-- Add room inspector to BuildInspector
+**Fix**: 
+- **Doors**: Add a thin box (door frame) and a slightly inset panel (the door leaf) at each door opening position in `InteractiveWalls3D.tsx`. Color: brown/wood.
+- **Windows**: Add a thin transparent panel (glass) with a frame at each window opening. Use `meshPhysicalMaterial` with `transmission` for glass effect.
+- **Stairs**: Create a `Stairs3D.tsx` component that renders stair treads as a series of box meshes, positioned according to the stair data.
 
-### 8. Opening Dragging Along Wall
-- When select tool is active and user clicks on an opening marker, allow dragging it along the wall to change its offset
+### 5. Floor picker appears grayed out / non-functional
+**Root cause**: The FloorPicker code looks correct but the `floorFilter` state may conflict with `activeFloorId`. When "Alla vaningar" is selected, `floorFilter` is `'all'` but `activeFloorId` remains unchanged. The label says "Alla" which is confusing. Additionally, the dropdown header should say "Vaningar" not "Alla".
 
-### 9. Improve "Ghost Floors" Explanation
-- Rename the ghost button tooltip from "Visa andra vaningar" to a clearer label
-- Add a small descriptive text in the status bar when ghost is active: "Visar andra vaningars vaggar som skuggor"
+**Fix**: 
+- Rename the button label from "Alla" to "Vaningar" when showing all floors
+- Ensure clicking a specific floor always sets both `activeFloorId` AND `floorFilter`
+- Make sure the canvas and tools respect the active floor properly
 
-### 10. Improve Clear All UX
-- Add confirmation dialog before clearing
+### 6. Room polygon updates when walls are dragged
+**Problem**: After detecting or creating rooms, dragging a wall node does not update the room polygon, so the room shape becomes stale.
+
+**Fix**: Add a `updateRoomPolygon` action to the store. After any wall node drag completes (in `handlePointerUp` of `BuildCanvas2D.tsx`), recalculate all room polygons on the active floor by reading the current wall positions. Each room stores `wallIds` -- iterate those walls and rebuild the polygon from connected endpoints.
+
+### 7. Paint tool not working for walls
+**Problem**: The `PaintTool` component in the left panel sets `room.wallMaterialId` and `room.floorMaterialId`, which is correct for rooms. But individual wall materials (`wall.materialId`) are never set. The paint tool only works per-room, not per-wall.
+
+**Fix**: This is actually working as designed (per-room material). The real issue is #2 above -- the 3D rendering ignores room materials. Once #2 is fixed, the paint tool will work. Additionally, add visual feedback in the 2D canvas: render room fills using the floor material color.
 
 ---
 
 ## Technical Changes
 
+### `src/components/build/Floors3D.tsx`
+- Negate Z coordinates in shape construction: `shape.moveTo(polygon[0][0], -polygon[0][1])`
+
+### `src/components/build/Ceilings3D.tsx` (new file)
+- Render invisible shadow-casting ceiling meshes per room
+- Same polygon logic as Floors3D but at `elevation + heightMeters`
+- Material: `visible={false}`, mesh has `castShadow={true}`
+
+### `src/components/build/Stairs3D.tsx` (new file)
+- Render stair treads as stacked boxes
+- Read from `floor.stairs` data
+
+### `src/components/build/InteractiveWalls3D.tsx`
+- Look up room wall materials and apply them to wall meshes
+- Add simple door frame + panel meshes at door openings
+- Add glass panel + frame meshes at window openings
+
+### `src/components/build/BuildScene3D.tsx`
+- Add `Ceilings3D` and `Stairs3D` components
+
+### `src/components/build/FloorPicker.tsx`
+- Change label from "Alla" to "Vaningar"
+- Ensure proper floor switching behavior
+
 ### `src/store/useAppStore.ts`
-- Add `clearFloor(floorId)` action: removes all walls, rooms, stairs from a floor
-- Add `clearAllFloors()` action: clears all floors' walls/rooms/stairs and all props
-- Bump persist version to 3
-
-### `src/components/build/BuildCanvas2D.tsx` (major rewrite of interaction handlers)
-- Add state for wall node dragging: `dragNode: { wallId, endpoint: 'from'|'to', connectedWalls } | null`
-- Add state for wall segment dragging: `dragWall: { wallId, startFrom, startTo, mouseStart } | null`
-- Add state for room rectangle drawing: use existing `roomDrawing` state
-- Add `findNodeAt(sx, sy)` -- finds wall endpoint near cursor
-- Add `findRoomAt(sx, sy)` -- point-in-polygon test for room selection
-- Update `handlePointerDown`:
-  - Select tool: check node first, then prop, then wall, then room, then deselect
-  - Door/Window tool: find wall at click, place opening
-  - Room tool: start rectangle drag
-- Update `handlePointerMove`:
-  - Handle node dragging (update wall node + connected walls)
-  - Handle wall segment dragging
-  - Handle room rectangle preview
-- Update `handlePointerUp`:
-  - Finish node/wall drag
-  - Finish room rectangle (create room)
-- Add room rectangle preview rendering in draw loop
-- Add opening selection rendering
-
-### `src/components/build/BuildInspector.tsx`
-- Add Room Inspector section (when selection.type === 'room'):
-  - Room name (editable)
-  - Area display
-  - Wall/floor material color
-  - Delete room button
-
-### `src/components/build/BuildTopToolbar.tsx`
-- Add "Rensa allt" button with trash icon + confirmation
+- Add `updateRoomPolygons(floorId)` action that recalculates room polygons from current wall positions
 
 ### `src/store/types.ts`
-- No changes needed (types already support everything)
+- Add `updateRoomPolygons` to AppState interface
+
+### `src/components/build/BuildCanvas2D.tsx`
+- After wall node/segment drag ends, call `updateRoomPolygons`
+- Render room floor fills using material color in 2D view
+- When room tool draws a rectangle, the created room walls should have their polygon auto-updated
+
+### `src/components/build/BuildCanvas2D.tsx` (2D room fill colors)
+- In the room drawing section, use the room's `floorMaterialId` to get the material color and fill the room polygon with it instead of the default blue tint
 
 ## Implementation Order
-1. Store changes (clearFloor, clearAllFloors, persist v3)
-2. BuildCanvas2D interaction handlers (node drag, wall drag, door/window placement, room rectangle, room selection)
-3. BuildInspector room inspector
-4. BuildTopToolbar clear all button
-5. Ghost floors tooltip improvement
-
+1. Fix Floors3D coordinate bug (quick fix)
+2. Add `updateRoomPolygons` store action
+3. Fix wall material lookup from rooms in InteractiveWalls3D
+4. Create Ceilings3D for shadow-casting invisible roof
+5. Add door/window 3D representations in InteractiveWalls3D
+6. Create Stairs3D component
+7. Update BuildScene3D to include new components
+8. Fix FloorPicker labels and behavior
+9. Update BuildCanvas2D for room polygon refresh and material-colored fills
