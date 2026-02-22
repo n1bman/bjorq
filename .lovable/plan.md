@@ -1,105 +1,137 @@
 
-# Enheter: Gizmo, auto-deselect, fler enhetstyper och toolbar-fix
+# Fix: Gizmo-frysning, importerad modell, live-vader och kontrollpanel
 
-## Problem att losa
+## Problem 1: Skärmen fryser vid gizmo-drag
 
-1. **Ingen pivot/gizmo** -- efter placering kan man inte flytta/rotera enheter visuellt i 3D. Behovs en translate/rotate gizmo (TransformControls fran drei).
-2. **Sol & Vader hamnar i toolbarn** -- miljopanelen renderas som `absolute` inuti toolbar-diven som har `overflow-x-auto`, sa den hamnar i scrollfloden istallet for att flyta ovanfor.
-3. **Place-verktyget stannar aktivt** -- efter att man placerat en enhet forblir place-verktyget aktivt sa man kan trycka ut massa enheter. Ska aterstallas till `select` efter en placering.
-4. **For fa enhetstyper** -- saknas kamera, robotdammsugare, kylskap, av/pa-knapp, varmeskap, tvattmaskin, garageport, dorr m.fl.
+**Orsak**: `onObjectChange` i `TransformControls` anropar `updateDevice` pa varje frame vid drag. Detta triggar en Zustand state-uppdatering som orsakar en React re-render, som aterrendderar `TransformControls` -- en oandlig loop som laser browsern.
 
-## Andringar
+**Losning**: Byt till `onMouseUp` / `dragging-changed` event istallet for `onObjectChange`. Spara positionen lokalt under drag och committa till store forst nar anvandaren slapper musen.
 
-### 1. TransformControls-gizmo for valda enheter
-
-I `DeviceMarkers3D.tsx`, nar `buildMode` ar aktivt och en enhet ar vald:
-- Wrappa den valda markoren med `<TransformControls>` fran `@react-three/drei`
-- Lagg till en liten UI-kontroll (knappar) i inspektorn for att valja mode: "translate" eller "rotate"
-- Nar gizmo drags, uppdatera `updateDevice` med nya position/rotation-varden via `onObjectChange`-event
-- Inaktivera OrbitControls nar gizmo ar aktiv (TransformControls gor detta automatiskt via `makeDefault` pa OrbitControls)
-
-### 2. Auto-deselect efter placering
-
-I `BuildScene3D.tsx` `handleGroundPointerDown` och i `BuildCanvas2D.tsx`:
-- Efter `addDevice(...)`, lagg till `setBuildTool('select')` sa verktyget atergar till markera-lage efter en placering
-- Om anvandaren vill placera fler far den trycka pa enhetstypen igen
-
-### 3. Fixa Sol & Vader-panelen
-
-I `BuildTopToolbar.tsx`:
-- Flytta miljopanelen ut fran toolbar-diven, eller andra den till `fixed`/portal-baserad positionering sa den inte paskverkas av `overflow-x-auto`
-- Enklast: andra panelens CSS fran `absolute top-full right-3` till att anvanda en overlay/portal utanfor scrollcontainern
-
-### 4. Fler enhetstyper
-
-Utoka `DeviceKind` i `types.ts`:
-```
-export type DeviceKind =
-  | 'light' | 'switch' | 'sensor' | 'climate'
-  | 'vacuum' | 'camera' | 'fridge' | 'oven'
-  | 'washer' | 'garage-door' | 'door-lock'
-  | 'power-outlet';
+```text
+Drag start --> lagra position lokalt (useRef)
+Dragging   --> uppdatera bara Three.js-objektet (ingen React state)
+Drag end   --> committa till updateDevice() en gang
 ```
 
-Utoka `BuildTool` med:
+I `DeviceMarkers3D.tsx`:
+- Ta bort `onObjectChange` fran TransformControls
+- Lagg till `onMouseUp` som laser objektets position/rotation och anropar `updateDevice` en enda gang
+- Anvand `ref` pa TransformControls for att lyssna pa `dragging-changed` event via `useEffect` + `addEventListener`
+
+## Problem 2: Importerad 3D-modell forsvinner vid sidladdning
+
+**Orsak**: Importerade GLB/GLTF-filer lagras som `blob:` URL:er eller `File`-objekt-URL:er. Dessa forsvinner nar sidan laddas om -- de ar temporara. Men URL:en sparas i localStorage (via persist), sa `homeGeometry.imported.url` pekar pa en blob som inte langre existerar.
+
+**Losning**: Nar anvandaren importerar en modell, las filen som base64 eller lagra den i IndexedDB. Vid sidladdning, aterskapa blob-URL:en fran den sparade datan.
+
+I `useAppStore.ts`:
+- Lagg till ett `fileData` falt (base64-strang) i `ImportedHomeSettings`
+- Nar modell importeras: las filen som base64 och spara bade `url` och `fileData`
+- I store-initiering (eller i `ImportedHome3D`): om `url` ar en blob som inte langre ar giltig men `fileData` finns, aterskapa blob-URL:en
+
+I `ImportedHome3D.tsx`:
+- Lagg till en `useEffect` som kontrollerar om URL:en ar giltig, och om inte, aterskap den fran `fileData`
+
+## Problem 3: Live-vader baserat pa plats
+
+**Orsak**: Vadret ar manuellt (clear/cloudy/rain/snow via knappar). Ingen koppling till riktiga vaderdata.
+
+**Losning**: Anvand OpenMeteo (gratis, inget API-nyckel) for att hamta aktuellt vader baserat pa lat/lon fran `environment.location`.
+
+Skapa `src/hooks/useWeatherSync.ts`:
+- Hamta vader fran `https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current_weather=true`
+- Mappa WMO-vaderkod till `WeatherCondition`: kod 0-3 = clear/cloudy, 51-67/80-82 = rain, 71-77/85-86 = snow
+- Uppdatera `setWeather()` med resultat
+- Polla var 15:e minut
+- Aktivera bara nar `environment.source === 'ha'` eller nytt `'auto'` lage
+
+I `EnvironmentState`:
+- Lagg till `source: 'manual' | 'auto'` (auto = live vader)
+
+I `BuildTopToolbar.tsx` och kontrollpanelen:
+- Lagg till en toggle for "Live vader" som satter source till 'auto'
+
+## Problem 4: Kontrollpanel -- kategori-baserad navigation
+
+**Inspiration fran referensbilden**: En ikon-banner langs toppen med kategorier (hem, vader, enheter, sol, batteri, etc), och varje kategori visar relevant innehall.
+
+**Losning**: Omstrukturera `DashboardGrid.tsx` med en horisontell ikon-nav langs toppen (liknande referensbilden), och varje kategori visar en specifik vy:
+
+```text
+Kategorier (ikon-banner):
+[Home] [Weather] [Devices] [Energy] [Solar] [Settings] [HA]
 ```
-  | 'place-vacuum' | 'place-camera' | 'place-fridge'
-  | 'place-oven' | 'place-washer' | 'place-garage-door'
-  | 'place-door-lock' | 'place-power-outlet'
-```
 
-Uppdatera `DevicePlacementTools.tsx`:
-- Lagg till knappar for alla nya typer med passande ikoner (Camera, Bot, Refrigerator, CookingPot, WashingMachine, DoorOpen, Lock, Plug)
+- **Home**: Oversikt med klocka, vader-sammanfattning, snabbtoggle for enheter
+- **Weather**: Detaljerad vader-widget (temp, vind, fuktighet, prognos)
+- **Devices**: Alla enheter grupperade per rum med toggle
+- **Energy**: Energi-statistik (placeholder for solpaneler, forbrukning etc)
+- **Settings**: Plats, widget-konfiguration
+- **HA**: Home Assistant-koppling
 
-Uppdatera `DeviceMarkers3D.tsx`:
-- Lagg till enkla visuella markoerer for varje ny typ (fargade sfarer/ringar med unika farger)
-- Kamera: rod glow
-- Robotdammsugare: lila pulsering (redan finns vacuum -> SensorMarker)
-- Kylskap/ugn/tvattmaskin: vita/gra sfarer med unik emissive farg
-- Garageport/dorr: orange ringar
-- Eluttag: gul ring
-
-Uppdatera `BuildInspector.tsx` (DeviceInspector):
-- Utoka `kindLabels` med alla nya typer
-
-Uppdatera `BuildScene3D.tsx`:
-- Hantera alla nya `place-*`-verktyg i `handleGroundPointerDown` med lampande default-hojder
+I `DashboardGrid.tsx`:
+- Lagg till en `useState` for aktiv kategori
+- Rendera en ikon-rad langs toppen
+- Villkorligt rendera innehall baserat pa vald kategori
+- Varje kategori ar en egen sektion/komponent
 
 ## Tekniska detaljer
 
-### TransformControls-integration
+### DeviceMarkers3D.tsx -- Gizmo-fix
 ```tsx
-import { TransformControls } from '@react-three/drei';
+// Byt fran onObjectChange till dragging-changed event
+const tcRef = useRef<any>(null);
 
-// I DeviceMarkers3D, for den valda markoren:
-{selected && buildMode && (
-  <TransformControls
-    mode={transformMode} // 'translate' | 'rotate'
-    onObjectChange={(e) => {
-      const obj = e.target.object;
+useEffect(() => {
+  const tc = tcRef.current;
+  if (!tc) return;
+  const handler = (event: any) => {
+    if (!event.value && tc.object) {
+      // Drag avslutad -- committa
+      const obj = tc.object;
       updateDevice(marker.id, {
         position: [obj.position.x, obj.position.y, obj.position.z],
         rotation: [obj.rotation.x, obj.rotation.y, obj.rotation.z],
       });
-    }}
-  >
-    <Component ... />
-  </TransformControls>
-)}
+    }
+  };
+  tc.addEventListener('dragging-changed', handler);
+  return () => tc.removeEventListener('dragging-changed', handler);
+}, [marker.id, updateDevice]);
+
+<TransformControls ref={tcRef} mode={transformMode} size={0.6}
+  position={marker.position}>
+  ...
+</TransformControls>
 ```
 
-### DeviceInspector andringar
-- Lagg till "Flytta/Rotera"-knappar som styr `transformMode` state (laggs i store eller lokalt i DeviceMarkers3D via ett callback)
-- Lagg till position X/Z sliders (som PropInspector har) for fininjustering via UI
+### types.ts -- ImportedHomeSettings
+```typescript
+interface ImportedHomeSettings {
+  // ... befintliga falt
+  fileData?: string; // base64-kodad GLB/GLTF
+}
+```
 
-### BuildTopToolbar fix
-- Wrappa hela komponenten i en relativ container, och rendera miljopanelen som ett separat lager med `fixed` eller `z-[200]` utanfor overflow-containern
+### useWeatherSync.ts
+```typescript
+// Open-Meteo API (gratis, inget API-nyckel)
+// GET https://api.open-meteo.com/v1/forecast?latitude=59.33&longitude=18.07&current_weather=true
+// Svaret innehaller: weathercode, temperature, windspeed
+```
+
+### DashboardGrid.tsx -- Kategori-navigation
+```text
+Ikon-rad: [Home] [Weather] [Devices] [Energy] [Settings] [HA]
+     |
+     v
+  Villkorligt innehall baserat pa vald kategori
+```
 
 ### Implementationsordning
-1. Utoka `DeviceKind` och `BuildTool` i `types.ts` med alla nya enhetstyper
-2. Uppdatera `DevicePlacementTools.tsx` med nya verktygsknappar
-3. Uppdatera `DeviceMarkers3D.tsx` med nya marker-komponenter + TransformControls-gizmo
-4. Uppdatera `BuildScene3D.tsx` -- auto-deselect efter placering + hantera nya place-verktyg
-5. Uppdatera `BuildCanvas2D.tsx` -- auto-deselect efter placering
-6. Uppdatera `BuildInspector.tsx` -- nya kindLabels + position X/Z sliders + flytta/rotera-knappar
-7. Fixa `BuildTopToolbar.tsx` -- flytta miljopanelen ut ur overflow-containern
+1. Fixa gizmo-frysningen i `DeviceMarkers3D.tsx` (byt till dragging-changed event)
+2. Fixa importerad modell-persistens i `types.ts`, `useAppStore.ts`, och `ImportedHome3D.tsx`
+3. Skapa `useWeatherSync.ts` med Open-Meteo-integration
+4. Uppdatera `EnvironmentState` med auto-lage
+5. Omstrukturera `DashboardGrid.tsx` med kategori-navigation
+6. Uppdatera `BuildTopToolbar.tsx` med live-vader-toggle
