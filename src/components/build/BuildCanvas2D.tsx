@@ -1,5 +1,6 @@
 import { useRef, useEffect, useCallback, useState } from 'react';
 import { useAppStore } from '@/store/useAppStore';
+import { getMaterialById } from '@/lib/materials';
 import type { WallSegment } from '@/store/types';
 
 const generateId = () => Math.random().toString(36).slice(2, 10);
@@ -107,6 +108,7 @@ export default function BuildCanvas2D() {
   const updateProp = useAppStore((s) => s.updateProp);
   const addStair = useAppStore((s) => s.addStair);
   const addRoomFromRect = useAppStore((s) => s.addRoomFromRect);
+  const updateRoomPolygons = useAppStore((s) => s.updateRoomPolygons);
 
   const floor = floors.find((f) => f.id === activeFloorId);
   const walls = floor?.walls ?? [];
@@ -311,6 +313,11 @@ export default function BuildCanvas2D() {
     for (const room of rooms) {
       if (!room.polygon || room.polygon.length < 3) continue;
       const isSelected = selection.type === 'room' && selection.id === room.id;
+      
+      // Get room floor material color
+      const roomMat = room.floorMaterialId ? getMaterialById(room.floorMaterialId) : null;
+      const roomFillColor = roomMat ? roomMat.color + '30' : (isSelected ? COLORS.roomSelected : COLORS.room);
+      
       ctx.beginPath();
       const [sx, sy] = worldToScreen(room.polygon[0][0], room.polygon[0][1]);
       ctx.moveTo(sx, sy);
@@ -319,7 +326,7 @@ export default function BuildCanvas2D() {
         ctx.lineTo(px, py);
       }
       ctx.closePath();
-      ctx.fillStyle = isSelected ? COLORS.roomSelected : COLORS.room;
+      ctx.fillStyle = roomFillColor;
       ctx.fill();
       ctx.strokeStyle = isSelected ? COLORS.roomSelectedStroke : COLORS.roomStroke;
       ctx.lineWidth = isSelected ? 2 : 1;
@@ -864,10 +871,18 @@ export default function BuildCanvas2D() {
     setIsPanning(false);
 
     // Finish node drag
-    if (dragNode) { setDragNode(null); return; }
+    if (dragNode) {
+      setDragNode(null);
+      if (activeFloorId) updateRoomPolygons(activeFloorId);
+      return;
+    }
 
     // Finish wall drag
-    if (dragWall) { setDragWall(null); return; }
+    if (dragWall) {
+      setDragWall(null);
+      if (activeFloorId) updateRoomPolygons(activeFloorId);
+      return;
+    }
 
     // Finish opening drag
     if (dragOpening) { setDragOpening(null); return; }
@@ -891,7 +906,7 @@ export default function BuildCanvas2D() {
       setRoomDrawStart(null);
       setRoomDrawEnd(null);
     }
-  }, [dragNode, dragWall, dragOpening, isDraggingProp, roomDrawStart, roomDrawEnd, activeTool, activeFloorId, addRoomFromRect]);
+  }, [dragNode, dragWall, dragOpening, isDraggingProp, roomDrawStart, roomDrawEnd, activeTool, activeFloorId, addRoomFromRect, updateRoomPolygons]);
 
   const handleDoubleClick = useCallback(
     (e: React.MouseEvent) => {

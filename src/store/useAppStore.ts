@@ -589,6 +589,69 @@ export const useAppStore = create<AppState>()(
             ),
           },
         })),
+
+      // Room polygon recalculation from current wall positions
+      updateRoomPolygons: (floorId) =>
+        set((s) => ({
+          layout: {
+            ...s.layout,
+            floors: s.layout.floors.map((f) => {
+              if (f.id !== floorId) return f;
+              const updatedRooms = f.rooms.map((room) => {
+                if (!room.wallIds || room.wallIds.length === 0) return room;
+                // Rebuild polygon from wall endpoints
+                const roomWalls = room.wallIds
+                  .map((wid) => f.walls.find((w) => w.id === wid))
+                  .filter(Boolean) as WallSegment[];
+                if (roomWalls.length < 2) return room;
+
+                // Chain walls: start from first wall's 'from', follow connections
+                const polygon: [number, number][] = [];
+                const used = new Set<string>();
+                let current = roomWalls[0];
+                let currentEnd = current.from;
+                polygon.push([...currentEnd] as [number, number]);
+                used.add(current.id);
+
+                for (let iter = 0; iter < roomWalls.length; iter++) {
+                  const otherEnd: [number, number] =
+                    currentEnd === current.from ? [...current.to] as [number, number] : [...current.from] as [number, number];
+                  polygon.push(otherEnd);
+
+                  // Find next wall sharing otherEnd
+                  const next = roomWalls.find((w) => {
+                    if (used.has(w.id)) return false;
+                    const eps = 0.05;
+                    return (
+                      (Math.abs(w.from[0] - otherEnd[0]) < eps && Math.abs(w.from[1] - otherEnd[1]) < eps) ||
+                      (Math.abs(w.to[0] - otherEnd[0]) < eps && Math.abs(w.to[1] - otherEnd[1]) < eps)
+                    );
+                  });
+                  if (!next) break;
+                  used.add(next.id);
+                  const eps = 0.05;
+                  currentEnd =
+                    Math.abs(next.from[0] - otherEnd[0]) < eps && Math.abs(next.from[1] - otherEnd[1]) < eps
+                      ? next.from
+                      : next.to;
+                  current = next;
+                }
+
+                // Remove duplicate last point if it matches first
+                if (polygon.length > 1) {
+                  const first = polygon[0];
+                  const last = polygon[polygon.length - 1];
+                  if (Math.abs(first[0] - last[0]) < 0.05 && Math.abs(first[1] - last[1]) < 0.05) {
+                    polygon.pop();
+                  }
+                }
+
+                return { ...room, polygon };
+              });
+              return { ...f, rooms: updatedRooms };
+            }),
+          },
+        })),
     }),
     {
       name: 'hometwin-store',
