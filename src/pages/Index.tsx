@@ -1,5 +1,6 @@
 import BuildModeV2 from '@/components/build/BuildModeV2';
 import HomeView from '@/components/home/HomeView';
+import DashboardView from '@/components/home/DashboardView';
 import ModeHeader from '@/components/ModeHeader';
 import { useAppStore } from '@/store/useAppStore';
 
@@ -8,6 +9,10 @@ const Index = () => {
 
   if (appMode === 'home') {
     return <HomeView />;
+  }
+
+  if (appMode === 'dashboard') {
+    return <DashboardView />;
   }
 
   return (

@@ -1,17 +1,17 @@
-import { useAppStore } from '@/store/useAppStore';
 import Scene3D from '@/components/Scene3D';
+import DashboardGrid from './DashboardGrid';
 import HomeNav from './HomeNav';
-import CameraFab from './CameraFab';
 
-export default function HomeView() {
+export default function DashboardView() {
   return (
     <div className="fixed inset-0 bg-background">
-      <div className="absolute inset-0">
+      {/* Dimmed 3D background */}
+      <div className="absolute inset-0 opacity-30">
         <Scene3D />
       </div>
 
-      {/* Camera controls FAB - bottom right */}
-      <CameraFab />
+      {/* Dashboard overlay */}
+      <DashboardGrid />
 
       {/* Bottom floating pill nav */}
       <HomeNav />

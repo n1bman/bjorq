@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { AppState, BuildState, LayoutState, WallSegment, Room, HomeViewState } from './types';
+import type { AppState, BuildState, LayoutState, WallSegment, Room } from './types';
 
 const generateId = () => Math.random().toString(36).slice(2, 10);
 
@@ -40,8 +40,7 @@ export const useAppStore = create<AppState>()(
       appMode: 'home',
       setAppMode: (mode) => set({ appMode: mode }),
 
-      homeView: { viewMode: 'dashboard', cameraPreset: 'angle' } as HomeViewState,
-      setHomeViewMode: (mode) => set((s) => ({ homeView: { ...s.homeView, viewMode: mode } })),
+      homeView: { cameraPreset: 'angle' },
       setCameraPreset: (preset) => set((s) => ({ homeView: { ...s.homeView, cameraPreset: preset } })),
 
       layout: initialLayout,
