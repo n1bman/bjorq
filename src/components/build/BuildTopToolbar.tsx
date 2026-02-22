@@ -73,7 +73,8 @@ export default function BuildTopToolbar() {
   );
 
   return (
-    <div className="flex items-center gap-1 px-2 py-1 border-b border-border bg-card/80 backdrop-blur-sm relative z-50 overflow-x-auto flex-nowrap">
+    <div className="relative z-50">
+    <div className="flex items-center gap-1 px-2 py-1 border-b border-border bg-card/80 backdrop-blur-sm overflow-x-auto flex-nowrap">
       {/* Primary tools */}
       <ToolBtn tool="select" icon={MousePointer2} label="Markera" />
       <ToolBtn tool="copy" icon={Copy} label="Kopiera" />
@@ -201,9 +202,11 @@ export default function BuildTopToolbar() {
       {/* Floor picker */}
       <FloorPicker />
 
-      {/* Environment panel */}
+      </div>
+
+      {/* Environment panel - rendered OUTSIDE overflow container */}
       {showEnvPanel && (
-        <div className="absolute top-full right-3 mt-2 z-[100] bg-card border border-border rounded-xl p-3 space-y-3 w-56 shadow-xl pointer-events-auto">
+        <div className="absolute top-full right-3 mt-2 z-[200] bg-card border border-border rounded-xl p-3 space-y-3 w-56 shadow-xl pointer-events-auto">
           <p className="text-xs font-medium text-foreground">Sol & Väder</p>
           
           <div className="space-y-1">
@@ -246,7 +249,7 @@ export default function BuildTopToolbar() {
 
       {/* Clear confirmation dialog */}
       {showClearConfirm && (
-        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-[100] bg-card border border-border rounded-xl p-4 space-y-3 w-64 shadow-xl pointer-events-auto">
+        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-[200] bg-card border border-border rounded-xl p-4 space-y-3 w-64 shadow-xl pointer-events-auto">
           <p className="text-sm text-foreground font-medium text-center">Rensa allt?</p>
           <p className="text-xs text-muted-foreground text-center">
             Alla väggar, rum, trappor och möbler på alla våningar tas bort. Kan inte ångras.

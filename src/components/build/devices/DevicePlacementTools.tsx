@@ -1,6 +1,6 @@
 import { useAppStore } from '@/store/useAppStore';
 import type { DeviceKind, BuildTool } from '@/store/types';
-import { Lightbulb, ToggleLeft, Activity, Thermometer, Trash2 } from 'lucide-react';
+import { Lightbulb, ToggleLeft, Activity, Thermometer, Trash2, Camera, Bot, CookingPot, WashingMachine, DoorOpen, Lock, Plug, Refrigerator } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const deviceTools: { key: BuildTool; kind: DeviceKind; label: string; icon: typeof Lightbulb; color: string }[] = [
@@ -8,6 +8,14 @@ const deviceTools: { key: BuildTool; kind: DeviceKind; label: string; icon: type
   { key: 'place-switch', kind: 'switch', label: 'Knapp', icon: ToggleLeft, color: 'text-blue-400' },
   { key: 'place-sensor', kind: 'sensor', label: 'Sensor', icon: Activity, color: 'text-green-400' },
   { key: 'place-climate', kind: 'climate', label: 'Klimat', icon: Thermometer, color: 'text-cyan-400' },
+  { key: 'place-camera', kind: 'camera', label: 'Kamera', icon: Camera, color: 'text-red-400' },
+  { key: 'place-vacuum', kind: 'vacuum', label: 'Dammsugare', icon: Bot, color: 'text-purple-400' },
+  { key: 'place-fridge', kind: 'fridge', label: 'Kylskåp', icon: Refrigerator, color: 'text-slate-300' },
+  { key: 'place-oven', kind: 'oven', label: 'Ugn', icon: CookingPot, color: 'text-orange-400' },
+  { key: 'place-washer', kind: 'washer', label: 'Tvättmaskin', icon: WashingMachine, color: 'text-sky-300' },
+  { key: 'place-garage-door', kind: 'garage-door', label: 'Garageport', icon: DoorOpen, color: 'text-amber-500' },
+  { key: 'place-door-lock', kind: 'door-lock', label: 'Dörrlås', icon: Lock, color: 'text-amber-400' },
+  { key: 'place-power-outlet', kind: 'power-outlet', label: 'Eluttag', icon: Plug, color: 'text-yellow-300' },
 ];
 
 const kindLabels: Record<DeviceKind, string> = {
@@ -16,6 +24,13 @@ const kindLabels: Record<DeviceKind, string> = {
   sensor: '🌡️ Sensor',
   climate: '❄️ Klimat',
   vacuum: '🤖 Dammsugare',
+  camera: '📷 Kamera',
+  fridge: '🧊 Kylskåp',
+  oven: '🍳 Ugn',
+  washer: '🫧 Tvättmaskin',
+  'garage-door': '🚗 Garageport',
+  'door-lock': '🔒 Dörrlås',
+  'power-outlet': '🔌 Eluttag',
 };
 
 export default function DevicePlacementTools() {

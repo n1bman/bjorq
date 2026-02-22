@@ -84,7 +84,15 @@ export type BuildTool =
   | 'place-light'
   | 'place-switch'
   | 'place-sensor'
-  | 'place-climate';
+  | 'place-climate'
+  | 'place-vacuum'
+  | 'place-camera'
+  | 'place-fridge'
+  | 'place-oven'
+  | 'place-washer'
+  | 'place-garage-door'
+  | 'place-door-lock'
+  | 'place-power-outlet';
 
 export type BuildTab = 'structure' | 'import' | 'furnish' | 'devices';
 export type SnapMode = 'strict' | 'soft' | 'off';
@@ -156,7 +164,7 @@ export interface HomeGeometryState {
 }
 
 // ─── Devices Layer ───
-export type DeviceKind = 'light' | 'switch' | 'sensor' | 'climate' | 'vacuum';
+export type DeviceKind = 'light' | 'switch' | 'sensor' | 'climate' | 'vacuum' | 'camera' | 'fridge' | 'oven' | 'washer' | 'garage-door' | 'door-lock' | 'power-outlet';
 export type DeviceSurface = 'floor' | 'wall' | 'ceiling';
 
 export interface DeviceMarker {

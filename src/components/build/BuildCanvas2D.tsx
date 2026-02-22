@@ -507,6 +507,13 @@ export default function BuildCanvas2D() {
       sensor: '#4ade80',
       climate: '#22d3ee',
       vacuum: '#a78bfa',
+      camera: '#ef4444',
+      fridge: '#cbd5e1',
+      oven: '#f97316',
+      washer: '#7dd3fc',
+      'garage-door': '#f59e0b',
+      'door-lock': '#fbbf24',
+      'power-outlet': '#fde047',
     };
     for (const dev of floorDevices) {
       const [dx2, dy2] = worldToScreen(dev.position[0], dev.position[2]);
@@ -715,10 +722,11 @@ export default function BuildCanvas2D() {
           kind,
           name: '',
           floorId: activeFloorId,
-          surface: kind === 'light' ? 'ceiling' : 'wall',
+          surface: kind === 'light' ? 'ceiling' : 'floor',
           position: [snapped[0], yPos, snapped[1]],
           rotation: [0, 0, 0],
         });
+        useAppStore.getState().setBuildTool('select');
         return;
       }
 
