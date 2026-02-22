@@ -1,3 +1,12 @@
+// ─── Materials ───
+export interface Material {
+  id: string;
+  name: string;
+  type: 'paint' | 'concrete' | 'wood' | 'tile' | 'metal';
+  color: string; // hex
+  roughness: number;
+}
+
 // ─── Layout Layer ───
 export interface WallOpening {
   id: string;
@@ -24,6 +33,7 @@ export interface Room {
   wallIds: string[];
   floorMaterialId?: string;
   wallMaterialId?: string;
+  polygon?: [number, number][]; // cached polygon for rendering
 }
 
 export interface Floor {
@@ -44,10 +54,11 @@ export interface LayoutState {
 }
 
 // ─── Build Mode State ───
-export type BuildTool = 'select' | 'wall' | 'calibrate' | 'pan';
+export type BuildTool = 'select' | 'wall' | 'calibrate' | 'pan' | 'opening';
 
 export interface BuildState {
   activeTool: BuildTool;
+  openingType: 'door' | 'window';
   wallDrawing: {
     isDrawing: boolean;
     nodes: [number, number][];
@@ -64,6 +75,7 @@ export interface BuildState {
   redoStack: LayoutState[];
   canvasOffset: [number, number];
   canvasZoom: number;
+  show3DPreview: boolean;
 }
 
 // ─── Devices Layer ───
@@ -157,6 +169,21 @@ export interface AppState {
   updateWallNode: (floorId: string, wallId: string, endpoint: 'from' | 'to', pos: [number, number]) => void;
   deleteWall: (floorId: string, wallId: string) => void;
 
+  // Opening actions
+  addOpening: (floorId: string, wallId: string, opening: WallOpening) => void;
+  removeOpening: (floorId: string, wallId: string, openingId: string) => void;
+
+  // Room actions
+  setRooms: (floorId: string, rooms: Room[]) => void;
+  removeRoom: (floorId: string, roomId: string) => void;
+  renameRoom: (floorId: string, roomId: string, name: string) => void;
+  setRoomMaterial: (floorId: string, roomId: string, target: 'floor' | 'wall', materialId: string) => void;
+
+  // Props actions
+  addProp: (prop: PropItem) => void;
+  removeProp: (id: string) => void;
+  updateProp: (id: string, changes: Partial<PropItem>) => void;
+
   // Build actions
   setBuildTool: (tool: BuildTool) => void;
   setWallDrawing: (drawing: Partial<BuildState['wallDrawing']>) => void;
@@ -164,6 +191,7 @@ export interface AppState {
   setSelectedWall: (wallId: string | null) => void;
   setCanvasOffset: (offset: [number, number]) => void;
   setCanvasZoom: (zoom: number) => void;
+  setShow3DPreview: (show: boolean) => void;
   pushUndo: () => void;
   undo: () => void;
   redo: () => void;

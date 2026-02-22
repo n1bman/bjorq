@@ -1,6 +1,7 @@
 import { useRef, useEffect, useCallback, useState } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import type { WallSegment } from '@/store/types';
+import { getMaterialById } from '@/lib/materials';
 
 const GRID_COLOR = '#2a2d35';
 const GRID_MAJOR_COLOR = '#3a3d45';
@@ -10,6 +11,8 @@ const NODE_COLOR = '#e8a845';
 const NODE_HOVER_COLOR = '#ffffff';
 const CALIBRATION_COLOR = '#4a9eff';
 const DRAWING_COLOR = '#e8a845';
+const DOOR_COLOR = '#8B6914';
+const WINDOW_COLOR = '#4a9eff';
 const NODE_RADIUS = 6;
 const WALL_WIDTH = 4;
 
@@ -150,6 +153,32 @@ export default function Canvas2D() {
       ctx.stroke();
     }
 
+    // Room fills
+    const rooms = activeFloor?.rooms ?? [];
+    rooms.forEach((room) => {
+      if (!room.polygon || room.polygon.length < 3) return;
+      const mat = room.floorMaterialId ? getMaterialById(room.floorMaterialId) : null;
+      const fillColor = mat?.color ?? '#e8a845';
+      ctx.globalAlpha = 0.15;
+      ctx.fillStyle = fillColor;
+      ctx.beginPath();
+      ctx.moveTo(room.polygon[0][0] * pixelsPerMeter, room.polygon[0][1] * pixelsPerMeter);
+      for (let i = 1; i < room.polygon.length; i++) {
+        ctx.lineTo(room.polygon[i][0] * pixelsPerMeter, room.polygon[i][1] * pixelsPerMeter);
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.globalAlpha = 1;
+
+      // Room label
+      const cx = room.polygon.reduce((s, p) => s + p[0], 0) / room.polygon.length;
+      const cy = room.polygon.reduce((s, p) => s + p[1], 0) / room.polygon.length;
+      ctx.fillStyle = '#ffffff';
+      ctx.font = `${11 / canvasZoom}px "DM Sans", sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.fillText(room.name, cx * pixelsPerMeter, cy * pixelsPerMeter);
+    });
+
     // Walls
     const walls = activeFloor?.walls ?? [];
     walls.forEach((wall) => {
@@ -161,6 +190,36 @@ export default function Canvas2D() {
       ctx.moveTo(wall.from[0] * pixelsPerMeter, wall.from[1] * pixelsPerMeter);
       ctx.lineTo(wall.to[0] * pixelsPerMeter, wall.to[1] * pixelsPerMeter);
       ctx.stroke();
+
+      // Openings
+      wall.openings.forEach((op) => {
+        const dx = wall.to[0] - wall.from[0];
+        const dz = wall.to[1] - wall.from[1];
+        const len = Math.sqrt(dx * dx + dz * dz);
+        const nx = dx / len;
+        const nz = dz / len;
+        const opCenterX = (wall.from[0] + nx * op.offset * len) * pixelsPerMeter;
+        const opCenterZ = (wall.from[1] + nz * op.offset * len) * pixelsPerMeter;
+        const opHalfW = (op.width / 2) * pixelsPerMeter;
+
+        ctx.strokeStyle = op.type === 'door' ? DOOR_COLOR : WINDOW_COLOR;
+        ctx.lineWidth = (WALL_WIDTH + 2) / canvasZoom;
+        ctx.beginPath();
+        ctx.moveTo(opCenterX - nx * opHalfW, opCenterZ - nz * opHalfW);
+        ctx.lineTo(opCenterX + nx * opHalfW, opCenterZ + nz * opHalfW);
+        ctx.stroke();
+
+        // Small perpendicular marks
+        const perpX = -nz * 4 / canvasZoom;
+        const perpZ = nx * 4 / canvasZoom;
+        ctx.lineWidth = 1.5 / canvasZoom;
+        ctx.beginPath();
+        ctx.moveTo(opCenterX - nx * opHalfW + perpX, opCenterZ - nz * opHalfW + perpZ);
+        ctx.lineTo(opCenterX - nx * opHalfW - perpX, opCenterZ - nz * opHalfW - perpZ);
+        ctx.moveTo(opCenterX + nx * opHalfW + perpX, opCenterZ + nz * opHalfW + perpZ);
+        ctx.lineTo(opCenterX + nx * opHalfW - perpX, opCenterZ + nz * opHalfW - perpZ);
+        ctx.stroke();
+      });
 
       // Nodes
       [
@@ -230,7 +289,7 @@ export default function Canvas2D() {
     ctx.restore();
   }, [
     size, canvasOffset, canvasZoom, floorplanImg, gridSize, pixelsPerMeter,
-    activeFloor?.walls, wallDrawing, calibration, selectedWallId, hoveredNode,
+    activeFloor?.walls, activeFloor?.rooms, wallDrawing, calibration, selectedWallId, hoveredNode,
   ]);
 
   // Mouse handlers
