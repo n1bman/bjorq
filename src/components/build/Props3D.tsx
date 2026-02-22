@@ -1,4 +1,5 @@
 import { Suspense, useRef, useState, useCallback } from 'react';
+import { ErrorBoundary } from './ErrorBoundary3D';
 import { useLoader, useThree } from '@react-three/fiber';
 import { useAppStore } from '@/store/useAppStore';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
@@ -124,20 +125,27 @@ export default function Props3D() {
   return (
     <group>
       {floorItems.map((prop) => (
-        <Suspense key={prop.id} fallback={
+        <ErrorBoundary key={prop.id} fallback={
           <mesh position={prop.position}>
             <boxGeometry args={[0.5, 0.5, 0.5]} />
             <meshStandardMaterial color="#e8a838" wireframe />
           </mesh>
         }>
-          <PropModel
-            id={prop.id}
-            url={prop.url}
-            position={prop.position}
-            rotation={prop.rotation}
-            scale={prop.scale}
-          />
-        </Suspense>
+          <Suspense fallback={
+            <mesh position={prop.position}>
+              <boxGeometry args={[0.5, 0.5, 0.5]} />
+              <meshStandardMaterial color="#e8a838" wireframe />
+            </mesh>
+          }>
+            <PropModel
+              id={prop.id}
+              url={prop.url}
+              position={prop.position}
+              rotation={prop.rotation}
+              scale={prop.scale}
+            />
+          </Suspense>
+        </ErrorBoundary>
       ))}
     </group>
   );

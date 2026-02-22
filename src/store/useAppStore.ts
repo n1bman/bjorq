@@ -699,9 +699,9 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: 'hometwin-store',
-      version: 3,
+      version: 4,
       migrate: () => {
-        // V3: Force-clear stale data
+        // V4: Force-clear all stale blob URLs and data
         return undefined as any;
       },
       partialize: (state) => ({
