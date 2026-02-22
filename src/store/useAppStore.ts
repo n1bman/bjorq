@@ -1,21 +1,20 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { AppState, BuildState, LayoutState } from './types';
+import type { AppState, BuildState, LayoutState, WallSegment, Room } from './types';
 
 const generateId = () => Math.random().toString(36).slice(2, 10);
 
 const initialBuild: BuildState = {
+  tab: 'structure',
   activeTool: 'select',
-  openingType: 'door',
+  grid: { enabled: true, sizeMeters: 0.5, snapMode: 'strict' },
+  selection: { type: null, id: null },
+  view: { cameraMode: 'topdown', showOtherFloorsGhost: false, floorFilter: 'all' },
   wallDrawing: { isDrawing: false, nodes: [] },
+  roomDrawing: { isDrawing: false, startPoint: null, endPoint: null },
   calibration: { isCalibrating: false, point1: null, point2: null, realMeters: null },
-  selectedWallId: null,
-  selectedNodeIndex: null,
   undoStack: [],
   redoStack: [],
-  canvasOffset: [0, 0],
-  canvasZoom: 1,
-  show3DPreview: false,
 };
 
 const initialLayout: LayoutState = {
@@ -24,9 +23,11 @@ const initialLayout: LayoutState = {
       id: 'floor-1',
       name: 'Våning 1',
       elevation: 0,
+      heightMeters: 2.5,
       gridSize: 0.5,
       walls: [],
       rooms: [],
+      stairs: [],
     },
   ],
   activeFloorId: 'floor-1',
@@ -42,7 +43,20 @@ export const useAppStore = create<AppState>()(
       layout: initialLayout,
       build: initialBuild,
       devices: { markers: [] },
-      props: { items: [] },
+      props: { catalog: [], items: [] },
+
+      homeGeometry: {
+        source: 'procedural',
+        imported: {
+          url: null,
+          position: [0, 0, 0],
+          rotation: [0, 0, 0],
+          scale: [1, 1, 1],
+          groundLevelY: 0,
+          northAngle: 0,
+          floorBands: [],
+        },
+      },
 
       environment: {
         source: 'manual',
@@ -71,9 +85,11 @@ export const useAppStore = create<AppState>()(
                 id: generateId(),
                 name,
                 elevation: s.layout.floors.length * 3,
+                heightMeters: 2.5,
                 gridSize: 0.5,
                 walls: [],
                 rooms: [],
+                stairs: [],
               },
             ],
           },
@@ -173,6 +189,34 @@ export const useAppStore = create<AppState>()(
           },
         })),
 
+      splitWall: (floorId, wallId, point) =>
+        set((s) => ({
+          layout: {
+            ...s.layout,
+            floors: s.layout.floors.map((f) => {
+              if (f.id !== floorId) return f;
+              const wall = f.walls.find((w) => w.id === wallId);
+              if (!wall) return f;
+              const wall1: WallSegment = {
+                ...wall,
+                id: generateId(),
+                to: point,
+                openings: [],
+              };
+              const wall2: WallSegment = {
+                ...wall,
+                id: generateId(),
+                from: point,
+                openings: [],
+              };
+              return {
+                ...f,
+                walls: [...f.walls.filter((w) => w.id !== wallId), wall1, wall2],
+              };
+            }),
+          },
+        })),
+
       // Opening actions
       addOpening: (floorId, wallId, opening) =>
         set((s) => ({
@@ -262,7 +306,86 @@ export const useAppStore = create<AppState>()(
           },
         })),
 
+      addRoomFromRect: (floorId, x, z, w, d, name) => {
+        const s = get();
+        const floor = s.layout.floors.find((f) => f.id === floorId);
+        if (!floor) return;
+
+        s.pushUndo();
+
+        const corners: [number, number][] = [
+          [x, z], [x + w, z], [x + w, z + d], [x, z + d],
+        ];
+
+        const wallIds: string[] = [];
+        const newWalls: WallSegment[] = [];
+
+        for (let i = 0; i < 4; i++) {
+          const wall: WallSegment = {
+            id: generateId(),
+            from: corners[i],
+            to: corners[(i + 1) % 4],
+            height: floor.heightMeters,
+            thickness: 0.15,
+            openings: [],
+          };
+          wallIds.push(wall.id);
+          newWalls.push(wall);
+        }
+
+        const room: Room = {
+          id: generateId(),
+          name,
+          wallIds,
+          polygon: corners,
+        };
+
+        set((s2) => ({
+          layout: {
+            ...s2.layout,
+            floors: s2.layout.floors.map((f) =>
+              f.id === floorId
+                ? { ...f, walls: [...f.walls, ...newWalls], rooms: [...f.rooms, room] }
+                : f
+            ),
+          },
+        }));
+      },
+
+      // Stair actions
+      addStair: (floorId, stair) =>
+        set((s) => ({
+          layout: {
+            ...s.layout,
+            floors: s.layout.floors.map((f) =>
+              f.id === floorId ? { ...f, stairs: [...f.stairs, stair] } : f
+            ),
+          },
+        })),
+
+      removeStair: (floorId, stairId) =>
+        set((s) => ({
+          layout: {
+            ...s.layout,
+            floors: s.layout.floors.map((f) =>
+              f.id === floorId ? { ...f, stairs: f.stairs.filter((st) => st.id !== stairId) } : f
+            ),
+          },
+        })),
+
       // Props actions
+      addToCatalog: (item) =>
+        set((s) => ({ props: { ...s.props, catalog: [...s.props.catalog, item] } })),
+
+      removeFromCatalog: (id) =>
+        set((s) => ({
+          props: {
+            ...s.props,
+            catalog: s.props.catalog.filter((c) => c.id !== id),
+            items: s.props.items.filter((p) => p.catalogId !== id),
+          },
+        })),
+
       addProp: (prop) =>
         set((s) => ({ props: { ...s.props, items: [...s.props.items, prop] } })),
 
@@ -275,37 +398,58 @@ export const useAppStore = create<AppState>()(
         })),
 
       // Build actions
+      setBuildTab: (tab) =>
+        set((s) => ({
+          build: {
+            ...s.build,
+            tab,
+            activeTool: 'select',
+            wallDrawing: { isDrawing: false, nodes: [] },
+            roomDrawing: { isDrawing: false, startPoint: null, endPoint: null },
+            selection: { type: null, id: null },
+          },
+        })),
+
       setBuildTool: (tool) =>
         set((s) => ({
           build: {
             ...s.build,
             activeTool: tool,
             wallDrawing: { isDrawing: false, nodes: [] },
-            selectedWallId: null,
+            roomDrawing: { isDrawing: false, startPoint: null, endPoint: null },
+            selection: { type: null, id: null },
           },
         })),
+
+      setGrid: (grid) =>
+        set((s) => ({ build: { ...s.build, grid: { ...s.build.grid, ...grid } } })),
+
+      toggleGrid: () =>
+        set((s) => ({ build: { ...s.build, grid: { ...s.build.grid, enabled: !s.build.grid.enabled } } })),
+
+      setSelection: (sel) =>
+        set((s) => ({ build: { ...s.build, selection: sel } })),
+
+      setCameraMode: (mode) =>
+        set((s) => ({ build: { ...s.build, view: { ...s.build.view, cameraMode: mode } } })),
+
+      setView: (view) =>
+        set((s) => ({ build: { ...s.build, view: { ...s.build.view, ...view } } })),
 
       setWallDrawing: (drawing) =>
         set((s) => ({
           build: { ...s.build, wallDrawing: { ...s.build.wallDrawing, ...drawing } },
         })),
 
+      setRoomDrawing: (drawing) =>
+        set((s) => ({
+          build: { ...s.build, roomDrawing: { ...s.build.roomDrawing, ...drawing } },
+        })),
+
       setCalibration: (cal) =>
         set((s) => ({
           build: { ...s.build, calibration: { ...s.build.calibration, ...cal } },
         })),
-
-      setSelectedWall: (wallId) =>
-        set((s) => ({ build: { ...s.build, selectedWallId: wallId } })),
-
-      setCanvasOffset: (offset) =>
-        set((s) => ({ build: { ...s.build, canvasOffset: offset } })),
-
-      setCanvasZoom: (zoom) =>
-        set((s) => ({ build: { ...s.build, canvasZoom: Math.max(0.1, Math.min(5, zoom)) } })),
-
-      setShow3DPreview: (show) =>
-        set((s) => ({ build: { ...s.build, show3DPreview: show } })),
 
       pushUndo: () =>
         set((s) => ({
@@ -344,6 +488,61 @@ export const useAppStore = create<AppState>()(
         });
       },
 
+      // Home Geometry actions
+      setHomeGeometrySource: (source) =>
+        set((s) => ({ homeGeometry: { ...s.homeGeometry, source } })),
+
+      setImportedModel: (settings) =>
+        set((s) => ({
+          homeGeometry: {
+            ...s.homeGeometry,
+            imported: { ...s.homeGeometry.imported, ...settings },
+          },
+        })),
+
+      addFloorBand: (band) =>
+        set((s) => ({
+          homeGeometry: {
+            ...s.homeGeometry,
+            imported: {
+              ...s.homeGeometry.imported,
+              floorBands: [...s.homeGeometry.imported.floorBands, band],
+            },
+          },
+        })),
+
+      removeFloorBand: (id) =>
+        set((s) => ({
+          homeGeometry: {
+            ...s.homeGeometry,
+            imported: {
+              ...s.homeGeometry.imported,
+              floorBands: s.homeGeometry.imported.floorBands.filter((b) => b.id !== id),
+            },
+          },
+        })),
+
+      updateFloorBand: (id, changes) =>
+        set((s) => ({
+          homeGeometry: {
+            ...s.homeGeometry,
+            imported: {
+              ...s.homeGeometry.imported,
+              floorBands: s.homeGeometry.imported.floorBands.map((b) =>
+                b.id === id ? { ...b, ...changes } : b
+              ),
+            },
+          },
+        })),
+
+      setNorthAngle: (angle) =>
+        set((s) => ({
+          homeGeometry: {
+            ...s.homeGeometry,
+            imported: { ...s.homeGeometry.imported, northAngle: angle },
+          },
+        })),
+
       // Environment actions
       setTimeMode: (mode) =>
         set((s) => ({ environment: { ...s.environment, timeMode: mode } })),
@@ -356,6 +555,7 @@ export const useAppStore = create<AppState>()(
       partialize: (state) => ({
         appMode: state.appMode,
         layout: state.layout,
+        homeGeometry: state.homeGeometry,
         devices: state.devices,
         props: state.props,
         environment: state.environment,

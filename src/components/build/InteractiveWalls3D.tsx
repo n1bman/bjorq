@@ -7,12 +7,14 @@ import { ThreeEvent } from '@react-three/fiber';
 export default function InteractiveWalls3D() {
   const floors = useAppStore((s) => s.layout.floors);
   const activeFloorId = useAppStore((s) => s.layout.activeFloorId);
-  const selectedWallId = useAppStore((s) => s.build.selectedWallId);
+  const selection = useAppStore((s) => s.build.selection);
   const activeTool = useAppStore((s) => s.build.activeTool);
-  const setSelectedWall = useAppStore((s) => s.setSelectedWall);
+  const setSelection = useAppStore((s) => s.setSelection);
   const updateWallNode = useAppStore((s) => s.updateWallNode);
   const pushUndo = useAppStore((s) => s.pushUndo);
   const [hoveredWallId, setHoveredWallId] = useState<string | null>(null);
+
+  const selectedWallId = selection.type === 'wall' ? selection.id : null;
 
   const floor = floors.find((f) => f.id === activeFloorId);
   const walls = floor?.walls ?? [];
@@ -21,8 +23,8 @@ export default function InteractiveWalls3D() {
   const handleWallClick = useCallback((e: ThreeEvent<PointerEvent>, wallId: string) => {
     if (activeTool !== 'select') return;
     e.stopPropagation();
-    setSelectedWall(wallId);
-  }, [activeTool, setSelectedWall]);
+    setSelection({ type: 'wall', id: wallId });
+  }, [activeTool, setSelection]);
 
   const wallMeshes = useMemo(() => {
     return walls.map((wall) => {
@@ -43,20 +45,12 @@ export default function InteractiveWalls3D() {
 
       if (wall.openings.length === 0) {
         segments.push(
-          <mesh
-            key={`${wall.id}-solid`}
-            position={[cx, wall.height / 2 + elevation, cz]}
-            rotation={[0, -angle, 0]}
-            castShadow
-            receiveShadow
-          >
+          <mesh key={`${wall.id}-solid`} position={[cx, wall.height / 2 + elevation, cz]}
+            rotation={[0, -angle, 0]} castShadow receiveShadow>
             <boxGeometry args={[length, wall.height, wall.thickness]} />
-            <meshStandardMaterial
-              color={color}
-              roughness={mat?.roughness ?? 0.8}
+            <meshStandardMaterial color={color} roughness={mat?.roughness ?? 0.8}
               emissive={isSelected ? '#1a3a6a' : isHovered ? '#3a2a10' : '#000000'}
-              emissiveIntensity={isSelected || isHovered ? 0.3 : 0}
-            />
+              emissiveIntensity={isSelected || isHovered ? 0.3 : 0} />
           </mesh>
         );
       } else {
@@ -66,7 +60,7 @@ export default function InteractiveWalls3D() {
         sortedOpenings.forEach((op, i) => {
           const opStart = op.offset * length - op.width / 2;
           const opEnd = op.offset * length + op.width / 2;
-          const opBottom = op.type === 'window' ? (wall.height - op.height) / 2 : 0;
+          const opBottom = op.type === 'window' ? (op.sillHeight ?? (wall.height - op.height) / 2) : 0;
           const opTop = opBottom + op.height;
 
           if (opStart > cursor) {
@@ -134,35 +128,26 @@ export default function InteractiveWalls3D() {
         }
       }
 
-      // Node spheres for endpoints (visible in select mode)
       const nodeElements = activeTool === 'select' ? (
         <>
           <mesh position={[wall.from[0], 0.15 + elevation, wall.from[1]]}>
             <sphereGeometry args={[0.1, 16, 16]} />
-            <meshStandardMaterial
-              color={isSelected ? '#4a9eff' : '#e8a845'}
-              emissive={isSelected ? '#4a9eff' : '#e8a845'}
-              emissiveIntensity={0.4}
-            />
+            <meshStandardMaterial color={isSelected ? '#4a9eff' : '#e8a845'}
+              emissive={isSelected ? '#4a9eff' : '#e8a845'} emissiveIntensity={0.4} />
           </mesh>
           <mesh position={[wall.to[0], 0.15 + elevation, wall.to[1]]}>
             <sphereGeometry args={[0.1, 16, 16]} />
-            <meshStandardMaterial
-              color={isSelected ? '#4a9eff' : '#e8a845'}
-              emissive={isSelected ? '#4a9eff' : '#e8a845'}
-              emissiveIntensity={0.4}
-            />
+            <meshStandardMaterial color={isSelected ? '#4a9eff' : '#e8a845'}
+              emissive={isSelected ? '#4a9eff' : '#e8a845'} emissiveIntensity={0.4} />
           </mesh>
         </>
       ) : null;
 
       return (
-        <group
-          key={wall.id}
+        <group key={wall.id}
           onPointerDown={(e) => handleWallClick(e, wall.id)}
           onPointerEnter={() => activeTool === 'select' && setHoveredWallId(wall.id)}
-          onPointerLeave={() => setHoveredWallId(null)}
-        >
+          onPointerLeave={() => setHoveredWallId(null)}>
           {segments}
           {nodeElements}
         </group>

@@ -16,11 +16,11 @@ function SceneContent() {
   const wallDrawing = useAppStore((s) => s.build.wallDrawing);
   const activeFloorId = useAppStore((s) => s.layout.activeFloorId);
   const activeFloor = useAppStore((s) => s.layout.floors.find((f) => f.id === s.layout.activeFloorId));
-  const gridSize = activeFloor?.gridSize ?? 0.5;
+  const gridState = useAppStore((s) => s.build.grid);
 
   const setWallDrawing = useAppStore((s) => s.setWallDrawing);
   const addWall = useAppStore((s) => s.addWall);
-  const setSelectedWall = useAppStore((s) => s.setSelectedWall);
+  const setSelection = useAppStore((s) => s.setSelection);
   const pushUndo = useAppStore((s) => s.pushUndo);
 
   const [cursorPos, setCursorPos] = useState<[number, number] | null>(null);
@@ -28,12 +28,11 @@ function SceneContent() {
 
   const snapToGrid = useCallback(
     (x: number, z: number): [number, number] => {
-      return [
-        Math.round(x / gridSize) * gridSize,
-        Math.round(z / gridSize) * gridSize,
-      ];
+      if (!gridState.enabled || gridState.snapMode === 'off') return [x, z];
+      const s = gridState.sizeMeters;
+      return [Math.round(x / s) * s, Math.round(z / s) * s];
     },
-    [gridSize]
+    [gridState]
   );
 
   const handleGroundPointerDown = useCallback(
@@ -41,19 +40,16 @@ function SceneContent() {
       if (activeTool === 'wall') {
         e.stopPropagation();
         const snapped = snapToGrid(point.x, point.z);
-
         if (!wallDrawing.isDrawing) {
           setWallDrawing({ isDrawing: true, nodes: [snapped] });
         } else {
-          const nodes = [...wallDrawing.nodes, snapped];
-          setWallDrawing({ nodes });
+          setWallDrawing({ nodes: [...wallDrawing.nodes, snapped] });
         }
       } else if (activeTool === 'select') {
-        // Clicking ground deselects
-        setSelectedWall(null);
+        setSelection({ type: null, id: null });
       }
     },
-    [activeTool, wallDrawing, snapToGrid, setWallDrawing, setSelectedWall]
+    [activeTool, wallDrawing, snapToGrid, setWallDrawing, setSelection]
   );
 
   const handleGroundPointerMove = useCallback(
@@ -66,7 +62,6 @@ function SceneContent() {
     [activeTool, snapToGrid]
   );
 
-  // Double-click to finish wall chain
   const handleDoubleClick = useCallback(() => {
     if (activeTool === 'wall' && wallDrawing.isDrawing && activeFloorId) {
       pushUndo();
@@ -76,7 +71,7 @@ function SceneContent() {
           id: generateId(),
           from: nodes[i],
           to: nodes[i + 1],
-          height: 2.5,
+          height: activeFloor?.heightMeters ?? 2.5,
           thickness: 0.15,
           openings: [],
         };
@@ -85,45 +80,34 @@ function SceneContent() {
       setWallDrawing({ isDrawing: false, nodes: [] });
       setCursorPos(null);
     }
-  }, [activeTool, wallDrawing, activeFloorId, pushUndo, addWall, setWallDrawing]);
+  }, [activeTool, wallDrawing, activeFloorId, activeFloor, pushUndo, addWall, setWallDrawing]);
 
-  // Disable orbit rotation during wall drawing
   const enableRotate = activeTool !== 'wall' || !wallDrawing.isDrawing;
 
   return (
     <>
       <ambientLight intensity={0.35} color="#b8c4d4" />
-      <directionalLight
-        position={[10, 15, 8]}
-        intensity={1.2}
-        color="#ffd699"
-        castShadow
-        shadow-mapSize-width={2048}
-        shadow-mapSize-height={2048}
-        shadow-camera-far={50}
-        shadow-camera-left={-20}
-        shadow-camera-right={20}
-        shadow-camera-top={20}
-        shadow-camera-bottom={-20}
-      />
+      <directionalLight position={[10, 15, 8]} intensity={1.2} color="#ffd699" castShadow
+        shadow-mapSize-width={2048} shadow-mapSize-height={2048}
+        shadow-camera-far={50} shadow-camera-left={-20} shadow-camera-right={20}
+        shadow-camera-top={20} shadow-camera-bottom={-20} />
       <pointLight position={[0, 8, 0]} intensity={0.15} color="#4a9eff" />
 
-      <GroundPlane
-        onPointerDown={handleGroundPointerDown}
-        onPointerMove={handleGroundPointerMove}
-      />
+      <GroundPlane onPointerDown={handleGroundPointerDown} onPointerMove={handleGroundPointerMove} />
 
-      <Grid
-        args={[100, 100]}
-        cellSize={gridSize}
-        cellThickness={0.5}
-        cellColor="#2a2d35"
-        sectionSize={gridSize * 10}
-        sectionThickness={1}
-        sectionColor="#3a3d45"
-        fadeDistance={30}
-        position={[0, 0, 0]}
-      />
+      {gridState.enabled && (
+        <Grid
+          args={[100, 100]}
+          cellSize={gridState.sizeMeters}
+          cellThickness={0.5}
+          cellColor="#2a2d35"
+          sectionSize={gridState.sizeMeters * 10}
+          sectionThickness={1}
+          sectionColor="#3a3d45"
+          fadeDistance={30}
+          position={[0, 0, 0]}
+        />
+      )}
 
       <InteractiveWalls3D />
       <Floors3D />
@@ -153,6 +137,7 @@ export default function BuildScene3D() {
   const activeTool = useAppStore((s) => s.build.activeTool);
   const wallDrawing = useAppStore((s) => s.build.wallDrawing);
   const activeFloorId = useAppStore((s) => s.layout.activeFloorId);
+  const activeFloor = useAppStore((s) => s.layout.floors.find((f) => f.id === s.layout.activeFloorId));
   const setWallDrawing = useAppStore((s) => s.setWallDrawing);
   const addWall = useAppStore((s) => s.addWall);
   const pushUndo = useAppStore((s) => s.pushUndo);
@@ -166,7 +151,7 @@ export default function BuildScene3D() {
           id: generateId(),
           from: nodes[i],
           to: nodes[i + 1],
-          height: 2.5,
+          height: activeFloor?.heightMeters ?? 2.5,
           thickness: 0.15,
           openings: [],
         };
@@ -174,7 +159,7 @@ export default function BuildScene3D() {
       }
       setWallDrawing({ isDrawing: false, nodes: [] });
     }
-  }, [activeTool, wallDrawing, activeFloorId, pushUndo, addWall, setWallDrawing]);
+  }, [activeTool, wallDrawing, activeFloorId, activeFloor, pushUndo, addWall, setWallDrawing]);
 
   return (
     <div className="w-full h-full" onDoubleClick={handleDoubleClick}>
