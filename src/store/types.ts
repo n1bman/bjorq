@@ -238,16 +238,14 @@ export interface RoomTemplate {
 }
 
 // ─── Home View ───
-export type HomeViewMode = 'dashboard' | '3d';
 export type CameraPreset = 'free' | 'topdown' | 'angle' | 'front';
 
 export interface HomeViewState {
-  viewMode: HomeViewMode;
   cameraPreset: CameraPreset;
 }
 
 // ─── App State ───
-export type AppMode = 'home' | 'build';
+export type AppMode = 'home' | 'dashboard' | 'build';
 
 export interface AppState {
   appMode: AppMode;
@@ -263,7 +261,6 @@ export interface AppState {
   homeView: HomeViewState;
 
   // Home View actions
-  setHomeViewMode: (mode: HomeViewMode) => void;
   setCameraPreset: (preset: CameraPreset) => void;
 
   // Layout actions
