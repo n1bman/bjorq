@@ -4,23 +4,26 @@ import * as THREE from 'three';
 import { useAppStore } from '@/store/useAppStore';
 
 const MIN_RADIUS = 6; // meters from center — particles only spawn outside this
+const MAX_HEIGHT = 6; // max spawn height in meters (stays below roof level)
 
 function randomRingPosition(): [number, number, number] {
-  // Spawn in ring: MIN_RADIUS to 20m from center
   let x: number, z: number;
   do {
     x = (Math.random() - 0.5) * 40;
     z = (Math.random() - 0.5) * 40;
   } while (Math.sqrt(x * x + z * z) < MIN_RADIUS);
-  const y = Math.random() * 20;
+  const y = Math.random() * MAX_HEIGHT;
   return [x, y, z];
 }
 
 export default function WeatherEffects3D() {
   const weather = useAppStore((s) => s.environment.weather.condition);
+  const intensity = useAppStore((s) => s.environment.weather.intensity);
   const ref = useRef<THREE.Points>(null);
 
-  const count = weather === 'rain' ? 3000 : weather === 'snow' ? 1500 : 0;
+  const baseCount = weather === 'rain' ? 3000 : weather === 'snow' ? 1500 : 0;
+  const effectiveIntensity = intensity > 0 ? intensity : (weather === 'rain' || weather === 'snow' ? 0.5 : 0);
+  const count = Math.round(baseCount * effectiveIntensity);
 
   const positions = useMemo(() => {
     const arr = new Float32Array(count * 3);
@@ -40,11 +43,10 @@ export default function WeatherEffects3D() {
     for (let i = 0; i < count; i++) {
       let y = (pos as any).array[i * 3 + 1] - speed * delta;
       if (y < 0) {
-        // Re-spawn in ring
         const [nx, , nz] = randomRingPosition();
         (pos as any).array[i * 3] = nx;
         (pos as any).array[i * 3 + 2] = nz;
-        y = 20;
+        y = MAX_HEIGHT;
       }
       (pos as any).array[i * 3 + 1] = y;
       if (weather === 'snow') {

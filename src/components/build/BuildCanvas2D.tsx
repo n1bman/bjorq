@@ -97,6 +97,7 @@ export default function BuildCanvas2D() {
   const showGhost = useAppStore((s) => s.build.view.showOtherFloorsGhost);
   const deviceMarkers = useAppStore((s) => s.devices.markers);
   const addDevice = useAppStore((s) => s.addDevice);
+  const homeGeometry = useAppStore((s) => s.homeGeometry);
 
   const setWallDrawing = useAppStore((s) => s.setWallDrawing);
   const addWall = useAppStore((s) => s.addWall);
@@ -497,6 +498,27 @@ export default function BuildCanvas2D() {
       ctx.rotate(-Math.PI / 2);
       ctx.fillText(`${rd.toFixed(1)} m`, 0, 0);
       ctx.restore();
+    }
+
+    // ─── Draw imported model footprint ───
+    if (homeGeometry.source === 'imported' && homeGeometry.imported.url) {
+      const imp = homeGeometry.imported;
+      const footW = 10 * imp.scale[0];
+      const footD = 10 * imp.scale[2];
+      const cx = imp.position[0];
+      const cz = imp.position[2];
+      const [ix1, iy1] = worldToScreen(cx - footW / 2, cz - footD / 2);
+      const [ix2, iy2] = worldToScreen(cx + footW / 2, cz + footD / 2);
+      ctx.strokeStyle = '#a78bfa';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([8, 4]);
+      ctx.strokeRect(Math.min(ix1, ix2), Math.min(iy1, iy2), Math.abs(ix2 - ix1), Math.abs(iy2 - iy1));
+      ctx.setLineDash([]);
+      ctx.fillStyle = 'rgba(167, 139, 250, 0.6)';
+      ctx.font = '10px DM Sans, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('Importerad modell', (ix1 + ix2) / 2, (iy1 + iy2) / 2);
     }
 
     // ─── Draw device markers ───

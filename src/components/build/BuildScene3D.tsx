@@ -39,7 +39,7 @@ function SceneContent() {
     ] as [number, number, number];
   }, [sunAzimuth, sunElevation]);
 
-  const sunIntensity = weatherCondition === 'cloudy' ? 0.4 : weatherCondition === 'rain' ? 0.2 : weatherCondition === 'snow' ? 0.3 : 1.2;
+  const sunIntensity = sunElevation < 0 ? 0 : (weatherCondition === 'cloudy' ? 0.4 : weatherCondition === 'rain' ? 0.2 : weatherCondition === 'snow' ? 0.3 : 1.2);
 
   const setWallDrawing = useAppStore((s) => s.setWallDrawing);
   const addWall = useAppStore((s) => s.addWall);

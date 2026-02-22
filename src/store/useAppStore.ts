@@ -82,7 +82,7 @@ export const useAppStore = create<AppState>()(
         location: { lat: 59.33, lon: 18.07, timezone: 'Europe/Stockholm' },
         timeMode: 'live',
         previewDateTime: new Date().toISOString(),
-        weather: { condition: 'clear', temperature: 18 },
+        weather: { condition: 'clear', temperature: 18, intensity: 0 },
         sunAzimuth: 135,
         sunElevation: 45,
       },

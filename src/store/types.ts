@@ -216,7 +216,7 @@ export interface EnvironmentState {
   location: { lat: number; lon: number; timezone: string };
   timeMode: 'live' | 'preview';
   previewDateTime: string;
-  weather: { condition: WeatherCondition; temperature: number; windSpeed?: number; humidity?: number };
+  weather: { condition: WeatherCondition; temperature: number; windSpeed?: number; humidity?: number; intensity: number };
   sunAzimuth: number;
   sunElevation: number;
 }
@@ -356,7 +356,7 @@ export interface AppState {
   setPreviewDateTime: (dt: string) => void;
   setSunPosition: (azimuth: number, elevation: number) => void;
   setWeather: (condition: WeatherCondition) => void;
-  setWeatherData: (data: { condition: WeatherCondition; temperature: number; windSpeed?: number; humidity?: number }) => void;
+  setWeatherData: (data: { condition: WeatherCondition; temperature: number; windSpeed?: number; humidity?: number; intensity?: number }) => void;
   setWeatherSource: (source: 'manual' | 'auto' | 'ha') => void;
   setLocation: (lat: number, lon: number) => void;
 

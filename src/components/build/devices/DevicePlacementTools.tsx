@@ -39,6 +39,8 @@ export default function DevicePlacementTools() {
   const markers = useAppStore((s) => s.devices.markers);
   const activeFloorId = useAppStore((s) => s.layout.activeFloorId);
   const removeDevice = useAppStore((s) => s.removeDevice);
+  const setSelection = useAppStore((s) => s.setSelection);
+  const selectedId = useAppStore((s) => s.build.selection.type === 'device' ? s.build.selection.id : null);
 
   const floorMarkers = markers.filter((m) => m.floorId === activeFloorId);
 
@@ -77,7 +79,10 @@ export default function DevicePlacementTools() {
           </p>
           <div className="flex flex-col gap-0.5 max-h-[30vh] overflow-y-auto">
             {floorMarkers.map((m) => (
-              <div key={m.id} className="flex items-center justify-between px-2 py-1.5 rounded text-xs text-muted-foreground hover:bg-secondary/20">
+              <div key={m.id} onClick={() => setSelection({ type: 'device', id: m.id })} className={cn(
+                "flex items-center justify-between px-2 py-1.5 rounded text-xs cursor-pointer",
+                selectedId === m.id ? "bg-primary/20 text-primary" : "text-muted-foreground hover:bg-secondary/20"
+              )}>
                 <span className="hidden lg:inline truncate">{m.name || kindLabels[m.kind]}</span>
                 <button
                   onClick={() => removeDevice(m.id)}
