@@ -2,10 +2,13 @@ import { useAppStore } from '@/store/useAppStore';
 import type { BuildTool } from '@/store/types';
 import {
   Minus, Square, DoorOpen, SquareStack, Paintbrush,
-  Ruler, Upload, Compass, Layers, Move, RotateCcw,
-  Package, Plus,
+  Ruler, Upload, Layers, Move, Package, Plus,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import TemplatesPicker from './structure/TemplatesPicker';
+import PaintTool from './structure/PaintTool';
+import ImportTools from './import/ImportTools';
+import FurnishTools from './furnish/FurnishTools';
 
 interface ToolItem {
   key: BuildTool;
@@ -25,15 +28,6 @@ const structureTools: ToolItem[] = [
   { key: 'calibrate', label: 'Skala', icon: Ruler },
 ];
 
-const importTools: ToolItem[] = [
-  { key: 'select', label: 'Placera', icon: Move },
-  { key: 'calibrate', label: 'Skala', icon: Ruler },
-];
-
-const furnishTools: ToolItem[] = [
-  { key: 'select', label: 'Placera', icon: Move },
-];
-
 export default function BuildLeftPanel() {
   const tab = useAppStore((s) => s.build.tab);
   const activeTool = useAppStore((s) => s.build.activeTool);
@@ -42,66 +36,88 @@ export default function BuildLeftPanel() {
 
   const isStructureReadOnly = tab === 'structure' && homeGeometrySource === 'imported';
 
-  const tools = tab === 'structure'
-    ? structureTools
-    : tab === 'import'
-    ? importTools
-    : furnishTools;
+  // Show expanded sub-panel for template/paint tools
+  const showSubPanel = tab === 'structure' && (activeTool === 'template' || activeTool === 'paint');
 
   return (
-    <div className="w-14 lg:w-48 border-r border-border bg-card/50 backdrop-blur-sm flex flex-col py-2 gap-0.5 overflow-y-auto">
-      {/* Tab-specific header */}
-      <div className="px-2 mb-2 hidden lg:block">
-        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-          {tab === 'structure' ? 'Verktyg' : tab === 'import' ? 'Importera hem' : 'Möbler'}
-        </h3>
-      </div>
+    <div className={cn(
+      'border-r border-border bg-card/50 backdrop-blur-sm flex flex-col overflow-y-auto transition-all',
+      showSubPanel ? 'w-56 lg:w-64' : 'w-14 lg:w-48'
+    )}>
+      {/* Structure tab */}
+      {tab === 'structure' && (
+        <>
+          <div className="px-2 py-2 hidden lg:block">
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Verktyg
+            </h3>
+          </div>
 
-      {isStructureReadOnly && (
-        <div className="px-2 mb-2 hidden lg:block">
-          <p className="text-[10px] text-muted-foreground italic">
-            Importerad modell aktiv — strukturredigering inaktiverad
-          </p>
-        </div>
-      )}
-
-      {tools.map(({ key, label, icon: Icon }) => (
-        <button
-          key={key}
-          onClick={() => !isStructureReadOnly && setBuildTool(key)}
-          title={label}
-          disabled={isStructureReadOnly}
-          className={cn(
-            'flex items-center gap-2 px-3 py-2.5 mx-1 rounded-lg text-xs font-medium transition-all min-h-[44px]',
-            'lg:justify-start justify-center',
-            isStructureReadOnly && 'opacity-40 cursor-not-allowed',
-            activeTool === key
-              ? 'bg-primary/20 text-primary'
-              : 'text-muted-foreground hover:text-foreground hover:bg-secondary/30'
+          {isStructureReadOnly && (
+            <div className="px-2 mb-2 hidden lg:block">
+              <p className="text-[10px] text-muted-foreground italic">
+                Importerad modell aktiv — strukturredigering inaktiverad
+              </p>
+            </div>
           )}
-        >
-          <Icon size={18} />
-          <span className="hidden lg:inline">{label}</span>
-        </button>
-      ))}
 
-      {/* Import-specific: Upload button */}
+          <div className="flex flex-col gap-0.5">
+            {structureTools.map(({ key, label, icon: Icon }) => (
+              <button
+                key={key}
+                onClick={() => !isStructureReadOnly && setBuildTool(key)}
+                title={label}
+                disabled={isStructureReadOnly}
+                className={cn(
+                  'flex items-center gap-2 px-3 py-2.5 mx-1 rounded-lg text-xs font-medium transition-all min-h-[44px]',
+                  'lg:justify-start justify-center',
+                  isStructureReadOnly && 'opacity-40 cursor-not-allowed',
+                  activeTool === key
+                    ? 'bg-primary/20 text-primary'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary/30'
+                )}
+              >
+                <Icon size={18} />
+                <span className="hidden lg:inline">{label}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Sub-panels for template/paint */}
+          {activeTool === 'template' && !isStructureReadOnly && (
+            <div className="border-t border-border mt-2 pt-2 px-2">
+              <TemplatesPicker />
+            </div>
+          )}
+          {activeTool === 'paint' && !isStructureReadOnly && (
+            <div className="border-t border-border mt-2 pt-2 px-2 overflow-y-auto max-h-[50vh]">
+              <PaintTool />
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Import tab */}
       {tab === 'import' && (
-        <div className="mt-2 px-2">
-          <button className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg bg-primary/20 text-primary text-xs font-medium hover:bg-primary/30 transition-all min-h-[44px]">
-            <Upload size={18} />
-            <span className="hidden lg:inline">Ladda upp GLB</span>
-          </button>
+        <div className="py-2">
+          <div className="px-2 mb-2 hidden lg:block">
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Importera hem
+            </h3>
+          </div>
+          <ImportTools />
         </div>
       )}
 
-      {/* Furnish-specific: Import button */}
+      {/* Furnish tab */}
       {tab === 'furnish' && (
-        <div className="mt-2 px-2">
-          <button className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg bg-primary/20 text-primary text-xs font-medium hover:bg-primary/30 transition-all min-h-[44px]">
-            <Plus size={18} />
-            <span className="hidden lg:inline">Importera modell</span>
-          </button>
+        <div className="py-2">
+          <div className="px-2 mb-2 hidden lg:block">
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Möblera
+            </h3>
+          </div>
+          <FurnishTools />
         </div>
       )}
     </div>
