@@ -203,6 +203,8 @@ export interface EnvironmentState {
   timeMode: 'live' | 'preview';
   previewDateTime: string;
   weather: { condition: WeatherCondition; temperature: number };
+  sunAzimuth: number;
+  sunElevation: number;
 }
 
 // ─── Home Assistant Layer ───
@@ -313,6 +315,12 @@ export interface AppState {
   // Environment actions
   setTimeMode: (mode: 'live' | 'preview') => void;
   setPreviewDateTime: (dt: string) => void;
+  setSunPosition: (azimuth: number, elevation: number) => void;
+  setWeather: (condition: WeatherCondition) => void;
+
+  // Opening/Stair update actions
+  updateOpening: (floorId: string, wallId: string, openingId: string, changes: Partial<WallOpening>) => void;
+  updateStair: (floorId: string, stairId: string, changes: Partial<StairItem>) => void;
 
   // Clear actions
   clearFloor: (floorId: string) => void;

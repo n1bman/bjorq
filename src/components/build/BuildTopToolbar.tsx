@@ -3,9 +3,11 @@ import type { BuildTool, SnapMode } from '@/store/types';
 import {
   MousePointer2, Minus, Square, DoorOpen, SquareStack,
   Undo2, Redo2, Grid3X3, Ruler, Trash2, Copy, Paintbrush,
-  Eye, Box, Layers, Ghost, XCircle,
+  Eye, Box, Layers, Ghost, XCircle, Sun, CloudRain,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Slider } from '@/components/ui/slider';
+import type { WeatherCondition } from '@/store/types';
 import FloorPicker from './FloorPicker';
 import { useState } from 'react';
 
@@ -37,8 +39,14 @@ export default function BuildTopToolbar() {
   const showGhost = useAppStore((s) => s.build.view.showOtherFloorsGhost);
   const setView = useAppStore((s) => s.setView);
   const clearAllFloors = useAppStore((s) => s.clearAllFloors);
+  const sunAzimuth = useAppStore((s) => s.environment.sunAzimuth);
+  const sunElevation = useAppStore((s) => s.environment.sunElevation);
+  const setSunPosition = useAppStore((s) => s.setSunPosition);
+  const weatherCondition = useAppStore((s) => s.environment.weather.condition);
+  const setWeather = useAppStore((s) => s.setWeather);
 
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [showEnvPanel, setShowEnvPanel] = useState(false);
 
   const handleClearAll = () => {
     clearAllFloors();
@@ -158,11 +166,66 @@ export default function BuildTopToolbar() {
         <XCircle size={18} />
       </button>
 
+      {/* Sun/Weather toggle */}
+      <button
+        onClick={() => setShowEnvPanel(!showEnvPanel)}
+        title="Sol & Väder"
+        className={cn(
+          'p-2 rounded-lg transition-all min-w-[44px] min-h-[44px] flex items-center justify-center',
+          showEnvPanel ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-foreground'
+        )}
+      >
+        <Sun size={18} />
+      </button>
+
       {/* Spacer */}
       <div className="flex-1" />
 
       {/* Floor picker */}
       <FloorPicker />
+
+      {/* Environment panel */}
+      {showEnvPanel && (
+        <div className="absolute top-full right-3 mt-2 z-50 glass-panel rounded-xl p-3 space-y-3 w-56 shadow-xl">
+          <p className="text-xs font-medium text-foreground">Sol & Väder</p>
+          
+          <div className="space-y-1">
+            <span className="text-[10px] text-muted-foreground">Solriktning</span>
+            <div className="flex items-center gap-2">
+              <Slider min={0} max={360} step={1} value={[sunAzimuth]}
+                onValueChange={([v]) => setSunPosition(v, sunElevation)} className="flex-1" />
+              <span className="text-[10px] text-foreground w-8 text-right">{sunAzimuth}°</span>
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <span className="text-[10px] text-muted-foreground">Solhöjd</span>
+            <div className="flex items-center gap-2">
+              <Slider min={5} max={90} step={1} value={[sunElevation]}
+                onValueChange={([v]) => setSunPosition(sunAzimuth, v)} className="flex-1" />
+              <span className="text-[10px] text-foreground w-8 text-right">{sunElevation}°</span>
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <span className="text-[10px] text-muted-foreground">Väder</span>
+            <div className="flex gap-1">
+              {(['clear', 'cloudy', 'rain', 'snow'] as WeatherCondition[]).map((w) => (
+                <button
+                  key={w}
+                  onClick={() => setWeather(w)}
+                  className={cn(
+                    'flex-1 py-1.5 rounded-md text-[10px] transition-colors',
+                    weatherCondition === w ? 'bg-primary/20 text-primary' : 'bg-secondary/30 text-muted-foreground hover:text-foreground'
+                  )}
+                >
+                  {w === 'clear' ? '☀️' : w === 'cloudy' ? '☁️' : w === 'rain' ? '🌧️' : '❄️'}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Clear confirmation dialog */}
       {showClearConfirm && (
