@@ -5,7 +5,6 @@ import { Input } from '@/components/ui/input';
 import { presetMaterials } from '@/lib/materials';
 import { useState } from 'react';
 import type { DeviceKind, DeviceSurface } from '@/store/types';
-import { setDeviceTransformMode } from '@/components/devices/DeviceMarkers3D';
 
 const generateId = () => Math.random().toString(36).slice(2, 10);
 
@@ -518,25 +517,6 @@ function DeviceInspector({ deviceId, close }: { deviceId: string; close: React.R
         />
       </div>
 
-      {/* Transform mode buttons */}
-      <div className="space-y-1">
-        <span className="text-muted-foreground text-[10px]">Gizmo-läge</span>
-        <div className="flex gap-1">
-          <button
-            onClick={() => setDeviceTransformMode('translate')}
-            className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-md text-xs bg-primary/20 text-primary hover:bg-primary/30 transition-colors"
-          >
-            <Move size={12} /> Flytta
-          </button>
-          <button
-            onClick={() => setDeviceTransformMode('rotate')}
-            className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-md text-xs bg-secondary/30 text-muted-foreground hover:bg-secondary/50 transition-colors"
-          >
-            <RotateCcw size={12} /> Rotera
-          </button>
-        </div>
-      </div>
-
       {/* Position sliders */}
       <div className="space-y-1.5">
         <div className="flex items-center gap-1 text-muted-foreground"><ArrowRightLeft size={12} /> Position</div>
@@ -554,6 +534,19 @@ function DeviceInspector({ deviceId, close }: { deviceId: string; close: React.R
             <span className="text-[10px] text-foreground w-8 text-right">{device.position[i].toFixed(1)}</span>
           </div>
         ))}
+      </div>
+
+      {/* Y-Rotation slider */}
+      <div className="space-y-1.5">
+        <div className="flex items-center gap-1 text-muted-foreground"><RotateCcw size={12} /> Rotation</div>
+        <div className="flex items-center gap-2">
+          <Slider min={0} max={360} step={1}
+            value={[device.rotation[1] * (180 / Math.PI)]}
+            onValueChange={([v]) => updateDevice(device.id, { rotation: [0, v * (Math.PI / 180), 0] })}
+            className="flex-1"
+          />
+          <span className="text-[10px] text-foreground w-8 text-right">{Math.round(device.rotation[1] * (180 / Math.PI))}°</span>
+        </div>
       </div>
 
       <button onClick={handleDelete}
