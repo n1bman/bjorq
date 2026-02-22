@@ -317,6 +317,7 @@ export interface AppState {
   setPreviewDateTime: (dt: string) => void;
   setSunPosition: (azimuth: number, elevation: number) => void;
   setWeather: (condition: WeatherCondition) => void;
+  setLocation: (lat: number, lon: number) => void;
 
   // Opening/Stair update actions
   updateOpening: (floorId: string, wallId: string, openingId: string, changes: Partial<WallOpening>) => void;

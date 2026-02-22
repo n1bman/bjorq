@@ -5,8 +5,11 @@ import * as THREE from 'three';
 export default function Ceilings3D() {
   const floors = useAppStore((s) => s.layout.floors);
   const activeFloorId = useAppStore((s) => s.layout.activeFloorId);
+  const homeSource = useAppStore((s) => s.homeGeometry.source);
   const floor = floors.find((f) => f.id === activeFloorId);
   const rooms = floor?.rooms ?? [];
+
+  const ceilingY = (floor?.elevation ?? 0) + (floor?.heightMeters ?? 2.5);
 
   const ceilingMeshes = useMemo(() => {
     return rooms
@@ -19,8 +22,6 @@ export default function Ceilings3D() {
           shape.lineTo(polygon[i][0], -polygon[i][1]);
         }
         shape.closePath();
-
-        const ceilingY = (floor?.elevation ?? 0) + (floor?.heightMeters ?? 2.5);
 
         return (
           <mesh
@@ -37,7 +38,27 @@ export default function Ceilings3D() {
           </mesh>
         );
       });
-  }, [rooms, floor?.elevation, floor?.heightMeters]);
+  }, [rooms, ceilingY]);
 
-  return <group>{ceilingMeshes}</group>;
+  // For imported models: large invisible ceiling plane to block light from above
+  const importedCeiling = homeSource === 'imported' ? (
+    <mesh
+      rotation={[-Math.PI / 2, 0, 0]}
+      position={[0, ceilingY, 0]}
+      castShadow
+    >
+      <planeGeometry args={[40, 40]} />
+      <meshBasicMaterial
+        colorWrite={false}
+        side={THREE.DoubleSide}
+      />
+    </mesh>
+  ) : null;
+
+  return (
+    <group>
+      {ceilingMeshes}
+      {importedCeiling}
+    </group>
+  );
 }

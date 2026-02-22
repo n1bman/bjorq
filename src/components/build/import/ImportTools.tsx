@@ -1,13 +1,16 @@
 import { useAppStore } from '@/store/useAppStore';
 import { useRef } from 'react';
-import { Upload, Compass, Ruler, Layers, Move } from 'lucide-react';
+import { Upload, Compass, Ruler, Layers, Move, RotateCw, MapPin } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
+import { Input } from '@/components/ui/input';
 
 export default function ImportTools() {
   const homeGeometry = useAppStore((s) => s.homeGeometry);
   const setHomeGeometrySource = useAppStore((s) => s.setHomeGeometrySource);
   const setImportedModel = useAppStore((s) => s.setImportedModel);
   const setNorthAngle = useAppStore((s) => s.setNorthAngle);
+  const location = useAppStore((s) => s.environment.location);
+  const setLocation = useAppStore((s) => s.setLocation);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -53,7 +56,7 @@ export default function ImportTools() {
             Använd verktygen under <em>Struktur</em>-fliken för att manuellt placera öppningar på den importerade modellen.
           </div>
 
-          {/* Position/Scale */}
+          {/* Position */}
           <div className="space-y-2">
             <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
               <Move size={12} /> Placering
@@ -75,6 +78,27 @@ export default function ImportTools() {
                   <span className="text-[10px] text-foreground w-8 text-right">{imported.position[i].toFixed(1)}</span>
                 </div>
               ))}
+            </div>
+          </div>
+
+          {/* Rotation (Y-axis) */}
+          <div className="space-y-2">
+            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+              <RotateCw size={12} /> Rotation
+            </h4>
+            <div className="flex items-center gap-2">
+              <Slider
+                min={0} max={360} step={1}
+                value={[THREE.MathUtils.radToDeg(imported.rotation[1]) || 0]}
+                onValueChange={([v]) => {
+                  const rad = THREE.MathUtils.degToRad(v);
+                  setImportedModel({ rotation: [imported.rotation[0], rad, imported.rotation[2]] });
+                }}
+                className="flex-1"
+              />
+              <span className="text-[10px] text-foreground w-8 text-right">
+                {Math.round(THREE.MathUtils.radToDeg(imported.rotation[1]) || 0)}°
+              </span>
             </div>
           </div>
 
@@ -110,6 +134,36 @@ export default function ImportTools() {
             </div>
           </div>
 
+          {/* Location (Google coordinates) */}
+          <div className="space-y-2">
+            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+              <MapPin size={12} /> Plats (koordinater)
+            </h4>
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] text-muted-foreground w-6">Lat</span>
+                <Input
+                  type="number"
+                  step="0.0001"
+                  value={location.lat}
+                  onChange={(e) => setLocation(parseFloat(e.target.value) || 0, location.lon)}
+                  className="h-7 text-[10px] flex-1"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] text-muted-foreground w-6">Lon</span>
+                <Input
+                  type="number"
+                  step="0.0001"
+                  value={location.lon}
+                  onChange={(e) => setLocation(location.lat, parseFloat(e.target.value) || 0)}
+                  className="h-7 text-[10px] flex-1"
+                />
+              </div>
+            </div>
+            <p className="text-[9px] text-muted-foreground">Ange latitud och longitud från t.ex. Google Maps för korrekt solposition.</p>
+          </div>
+
           {/* Back to procedural */}
           <button
             onClick={() => setHomeGeometrySource('procedural')}
@@ -122,3 +176,6 @@ export default function ImportTools() {
     </div>
   );
 }
+
+// Need THREE for radToDeg/degToRad
+import * as THREE from 'three';

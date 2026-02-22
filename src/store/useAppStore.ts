@@ -558,6 +558,9 @@ export const useAppStore = create<AppState>()(
       setWeather: (condition) =>
         set((s) => ({ environment: { ...s.environment, weather: { ...s.environment.weather, condition } } })),
 
+      setLocation: (lat, lon) =>
+        set((s) => ({ environment: { ...s.environment, location: { ...s.environment.location, lat, lon } } })),
+
       // Opening update
       updateOpening: (floorId, wallId, openingId, changes) =>
         set((s) => ({
