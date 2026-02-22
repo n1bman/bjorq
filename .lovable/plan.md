@@ -1,151 +1,134 @@
 
 
-# HA-Style Widget Dashboard -- Hem View
+# Enheter som visuella markoerer + Kontrollpanel + Hem-widgets
 
-## Inspiration
-The reference images show a Home Assistant "Lovelace" style dashboard: a dark full-screen grid of room cards, each showing device icons and status, plus weather/clock/power widgets. No traditional bars -- everything is floating cards on a dark background.
+## Koncept
 
-## Design
+Enheter i 3D-scenen ar INTE 3D-modeller -- de ar enkla visuella indikatorer:
+- **Ljus (light)**: En glodande punkt som faktiskt kastar ljus (PointLight) i scenen. Gul/varm farg. Touch for att sla av/pa.
+- **Knapp (switch)**: En liten lysande ring/cirkel pa vaggen/golvet. Bla farg. Touch for att togla.
+- **Sensor (sensor)**: En pulserande/blinkande liten prick. Gron farg. Visar status med animation.
+- **Klimat (climate)**: En svag glod med cyan farg. Indikerar temperaturzon.
 
-The Home view becomes a full-screen space with two layers:
-1. **3D scene** as background (the built home, same as now)
-2. **A semi-transparent card grid overlay** on top, HA-style
+Inga meshes, inga laddade modeller -- bara ljuspunkter, glodeffekter och enkla geometrier (sfarer, ringar).
 
-The user can toggle between "3D view" (full 3D, minimal widgets) and "Dashboard view" (the HA-style card grid over the dimmed 3D background).
+## Del 1: Uppdatera DeviceMarkers3D -- Interaktiva ljusmarkoerer
 
-### Dashboard Card Grid
-A CSS grid of glassmorphic room/widget cards overlaid on the 3D scene:
+Omskriv `src/components/devices/DeviceMarkers3D.tsx` helt:
 
-```text
-+--------------------------------------------------+
-| 12:45                    11.4C  Klart     1541 W  |
-| Torsdag                  33 km/h SSW      1.5 kr  |
-+----------+----------+----------+---------+--------+
-| Vardags- | Kok      | Sovrum   | Badrum  |        |
-| rum      |          |          |         |        |
-| [icons]  | [icons]  | [icons]  | [icons] |        |
-| 21.2C    | 22.1C    | 19.8C    |         |        |
-+----------+----------+----------+---------+--------+
-| Garage   | Hall     | Kontor   |  ...    |        |
-| [icons]  | [icons]  | [icons]  |         |        |
-+----------+----------+----------+---------+--------+
-|                                                   |
-|         [3D vy]  [Hem]  [Bygge]                   |
-+---------------------------------------------------+
+- **Ljus-typ**: Rendera en faktisk `<pointLight>` med varm farg + en liten emissive sfar. Klick toglar pa/av (intensitet 0 vs full). Nar "pa" sprider den faktiskt ljus i scenen.
+- **Knapp-typ**: En liten flat glodande ring. Klick toglar farg (bla = pa, gra = av). Pulsanimation vid toggle.
+- **Sensor-typ**: En liten sfar med pulserande animation (scale oscillation via useFrame). Gron glow.
+- **Klimat-typ**: En svag, stor, halvtransparent sfar som representerar temperaturzon. Cyan farg.
+- Alla enheter ar klickbara via `onClick` pa mesh. Klick uppdaterar en lokal `on/off` state (eller HA-state om kopplad).
+- Anvand `useFrame` for pulserande/blinkande animationer pa sensorer.
+- Inga Billboard/Text-etiketter med emojis -- bara rena ljuseffekter.
+
+## Del 2: Enheter-flik i Bygge
+
+### types.ts
+- Utoka `BuildTab` till `'structure' | 'import' | 'furnish' | 'devices'`
+- Lagg till `BuildTool`-varianter: `'place-light' | 'place-switch' | 'place-sensor' | 'place-climate'`
+- Lagg till actions: `addDevice(marker: DeviceMarker)`, `removeDevice(id: string)`, `updateDevice(id: string, changes: Partial<DeviceMarker>)`
+
+### BuildTabBar.tsx
+- Lagg till fjarde flik: `{ key: 'devices', label: 'Enheter', icon: Lightbulb }`
+
+### BuildLeftPanel.tsx
+- Nytt block for `tab === 'devices'`:
+  - Knappar for att valja enhetstyp att placera (Ljus, Knapp, Sensor, Klimat)
+  - Lista over placerade enheter pa aktiv vaning med ta-bort-knapp
+  - Varje enhet visar typ-ikon + position
+
+### Ny: `src/components/build/devices/DevicePlacementTools.tsx`
+- Verktygspanel med 4 knappar (en per DeviceKind: light, switch, sensor, climate)
+- Klicka for att valja typ, sedan klicka i 2D-canvas/3D for att placera
+- Lista placerade enheter med radera-knapp
+
+## Del 3: Kontrollpanel -- Full HA-dashboard
+
+Bygg ut `DashboardGrid.tsx` och skapa nya sektioner:
+
+### Ny: `src/components/home/cards/DevicesSection.tsx`
+- Grid med alla placerade enheter, grupperade per rum
+- Varje enhet visar: typ-ikon, namn (rum + typ), pa/av-status
+- Toggle-switch for att sla av/pa (uppdaterar device state)
+- Om kopplad till HA: visa entityId
+
+### Ny: `src/components/home/cards/LocationSettings.tsx`
+- Inputfalt for latitud och longitud
+- Tidszon-valjare (dropdown)
+- Anropar `setLocation(lat, lon)` som redan finns i store
+- Visar aktuell plats pa en enkel text-display
+
+### Ny: `src/components/home/cards/HomeWidgetConfig.tsx`
+- Checkboxar/toggles for vilka widgets som syns pa Hem-skarmen:
+  - Klocka (clock)
+  - Vader (weather)
+  - Temperatur (temperature)
+  - Energi (energy)
+- Anvander nya `visibleWidgets` state i store
+
+### Uppdatera: `src/components/home/cards/WeatherWidget.tsx`
+- Utoka med vindhastighet (placeholder), luftfuktighet
+- Visa platsnamn baserat pa koordinater
+
+### Uppdatera: `src/components/home/cards/EnergyWidget.tsx`
+- Utoka med mer statistik (placeholder-data)
+
+### Uppdatera: `src/components/home/DashboardGrid.tsx`
+- Lagg till sektioner med rubriker:
+  1. Overst: Klocka + Vader + Energi (som nu)
+  2. "Enheter" -- DevicesSection
+  3. "Installningar" -- LocationSettings + HomeWidgetConfig
+- Scrollbar layout med tydliga sektionsrubriker
+
+## Del 4: Hem-vy med konfigurerbara widgets
+
+### types.ts
+- Utoka `HomeViewState`:
 ```
-
-### Key Elements
-
-**Top bar (floating, no background):**
-- Clock + date (left)
-- Weather info (center-left): temperature, wind, condition icon
-- Power/energy stats placeholder (right)
-
-**Room cards (grid):**
-- One card per room from the layout store
-- Each card shows: room name, device icons for devices in that room, temperature (placeholder)
-- Cards are dark glassmorphic with subtle borders
-- Device icons are color-coded: yellow = active, blue = sensor, gray = off
-- Tapping a card could later expand to show device controls
-
-**Quick-access device icons on cards:**
-- Each room card shows small icons for the devices placed in that room
-- Icons match device kinds: lightbulb, thermometer, switch, etc.
-
-**Bottom nav:**
-- Minimal floating pill: "3D vy" (toggle to full 3D), "Hem" (current), "Bygge"
-
-## Technical Changes
-
-### 1. Update `src/store/types.ts`
-- Change `AppMode` to `'home' | 'build'`
-- Add `homeView` state:
-  ```
-  homeView: {
-    viewMode: 'dashboard' | '3d'  // toggle between card grid and full 3D
-    cameraPreset: 'free' | 'topdown' | 'angle' | 'front'
+homeView: {
+  cameraPreset: CameraPreset;
+  visibleWidgets: {
+    clock: boolean;
+    weather: boolean;
+    temperature: boolean;
+    energy: boolean;
   }
-  ```
-- Add actions: `setHomeViewMode`, `setCameraPreset`
+}
+```
+- Ny action: `toggleHomeWidget(widget: keyof visibleWidgets)`
 
-### 2. Update `src/store/useAppStore.ts`
-- Default `appMode` to `'home'`
-- Add `homeView` state and actions
-- Bump store version to force fresh state
+### store uppdatering
+- Default alla widgets till `true`
+- Implementera `toggleHomeWidget`
+- Implementera `addDevice`, `removeDevice`, `updateDevice`
 
-### 3. New: `src/components/home/HomeView.tsx`
-- Full-screen wrapper component
-- When `viewMode === 'dashboard'`: renders Scene3D dimmed in background + card grid overlay
-- When `viewMode === '3d'`: renders Scene3D full-screen with minimal floating controls
-- Renders the floating bottom pill nav
+### HomeView.tsx
+- Rendera flytande widgets VILLKORLIGT baserat pa `visibleWidgets`:
+  - Om `clock: true` -> visa ClockWidget flytande overst vanster
+  - Om `weather: true` -> visa WeatherWidget overst mitten
+  - Om `energy: true` -> visa EnergyWidget overst hoger
+- Behal CameraFab och HomeNav
 
-### 4. New: `src/components/home/DashboardGrid.tsx`
-- The main HA-style card grid overlay
-- Renders a responsive CSS grid of room cards + widget cards
-- Top section: ClockWidget, WeatherWidget, EnergyWidget
-- Main section: one RoomCard per room from store
-- Each RoomCard shows:
-  - Room name (from layout)
-  - Floor label
-  - Device icons (filtered by roomId from devices.markers)
-  - Placeholder temperature
+## Del 5: Cleanup
 
-### 5. New: `src/components/home/cards/RoomCard.tsx`
-- Glassmorphic dark card
-- Shows room name, device kind icons with color states
-- Compact layout matching the HA reference style
-- Click handler (future: expand to control devices)
+- Ta bort `src/components/devices/DevicesOverlay.tsx` (om den fortfarande finns)
+- Saker att `BottomNav.tsx` inte langre anvands (HomeNav ersatter den)
 
-### 6. New: `src/components/home/cards/ClockWidget.tsx`
-- Shows current time (large), date below
-- Live-updating with `useState` + `setInterval`
-- Swedish locale date formatting
+## Implementationsordning
 
-### 7. New: `src/components/home/cards/WeatherWidget.tsx`
-- Shows temperature, wind (placeholder), weather condition icon
-- Reads from `environment.weather` in store
-
-### 8. New: `src/components/home/cards/EnergyWidget.tsx`
-- Placeholder card showing power consumption stats
-- Static placeholder data for now (e.g., "1541 W", "1.5 kr/kWh")
-
-### 9. Update `src/components/BottomNav.tsx`
-- Change to 2 main tabs: "Hem" and "Bygge"
-- Add a "3D vy" toggle button that switches `homeView.viewMode`
-- Make it a floating semi-transparent pill
-- Only visible in home mode
-
-### 10. Update `src/components/ModeHeader.tsx`
-- Hide completely in home mode (dashboard has its own top section)
-- Only show in build mode
-
-### 11. Update `src/pages/Index.tsx`
-- Home mode: render `HomeView` (no ModeHeader, no BottomNav padding)
-- Build mode: render `BuildModeV2` with ModeHeader and BottomNav as before
-
-### 12. Update `src/components/Scene3D.tsx`
-- Accept an optional `dimmed` prop to apply a dark overlay when dashboard grid is shown
-- Add camera preset logic (animate to preset positions)
-
-### 13. Cleanup
-- Delete `src/components/dashboard/DashboardOverlay.tsx` (replaced by DashboardGrid)
-- Delete `src/components/devices/DevicesOverlay.tsx` (devices integrated into room cards)
-
-## Styling
-- All cards use the existing `glass-panel` class with the dark theme
-- Device icons use lucide-react icons, colored with amber (active), blue (sensor), gray (off)
-- Room cards have subtle `glass-border` borders
-- Responsive grid: 3-4 columns on desktop, 2 on tablet, 1 on mobile
-- Clock uses the `Space Grotesk` display font already imported
-
-## Implementation Order
-1. Update types and store (AppMode, homeView state)
-2. Create card components (RoomCard, ClockWidget, WeatherWidget, EnergyWidget)
-3. Create DashboardGrid
-4. Create HomeView wrapper
-5. Update BottomNav to floating pill with 3D toggle
-6. Update ModeHeader to hide in home mode
-7. Update Scene3D with dimming and camera presets
-8. Update Index.tsx
-9. Delete old overlay files
+1. Uppdatera `types.ts` (BuildTab, nya BuildTools, HomeViewState med visibleWidgets, nya actions)
+2. Uppdatera `useAppStore.ts` (nya actions, default state, device CRUD)
+3. Omskriv `DeviceMarkers3D.tsx` (ljuspunkter, interaktiva, animerade -- inga 3D-modeller)
+4. Skapa `DevicePlacementTools.tsx`
+5. Uppdatera `BuildTabBar.tsx` (lagg till Enheter-flik)
+6. Uppdatera `BuildLeftPanel.tsx` (devices tab block)
+7. Skapa `DevicesSection.tsx` for Kontrollpanelen
+8. Skapa `LocationSettings.tsx`
+9. Skapa `HomeWidgetConfig.tsx`
+10. Uppdatera `DashboardGrid.tsx` med alla nya sektioner
+11. Uppdatera `HomeView.tsx` med villkorliga widgets
+12. Cleanup gamla filer
 
