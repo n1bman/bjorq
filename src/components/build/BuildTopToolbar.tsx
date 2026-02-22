@@ -10,6 +10,8 @@ import { Slider } from '@/components/ui/slider';
 import type { WeatherCondition } from '@/store/types';
 import FloorPicker from './FloorPicker';
 import { useState } from 'react';
+import { toast } from 'sonner';
+import { Check } from 'lucide-react';
 
 const viewModes = [
   { key: 'topdown' as const, label: 'Plan', icon: Eye },
@@ -26,6 +28,7 @@ const snapModes: { key: SnapMode; label: string }[] = [
 
 export default function BuildTopToolbar() {
   const activeTool = useAppStore((s) => s.build.activeTool);
+  const setAppMode = useAppStore((s) => s.setAppMode);
   const setBuildTool = useAppStore((s) => s.setBuildTool);
   const undo = useAppStore((s) => s.undo);
   const redo = useAppStore((s) => s.redo);
@@ -176,6 +179,18 @@ export default function BuildTopToolbar() {
         )}
       >
         <Sun size={18} />
+      </button>
+
+      {/* Save & View button */}
+      <button
+        onClick={() => {
+          toast.success('Sparad! Ditt hem är redo att visa.');
+          setAppMode('dashboard');
+        }}
+        className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors"
+      >
+        <Check size={14} />
+        <span className="hidden sm:inline">Klar</span>
       </button>
 
       {/* Spacer */}
