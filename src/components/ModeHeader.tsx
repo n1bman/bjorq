@@ -1,19 +1,10 @@
 import { useAppStore } from '@/store/useAppStore';
 
-const modeLabels = {
-  dashboard: 'Kontrollpanel',
-  devices: 'Enheter',
-  build: 'Bygge',
-} as const;
-
-const modeDescriptions = {
-  dashboard: 'Visa och styr ditt hem',
-  devices: 'Placera och bind enheter',
-  build: 'Redigera planlösning',
-} as const;
-
 export default function ModeHeader() {
   const appMode = useAppStore((s) => s.appMode);
+
+  // Only show in build mode
+  if (appMode !== 'build') return null;
 
   return (
     <header className="fixed top-0 inset-x-0 z-40 glass-panel border-b border-[hsl(var(--glass-border))]">
@@ -23,12 +14,8 @@ export default function ModeHeader() {
             <span className="text-primary font-bold text-sm font-display">HT</span>
           </div>
           <div>
-            <h1 className="text-sm font-semibold tracking-tight font-display">
-              {modeLabels[appMode]}
-            </h1>
-            <p className="text-[11px] text-muted-foreground">
-              {modeDescriptions[appMode]}
-            </p>
+            <h1 className="text-sm font-semibold tracking-tight font-display">Bygge</h1>
+            <p className="text-[11px] text-muted-foreground">Redigera planlösning</p>
           </div>
         </div>
       </div>

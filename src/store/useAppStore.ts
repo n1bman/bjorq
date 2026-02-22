@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { AppState, BuildState, LayoutState, WallSegment, Room } from './types';
+import type { AppState, BuildState, LayoutState, WallSegment, Room, HomeViewState } from './types';
 
 const generateId = () => Math.random().toString(36).slice(2, 10);
 
@@ -37,8 +37,12 @@ const initialLayout: LayoutState = {
 export const useAppStore = create<AppState>()(
   persist(
     (set, get) => ({
-      appMode: 'dashboard',
+      appMode: 'home',
       setAppMode: (mode) => set({ appMode: mode }),
+
+      homeView: { viewMode: 'dashboard', cameraPreset: 'angle' } as HomeViewState,
+      setHomeViewMode: (mode) => set((s) => ({ homeView: { ...s.homeView, viewMode: mode } })),
+      setCameraPreset: (preset) => set((s) => ({ homeView: { ...s.homeView, cameraPreset: preset } })),
 
       layout: initialLayout,
       build: initialBuild,
@@ -699,15 +703,16 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: 'hometwin-store',
-      version: 4,
+      version: 5,
       migrate: () => {
-        // V4: Force-clear all stale blob URLs and data
+        // V5: Unified home view, force-clear stale state
         return undefined as any;
       },
       partialize: (state) => ({
         appMode: state.appMode,
         layout: state.layout,
         homeGeometry: state.homeGeometry,
+        homeView: state.homeView,
         devices: state.devices,
         props: state.props,
         environment: state.environment,
