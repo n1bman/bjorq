@@ -20,7 +20,7 @@ export default function FloorPicker() {
         onClick={() => setOpen(!open)}
         className="flex items-center gap-2 px-3 py-2 rounded-lg bg-secondary/30 hover:bg-secondary/50 text-sm text-foreground transition-all min-h-[44px]"
       >
-        <span>{floorFilter === 'all' ? 'Alla' : activeFloor?.name ?? 'Välj våning'}</span>
+        <span>{floorFilter === 'all' ? 'Våningar' : activeFloor?.name ?? 'Välj våning'}</span>
         <ChevronDown size={14} className={cn('text-muted-foreground transition-transform', open && 'rotate-180')} />
       </button>
 
@@ -33,7 +33,7 @@ export default function FloorPicker() {
               floorFilter === 'all' ? 'bg-primary/10 text-primary' : 'text-foreground hover:bg-secondary/20'
             )}
           >
-            Alla våningar
+            Alla våningar (visa alla)
           </button>
           {floors.map((floor) => (
             <button

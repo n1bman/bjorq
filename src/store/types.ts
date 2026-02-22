@@ -320,4 +320,7 @@ export interface AppState {
 
   // Opening offset update
   updateOpeningOffset: (floorId: string, wallId: string, openingId: string, offset: number) => void;
+
+  // Room polygon recalculation
+  updateRoomPolygons: (floorId: string) => void;
 }
