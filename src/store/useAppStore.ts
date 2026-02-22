@@ -6,6 +6,7 @@ const generateId = () => Math.random().toString(36).slice(2, 10);
 
 const initialBuild: BuildState = {
   activeTool: 'select',
+  openingType: 'door',
   wallDrawing: { isDrawing: false, nodes: [] },
   calibration: { isCalibrating: false, point1: null, point2: null, realMeters: null },
   selectedWallId: null,
@@ -14,6 +15,7 @@ const initialBuild: BuildState = {
   redoStack: [],
   canvasOffset: [0, 0],
   canvasZoom: 1,
+  show3DPreview: false,
 };
 
 const initialLayout: LayoutState = {
@@ -171,6 +173,107 @@ export const useAppStore = create<AppState>()(
           },
         })),
 
+      // Opening actions
+      addOpening: (floorId, wallId, opening) =>
+        set((s) => ({
+          layout: {
+            ...s.layout,
+            floors: s.layout.floors.map((f) =>
+              f.id === floorId
+                ? {
+                    ...f,
+                    walls: f.walls.map((w) =>
+                      w.id === wallId ? { ...w, openings: [...w.openings, opening] } : w
+                    ),
+                  }
+                : f
+            ),
+          },
+        })),
+
+      removeOpening: (floorId, wallId, openingId) =>
+        set((s) => ({
+          layout: {
+            ...s.layout,
+            floors: s.layout.floors.map((f) =>
+              f.id === floorId
+                ? {
+                    ...f,
+                    walls: f.walls.map((w) =>
+                      w.id === wallId
+                        ? { ...w, openings: w.openings.filter((o) => o.id !== openingId) }
+                        : w
+                    ),
+                  }
+                : f
+            ),
+          },
+        })),
+
+      // Room actions
+      setRooms: (floorId, rooms) =>
+        set((s) => ({
+          layout: {
+            ...s.layout,
+            floors: s.layout.floors.map((f) =>
+              f.id === floorId ? { ...f, rooms } : f
+            ),
+          },
+        })),
+
+      removeRoom: (floorId, roomId) =>
+        set((s) => ({
+          layout: {
+            ...s.layout,
+            floors: s.layout.floors.map((f) =>
+              f.id === floorId ? { ...f, rooms: f.rooms.filter((r) => r.id !== roomId) } : f
+            ),
+          },
+        })),
+
+      renameRoom: (floorId, roomId, name) =>
+        set((s) => ({
+          layout: {
+            ...s.layout,
+            floors: s.layout.floors.map((f) =>
+              f.id === floorId
+                ? { ...f, rooms: f.rooms.map((r) => (r.id === roomId ? { ...r, name } : r)) }
+                : f
+            ),
+          },
+        })),
+
+      setRoomMaterial: (floorId, roomId, target, materialId) =>
+        set((s) => ({
+          layout: {
+            ...s.layout,
+            floors: s.layout.floors.map((f) =>
+              f.id === floorId
+                ? {
+                    ...f,
+                    rooms: f.rooms.map((r) =>
+                      r.id === roomId
+                        ? { ...r, [target === 'floor' ? 'floorMaterialId' : 'wallMaterialId']: materialId }
+                        : r
+                    ),
+                  }
+                : f
+            ),
+          },
+        })),
+
+      // Props actions
+      addProp: (prop) =>
+        set((s) => ({ props: { ...s.props, items: [...s.props.items, prop] } })),
+
+      removeProp: (id) =>
+        set((s) => ({ props: { ...s.props, items: s.props.items.filter((p) => p.id !== id) } })),
+
+      updateProp: (id, changes) =>
+        set((s) => ({
+          props: { ...s.props, items: s.props.items.map((p) => (p.id === id ? { ...p, ...changes } : p)) },
+        })),
+
       // Build actions
       setBuildTool: (tool) =>
         set((s) => ({
@@ -200,6 +303,9 @@ export const useAppStore = create<AppState>()(
 
       setCanvasZoom: (zoom) =>
         set((s) => ({ build: { ...s.build, canvasZoom: Math.max(0.1, Math.min(5, zoom)) } })),
+
+      setShow3DPreview: (show) =>
+        set((s) => ({ build: { ...s.build, show3DPreview: show } })),
 
       pushUndo: () =>
         set((s) => ({
