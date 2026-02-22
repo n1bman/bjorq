@@ -2,9 +2,60 @@ import { useRef, useState, useCallback, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { TransformControls } from '@react-three/drei';
 import { useAppStore } from '@/store/useAppStore';
-import type { DeviceKind } from '@/store/types';
+import type { DeviceKind, DeviceMarker } from '@/store/types';
 import * as THREE from 'three';
 
+// Extracted component that uses dragging-changed event instead of onObjectChange
+// to prevent re-render loops that freeze the browser
+function SelectedDeviceWithGizmo({
+  marker,
+  transformMode,
+  updateDevice,
+  handleSelect,
+  Component,
+}: {
+  marker: DeviceMarker;
+  transformMode: 'translate' | 'rotate';
+  updateDevice: (id: string, changes: Partial<DeviceMarker>) => void;
+  handleSelect: (id: string) => void;
+  Component: React.FC<MarkerProps>;
+}) {
+  const tcRef = useRef<any>(null);
+
+  useEffect(() => {
+    const tc = tcRef.current;
+    if (!tc) return;
+    const handler = (event: { value: boolean }) => {
+      if (!event.value && tc.object) {
+        const obj = tc.object;
+        updateDevice(marker.id, {
+          position: [obj.position.x, obj.position.y, obj.position.z],
+          rotation: [obj.rotation.x, obj.rotation.y, obj.rotation.z],
+        });
+      }
+    };
+    tc.addEventListener('dragging-changed', handler);
+    return () => tc.removeEventListener('dragging-changed', handler);
+  }, [marker.id, updateDevice]);
+
+  return (
+    <TransformControls
+      ref={tcRef}
+      mode={transformMode}
+      size={0.6}
+      position={marker.position}
+    >
+      <group>
+        <Component
+          position={[0, 0, 0]}
+          id={marker.id}
+          onSelect={handleSelect}
+          selected
+        />
+      </group>
+    </TransformControls>
+  );
+}
 
 interface MarkerProps {
   position: [number, number, number];
@@ -178,30 +229,14 @@ export default function DeviceMarkers3D({ buildMode }: DeviceMarkers3DProps) {
 
         if (isSelected && buildMode) {
           return (
-            <TransformControls
+            <SelectedDeviceWithGizmo
               key={marker.id + '-tc'}
-              mode={transformMode}
-              size={0.6}
-              position={marker.position}
-              onObjectChange={(e: any) => {
-                const obj = e?.target?.object;
-                if (obj) {
-                  updateDevice(marker.id, {
-                    position: [obj.position.x, obj.position.y, obj.position.z],
-                    rotation: [obj.rotation.x, obj.rotation.y, obj.rotation.z],
-                  });
-                }
-              }}
-            >
-              <group>
-                <Component
-                  position={[0, 0, 0]}
-                  id={marker.id}
-                  onSelect={handleSelect}
-                  selected
-                />
-              </group>
-            </TransformControls>
+              marker={marker}
+              transformMode={transformMode}
+              updateDevice={updateDevice}
+              handleSelect={handleSelect}
+              Component={Component}
+            />
           );
         }
 

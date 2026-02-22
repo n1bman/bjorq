@@ -1,3 +1,6 @@
+import { useState } from 'react';
+import { Home, Cloud, Cpu, Zap, Settings, Wifi } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import ClockWidget from './cards/ClockWidget';
 import WeatherWidget from './cards/WeatherWidget';
 import EnergyWidget from './cards/EnergyWidget';
@@ -6,31 +9,120 @@ import LocationSettings from './cards/LocationSettings';
 import HomeWidgetConfig from './cards/HomeWidgetConfig';
 import HAConnectionPanel from './cards/HAConnectionPanel';
 
+type DashCategory = 'home' | 'weather' | 'devices' | 'energy' | 'settings' | 'ha';
+
+const categories: { key: DashCategory; label: string; icon: typeof Home }[] = [
+  { key: 'home', label: 'Hem', icon: Home },
+  { key: 'weather', label: 'Väder', icon: Cloud },
+  { key: 'devices', label: 'Enheter', icon: Cpu },
+  { key: 'energy', label: 'Energi', icon: Zap },
+  { key: 'settings', label: 'Inställningar', icon: Settings },
+  { key: 'ha', label: 'HA', icon: Wifi },
+];
+
+function HomeCategory() {
+  return (
+    <div className="space-y-4">
+      <div className="flex items-start gap-3 flex-wrap">
+        <ClockWidget />
+        <WeatherWidget />
+        <EnergyWidget />
+      </div>
+      <DevicesSection />
+    </div>
+  );
+}
+
+function WeatherCategory() {
+  return (
+    <div className="space-y-4">
+      <WeatherWidget />
+      <div className="glass-panel rounded-2xl p-4">
+        <p className="text-xs text-muted-foreground">
+          Detaljerad väderprognos med timvis data kommer snart.
+          Aktivera "Live väder" under Inställningar för att synka med din plats.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function DevicesCategory() {
+  return (
+    <div className="space-y-3">
+      <h3 className="text-sm font-semibold text-foreground">Alla enheter</h3>
+      <DevicesSection />
+    </div>
+  );
+}
+
+function EnergyCategory() {
+  return (
+    <div className="space-y-3">
+      <EnergyWidget />
+      <div className="glass-panel rounded-2xl p-4 space-y-2">
+        <h4 className="text-sm font-semibold text-foreground">Solpaneler</h4>
+        <p className="text-xs text-muted-foreground">Anslut dina solpaneler via Home Assistant för att se produktion och förbrukning i realtid.</p>
+      </div>
+      <div className="glass-panel rounded-2xl p-4 space-y-2">
+        <h4 className="text-sm font-semibold text-foreground">Förbrukning</h4>
+        <p className="text-xs text-muted-foreground">Energiförbrukningsdata visas här när Home Assistant är ansluten.</p>
+      </div>
+    </div>
+  );
+}
+
+function SettingsCategory() {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <LocationSettings />
+      <HomeWidgetConfig />
+    </div>
+  );
+}
+
+function HACategory() {
+  return <HAConnectionPanel />;
+}
+
+const categoryContent: Record<DashCategory, React.FC> = {
+  home: HomeCategory,
+  weather: WeatherCategory,
+  devices: DevicesCategory,
+  energy: EnergyCategory,
+  settings: SettingsCategory,
+  ha: HACategory,
+};
+
 export default function DashboardGrid() {
+  const [active, setActive] = useState<DashCategory>('home');
+  const Content = categoryContent[active];
+
   return (
     <div className="absolute inset-0 z-10 pointer-events-none">
-      <div className="relative w-full h-full p-4 flex flex-col gap-6 overflow-y-auto pointer-events-auto">
-        {/* Top row: Clock, Weather, Energy */}
-        <div className="flex items-start gap-3 flex-wrap">
-          <ClockWidget />
-          <WeatherWidget />
-          <EnergyWidget />
+      <div className="relative w-full h-full flex flex-col pointer-events-auto">
+        {/* Category icon banner */}
+        <div className="flex items-center gap-1 px-3 py-2 bg-card/80 backdrop-blur-sm border-b border-border overflow-x-auto flex-nowrap shrink-0">
+          {categories.map(({ key, label, icon: Icon }) => (
+            <button
+              key={key}
+              onClick={() => setActive(key)}
+              className={cn(
+                'flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-lg text-[10px] font-medium transition-all min-w-[52px]',
+                active === key
+                  ? 'bg-primary/15 text-primary'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-secondary/30'
+              )}
+            >
+              <Icon size={18} />
+              <span>{label}</span>
+            </button>
+          ))}
         </div>
 
-        {/* Devices section */}
-        <div>
-          <h3 className="text-sm font-semibold text-foreground mb-3">Enheter</h3>
-          <DevicesSection />
-        </div>
-
-        {/* Settings section */}
-        <div>
-          <h3 className="text-sm font-semibold text-foreground mb-3">Inställningar</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <LocationSettings />
-            <HomeWidgetConfig />
-            <HAConnectionPanel />
-          </div>
+        {/* Content area */}
+        <div className="flex-1 overflow-y-auto p-4">
+          <Content />
         </div>
       </div>
     </div>

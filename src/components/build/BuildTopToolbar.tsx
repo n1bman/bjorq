@@ -47,6 +47,8 @@ export default function BuildTopToolbar() {
   const setSunPosition = useAppStore((s) => s.setSunPosition);
   const weatherCondition = useAppStore((s) => s.environment.weather.condition);
   const setWeather = useAppStore((s) => s.setWeather);
+  const envSource = useAppStore((s) => s.environment.source);
+  const setWeatherSource = useAppStore((s) => s.setWeatherSource);
 
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [showEnvPanel, setShowEnvPanel] = useState(false);
@@ -229,20 +231,29 @@ export default function BuildTopToolbar() {
 
           <div className="space-y-1">
             <span className="text-[10px] text-muted-foreground">Väder</span>
-            <div className="flex gap-1">
+            <div className="flex gap-1 mb-2">
               {(['clear', 'cloudy', 'rain', 'snow'] as WeatherCondition[]).map((w) => (
                 <button
                   key={w}
-                  onClick={() => setWeather(w)}
+                  onClick={() => { setWeather(w); if (envSource === 'auto') setWeatherSource('manual'); }}
                   className={cn(
                     'flex-1 py-1.5 rounded-md text-[10px] transition-colors',
-                    weatherCondition === w ? 'bg-primary/20 text-primary' : 'bg-secondary/30 text-muted-foreground hover:text-foreground'
+                    weatherCondition === w && envSource !== 'auto' ? 'bg-primary/20 text-primary' : 'bg-secondary/30 text-muted-foreground hover:text-foreground'
                   )}
                 >
                   {w === 'clear' ? '☀️' : w === 'cloudy' ? '☁️' : w === 'rain' ? '🌧️' : '❄️'}
                 </button>
               ))}
             </div>
+            <button
+              onClick={() => setWeatherSource(envSource === 'auto' ? 'manual' : 'auto')}
+              className={cn(
+                'w-full py-1.5 rounded-md text-[10px] font-medium transition-colors',
+                envSource === 'auto' ? 'bg-primary/20 text-primary' : 'bg-secondary/30 text-muted-foreground hover:text-foreground'
+              )}
+            >
+              {envSource === 'auto' ? '🌍 Live väder (aktiv)' : '🌍 Aktivera live väder'}
+            </button>
           </div>
         </div>
       )}

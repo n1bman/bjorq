@@ -5,9 +5,11 @@ import CameraFab from './CameraFab';
 import ClockWidget from './cards/ClockWidget';
 import WeatherWidget from './cards/WeatherWidget';
 import EnergyWidget from './cards/EnergyWidget';
+import { useWeatherSync } from '@/hooks/useWeatherSync';
 
 export default function HomeView() {
   const visibleWidgets = useAppStore((s) => s.homeView.visibleWidgets);
+  useWeatherSync();
 
   return (
     <div className="fixed inset-0 bg-background">
