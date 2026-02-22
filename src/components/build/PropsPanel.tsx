@@ -1,5 +1,5 @@
-import { useRef } from 'react';
 import { useAppStore } from '@/store/useAppStore';
+import { useRef } from 'react';
 import { Upload, Trash2 } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
 
@@ -9,6 +9,7 @@ export default function PropsPanel() {
   const activeFloorId = useAppStore((s) => s.layout.activeFloorId);
   const props = useAppStore((s) => s.props.items);
   const addProp = useAppStore((s) => s.addProp);
+  const addToCatalog = useAppStore((s) => s.addToCatalog);
   const removeProp = useAppStore((s) => s.removeProp);
   const updateProp = useAppStore((s) => s.updateProp);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -19,8 +20,16 @@ export default function PropsPanel() {
     const file = e.target.files?.[0];
     if (!file || !activeFloorId) return;
     const url = URL.createObjectURL(file);
+    const catalogId = generateId();
+    addToCatalog({
+      id: catalogId,
+      name: file.name,
+      url,
+      source: 'user',
+    });
     addProp({
       id: generateId(),
+      catalogId,
       floorId: activeFloorId,
       url,
       position: [0, 0, 0],
