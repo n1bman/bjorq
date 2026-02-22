@@ -1,140 +1,86 @@
 
 
-# Phase 2 Continuation – Remaining Build Mode Features
+# Build Mode Overhaul: 3D-First (Sims/Vivaland Style)
 
-## Status Check
-Already done: Floor management, floorplan import, scale calibration, basic wall drawing (nodes, snap, select, delete, undo/redo), 2D canvas with zoom/pan.
+## What Changes
 
-Remaining from Phase 2:
-- Wall openings (doors and windows)
-- Room detection from closed wall loops
-- Materials system with presets
-- Props system (GLB/GLTF import)
-- 3D wall extrusion preview
+The current Build Mode uses a **2D canvas as primary** with a 3D preview toggle. This overhaul flips that: **3D is the default and primary view**, with all building (wall drawing, object placement, material painting) happening directly in the 3D scene via raycasting. The UI panels overlay on top of the 3D view, just like in The Sims and Vivaland.
 
 ---
 
-## 2.3a Wall Openings (Doors & Windows)
+## Architecture Changes
 
-New build tool "opening" added to toolbar. When a wall is selected, user can place a door or window on it.
+### 1. BuildMode layout becomes 3D-first
+- The `BuildPreview3D` canvas becomes the main view (always visible)
+- 2D canvas becomes an optional minimap or is removed entirely
+- Toolbar and side panels float over the 3D scene as glassmorphism overlays
+- Floor manager stays as a floating top-left panel
 
-**Store changes** (`types.ts`):
-- Add `BuildTool` value: `'opening'`
-- Add to `BuildState`: `openingType: 'door' | 'window'`
+### 2. 3D Wall Drawing via Raycasting
+- When "Vagg" tool is active, clicking on the ground plane places wall nodes in 3D
+- A transparent ground plane mesh acts as the raycast target
+- Grid snapping works in 3D world coordinates (already in meters)
+- Wall preview line renders as a dashed 3D line while drawing
+- Double-click finishes the wall chain (same behavior as current 2D)
+- Walls immediately render as extruded 3D meshes (using existing `Walls3D`)
 
-**Store actions** (`useAppStore.ts`):
-- `addOpening(floorId, wallId, opening)` – push opening onto wall's openings array
-- `removeOpening(floorId, wallId, openingId)` – remove opening
-- `setOpeningType(type)` – set door or window for placement
+### 3. 3D Selection & Interaction
+- Select tool: click on wall meshes to select (raycast against wall geometry)
+- Drag wall nodes in 3D (constrained to ground plane)
+- Selected wall highlights with outline or color change
+- Opening placement: click on selected wall to place door/window at offset
 
-**New component**: `src/components/build/WallProperties.tsx`
-- Side panel shown when a wall is selected
-- Shows wall length (calculated), height, thickness
-- Lists openings on that wall with delete button
-- "Lägg till dörr" / "Lägg till fönster" buttons
-- Opening offset slider (0-100% along wall)
-- Width/height inputs
+### 4. Camera Controls
+- OrbitControls with Sims-style defaults: 45-degree isometric angle
+- Scroll to zoom, right-drag to rotate, middle-drag to pan
+- Wall drawing disables orbit rotation (only pan allowed)
+- Keyboard shortcuts: WASD for pan, Q/E for rotate
 
-**Canvas2D updates**:
-- Render openings as colored markers on walls (blue rectangles for windows, brown for doors)
-- Click on wall + click position to place opening at calculated offset
-
----
-
-## 2.4 Room Detection & Materials
-
-**Room detection** (`src/lib/roomDetection.ts`):
-- Graph-based cycle detection from wall segments
-- Find minimal closed loops of connected walls
-- Auto-generate rooms with default names ("Rum 1", "Rum 2"...)
-- Triggered via a "Detektera rum" button in toolbar
-
-**Store changes**:
-- `addRoom(floorId, room)` / `removeRoom(floorId, roomId)` / `renameRoom(floorId, roomId, name)`
-- `setRoomMaterial(floorId, roomId, target: 'floor' | 'wall', materialId)`
-
-**Materials system** (`src/store/types.ts`):
-- New `Material` type: `{ id, name, type: 'paint' | 'concrete' | 'wood', color, roughness }`
-- Preset materials defined in `src/lib/materials.ts`
-
-**New component**: `src/components/build/MaterialsPanel.tsx`
-- Glass-panel sidebar listing rooms
-- Per-room: rename, pick floor material, pick wall material
-- Material picker with preset swatches + color picker + roughness slider
-
-**New component**: `src/components/build/RoomList.tsx`
-- Shows detected rooms
-- Click to rename, delete
-
-**Canvas2D updates**:
-- Fill detected room polygons with semi-transparent material color
-
----
-
-## 2.5 Props System (GLB/GLTF Import)
-
-**Store changes** (`types.ts` / `useAppStore.ts`):
-- `addProp(prop)` / `removeProp(id)` / `updateProp(id, changes)`
-- Props already defined in types
-
-**New component**: `src/components/build/PropsPanel.tsx`
-- "Importera 3D-modell" button to upload GLB/GLTF
-- File stored as object URL
-- List of placed props with delete/select
-- Position (x, z), rotation slider, scale slider per prop
-
-Props are 3D-only, so they render in the 3D preview (Phase 2.6).
-
----
-
-## 2.6 3D Wall Extrusion Preview
-
-**New component**: `src/components/build/Walls3D.tsx`
-- Reads walls from active floor
-- For each wall segment: creates a BoxGeometry extruded along the wall line
-- Wall height and thickness from wall data
-- Splits mesh visually around openings (separate box segments with gaps)
-- Uses material color from assigned materialId or default amber
-
-**New component**: `src/components/build/Floors3D.tsx`
-- For each detected room: renders floor plane at room elevation
-- Uses room floor material color
-
-**Integration into Scene3D or a new `BuildPreview3D`**:
-- Toggle between 2D canvas and 3D preview in Build mode
-- Add "3D Förhandsgranskning" button to toolbar
-
----
-
-## Implementation Order
-
-1. Wall openings (store actions + WallProperties panel + Canvas2D rendering)
-2. Materials presets library
-3. Room detection algorithm + RoomList UI
-4. MaterialsPanel for room material assignment
-5. 3D wall extrusion (Walls3D + Floors3D)
-6. Props system (PropsPanel + store actions)
-7. 3D preview toggle in Build mode
+### 5. UI Overlay Layout (Sims-inspired)
+- Top toolbar: floating glassmorphism bar with tools (like Sims top bar)
+- Left panel: collapsible category panel for materials/props (like Sims catalog)
+- Right panel: properties for selected wall/room
+- Bottom-left: floor manager and minimap
+- All panels are semi-transparent, floating over the 3D scene
 
 ---
 
 ## Technical Details
 
-**Files to create**:
-- `src/components/build/WallProperties.tsx`
-- `src/components/build/RoomList.tsx`
-- `src/components/build/MaterialsPanel.tsx`
-- `src/components/build/PropsPanel.tsx`
-- `src/components/build/Walls3D.tsx`
-- `src/components/build/Floors3D.tsx`
-- `src/lib/roomDetection.ts`
-- `src/lib/materials.ts`
+### Files to modify:
+- `src/components/build/BuildMode.tsx` -- complete layout restructure, 3D canvas as base layer with overlay UI
+- `src/components/build/BuildPreview3D.tsx` -- add ground plane raycast target, wall drawing logic in 3D, selection raycasting, node dragging
+- `src/components/build/BuildToolbar.tsx` -- restyle as floating top bar overlay
+- `src/components/build/Walls3D.tsx` -- add selection highlighting, node spheres for dragging
+- `src/store/types.ts` -- no major changes needed (wall data is already in meters)
+- `src/store/useAppStore.ts` -- no major changes needed
 
-**Files to modify**:
-- `src/store/types.ts` – add Material type, extend BuildTool, add store actions
-- `src/store/useAppStore.ts` – implement new actions
-- `src/components/build/BuildToolbar.tsx` – add opening tool, room detection button, 3D preview toggle
-- `src/components/build/Canvas2D.tsx` – render openings and room fills
-- `src/components/build/BuildMode.tsx` – integrate new side panels
-- `src/components/Scene3D.tsx` – add Walls3D and Floors3D components
+### Files to create:
+- `src/components/build/BuildScene3D.tsx` -- new main 3D scene component combining ground plane, grid, walls, floors, props, and all interactive raycasting logic
+- `src/components/build/GroundPlane.tsx` -- invisible raycast target + visible grid
+- `src/components/build/WallDrawing3D.tsx` -- 3D wall drawing preview (dashed lines, node spheres)
+- `src/components/build/InteractiveWalls3D.tsx` -- walls with click-to-select, hover highlight, node drag handles
+
+### Files to keep (restyled as overlays):
+- `src/components/build/WallProperties.tsx` -- floating right panel
+- `src/components/build/RoomList.tsx` -- floating panel
+- `src/components/build/MaterialsPanel.tsx` -- collapsible left catalog
+- `src/components/build/PropsPanel.tsx` -- part of left catalog
+- `src/components/build/FloorManager.tsx` -- floating bottom-left
+- `src/components/build/ScaleCalibration.tsx` -- modal/overlay
+
+### Canvas2D.tsx:
+- Kept as optional 2D minimap view (small corner overlay) or removed entirely
+
+---
+
+## Implementation Order
+
+1. **BuildScene3D + GroundPlane**: Ground plane with raycast, grid, camera controls
+2. **WallDrawing3D**: 3D wall drawing via ground plane clicks, preview lines
+3. **InteractiveWalls3D**: Selectable/draggable walls with highlights and node handles
+4. **BuildMode layout**: Restructure to 3D-first with floating overlay panels
+5. **BuildToolbar restyle**: Floating glassmorphism top bar
+6. **Panel overlays**: Reposition all side panels as floating overlays
+7. **Camera management**: Disable orbit during wall draw, add keyboard controls
 
