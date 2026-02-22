@@ -4,6 +4,7 @@ import BuildTabBar from './BuildTabBar';
 import BuildLeftPanel from './BuildLeftPanel';
 import BuildInspector from './BuildInspector';
 import BuildCanvas2D from './BuildCanvas2D';
+import BuildScene3D from './BuildScene3D';
 
 export default function BuildModeV2() {
   const cameraMode = useAppStore((s) => s.build.view.cameraMode);
@@ -23,9 +24,7 @@ export default function BuildModeV2() {
           {cameraMode === 'topdown' ? (
             <BuildCanvas2D />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-              <span className="text-sm">3D-förhandsvisning (kommer snart)</span>
-            </div>
+            <BuildScene3D />
           )}
 
           {/* Inspector overlay - floating right */}
