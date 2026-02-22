@@ -1,6 +1,7 @@
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Grid, Environment } from '@react-three/drei';
-import { Suspense, useMemo } from 'react';
+import { Suspense, useMemo, useRef, useEffect } from 'react';
+import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useAppStore } from '@/store/useAppStore';
 import Walls3D from './build/Walls3D';
@@ -12,6 +13,56 @@ import Props3D from './build/Props3D';
 import DeviceMarkers3D from './devices/DeviceMarkers3D';
 import WeatherEffects3D from './build/WeatherEffects3D';
 import GroundPlane from './build/GroundPlane';
+import type { CameraPreset } from '@/store/types';
+
+const presetPositions: Record<CameraPreset, THREE.Vector3> = {
+  free: new THREE.Vector3(12, 12, 12),
+  topdown: new THREE.Vector3(0, 25, 0.01),
+  angle: new THREE.Vector3(12, 12, 12),
+  front: new THREE.Vector3(0, 6, 20),
+};
+
+const presetTargets: Record<CameraPreset, THREE.Vector3> = {
+  free: new THREE.Vector3(0, 0, 0),
+  topdown: new THREE.Vector3(0, 0, 0),
+  angle: new THREE.Vector3(0, 0, 0),
+  front: new THREE.Vector3(0, 2, 0),
+};
+
+function CameraController() {
+  const cameraPreset = useAppStore((s) => s.homeView.cameraPreset);
+  const controlsRef = useRef<any>(null);
+  const prevPreset = useRef(cameraPreset);
+
+  useEffect(() => {
+    if (cameraPreset !== prevPreset.current) {
+      prevPreset.current = cameraPreset;
+    }
+  }, [cameraPreset]);
+
+  useFrame(({ camera }, delta) => {
+    if (cameraPreset === 'free') return;
+    const targetPos = presetPositions[cameraPreset];
+    camera.position.lerp(targetPos, delta * 3);
+    if (controlsRef.current) {
+      const target = presetTargets[cameraPreset];
+      controlsRef.current.target.lerp(target, delta * 3);
+      controlsRef.current.update();
+    }
+  });
+
+  return (
+    <OrbitControls
+      ref={controlsRef}
+      makeDefault
+      enableDamping
+      dampingFactor={0.08}
+      minDistance={3}
+      maxDistance={50}
+      maxPolarAngle={Math.PI / 2.1}
+    />
+  );
+}
 
 function SceneContent() {
   const sunAzimuth = useAppStore((s) => s.environment.sunAzimuth);
@@ -29,16 +80,21 @@ function SceneContent() {
     ] as [number, number, number];
   }, [sunAzimuth, sunElevation]);
 
-  const sunIntensity = weatherCondition === 'cloudy' ? 0.4 : weatherCondition === 'rain' ? 0.2 : weatherCondition === 'snow' ? 0.3 : 1.2;
+  // Day/night ambient
+  const isNight = sunElevation < 0;
+  const isTwilight = sunElevation >= 0 && sunElevation < 15;
+  const ambientIntensity = isNight ? 0.1 : isTwilight ? 0.25 : (weatherCondition === 'cloudy' || weatherCondition === 'rain' ? 0.5 : 0.35);
+  const ambientColor = isNight ? '#1a1a3e' : isTwilight ? '#ff9966' : '#b8c4d4';
+  const sunIntensity = isNight ? 0 : (weatherCondition === 'cloudy' ? 0.4 : weatherCondition === 'rain' ? 0.2 : weatherCondition === 'snow' ? 0.3 : 1.2);
 
   return (
     <>
-      <ambientLight intensity={weatherCondition === 'cloudy' || weatherCondition === 'rain' ? 0.5 : 0.35} color="#b8c4d4" />
+      <ambientLight intensity={ambientIntensity} color={ambientColor} />
       <directionalLight position={sunPos} intensity={sunIntensity} color="#ffd699" castShadow
         shadow-mapSize-width={2048} shadow-mapSize-height={2048}
         shadow-camera-far={50} shadow-camera-left={-20} shadow-camera-right={20}
         shadow-camera-top={20} shadow-camera-bottom={-20} />
-      <pointLight position={[0, 8, 0]} intensity={0.15} color="#4a9eff" />
+      {!isNight && <pointLight position={[0, 8, 0]} intensity={0.15} color="#4a9eff" />}
 
       <GroundPlane onPointerDown={() => {}} onPointerMove={() => {}} />
 
@@ -64,14 +120,7 @@ function SceneContent() {
       <DeviceMarkers3D />
 
       <Environment preset="night" />
-      <OrbitControls
-        makeDefault
-        enableDamping
-        dampingFactor={0.08}
-        minDistance={3}
-        maxDistance={50}
-        maxPolarAngle={Math.PI / 2.1}
-      />
+      <CameraController />
     </>
   );
 }

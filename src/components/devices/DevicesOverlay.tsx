@@ -30,16 +30,15 @@ export default function DevicesOverlay() {
       position: [0, 0.5, 0] as [number, number, number],
       rotation: [0, 0, 0] as [number, number, number],
     };
-    useAppStore.getState().devices.markers.push(newMarker);
     useAppStore.setState((s) => ({
-      devices: { markers: [...s.devices.markers] },
+      devices: { ...s.devices, markers: [...s.devices.markers, newMarker] },
     }));
     setShowAddMenu(false);
   };
 
   const removeDevice = (id: string) => {
     useAppStore.setState((s) => ({
-      devices: { markers: s.devices.markers.filter((m) => m.id !== id) },
+      devices: { ...s.devices, markers: s.devices.markers.filter((m) => m.id !== id) },
     }));
   };
 

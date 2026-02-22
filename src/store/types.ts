@@ -182,6 +182,7 @@ export interface DeviceMarker {
 
 export interface DevicesState {
   markers: DeviceMarker[];
+  deviceStates: Record<string, boolean>; // id -> on/off
 }
 
 // ─── Props Layer ───
@@ -290,6 +291,8 @@ export interface AppState {
   addDevice: (marker: DeviceMarker) => void;
   removeDevice: (id: string) => void;
   updateDevice: (id: string, changes: Partial<DeviceMarker>) => void;
+  toggleDeviceState: (id: string) => void;
+  setDeviceState: (id: string, on: boolean) => void;
 
   // Layout actions
   addFloor: (name: string) => void;

@@ -58,10 +58,16 @@ export const useAppStore = create<AppState>()(
       updateDevice: (id, changes) => set((s) => ({
         devices: { ...s.devices, markers: s.devices.markers.map((m) => m.id === id ? { ...m, ...changes } : m) },
       })),
+      toggleDeviceState: (id) => set((s) => ({
+        devices: { ...s.devices, deviceStates: { ...s.devices.deviceStates, [id]: !s.devices.deviceStates[id] } },
+      })),
+      setDeviceState: (id, on) => set((s) => ({
+        devices: { ...s.devices, deviceStates: { ...s.devices.deviceStates, [id]: on } },
+      })),
 
       layout: initialLayout,
       build: initialBuild,
-      devices: { markers: [] },
+      devices: { markers: [], deviceStates: {} },
       props: { catalog: [], items: [] },
 
       homeGeometry: {

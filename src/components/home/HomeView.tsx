@@ -5,6 +5,7 @@ import CameraFab from './CameraFab';
 import ClockWidget from './cards/ClockWidget';
 import WeatherWidget from './cards/WeatherWidget';
 import EnergyWidget from './cards/EnergyWidget';
+import TemperatureWidget from './cards/TemperatureWidget';
 import { useWeatherSync } from '@/hooks/useWeatherSync';
 
 export default function HomeView() {
@@ -21,6 +22,7 @@ export default function HomeView() {
       <div className="absolute top-4 left-4 right-4 z-10 flex items-start gap-3 flex-wrap pointer-events-auto">
         {visibleWidgets.clock && <ClockWidget />}
         {visibleWidgets.weather && <WeatherWidget />}
+        {visibleWidgets.temperature && <TemperatureWidget />}
         {visibleWidgets.energy && <EnergyWidget />}
       </div>
 
