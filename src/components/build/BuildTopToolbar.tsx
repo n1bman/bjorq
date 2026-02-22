@@ -3,7 +3,7 @@ import type { BuildTool, SnapMode } from '@/store/types';
 import {
   MousePointer2, Minus, Square, DoorOpen, SquareStack,
   Undo2, Redo2, Grid3X3, Ruler, Trash2, Copy, Paintbrush,
-  Eye, Box, Layers,
+  Eye, Box, Layers, Ghost,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import FloorPicker from './FloorPicker';
@@ -33,6 +33,8 @@ export default function BuildTopToolbar() {
   const toggleGrid = useAppStore((s) => s.toggleGrid);
   const cameraMode = useAppStore((s) => s.build.view.cameraMode);
   const setCameraMode = useAppStore((s) => s.setCameraMode);
+  const showGhost = useAppStore((s) => s.build.view.showOtherFloorsGhost);
+  const setView = useAppStore((s) => s.setView);
 
   const ToolBtn = ({ tool, icon: Icon, label }: { tool: BuildTool; icon: typeof MousePointer2; label: string }) => (
     <button
@@ -125,6 +127,18 @@ export default function BuildTopToolbar() {
           </button>
         ))}
       </div>
+
+      {/* Ghost floors toggle */}
+      <button
+        onClick={() => setView({ showOtherFloorsGhost: !showGhost })}
+        title="Visa andra våningar"
+        className={cn(
+          'p-2 rounded-lg transition-all min-w-[44px] min-h-[44px] flex items-center justify-center',
+          showGhost ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-foreground'
+        )}
+      >
+        <Ghost size={18} />
+      </button>
 
       {/* Spacer */}
       <div className="flex-1" />
