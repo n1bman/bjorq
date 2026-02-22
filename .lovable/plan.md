@@ -1,55 +1,97 @@
 
 
-# Fix Build Mode v2 -- Round 5
+# Complete Build Mode and Sync with Dashboard/Devices
 
-## Issues to Address
+## Overview
+The build mode has good editing tools, but the rest of the app is empty. When a user finishes building, nothing appears in the Dashboard ("Kontrollpanel") or Devices ("Enheter") views. The main 3D scene (`Scene3D`) is a static empty canvas that doesn't render any of the layout data. There's also no explicit "save" action or feedback -- though data does persist automatically via localStorage.
 
-### 1. Imported model rotation not working
-The `ImportedHome3D.tsx` component applies `rotation` from the store, but the Import Tools panel only has sliders for position, scale, and north angle -- there is NO rotation slider. The `rotation` field in the store defaults to `[0, 0, 0]` and is never changed by the UI. Need to add a Y-axis rotation slider to the Import Tools panel (most users only need to rotate around Y to orient their home).
+## What's Missing
 
-### 2. Weather effects (rain/snow) should only appear OUTSIDE the building
-Currently `WeatherEffects3D` spawns particles across the entire 40x40m area including inside rooms. The simplest approach: don't try to exclude particles from inside the building (too complex). Instead, ensure the ceiling blocks the particles visually -- particles that fall below the ceiling height inside rooms should be hidden. However, this is hard with a particle system. A pragmatic solution: spawn particles in a donut/ring shape around the building center, or simply raise the spawn area and let the ceiling mesh occlude them. Since the ceiling uses `colorWrite={false}`, it won't actually occlude. Best approach: make particles only spawn in a ring OUTSIDE a configurable radius from center (e.g., outside 8m radius), so they fall around the house, not through it.
+### 1. Dashboard and Devices show nothing
+The `Scene3D` component used by both Dashboard and Devices modes renders only a ground plane and grid -- no walls, rooms, floors, imported models, props, or weather effects. All the 3D components (InteractiveWalls3D, Floors3D, Ceilings3D, Stairs3D, ImportedHome3D, Props3D, WeatherEffects3D) are only used inside `BuildScene3D`.
 
-### 3. Ceiling not working for imported models
-`Ceilings3D.tsx` only renders ceilings for rooms with polygons (procedural mode). For imported models, there is no room data, so no ceiling is generated. Since imported GLB models typically already have their own roof geometry, no invisible ceiling is needed for those. However, sunlight still passes through the imported model's windows -- that's actually correct behavior. The user seems to want an invisible ceiling ON TOP of the imported model. We can add a simple large flat plane at a configurable ceiling height when in imported mode.
+### 2. No explicit save/done action
+The store auto-persists to localStorage, so data IS saved. But there's no user-facing "Spara" (Save) button or visual confirmation. Users don't know their work is saved.
 
-### 4. Google coordinates for real-world positioning
-The store already has `location: { lat, lon, timezone }` in the environment state. Add input fields for latitude and longitude in the Import Tools or a new "Plats" (Location) section. This could also be used to calculate real sun position based on time and coordinates in the future.
+### 3. Devices mode has no functionality
+The Devices tab exists in the bottom nav but shows the same empty scene as Dashboard. There's no UI for placing device markers, binding to Home Assistant entities, or viewing device states.
 
-### 5. Room numbering still seems off
-The previous fix changed room naming to `Rum ${rooms.length + 1}`, but there may be phantom rooms or the count may not reflect visible rooms. Need to verify and ensure naming scans for the next available number.
+### 4. Dashboard has no controls
+The Dashboard should show the finished home with environment controls (time of day, weather) and device states, but currently it's just an empty 3D scene.
 
 ---
 
-## Technical Changes
+## Plan
 
-### `src/components/build/import/ImportTools.tsx`
-- Add a Y-rotation slider (0-360 degrees) that calls `setImportedModel({ rotation: [0, degrees, 0] })`
-- Add a "Plats" (Location) section with latitude and longitude input fields that update `environment.location`
-- Add an optional "Takhojd" (ceiling height) input for imported models that controls an invisible ceiling plane height
+### A. Make Scene3D render the built home
+Refactor `Scene3D` to render all layout geometry (walls, floors, ceilings, stairs, imported model, props, weather) just like `BuildScene3D` does, but in a read-only/view mode (no editing tools, no selection highlights). This is the core fix -- once the home renders in Scene3D, both Dashboard and Devices modes will show the built home.
 
-### `src/components/build/ImportedHome3D.tsx`
-- No changes needed (rotation already applied from store)
+**Changes to `src/components/Scene3D.tsx`:**
+- Import and render: InteractiveWalls3D (or a view-only variant), Floors3D, Ceilings3D, Stairs3D, ImportedHome3D, Props3D, WeatherEffects3D
+- Read sun position and weather from store for lighting
+- Keep OrbitControls for viewing
 
-### `src/components/build/WeatherEffects3D.tsx`
-- Change particle spawn to a ring shape: only spawn particles where `distance from center > minRadius` (e.g., 6m)
-- This ensures rain/snow falls around the building, not through it
-- Add a simple check: if `sqrt(x^2 + z^2) < minRadius`, re-randomize position to be outside
+### B. Add a "Spara & Visa" (Save & View) button in Build mode
+Add a button in `BuildTopToolbar` or `BuildTabBar` that switches from build mode to dashboard mode. Since data auto-persists, this is just a mode switch with a toast confirmation ("Sparad!").
 
-### `src/components/build/Ceilings3D.tsx`
-- Add a section for imported mode: when `homeGeometry.source === 'imported'`, render a large invisible shadow-casting plane at a configurable height (default: the floor's heightMeters)
-- This prevents light from passing through the top of imported models
+**Changes to `src/components/build/BuildTopToolbar.tsx`:**
+- Add a "Klar" (Done) button that calls `setAppMode('dashboard')` and shows a toast
 
-### `src/store/useAppStore.ts`
-- Add `setLocation(lat, lon)` action to update `environment.location`
+### C. Add basic Dashboard overlay
+Create a `DashboardOverlay` component that shows on top of Scene3D in dashboard mode with:
+- Environment controls (sun direction, weather, time) -- reuse the same controls from BuildTopToolbar
+- Room list with temperatures (placeholder data for now)
+- A "Redigera" (Edit) button to go back to build mode
 
-### `src/store/types.ts`
-- Add `setLocation` action signature
+**New file: `src/components/dashboard/DashboardOverlay.tsx`**
+
+### D. Add basic Devices mode UI
+Create a `DevicesPanel` component for devices mode showing:
+- List of placed device markers
+- "Lagg till enhet" (Add device) button with device type picker
+- Device placement on the 3D scene (click to place)
+- Device inspector when selected (position, type, HA entity binding)
+
+**New files:**
+- `src/components/devices/DevicesOverlay.tsx` -- panel with device list and controls
+- `src/components/devices/DeviceMarkers3D.tsx` -- renders device markers in 3D scene
+
+### E. Update Index.tsx layout
+Update the page layout so Dashboard and Devices modes show Scene3D with their respective overlays.
+
+**Changes to `src/pages/Index.tsx`:**
+- Import DashboardOverlay and DevicesOverlay
+- Render them conditionally based on appMode
+
+---
+
+## Technical Details
+
+### Scene3D changes
+```text
+Current: Empty scene (ground + grid + lights)
+After:   Full home render (walls + floors + ceilings + stairs + 
+         imported model + props + weather + sun position)
+```
+
+The key difference from BuildScene3D: no editing interactions (no wall drawing, no tool handling, no selection). Just pure rendering with orbit camera controls.
+
+### Store -- no changes needed
+The store already has all the data structures and actions needed. Layout data, environment state, and device markers are all persisted.
+
+### Device markers in 3D
+Each `DeviceMarker` from the store will render as a small icon/sphere in the 3D scene at its position. Clicking a marker in devices mode selects it and shows its inspector.
+
+### Dashboard environment controls
+Reuse the same sun/weather slider logic from BuildTopToolbar but in a floating panel on the dashboard view.
+
+---
 
 ## Implementation Order
-1. Add rotation slider to ImportTools
-2. Fix weather particle spawn ring
-3. Add imported model ceiling plane
-4. Add location inputs
-5. Add store action for location
+1. Refactor Scene3D to render layout geometry (walls, floors, etc.)
+2. Add "Klar" button in build mode toolbar
+3. Create DashboardOverlay with environment controls
+4. Create DevicesOverlay with device list and placement
+5. Create DeviceMarkers3D for 3D rendering
+6. Update Index.tsx to wire everything together
 
