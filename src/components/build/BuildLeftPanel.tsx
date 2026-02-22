@@ -1,8 +1,9 @@
 import { useAppStore } from '@/store/useAppStore';
+import { detectRooms } from '@/lib/roomDetection';
 import type { BuildTool } from '@/store/types';
 import {
   Minus, Square, DoorOpen, SquareStack, Paintbrush,
-  Ruler, Upload, Layers, Move, Package, Plus,
+  Ruler, Upload, Layers, Move, Package, Plus, RefreshCw,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import TemplatesPicker from './structure/TemplatesPicker';
@@ -33,6 +34,12 @@ export default function BuildLeftPanel() {
   const activeTool = useAppStore((s) => s.build.activeTool);
   const setBuildTool = useAppStore((s) => s.setBuildTool);
   const homeGeometrySource = useAppStore((s) => s.homeGeometry.source);
+  const activeFloorId = useAppStore((s) => s.layout.activeFloorId);
+  const floors = useAppStore((s) => s.layout.floors);
+  const setRooms = useAppStore((s) => s.setRooms);
+  const pushUndo = useAppStore((s) => s.pushUndo);
+
+  const floor = floors.find((f) => f.id === activeFloorId);
 
   const isStructureReadOnly = tab === 'structure' && homeGeometrySource === 'imported';
 
@@ -82,6 +89,24 @@ export default function BuildLeftPanel() {
               </button>
             ))}
           </div>
+
+          {/* Room detection button */}
+          {!isStructureReadOnly && floor && floor.walls.length >= 3 && (
+            <div className="mx-1 mt-1">
+              <button
+                onClick={() => {
+                  if (!activeFloorId || !floor) return;
+                  pushUndo();
+                  const detected = detectRooms(floor.walls);
+                  setRooms(activeFloorId, detected);
+                }}
+                className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-xs font-medium text-primary bg-primary/10 hover:bg-primary/20 transition-all min-h-[44px] lg:justify-start justify-center"
+              >
+                <RefreshCw size={16} />
+                <span className="hidden lg:inline">Detektera rum</span>
+              </button>
+            </div>
+          )}
 
           {/* Sub-panels for template/paint */}
           {activeTool === 'template' && !isStructureReadOnly && (

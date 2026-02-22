@@ -34,16 +34,23 @@ export default function BuildCanvas2D() {
   const selection = useAppStore((s) => s.build.selection);
   const activeFloorId = useAppStore((s) => s.layout.activeFloorId);
   const floors = useAppStore((s) => s.layout.floors);
+  const propItems = useAppStore((s) => s.props.items);
 
   const setWallDrawing = useAppStore((s) => s.setWallDrawing);
   const addWall = useAppStore((s) => s.addWall);
   const setSelection = useAppStore((s) => s.setSelection);
   const pushUndo = useAppStore((s) => s.pushUndo);
   const deleteWall = useAppStore((s) => s.deleteWall);
+  const updateProp = useAppStore((s) => s.updateProp);
 
   const floor = floors.find((f) => f.id === activeFloorId);
   const walls = floor?.walls ?? [];
   const rooms = floor?.rooms ?? [];
+  const floorProps = propItems.filter((p) => p.floorId === activeFloorId);
+
+  const [isDraggingProp, setIsDraggingProp] = useState(false);
+  const [dragPropId, setDragPropId] = useState<string | null>(null);
+  const [dragPropOffset, setDragPropOffset] = useState<[number, number]>([0, 0]);
 
   // World <-> Screen conversions
   const worldToScreen = useCallback(
@@ -78,6 +85,20 @@ export default function BuildCanvas2D() {
   );
 
   // Find wall under screen point
+  // Find prop under screen point
+  const findPropAt = useCallback(
+    (sx: number, sy: number) => {
+      const [wx, wz] = screenToWorld(sx, sy);
+      const threshold = 0.5; // meters
+      for (const prop of floorProps) {
+        const dist = Math.sqrt((wx - prop.position[0]) ** 2 + (wz - prop.position[2]) ** 2);
+        if (dist < threshold) return prop;
+      }
+      return null;
+    },
+    [floorProps, screenToWorld]
+  );
+
   const findWallAt = useCallback(
     (sx: number, sy: number): WallSegment | null => {
       const [wx, wz] = screenToWorld(sx, sy);
@@ -269,6 +290,35 @@ export default function BuildCanvas2D() {
       }
     }
 
+    // Draw props as icons in 2D
+    for (const prop of floorProps) {
+      const [px, py] = worldToScreen(prop.position[0], prop.position[2]);
+      const isSelected = selection.type === 'prop' && selection.id === prop.id;
+      const size = 8;
+
+      // Prop square icon
+      ctx.fillStyle = isSelected ? '#4a9eff' : '#e8a838';
+      ctx.globalAlpha = isSelected ? 1 : 0.8;
+      ctx.fillRect(px - size, py - size, size * 2, size * 2);
+      ctx.globalAlpha = 1;
+
+      // Selection ring
+      if (isSelected) {
+        ctx.strokeStyle = '#4a9eff';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(px, py, size + 4, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      // Label
+      ctx.fillStyle = 'rgba(255,255,255,0.6)';
+      ctx.font = '9px DM Sans, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.fillText(prop.url.split('/').pop()?.slice(0, 10) ?? '3D', px, py + size + 3);
+    }
+
     // Cursor crosshair
     if (cursorWorld && (activeTool === 'wall' || activeTool === 'room')) {
       const snapped = snapToGrid(cursorWorld[0], cursorWorld[1]);
@@ -326,6 +376,17 @@ export default function BuildCanvas2D() {
           setWallDrawing({ nodes: [...wallDrawing.nodes, snapped] });
         }
       } else if (activeTool === 'select') {
+        // Check props first (they're on top)
+        const prop = findPropAt(sx, sy);
+        if (prop) {
+          setSelection({ type: 'prop', id: prop.id });
+          // Start dragging prop
+          const [wx, wz] = screenToWorld(sx, sy);
+          setIsDraggingProp(true);
+          setDragPropId(prop.id);
+          setDragPropOffset([wx - prop.position[0], wz - prop.position[2]]);
+          return;
+        }
         const wall = findWallAt(sx, sy);
         if (wall) {
           setSelection({ type: 'wall', id: wall.id });
@@ -340,7 +401,7 @@ export default function BuildCanvas2D() {
         }
       }
     },
-    [activeTool, activeFloorId, wallDrawing, screenToWorld, snapToGrid, setWallDrawing, findWallAt, setSelection, pushUndo, deleteWall]
+    [activeTool, activeFloorId, wallDrawing, screenToWorld, snapToGrid, setWallDrawing, findWallAt, findPropAt, setSelection, pushUndo, deleteWall]
   );
 
   const handlePointerMove = useCallback(
@@ -360,12 +421,25 @@ export default function BuildCanvas2D() {
       const sy = e.clientY - rect.top;
       const [wx, wz] = screenToWorld(sx, sy);
       setCursorWorld([wx, wz]);
+
+      // Drag prop
+      if (isDraggingProp && dragPropId) {
+        const snapped = snapToGrid(wx - dragPropOffset[0], wz - dragPropOffset[1]);
+        const prop = floorProps.find((p) => p.id === dragPropId);
+        if (prop) {
+          updateProp(dragPropId, {
+            position: [snapped[0], prop.position[1], snapped[1]],
+          });
+        }
+      }
     },
-    [isPanning, panStart, zoom, offset, screenToWorld]
+    [isPanning, panStart, zoom, offset, screenToWorld, isDraggingProp, dragPropId, dragPropOffset, snapToGrid, floorProps, updateProp]
   );
 
   const handlePointerUp = useCallback(() => {
     setIsPanning(false);
+    setIsDraggingProp(false);
+    setDragPropId(null);
   }, []);
 
   const handleDoubleClick = useCallback(() => {
@@ -409,7 +483,7 @@ export default function BuildCanvas2D() {
         onPointerLeave={handlePointerUp}
         onDoubleClick={handleDoubleClick}
         onWheel={handleWheel}
-        style={{ cursor: activeTool === 'wall' ? 'crosshair' : activeTool === 'erase' ? 'not-allowed' : 'default' }}
+        style={{ cursor: isDraggingProp ? 'grabbing' : activeTool === 'wall' ? 'crosshair' : activeTool === 'erase' ? 'not-allowed' : 'default' }}
       />
 
       {/* Status bar */}
