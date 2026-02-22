@@ -15,6 +15,11 @@ const COLORS = {
   room: 'rgba(74, 158, 255, 0.08)',
   roomStroke: 'rgba(74, 158, 255, 0.3)',
   cursor: '#e8a838',
+  ghost: 'rgba(255,255,255,0.12)',
+  ghostNode: 'rgba(255,255,255,0.08)',
+  stair: 'rgba(232, 168, 56, 0.4)',
+  stairStroke: '#e8a838',
+  measure: '#4ade80',
   floorplanOverlay: 0.3,
 };
 
@@ -23,10 +28,17 @@ export default function BuildCanvas2D() {
   const containerRef = useRef<HTMLDivElement>(null);
 
   const [offset, setOffset] = useState<[number, number]>([0, 0]);
-  const [zoom, setZoom] = useState(40); // pixels per meter
+  const [zoom, setZoom] = useState(40);
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState<[number, number]>([0, 0]);
   const [cursorWorld, setCursorWorld] = useState<[number, number] | null>(null);
+
+  // Measure tool state
+  const [measureStart, setMeasureStart] = useState<[number, number] | null>(null);
+  const [measureEnd, setMeasureEnd] = useState<[number, number] | null>(null);
+
+  // Touch state
+  const [touchPinch, setTouchPinch] = useState<{ dist: number; zoom: number; center: [number, number] } | null>(null);
 
   const activeTool = useAppStore((s) => s.build.activeTool);
   const grid = useAppStore((s) => s.build.grid);
@@ -35,6 +47,7 @@ export default function BuildCanvas2D() {
   const activeFloorId = useAppStore((s) => s.layout.activeFloorId);
   const floors = useAppStore((s) => s.layout.floors);
   const propItems = useAppStore((s) => s.props.items);
+  const showGhost = useAppStore((s) => s.build.view.showOtherFloorsGhost);
 
   const setWallDrawing = useAppStore((s) => s.setWallDrawing);
   const addWall = useAppStore((s) => s.addWall);
@@ -42,11 +55,16 @@ export default function BuildCanvas2D() {
   const pushUndo = useAppStore((s) => s.pushUndo);
   const deleteWall = useAppStore((s) => s.deleteWall);
   const updateProp = useAppStore((s) => s.updateProp);
+  const addStair = useAppStore((s) => s.addStair);
 
   const floor = floors.find((f) => f.id === activeFloorId);
   const walls = floor?.walls ?? [];
   const rooms = floor?.rooms ?? [];
+  const stairs = floor?.stairs ?? [];
   const floorProps = propItems.filter((p) => p.floorId === activeFloorId);
+
+  // Ghost floors (other floors' walls)
+  const ghostFloors = showGhost ? floors.filter((f) => f.id !== activeFloorId) : [];
 
   const [isDraggingProp, setIsDraggingProp] = useState(false);
   const [dragPropId, setDragPropId] = useState<string | null>(null);
@@ -57,8 +75,8 @@ export default function BuildCanvas2D() {
     (wx: number, wz: number): [number, number] => {
       const canvas = canvasRef.current;
       if (!canvas) return [0, 0];
-      const cx = canvas.width / 2;
-      const cy = canvas.height / 2;
+      const cx = canvas.width / (window.devicePixelRatio || 1) / 2;
+      const cy = canvas.height / (window.devicePixelRatio || 1) / 2;
       return [cx + (wx - offset[0]) * zoom, cy + (wz - offset[1]) * zoom];
     },
     [offset, zoom]
@@ -68,8 +86,8 @@ export default function BuildCanvas2D() {
     (sx: number, sy: number): [number, number] => {
       const canvas = canvasRef.current;
       if (!canvas) return [0, 0];
-      const cx = canvas.width / 2;
-      const cy = canvas.height / 2;
+      const cx = canvas.width / (window.devicePixelRatio || 1) / 2;
+      const cy = canvas.height / (window.devicePixelRatio || 1) / 2;
       return [(sx - cx) / zoom + offset[0], (sy - cy) / zoom + offset[1]];
     },
     [offset, zoom]
@@ -84,12 +102,10 @@ export default function BuildCanvas2D() {
     [grid]
   );
 
-  // Find wall under screen point
-  // Find prop under screen point
   const findPropAt = useCallback(
     (sx: number, sy: number) => {
       const [wx, wz] = screenToWorld(sx, sy);
-      const threshold = 0.5; // meters
+      const threshold = 0.5;
       for (const prop of floorProps) {
         const dist = Math.sqrt((wx - prop.position[0]) ** 2 + (wz - prop.position[2]) ** 2);
         if (dist < threshold) return prop;
@@ -102,7 +118,7 @@ export default function BuildCanvas2D() {
   const findWallAt = useCallback(
     (sx: number, sy: number): WallSegment | null => {
       const [wx, wz] = screenToWorld(sx, sy);
-      const threshold = 0.3; // meters
+      const threshold = 0.3;
       for (const wall of walls) {
         const dx = wall.to[0] - wall.from[0];
         const dz = wall.to[1] - wall.from[1];
@@ -120,7 +136,7 @@ export default function BuildCanvas2D() {
     [walls, screenToWorld]
   );
 
-  // Draw
+  // ─── Draw ───
   useEffect(() => {
     const canvas = canvasRef.current;
     const container = containerRef.current;
@@ -165,7 +181,6 @@ export default function BuildCanvas2D() {
         }
         ctx.stroke();
 
-        // Major grid lines
         const majorPx = gridPx * 10;
         if (majorPx > 20) {
           const majorStartX = ((ox % majorPx) - majorPx) % majorPx;
@@ -186,6 +201,21 @@ export default function BuildCanvas2D() {
       }
     }
 
+    // ─── Ghost floors ───
+    for (const gf of ghostFloors) {
+      for (const gw of gf.walls) {
+        const [x1, y1] = worldToScreen(gw.from[0], gw.from[1]);
+        const [x2, y2] = worldToScreen(gw.to[0], gw.to[1]);
+        ctx.strokeStyle = COLORS.ghost;
+        ctx.lineWidth = Math.max(1, gw.thickness * zoom * 0.5);
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+      }
+    }
+
     // Draw rooms
     for (const room of rooms) {
       if (!room.polygon || room.polygon.length < 3) continue;
@@ -203,7 +233,6 @@ export default function BuildCanvas2D() {
       ctx.lineWidth = 1;
       ctx.stroke();
 
-      // Room name
       const cx2 = room.polygon.reduce((a, p) => a + p[0], 0) / room.polygon.length;
       const cz2 = room.polygon.reduce((a, p) => a + p[1], 0) / room.polygon.length;
       const [tx, ty] = worldToScreen(cx2, cz2);
@@ -221,7 +250,6 @@ export default function BuildCanvas2D() {
 
       const isSelected = selection.type === 'wall' && selection.id === wall.id;
 
-      // Wall line with thickness
       const thickPx = wall.thickness * zoom;
       ctx.strokeStyle = isSelected ? COLORS.wallSelected : COLORS.wall;
       ctx.lineWidth = Math.max(2, thickPx);
@@ -235,8 +263,8 @@ export default function BuildCanvas2D() {
       for (const op of wall.openings) {
         const dx = x2 - x1;
         const dy = y2 - y1;
-        const ox = x1 + dx * op.offset;
-        const oy = y1 + dy * op.offset;
+        const opx = x1 + dx * op.offset;
+        const opy = y1 + dy * op.offset;
         const len = Math.sqrt(dx * dx + dy * dy);
         const nx = -dy / len;
         const ny = dx / len;
@@ -245,8 +273,8 @@ export default function BuildCanvas2D() {
         ctx.strokeStyle = op.type === 'door' ? '#e8a838' : '#4a9eff';
         ctx.lineWidth = 3;
         ctx.beginPath();
-        ctx.moveTo(ox + nx * halfW, oy + ny * halfW);
-        ctx.lineTo(ox - nx * halfW, oy - ny * halfW);
+        ctx.moveTo(opx + nx * halfW, opy + ny * halfW);
+        ctx.lineTo(opx - nx * halfW, opy - ny * halfW);
         ctx.stroke();
       }
 
@@ -258,6 +286,56 @@ export default function BuildCanvas2D() {
       ctx.beginPath();
       ctx.arc(x2, y2, 3, 0, Math.PI * 2);
       ctx.fill();
+    }
+
+    // ─── Draw stairs ───
+    for (const stair of stairs) {
+      const [sx, sy] = worldToScreen(stair.position[0], stair.position[1]);
+      const wPx = stair.width * zoom;
+      const lPx = stair.length * zoom;
+      const isSelected = selection.type === 'stair' && selection.id === stair.id;
+
+      ctx.save();
+      ctx.translate(sx, sy);
+      ctx.rotate(stair.rotation);
+
+      ctx.fillStyle = isSelected ? 'rgba(74, 158, 255, 0.3)' : COLORS.stair;
+      ctx.strokeStyle = isSelected ? '#4a9eff' : COLORS.stairStroke;
+      ctx.lineWidth = 1.5;
+      ctx.fillRect(-wPx / 2, -lPx / 2, wPx, lPx);
+      ctx.strokeRect(-wPx / 2, -lPx / 2, wPx, lPx);
+
+      // Draw stair treads
+      const treads = 8;
+      ctx.strokeStyle = isSelected ? 'rgba(74, 158, 255, 0.5)' : 'rgba(232, 168, 56, 0.5)';
+      ctx.lineWidth = 0.5;
+      for (let i = 1; i < treads; i++) {
+        const ty = -lPx / 2 + (lPx / treads) * i;
+        ctx.beginPath();
+        ctx.moveTo(-wPx / 2, ty);
+        ctx.lineTo(wPx / 2, ty);
+        ctx.stroke();
+      }
+
+      // Arrow
+      ctx.strokeStyle = isSelected ? '#4a9eff' : COLORS.stairStroke;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(0, lPx / 2 - 4);
+      ctx.lineTo(0, -lPx / 2 + 4);
+      ctx.lineTo(-4, -lPx / 2 + 10);
+      ctx.moveTo(0, -lPx / 2 + 4);
+      ctx.lineTo(4, -lPx / 2 + 10);
+      ctx.stroke();
+
+      ctx.restore();
+
+      // Label
+      ctx.fillStyle = 'rgba(255,255,255,0.5)';
+      ctx.font = '9px DM Sans, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.fillText('Trappa', sx, sy + lPx / 2 + 3);
     }
 
     // Wall drawing preview
@@ -280,7 +358,6 @@ export default function BuildCanvas2D() {
       ctx.stroke();
       ctx.setLineDash([]);
 
-      // Nodes
       for (const node of wallDrawing.nodes) {
         const [nx, ny] = worldToScreen(node[0], node[1]);
         ctx.fillStyle = COLORS.wallDrawing;
@@ -290,19 +367,17 @@ export default function BuildCanvas2D() {
       }
     }
 
-    // Draw props as icons in 2D
+    // Draw props as icons
     for (const prop of floorProps) {
       const [px, py] = worldToScreen(prop.position[0], prop.position[2]);
       const isSelected = selection.type === 'prop' && selection.id === prop.id;
       const size = 8;
 
-      // Prop square icon
       ctx.fillStyle = isSelected ? '#4a9eff' : '#e8a838';
       ctx.globalAlpha = isSelected ? 1 : 0.8;
       ctx.fillRect(px - size, py - size, size * 2, size * 2);
       ctx.globalAlpha = 1;
 
-      // Selection ring
       if (isSelected) {
         ctx.strokeStyle = '#4a9eff';
         ctx.lineWidth = 2;
@@ -311,7 +386,6 @@ export default function BuildCanvas2D() {
         ctx.stroke();
       }
 
-      // Label
       ctx.fillStyle = 'rgba(255,255,255,0.6)';
       ctx.font = '9px DM Sans, sans-serif';
       ctx.textAlign = 'center';
@@ -319,11 +393,55 @@ export default function BuildCanvas2D() {
       ctx.fillText(prop.url.split('/').pop()?.slice(0, 10) ?? '3D', px, py + size + 3);
     }
 
+    // ─── Measure tool ───
+    if (measureStart) {
+      const [mx1, my1] = worldToScreen(measureStart[0], measureStart[1]);
+
+      ctx.fillStyle = COLORS.measure;
+      ctx.beginPath();
+      ctx.arc(mx1, my1, 5, 0, Math.PI * 2);
+      ctx.fill();
+
+      const end = measureEnd ?? (cursorWorld ? snapToGrid(cursorWorld[0], cursorWorld[1]) : null);
+      if (end) {
+        const [mx2, my2] = worldToScreen(end[0], end[1]);
+
+        ctx.strokeStyle = COLORS.measure;
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([4, 3]);
+        ctx.beginPath();
+        ctx.moveTo(mx1, my1);
+        ctx.lineTo(mx2, my2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        ctx.fillStyle = COLORS.measure;
+        ctx.beginPath();
+        ctx.arc(mx2, my2, 5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Distance label
+        const dist = Math.sqrt((end[0] - measureStart[0]) ** 2 + (end[1] - measureStart[1]) ** 2);
+        const midX = (mx1 + mx2) / 2;
+        const midY = (my1 + my2) / 2;
+        const label = `${dist.toFixed(2)} m`;
+
+        ctx.font = 'bold 12px DM Sans, sans-serif';
+        const tw = ctx.measureText(label).width;
+        ctx.fillStyle = 'rgba(0,0,0,0.7)';
+        ctx.fillRect(midX - tw / 2 - 4, midY - 18, tw + 8, 20);
+        ctx.fillStyle = COLORS.measure;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(label, midX, midY - 8);
+      }
+    }
+
     // Cursor crosshair
-    if (cursorWorld && (activeTool === 'wall' || activeTool === 'room')) {
+    if (cursorWorld && (activeTool === 'wall' || activeTool === 'room' || activeTool === 'stairs' || activeTool === 'measure')) {
       const snapped = snapToGrid(cursorWorld[0], cursorWorld[1]);
       const [cx, cy] = worldToScreen(snapped[0], snapped[1]);
-      ctx.strokeStyle = COLORS.cursor;
+      ctx.strokeStyle = activeTool === 'measure' ? COLORS.measure : COLORS.cursor;
       ctx.lineWidth = 1;
       ctx.setLineDash([4, 4]);
       ctx.beginPath();
@@ -341,11 +459,51 @@ export default function BuildCanvas2D() {
     const container = containerRef.current;
     if (!container) return;
     const ro = new ResizeObserver(() => {
-      // trigger re-render
       setOffset((o) => [...o] as [number, number]);
     });
     ro.observe(container);
     return () => ro.disconnect();
+  }, []);
+
+  // ─── Touch handlers ───
+  const handleTouchStart = useCallback(
+    (e: React.TouchEvent) => {
+      if (e.touches.length === 2) {
+        e.preventDefault();
+        const t1 = e.touches[0];
+        const t2 = e.touches[1];
+        const dist = Math.sqrt((t1.clientX - t2.clientX) ** 2 + (t1.clientY - t2.clientY) ** 2);
+        const center: [number, number] = [(t1.clientX + t2.clientX) / 2, (t1.clientY + t2.clientY) / 2];
+        setTouchPinch({ dist, zoom, center });
+      }
+    },
+    [zoom]
+  );
+
+  const handleTouchMove = useCallback(
+    (e: React.TouchEvent) => {
+      if (e.touches.length === 2 && touchPinch) {
+        e.preventDefault();
+        const t1 = e.touches[0];
+        const t2 = e.touches[1];
+        const dist = Math.sqrt((t1.clientX - t2.clientX) ** 2 + (t1.clientY - t2.clientY) ** 2);
+        const scale = dist / touchPinch.dist;
+        const newZoom = Math.max(5, Math.min(200, touchPinch.zoom * scale));
+        setZoom(newZoom);
+
+        // Pan with center movement
+        const center: [number, number] = [(t1.clientX + t2.clientX) / 2, (t1.clientY + t2.clientY) / 2];
+        const dx = (center[0] - touchPinch.center[0]) / newZoom;
+        const dy = (center[1] - touchPinch.center[1]) / newZoom;
+        setOffset((o) => [o[0] - dx, o[1] - dy]);
+        setTouchPinch({ dist: touchPinch.dist, zoom: touchPinch.zoom, center });
+      }
+    },
+    [touchPinch]
+  );
+
+  const handleTouchEnd = useCallback(() => {
+    setTouchPinch(null);
   }, []);
 
   // Mouse handlers
@@ -356,7 +514,6 @@ export default function BuildCanvas2D() {
       const sx = e.clientX - rect.left;
       const sy = e.clientY - rect.top;
 
-      // Middle button or space+click = pan
       if (e.button === 1) {
         setIsPanning(true);
         setPanStart([e.clientX, e.clientY]);
@@ -365,6 +522,37 @@ export default function BuildCanvas2D() {
       }
 
       if (e.button !== 0) return;
+
+      if (activeTool === 'measure') {
+        const [wx, wz] = screenToWorld(sx, sy);
+        const snapped = snapToGrid(wx, wz);
+        if (!measureStart || measureEnd) {
+          // Start new measurement
+          setMeasureStart(snapped);
+          setMeasureEnd(null);
+        } else {
+          // Finish measurement
+          setMeasureEnd(snapped);
+        }
+        return;
+      }
+
+      if (activeTool === 'stairs' && activeFloorId) {
+        const [wx, wz] = screenToWorld(sx, sy);
+        const snapped = snapToGrid(wx, wz);
+        pushUndo();
+        addStair(activeFloorId, {
+          id: generateId(),
+          floorId: activeFloorId,
+          position: snapped,
+          rotation: 0,
+          width: 1,
+          length: 2.5,
+          fromFloorId: activeFloorId,
+          toFloorId: activeFloorId,
+        });
+        return;
+      }
 
       if (activeTool === 'wall' && activeFloorId) {
         const [wx, wz] = screenToWorld(sx, sy);
@@ -376,11 +564,9 @@ export default function BuildCanvas2D() {
           setWallDrawing({ nodes: [...wallDrawing.nodes, snapped] });
         }
       } else if (activeTool === 'select') {
-        // Check props first (they're on top)
         const prop = findPropAt(sx, sy);
         if (prop) {
           setSelection({ type: 'prop', id: prop.id });
-          // Start dragging prop
           const [wx, wz] = screenToWorld(sx, sy);
           setIsDraggingProp(true);
           setDragPropId(prop.id);
@@ -401,7 +587,7 @@ export default function BuildCanvas2D() {
         }
       }
     },
-    [activeTool, activeFloorId, wallDrawing, screenToWorld, snapToGrid, setWallDrawing, findWallAt, findPropAt, setSelection, pushUndo, deleteWall]
+    [activeTool, activeFloorId, wallDrawing, screenToWorld, snapToGrid, setWallDrawing, findWallAt, findPropAt, setSelection, pushUndo, deleteWall, measureStart, measureEnd, addStair]
   );
 
   const handlePointerMove = useCallback(
@@ -422,7 +608,6 @@ export default function BuildCanvas2D() {
       const [wx, wz] = screenToWorld(sx, sy);
       setCursorWorld([wx, wz]);
 
-      // Drag prop
       if (isDraggingProp && dragPropId) {
         const snapped = snapToGrid(wx - dragPropOffset[0], wz - dragPropOffset[1]);
         const prop = floorProps.find((p) => p.id === dragPropId);
@@ -471,6 +656,15 @@ export default function BuildCanvas2D() {
     []
   );
 
+  const getCursor = () => {
+    if (isDraggingProp) return 'grabbing';
+    if (activeTool === 'wall' || activeTool === 'room') return 'crosshair';
+    if (activeTool === 'erase') return 'not-allowed';
+    if (activeTool === 'measure') return 'crosshair';
+    if (activeTool === 'stairs') return 'copy';
+    return 'default';
+  };
+
   return (
     <div ref={containerRef} className="w-full h-full relative overflow-hidden"
       style={{ touchAction: 'none' }}>
@@ -483,7 +677,10 @@ export default function BuildCanvas2D() {
         onPointerLeave={handlePointerUp}
         onDoubleClick={handleDoubleClick}
         onWheel={handleWheel}
-        style={{ cursor: isDraggingProp ? 'grabbing' : activeTool === 'wall' ? 'crosshair' : activeTool === 'erase' ? 'not-allowed' : 'default' }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        style={{ cursor: getCursor() }}
       />
 
       {/* Status bar */}
@@ -495,6 +692,18 @@ export default function BuildCanvas2D() {
         )}
         {activeTool === 'wall' && !wallDrawing.isDrawing && (
           <span className="text-primary font-medium">Klicka för att börja rita vägg</span>
+        )}
+        {activeTool === 'measure' && !measureStart && (
+          <span className="text-primary font-medium">Klicka för att börja mäta</span>
+        )}
+        {activeTool === 'measure' && measureStart && !measureEnd && (
+          <span className="text-primary font-medium">Klicka för att avsluta mätning</span>
+        )}
+        {activeTool === 'measure' && measureStart && measureEnd && (
+          <span className="text-primary font-medium">Klicka för ny mätning</span>
+        )}
+        {activeTool === 'stairs' && (
+          <span className="text-primary font-medium">Klicka för att placera trappa</span>
         )}
       </div>
     </div>

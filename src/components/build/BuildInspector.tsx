@@ -1,5 +1,5 @@
 import { useAppStore } from '@/store/useAppStore';
-import { X, Plus, DoorOpen, RotateCcw, Move, Trash2 } from 'lucide-react';
+import { X, Plus, DoorOpen, RotateCcw, Move, Trash2, Layers } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
 
 const generateId = () => Math.random().toString(36).slice(2, 10);
@@ -16,6 +16,7 @@ export default function BuildInspector() {
   const items = useAppStore((s) => s.props.items);
   const updateProp = useAppStore((s) => s.updateProp);
   const removeProp = useAppStore((s) => s.removeProp);
+  const removeStair = useAppStore((s) => s.removeStair);
 
   const floor = floors.find((f) => f.id === activeFloorId);
 
@@ -186,6 +187,43 @@ export default function BuildInspector() {
         <button onClick={handleDelete}
           className="w-full py-2 rounded-lg bg-destructive/20 text-destructive text-xs font-medium hover:bg-destructive/30 transition-colors min-h-[44px] flex items-center justify-center gap-1">
           <Trash2 size={14} /> Ta bort
+        </button>
+      </div>
+    );
+  }
+
+  // ─── Stair Inspector ───
+  if (selection.type === 'stair') {
+    const stair = floor.stairs.find((s) => s.id === selection.id);
+    if (!stair) return null;
+
+    const handleDelete = () => {
+      if (!activeFloorId) return;
+      pushUndo();
+      removeStair(activeFloorId, stair.id);
+      setSelection({ type: null, id: null });
+    };
+
+    return (
+      <div className="absolute top-3 right-3 w-56 glass-panel rounded-xl p-3 space-y-3 text-xs z-10">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-foreground font-display flex items-center gap-1">
+            <Layers size={14} /> Trappa
+          </h3>
+          <button onClick={() => setSelection({ type: null, id: null })}
+            className="p-1 rounded hover:bg-secondary/30 text-muted-foreground">
+            <X size={14} />
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 text-muted-foreground">
+          <span>Bredd:</span><span className="text-foreground">{stair.width} m</span>
+          <span>Längd:</span><span className="text-foreground">{stair.length} m</span>
+        </div>
+
+        <button onClick={handleDelete}
+          className="w-full py-2 rounded-lg bg-destructive/20 text-destructive text-xs font-medium hover:bg-destructive/30 transition-colors min-h-[44px] flex items-center justify-center gap-1">
+          <Trash2 size={14} /> Ta bort trappa
         </button>
       </div>
     );
