@@ -3,10 +3,11 @@ import type { BuildTool, SnapMode } from '@/store/types';
 import {
   MousePointer2, Minus, Square, DoorOpen, SquareStack,
   Undo2, Redo2, Grid3X3, Ruler, Trash2, Copy, Paintbrush,
-  Eye, Box, Layers, Ghost,
+  Eye, Box, Layers, Ghost, XCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import FloorPicker from './FloorPicker';
+import { useState } from 'react';
 
 const viewModes = [
   { key: 'topdown' as const, label: 'Plan', icon: Eye },
@@ -35,6 +36,14 @@ export default function BuildTopToolbar() {
   const setCameraMode = useAppStore((s) => s.setCameraMode);
   const showGhost = useAppStore((s) => s.build.view.showOtherFloorsGhost);
   const setView = useAppStore((s) => s.setView);
+  const clearAllFloors = useAppStore((s) => s.clearAllFloors);
+
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+
+  const handleClearAll = () => {
+    clearAllFloors();
+    setShowClearConfirm(false);
+  };
 
   const ToolBtn = ({ tool, icon: Icon, label }: { tool: BuildTool; icon: typeof MousePointer2; label: string }) => (
     <button
@@ -53,7 +62,7 @@ export default function BuildTopToolbar() {
   );
 
   return (
-    <div className="flex items-center gap-1 px-2 py-1 border-b border-border bg-card/80 backdrop-blur-sm flex-wrap">
+    <div className="flex items-center gap-1 px-2 py-1 border-b border-border bg-card/80 backdrop-blur-sm flex-wrap relative">
       {/* Primary tools */}
       <ToolBtn tool="select" icon={MousePointer2} label="Markera" />
       <ToolBtn tool="copy" icon={Copy} label="Kopiera" />
@@ -82,7 +91,6 @@ export default function BuildTopToolbar() {
         <Grid3X3 size={18} />
       </button>
 
-      {/* Grid size */}
       <select
         value={grid.sizeMeters}
         onChange={(e) => setGrid({ sizeMeters: parseFloat(e.target.value) })}
@@ -94,7 +102,6 @@ export default function BuildTopToolbar() {
         ))}
       </select>
 
-      {/* Snap mode */}
       <select
         value={grid.snapMode}
         onChange={(e) => setGrid({ snapMode: e.target.value as SnapMode })}
@@ -131,7 +138,7 @@ export default function BuildTopToolbar() {
       {/* Ghost floors toggle */}
       <button
         onClick={() => setView({ showOtherFloorsGhost: !showGhost })}
-        title="Visa andra våningar"
+        title={showGhost ? 'Dölj andra våningars väggar' : 'Visa andra våningars väggar som skuggor'}
         className={cn(
           'p-2 rounded-lg transition-all min-w-[44px] min-h-[44px] flex items-center justify-center',
           showGhost ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-foreground'
@@ -140,11 +147,46 @@ export default function BuildTopToolbar() {
         <Ghost size={18} />
       </button>
 
+      <div className="w-px h-6 bg-border mx-1" />
+
+      {/* Clear all button */}
+      <button
+        onClick={() => setShowClearConfirm(true)}
+        title="Rensa allt"
+        className="p-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all min-w-[44px] min-h-[44px] flex items-center justify-center"
+      >
+        <XCircle size={18} />
+      </button>
+
       {/* Spacer */}
       <div className="flex-1" />
 
       {/* Floor picker */}
       <FloorPicker />
+
+      {/* Clear confirmation dialog */}
+      {showClearConfirm && (
+        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 glass-panel rounded-xl p-4 space-y-3 w-64 shadow-xl">
+          <p className="text-sm text-foreground font-medium text-center">Rensa allt?</p>
+          <p className="text-xs text-muted-foreground text-center">
+            Alla väggar, rum, trappor och möbler på alla våningar tas bort. Kan inte ångras.
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowClearConfirm(false)}
+              className="flex-1 py-2 rounded-lg bg-secondary/50 text-foreground text-xs font-medium hover:bg-secondary transition-colors"
+            >
+              Avbryt
+            </button>
+            <button
+              onClick={handleClearAll}
+              className="flex-1 py-2 rounded-lg bg-destructive text-destructive-foreground text-xs font-medium hover:bg-destructive/90 transition-colors"
+            >
+              Rensa allt
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

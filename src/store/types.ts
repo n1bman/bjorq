@@ -313,4 +313,11 @@ export interface AppState {
   // Environment actions
   setTimeMode: (mode: 'live' | 'preview') => void;
   setPreviewDateTime: (dt: string) => void;
+
+  // Clear actions
+  clearFloor: (floorId: string) => void;
+  clearAllFloors: () => void;
+
+  // Opening offset update
+  updateOpeningOffset: (floorId: string, wallId: string, openingId: string, offset: number) => void;
 }
