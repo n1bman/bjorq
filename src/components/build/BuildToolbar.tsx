@@ -1,6 +1,6 @@
 import { useAppStore } from '@/store/useAppStore';
 import type { BuildTool } from '@/store/types';
-import { MousePointer2, Minus, Ruler, Move, Undo2, Redo2, Image, Trash2, DoorOpen, Box } from 'lucide-react';
+import { MousePointer2, Minus, Ruler, Undo2, Redo2, Image, Trash2, DoorOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useRef } from 'react';
 
@@ -9,7 +9,6 @@ const tools: { key: BuildTool; label: string; icon: typeof MousePointer2 }[] = [
   { key: 'wall', label: 'Vägg', icon: Minus },
   { key: 'opening', label: 'Öppning', icon: DoorOpen },
   { key: 'calibrate', label: 'Skala', icon: Ruler },
-  { key: 'pan', label: 'Panorera', icon: Move },
 ];
 
 export default function BuildToolbar() {
@@ -24,8 +23,6 @@ export default function BuildToolbar() {
   const selectedWallId = useAppStore((s) => s.build.selectedWallId);
   const deleteWall = useAppStore((s) => s.deleteWall);
   const pushUndo = useAppStore((s) => s.pushUndo);
-  const show3D = useAppStore((s) => s.build.show3DPreview);
-  const setShow3D = useAppStore((s) => s.setShow3DPreview);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFloorplanUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -85,17 +82,6 @@ export default function BuildToolbar() {
         <Image size={16} />
       </button>
       <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={handleFloorplanUpload} />
-
-      <button
-        onClick={() => setShow3D(!show3D)}
-        title="3D Förhandsgranskning"
-        className={cn(
-          'p-1.5 rounded-lg transition-all',
-          show3D ? 'bg-accent/20 text-accent' : 'text-muted-foreground hover:text-foreground hover:bg-secondary/30'
-        )}
-      >
-        <Box size={16} />
-      </button>
 
       {selectedWallId && (
         <button onClick={handleDeleteWall} title="Ta bort vägg"
