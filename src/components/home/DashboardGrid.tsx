@@ -4,6 +4,7 @@ import EnergyWidget from './cards/EnergyWidget';
 import DevicesSection from './cards/DevicesSection';
 import LocationSettings from './cards/LocationSettings';
 import HomeWidgetConfig from './cards/HomeWidgetConfig';
+import HAConnectionPanel from './cards/HAConnectionPanel';
 
 export default function DashboardGrid() {
   return (
@@ -28,6 +29,7 @@ export default function DashboardGrid() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <LocationSettings />
             <HomeWidgetConfig />
+            <HAConnectionPanel />
           </div>
         </div>
       </div>

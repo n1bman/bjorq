@@ -91,7 +91,7 @@ export type SnapMode = 'strict' | 'soft' | 'off';
 export type CameraMode = 'topdown' | '3d' | 'floor-isolate';
 
 export interface BuildSelection {
-  type: 'wall' | 'opening' | 'room' | 'prop' | 'stair' | null;
+  type: 'wall' | 'opening' | 'room' | 'prop' | 'stair' | 'device' | null;
   id: string | null;
 }
 
@@ -162,6 +162,7 @@ export type DeviceSurface = 'floor' | 'wall' | 'ceiling';
 export interface DeviceMarker {
   id: string;
   kind: DeviceKind;
+  name: string;
   floorId: string;
   roomId?: string;
   surface: DeviceSurface;

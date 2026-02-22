@@ -24,6 +24,7 @@ export default function DevicesOverlay() {
     const newMarker = {
       id: generateId(),
       kind,
+      name: '',
       floorId: activeFloorId || 'floor-1',
       surface: 'floor' as const,
       position: [0, 0.5, 0] as [number, number, number],
