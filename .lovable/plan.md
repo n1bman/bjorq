@@ -1,99 +1,119 @@
 
+# Fix Build Mode v2 -- Round 3
 
-# Fix Build Mode v2 -- Round 2
+## Issues to Fix
 
-## Issues Found and Solutions
+### 1. Extra 3D geometry on doors and windows
+The door and window 3D models in `InteractiveWalls3D.tsx` render frame pieces AND panels that look like extra walls (visible in the screenshot). The frame positioning uses perpendicular offsets creating visible artifacts. Simplify to: door = just a thin panel in the opening, window = glass panel + thin frame outline only.
 
-### 1. Floor rendered outside rooms (3D coordinate bug)
-**Root cause**: In `Floors3D.tsx`, the room polygon uses `[x, z]` coordinates to create a `THREE.Shape` in the XY plane. When rotated `-PI/2` around the X axis, the Y values get negated, so world Z = -polygon_z. This causes the floor to appear mirrored/offset.
+### 2. Stairs should not have side walls/rails
+`Stairs3D.tsx` renders tall side rails (`railHeight = floorHeight + 0.9`) that look like walls. Remove the side rails entirely -- just keep the treads and risers for a clean stair look.
 
-**Fix**: In `Floors3D.tsx`, negate the Z coordinates when building the shape: use `shape.moveTo(polygon[0][0], -polygon[0][1])` and `shape.lineTo(polygon[i][0], -polygon[i][1])`.
+### 3. Ceiling not blocking light properly
+In `Ceilings3D.tsx`, the material uses `opacity={0}` with `transparent`. A fully transparent material won't cast shadows. Fix by using a solid opaque material on the backside only (`side: THREE.BackSide`) or use `colorWrite={false}` approach so the mesh is invisible but still writes to the depth/shadow buffer.
 
-### 2. Wall materials not applied from room settings
-**Root cause**: The Room Inspector sets `room.wallMaterialId`, but `InteractiveWalls3D.tsx` only reads `wall.materialId` (per-wall property). There is no connection between a room's wall material setting and the actual wall rendering.
+### 4. Sun direction and weather controls in build mode
+The store already has `environment.weather` and sun data. Add a small environment panel to the top toolbar or a collapsible section that lets users:
+- Rotate the directional light (sun azimuth) with a slider
+- Change sun elevation angle
+- Toggle weather: clear, cloudy, rain, snow
+- Add simple particle effects for rain/snow in the 3D scene
 
-**Fix**: In `InteractiveWalls3D.tsx`, look up which room each wall belongs to (by checking `room.wallIds`). If the room has a `wallMaterialId` and the wall has no own `materialId`, use the room's material. Same fix needed in the non-interactive `Walls3D.tsx`.
+New store actions needed: `setSunAngle(azimuth, elevation)` and `setWeather(condition)`.
 
-### 3. Invisible roof/ceiling for shadow control
-**Problem**: Light passes through the top of rooms unrealistically. Need an invisible ceiling that blocks light (casts shadows) but is not visually opaque.
+### 5. Room naming starts at "Rum 2"
+In `handlePointerUp` of `BuildCanvas2D.tsx`, rooms are created with the static name `'Rum'`. The `addRoomFromRect` action creates the room. The issue is that when creating multiple rooms, they all get "Rum" -- there's no counter. Fix by counting existing rooms: `Rum ${rooms.length + 1}`.
 
-**Fix**: Create a new `Ceilings3D.tsx` component that renders a flat mesh at the top of each room (at `elevation + heightMeters`). Use `meshStandardMaterial` with `visible={false}` but `castShadow={true}` -- or use a `shadowMaterial` approach. The ceiling mesh uses the same polygon shape as the floor but positioned at ceiling height. Add it to `BuildScene3D.tsx`.
+### 6. Floor picker -- can't add new floors
+The `addFloor` function works but after adding, it doesn't switch to the new floor. Fix `FloorPicker.tsx` to auto-select the newly added floor by calling `setActiveFloor` and `setView({ floorFilter: newFloorId })` after adding.
 
-### 4. Simple 3D door/window/stair models
-**Problem**: Doors and windows are just gaps in walls. No visual indicator in 3D view.
+### 7. Opening/door/window selection and editing
+Currently openings can be selected (`selection.type === 'opening'`) but there's no inspector for them. Add an `OpeningInspector` component in `BuildInspector.tsx` that shows:
+- Type (door/window)
+- Width (editable)
+- Height (editable)
+- Sill height (for windows, editable)
+- Position along wall (offset slider)
+- Delete button
 
-**Fix**: 
-- **Doors**: Add a thin box (door frame) and a slightly inset panel (the door leaf) at each door opening position in `InteractiveWalls3D.tsx`. Color: brown/wood.
-- **Windows**: Add a thin transparent panel (glass) with a frame at each window opening. Use `meshPhysicalMaterial` with `transmission` for glass effect.
-- **Stairs**: Create a `Stairs3D.tsx` component that renders stair treads as a series of box meshes, positioned according to the stair data.
+New store action needed: `updateOpening(floorId, wallId, openingId, changes)` for updating width/height/sillHeight.
 
-### 5. Floor picker appears grayed out / non-functional
-**Root cause**: The FloorPicker code looks correct but the `floorFilter` state may conflict with `activeFloorId`. When "Alla vaningar" is selected, `floorFilter` is `'all'` but `activeFloorId` remains unchanged. The label says "Alla" which is confusing. Additionally, the dropdown header should say "Vaningar" not "Alla".
+### 8. Stair selection and editing
+The stair inspector exists but only has delete. Add:
+- Width (editable)
+- Length (editable)
+- Rotation slider
+- Position display
 
-**Fix**: 
-- Rename the button label from "Alla" to "Vaningar" when showing all floors
-- Ensure clicking a specific floor always sets both `activeFloorId` AND `floorFilter`
-- Make sure the canvas and tools respect the active floor properly
-
-### 6. Room polygon updates when walls are dragged
-**Problem**: After detecting or creating rooms, dragging a wall node does not update the room polygon, so the room shape becomes stale.
-
-**Fix**: Add a `updateRoomPolygon` action to the store. After any wall node drag completes (in `handlePointerUp` of `BuildCanvas2D.tsx`), recalculate all room polygons on the active floor by reading the current wall positions. Each room stores `wallIds` -- iterate those walls and rebuild the polygon from connected endpoints.
-
-### 7. Paint tool not working for walls
-**Problem**: The `PaintTool` component in the left panel sets `room.wallMaterialId` and `room.floorMaterialId`, which is correct for rooms. But individual wall materials (`wall.materialId`) are never set. The paint tool only works per-room, not per-wall.
-
-**Fix**: This is actually working as designed (per-room material). The real issue is #2 above -- the 3D rendering ignores room materials. Once #2 is fixed, the paint tool will work. Additionally, add visual feedback in the 2D canvas: render room fills using the floor material color.
+New store action needed: `updateStair(floorId, stairId, changes)`.
 
 ---
 
 ## Technical Changes
 
-### `src/components/build/Floors3D.tsx`
-- Negate Z coordinates in shape construction: `shape.moveTo(polygon[0][0], -polygon[0][1])`
-
-### `src/components/build/Ceilings3D.tsx` (new file)
-- Render invisible shadow-casting ceiling meshes per room
-- Same polygon logic as Floors3D but at `elevation + heightMeters`
-- Material: `visible={false}`, mesh has `castShadow={true}`
-
-### `src/components/build/Stairs3D.tsx` (new file)
-- Render stair treads as stacked boxes
-- Read from `floor.stairs` data
-
-### `src/components/build/InteractiveWalls3D.tsx`
-- Look up room wall materials and apply them to wall meshes
-- Add simple door frame + panel meshes at door openings
-- Add glass panel + frame meshes at window openings
-
-### `src/components/build/BuildScene3D.tsx`
-- Add `Ceilings3D` and `Stairs3D` components
-
-### `src/components/build/FloorPicker.tsx`
-- Change label from "Alla" to "Vaningar"
-- Ensure proper floor switching behavior
+### `src/store/types.ts`
+- Add `updateOpening` action type
+- Add `updateStair` action type
+- Add `sunAzimuth` and `sunElevation` to `EnvironmentState`
+- Add `setSunPosition(azimuth, elevation)` action
+- Add `setWeather(condition)` action
 
 ### `src/store/useAppStore.ts`
-- Add `updateRoomPolygons(floorId)` action that recalculates room polygons from current wall positions
+- Add `sunAzimuth: 135` and `sunElevation: 45` to initial environment state
+- Implement `updateOpening(floorId, wallId, openingId, changes)` -- updates opening's width/height/sillHeight
+- Implement `updateStair(floorId, stairId, changes)` -- updates stair width/length/rotation/position
+- Implement `setSunPosition(azimuth, elevation)`
+- Implement `setWeather(condition)`
 
-### `src/store/types.ts`
-- Add `updateRoomPolygons` to AppState interface
+### `src/components/build/InteractiveWalls3D.tsx`
+- Simplify door model: remove separate left/right/top frame pieces. Keep only a single thin door panel mesh centered in the opening
+- Simplify window model: remove separate left/right/top/bottom frame pieces. Keep only the glass panel and a single thin frame box around it
+
+### `src/components/build/Stairs3D.tsx`
+- Remove the two side rail meshes (lines 44-58)
+- Keep only treads and risers
+
+### `src/components/build/Ceilings3D.tsx`
+- Change material to be shadow-casting properly: use `meshBasicMaterial` with `colorWrite={false}` and `depthWrite={true}`, or use a solid material with `side={THREE.BackSide}` so it's only visible from below (inside the room it appears as ceiling, from outside/above it's invisible)
+
+### `src/components/build/BuildScene3D.tsx`
+- Read `sunAzimuth` and `sunElevation` from store
+- Calculate directional light position from azimuth/elevation angles
+- Read weather condition and add simple rain/snow particle system component
+
+### `src/components/build/WeatherEffects3D.tsx` (new file)
+- Simple particle system for rain (falling blue lines) and snow (falling white dots)
+- Uses `useFrame` to animate particles downward
+- Only renders when weather is 'rain' or 'snow'
+
+### `src/components/build/BuildInspector.tsx`
+- Add `OpeningInspector` component for when `selection.type === 'opening'`
+  - Find the opening by searching all walls for matching opening ID
+  - Editable fields: width, height, sillHeight (window only), offset
+  - Delete button
+- Enhance `StairInspector` with editable width, length, rotation slider, position display
 
 ### `src/components/build/BuildCanvas2D.tsx`
-- After wall node/segment drag ends, call `updateRoomPolygons`
-- Render room floor fills using material color in 2D view
-- When room tool draws a rectangle, the created room walls should have their polygon auto-updated
+- Fix room naming on line 904: change `'Rum'` to `` `Rum ${rooms.length + 1}` ``
 
-### `src/components/build/BuildCanvas2D.tsx` (2D room fill colors)
-- In the room drawing section, use the room's `floorMaterialId` to get the material color and fill the room polygon with it instead of the default blue tint
+### `src/components/build/FloorPicker.tsx`
+- After `addFloor`, get the new floor ID and call `setActiveFloor` + `setView({ floorFilter: newFloorId })`
+
+### `src/components/build/BuildTopToolbar.tsx`
+- Add a sun/weather controls section:
+  - Sun azimuth slider (0-360 degrees)
+  - Weather dropdown (clear/cloudy/rain/snow)
+  - Only visible in 3D camera mode
+
+---
 
 ## Implementation Order
-1. Fix Floors3D coordinate bug (quick fix)
-2. Add `updateRoomPolygons` store action
-3. Fix wall material lookup from rooms in InteractiveWalls3D
-4. Create Ceilings3D for shadow-casting invisible roof
-5. Add door/window 3D representations in InteractiveWalls3D
-6. Create Stairs3D component
-7. Update BuildScene3D to include new components
-8. Fix FloorPicker labels and behavior
-9. Update BuildCanvas2D for room polygon refresh and material-colored fills
+1. Store changes (new actions, environment state)
+2. Fix InteractiveWalls3D (simplify door/window models)
+3. Fix Stairs3D (remove rails)
+4. Fix Ceilings3D (proper shadow casting)
+5. Fix BuildCanvas2D room naming
+6. Fix FloorPicker auto-select
+7. Add OpeningInspector and enhance StairInspector
+8. Add sun/weather controls to BuildScene3D and toolbar
+9. Create WeatherEffects3D
