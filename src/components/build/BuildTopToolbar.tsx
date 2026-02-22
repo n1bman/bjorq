@@ -73,7 +73,7 @@ export default function BuildTopToolbar() {
   );
 
   return (
-    <div className="flex items-center gap-1 px-2 py-1 border-b border-border bg-card/80 backdrop-blur-sm flex-wrap relative z-50">
+    <div className="flex items-center gap-1 px-2 py-1 border-b border-border bg-card/80 backdrop-blur-sm relative z-50 overflow-x-auto flex-nowrap">
       {/* Primary tools */}
       <ToolBtn tool="select" icon={MousePointer2} label="Markera" />
       <ToolBtn tool="copy" icon={Copy} label="Kopiera" />
@@ -105,7 +105,8 @@ export default function BuildTopToolbar() {
       <select
         value={grid.sizeMeters}
         onChange={(e) => setGrid({ sizeMeters: parseFloat(e.target.value) })}
-        className="h-8 px-1.5 rounded-md bg-secondary/50 text-xs text-foreground border-none outline-none cursor-pointer"
+        className="h-8 px-1.5 rounded-md bg-secondary/50 text-xs text-foreground border-none outline-none cursor-pointer shrink-0"
+        style={{ width: 70, maxWidth: 70 }}
         title="Rutnätsstorlek"
       >
         {gridSizes.map((s) => (
@@ -116,7 +117,8 @@ export default function BuildTopToolbar() {
       <select
         value={grid.snapMode}
         onChange={(e) => setGrid({ snapMode: e.target.value as SnapMode })}
-        className="h-8 px-1.5 rounded-md bg-secondary/50 text-xs text-foreground border-none outline-none cursor-pointer"
+        className="h-8 px-1.5 rounded-md bg-secondary/50 text-xs text-foreground border-none outline-none cursor-pointer shrink-0"
+        style={{ width: 70, maxWidth: 70 }}
         title="Snap-läge"
       >
         {snapModes.map((sm) => (
