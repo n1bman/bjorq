@@ -10,6 +10,7 @@ import TemplatesPicker from './structure/TemplatesPicker';
 import PaintTool from './structure/PaintTool';
 import ImportTools from './import/ImportTools';
 import FurnishTools from './furnish/FurnishTools';
+import DevicePlacementTools from './devices/DevicePlacementTools';
 
 interface ToolItem {
   key: BuildTool;
@@ -143,6 +144,13 @@ export default function BuildLeftPanel() {
             </h3>
           </div>
           <FurnishTools />
+        </div>
+      )}
+
+      {/* Devices tab */}
+      {tab === 'devices' && (
+        <div className="py-2">
+          <DevicePlacementTools />
         </div>
       )}
     </div>

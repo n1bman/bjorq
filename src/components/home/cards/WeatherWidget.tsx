@@ -1,5 +1,5 @@
 import { useAppStore } from '@/store/useAppStore';
-import { Thermometer } from 'lucide-react';
+import { Thermometer, Wind, Droplets } from 'lucide-react';
 
 const weatherIcons: Record<string, string> = {
   clear: '☀️',
@@ -8,12 +8,19 @@ const weatherIcons: Record<string, string> = {
   snow: '❄️',
 };
 
+const conditionLabels: Record<string, string> = {
+  clear: 'Klart',
+  cloudy: 'Molnigt',
+  rain: 'Regn',
+  snow: 'Snö',
+};
+
 export default function WeatherWidget() {
   const condition = useAppStore((s) => s.environment.weather.condition);
   const temperature = useAppStore((s) => s.environment.weather.temperature);
 
   return (
-    <div className="glass-panel rounded-2xl p-4 min-w-[140px]">
+    <div className="glass-panel rounded-2xl p-4 min-w-[160px]">
       <div className="flex items-center gap-3">
         <span className="text-2xl">{weatherIcons[condition] ?? '☀️'}</span>
         <div>
@@ -21,9 +28,17 @@ export default function WeatherWidget() {
             <Thermometer size={14} className="text-primary" />
             <span className="text-lg font-semibold font-display text-foreground">{temperature}°C</span>
           </div>
-          <p className="text-[10px] text-muted-foreground capitalize">
-            {condition === 'clear' ? 'Klart' : condition === 'cloudy' ? 'Molnigt' : condition === 'rain' ? 'Regn' : 'Snö'}
-          </p>
+          <p className="text-[10px] text-muted-foreground">{conditionLabels[condition] ?? condition}</p>
+        </div>
+      </div>
+      <div className="flex items-center gap-3 mt-2 pt-2 border-t border-border/30">
+        <div className="flex items-center gap-1">
+          <Wind size={12} className="text-muted-foreground" />
+          <span className="text-[10px] text-muted-foreground">3.2 m/s</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <Droplets size={12} className="text-muted-foreground" />
+          <span className="text-[10px] text-muted-foreground">62%</span>
         </div>
       </div>
     </div>
