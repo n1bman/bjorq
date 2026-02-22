@@ -1,137 +1,140 @@
 
 
-# HomeTwin Pro – Digital Twin Smart Home Platform
+# Phase 2 Continuation – Remaining Build Mode Features
 
-## Overview
-A premium 3D digital twin smart home platform with Swedish UI, dark Scandinavian aesthetic, and three distinct modes: Dashboard (view/control), Devices (placement/binding), and Build (floorplan/structure). Built with React Three Fiber for 3D rendering and Zustand for state management.
+## Status Check
+Already done: Floor management, floorplan import, scale calibration, basic wall drawing (nodes, snap, select, delete, undo/redo), 2D canvas with zoom/pan.
 
----
-
-## Phase 1 – Foundation & Design System
-
-### 1.1 Design System & Layout Shell
-- Dark charcoal theme with warm amber accents and cool blue info tones
-- Glass-morphism panel components
-- Swedish typography and UI labels throughout
-- Bottom navigation bar with mode switcher: **Kontrollpanel** (Dashboard), **Enheter** (Devices), **Bygge** (Build)
-- Responsive, mobile-first layout with bottom sheets for panels
-
-### 1.2 Zustand Store Architecture
-- Strict layered state: `layout`, `devices`, `props`, `environment`, `homeAssistant`
-- Each layer fully independent
-- localStorage persistence for all layers
-- Undo/redo history for Build mode operations
-
-### 1.3 Basic 3D Scene
-- React Three Fiber canvas with drei helpers
-- Orbit/zoom/pan camera controls (touch-friendly: 1-finger drag, 2-finger pinch/pan)
-- Dollhouse camera preset
-- Ground plane and ambient lighting
-- Soft shadows setup
+Remaining from Phase 2:
+- Wall openings (doors and windows)
+- Room detection from closed wall loops
+- Materials system with presets
+- Props system (GLB/GLTF import)
+- 3D wall extrusion preview
 
 ---
 
-## Phase 2 – Build Mode (Floorplan & Structure)
+## 2.3a Wall Openings (Doors & Windows)
 
-### 2.1 Floor Management
-- Add/remove/rename floors (Våning 1, Våning 2…)
-- Floor picker UI
-- Elevation setting per floor
-- Grid system with configurable size
+New build tool "opening" added to toolbar. When a wall is selected, user can place a door or window on it.
 
-### 2.2 Floorplan Import & Scale Calibration ⭐
-- Upload floorplan image (PNG/JPG)
-- Display as 2D background layer
-- **Scene Scale Calibration**: Draw a reference line over a known wall → enter real-world meters → system calculates pixel-to-meter scale
-- All subsequent layout data uses real-world meter units
+**Store changes** (`types.ts`):
+- Add `BuildTool` value: `'opening'`
+- Add to `BuildState`: `openingType: 'door' | 'window'`
 
-### 2.3 Wall System (2D Editor with 3D Preview)
-- 2D-first wall drawing: click to place wall nodes, segments snap to grid
-- Move wall nodes, split walls, delete walls
-- Undo/redo support
-- Walls render as extruded 3D meshes in preview
-- Wall openings (doors/windows): placed by offset on wall segment, width/height params, visual mesh splitting (no boolean cutting)
+**Store actions** (`useAppStore.ts`):
+- `addOpening(floorId, wallId, opening)` – push opening onto wall's openings array
+- `removeOpening(floorId, wallId, openingId)` – remove opening
+- `setOpeningType(type)` – set door or window for placement
 
-### 2.4 Room Detection & Materials
-- Auto-detect closed wall loops as rooms
-- Assign room name and materials
-- Materials panel: preset materials (paint, concrete, wood), color picker, roughness presets
-- Materials applied to walls, floors, doors, window frames
-- Materials stored by `materialId` and referenced by rooms/walls/openings
+**New component**: `src/components/build/WallProperties.tsx`
+- Side panel shown when a wall is selected
+- Shows wall length (calculated), height, thickness
+- Lists openings on that wall with delete button
+- "Lägg till dörr" / "Lägg till fönster" buttons
+- Opening offset slider (0-100% along wall)
+- Width/height inputs
 
-### 2.5 Props System
-- Import GLB/GLTF files as visual props
-- Place via raycast onto floor
-- Drag to move, slider to rotate, optional scale slider
-- Purely visual — no smart logic
-- Persisted in Zustand + localStorage
+**Canvas2D updates**:
+- Render openings as colored markers on walls (blue rectangles for windows, brown for doors)
+- Click on wall + click position to place opening at calculated offset
 
 ---
 
-## Phase 3 – Devices Mode (Placement & HA Binding)
+## 2.4 Room Detection & Materials
 
-### 3.1 Device Placement
-- Device types: Light, Switch/Button, Sensor, Climate, Vacuum Dock
-- Raycast placement onto floor/wall/ceiling surfaces
-- Optional grid snap
-- TransformControls for positioning (translate only in MVP)
-- OrbitControls disabled while dragging
-- Devices rendered as abstract billboard markers (not heavy 3D models)
-- Persisted per floor with position/rotation
+**Room detection** (`src/lib/roomDetection.ts`):
+- Graph-based cycle detection from wall segments
+- Find minimal closed loops of connected walls
+- Auto-generate rooms with default names ("Rum 1", "Rum 2"...)
+- Triggered via a "Detektera rum" button in toolbar
 
-### 3.2 Home Assistant Integration
-- WebSocket connection UI: URL + long-lived access token input
-- Fetch HA entities list
-- Bind device marker to `entity_id`
-- Subscribe to live state updates via WebSocket
-- Connection status indicator
+**Store changes**:
+- `addRoom(floorId, room)` / `removeRoom(floorId, roomId)` / `renameRoom(floorId, roomId, name)`
+- `setRoomMaterial(floorId, roomId, target: 'floor' | 'wall', materialId)`
 
----
+**Materials system** (`src/store/types.ts`):
+- New `Material` type: `{ id, name, type: 'paint' | 'concrete' | 'wood', color, roughness }`
+- Preset materials defined in `src/lib/materials.ts`
 
-## Phase 4 – Dashboard Mode (View & Control)
+**New component**: `src/components/build/MaterialsPanel.tsx`
+- Glass-panel sidebar listing rooms
+- Per-room: rename, pick floor material, pick wall material
+- Material picker with preset swatches + color picker + roughness slider
 
-### 4.1 3D Digital Twin View
-- Multi-floor dollhouse rendering with all layers combined
-- Floor selector: Alla, Våning 1, Våning 2…
-- Room filter
-- No editing allowed — view and control only
+**New component**: `src/components/build/RoomList.tsx`
+- Shows detected rooms
+- Click to rename, delete
 
-### 4.2 Overlay Markers & Smart Controls
-- Billboarded device icons with large invisible touch hit areas (min 44px)
-- Tap → quick control popup (toggle light, start vacuum, etc.)
-- Long press → detail drawer/bottom sheet
-- Control types:
-  - **Light**: toggle + brightness slider
-  - **Switch**: toggle
-  - **Sensor**: read-only value display
-  - **Climate**: temperature set point
-  - **Vacuum**: start / return to base
-
-### 4.3 Environment Layer
-- Sun position from HA `sun` entity (fallback: manual location input)
-- Dynamic directional light matching sun azimuth/elevation
-- Daylight intensity & color temperature shifts
-- Indoor light warmth adjusts with time of day
-
-### 4.4 Weather Particles
-- Subtle rain/snow particles rendered outside the building only
-- Driven by HA weather entity or manual setting
-
-### 4.5 Preview Time Scrubber ⭐
-- Toggle between **Live** (real-time from HA/system) and **Förhandsvisning** (Preview)
-- 24-hour time scrubber slider
-- Optional date selector
-- Sun position, lighting, and ambience update smoothly as scrubber moves
-- Simulate morning light, golden hour, night mode, winter darkness
-- Premium smooth animation feel
+**Canvas2D updates**:
+- Fill detected room polygons with semi-transparent material color
 
 ---
 
-## Technical Notes
-- **3D Engine**: React Three Fiber + drei (orbit controls, billboard, transform controls, environment)
-- **State**: Zustand with localStorage persistence, strict layer separation
-- **No backend needed for MVP** — all data local
-- **HA Integration**: Direct WebSocket from browser to Home Assistant instance
-- **Touch UX**: Mobile-first gestures, large handles, bottom sheet panels
-- **Texture/GLB caching** for performance
+## 2.5 Props System (GLB/GLTF Import)
+
+**Store changes** (`types.ts` / `useAppStore.ts`):
+- `addProp(prop)` / `removeProp(id)` / `updateProp(id, changes)`
+- Props already defined in types
+
+**New component**: `src/components/build/PropsPanel.tsx`
+- "Importera 3D-modell" button to upload GLB/GLTF
+- File stored as object URL
+- List of placed props with delete/select
+- Position (x, z), rotation slider, scale slider per prop
+
+Props are 3D-only, so they render in the 3D preview (Phase 2.6).
+
+---
+
+## 2.6 3D Wall Extrusion Preview
+
+**New component**: `src/components/build/Walls3D.tsx`
+- Reads walls from active floor
+- For each wall segment: creates a BoxGeometry extruded along the wall line
+- Wall height and thickness from wall data
+- Splits mesh visually around openings (separate box segments with gaps)
+- Uses material color from assigned materialId or default amber
+
+**New component**: `src/components/build/Floors3D.tsx`
+- For each detected room: renders floor plane at room elevation
+- Uses room floor material color
+
+**Integration into Scene3D or a new `BuildPreview3D`**:
+- Toggle between 2D canvas and 3D preview in Build mode
+- Add "3D Förhandsgranskning" button to toolbar
+
+---
+
+## Implementation Order
+
+1. Wall openings (store actions + WallProperties panel + Canvas2D rendering)
+2. Materials presets library
+3. Room detection algorithm + RoomList UI
+4. MaterialsPanel for room material assignment
+5. 3D wall extrusion (Walls3D + Floors3D)
+6. Props system (PropsPanel + store actions)
+7. 3D preview toggle in Build mode
+
+---
+
+## Technical Details
+
+**Files to create**:
+- `src/components/build/WallProperties.tsx`
+- `src/components/build/RoomList.tsx`
+- `src/components/build/MaterialsPanel.tsx`
+- `src/components/build/PropsPanel.tsx`
+- `src/components/build/Walls3D.tsx`
+- `src/components/build/Floors3D.tsx`
+- `src/lib/roomDetection.ts`
+- `src/lib/materials.ts`
+
+**Files to modify**:
+- `src/store/types.ts` – add Material type, extend BuildTool, add store actions
+- `src/store/useAppStore.ts` – implement new actions
+- `src/components/build/BuildToolbar.tsx` – add opening tool, room detection button, 3D preview toggle
+- `src/components/build/Canvas2D.tsx` – render openings and room fills
+- `src/components/build/BuildMode.tsx` – integrate new side panels
+- `src/components/Scene3D.tsx` – add Walls3D and Floors3D components
 
