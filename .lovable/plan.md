@@ -1,119 +1,79 @@
 
-# Fix Build Mode v2 -- Round 3
 
-## Issues to Fix
+# Fix Build Mode v2 -- Round 4
 
-### 1. Extra 3D geometry on doors and windows
-The door and window 3D models in `InteractiveWalls3D.tsx` render frame pieces AND panels that look like extra walls (visible in the screenshot). The frame positioning uses perpendicular offsets creating visible artifacts. Simplify to: door = just a thin panel in the opening, window = glass panel + thin frame outline only.
+## Issues and Solutions
 
-### 2. Stairs should not have side walls/rails
-`Stairs3D.tsx` renders tall side rails (`railHeight = floorHeight + 0.9`) that look like walls. Remove the side rails entirely -- just keep the treads and risers for a clean stair look.
+### 1. Grayed-out buttons / dropdowns not interactive
+The "Rensa allt" dialog, "Sol & Vader" panel, and "Vaningar" dropdown all render as `absolute` panels from within the toolbar. But the toolbar sits ABOVE the 3D Canvas which captures pointer events. The dropdown panels drop BELOW the toolbar into the canvas area. The `z-50` should work for 2D canvas, but for the 3D Canvas (WebGL via `<Canvas>`), the Three.js canvas element captures events regardless of z-index. 
 
-### 3. Ceiling not blocking light properly
-In `Ceilings3D.tsx`, the material uses `opacity={0}` with `transparent`. A fully transparent material won't cast shadows. Fix by using a solid opaque material on the backside only (`side: THREE.BackSide`) or use `colorWrite={false}` approach so the mesh is invisible but still writes to the depth/shadow buffer.
+**Fix**: The dropdowns/popups need to be rendered as portals or the toolbar wrapper needs `pointer-events: auto` and the panels need `pointer-events: auto` explicitly. Also, the `BuildTopToolbar` parent div uses `relative` positioning for the absolute panels -- need to ensure the panels have `pointer-events-auto` and are NOT obscured by the canvas. The real fix: move the popup panels outside the toolbar flow by adding `pointer-events-auto` and ensure the toolbar wrapper has a higher z-index than the canvas area.
 
-### 4. Sun direction and weather controls in build mode
-The store already has `environment.weather` and sun data. Add a small environment panel to the top toolbar or a collapsible section that lets users:
-- Rotate the directional light (sun azimuth) with a slider
-- Change sun elevation angle
-- Toggle weather: clear, cloudy, rain, snow
-- Add simple particle effects for rain/snow in the 3D scene
+### 2. X-pattern (cross) in windows
+In `InteractiveWalls3D.tsx` line 162, the window frame uses `wireframe` material which creates the visible X/cross pattern in each window.
 
-New store actions needed: `setSunAngle(azimuth, elevation)` and `setWeather(condition)`.
+**Fix**: Remove `wireframe` from the window frame material. Instead, create 4 thin frame bars (top, bottom, left, right) as separate box meshes, or simply remove the frame mesh entirely and keep only the glass panel.
 
-### 5. Room naming starts at "Rum 2"
-In `handlePointerUp` of `BuildCanvas2D.tsx`, rooms are created with the static name `'Rum'`. The `addRoomFromRect` action creates the room. The issue is that when creating multiple rooms, they all get "Rum" -- there's no counter. Fix by counting existing rooms: `Rum ${rooms.length + 1}`.
+### 3. Phantom "Rum 1" in Paint Tool
+The persist migration v3 returns `undefined` which should clear data, but the `migrate` function might not fire correctly or stale data persists. Also, `addRoomFromRect` in the store creates room walls AND adds a room -- the room counter `rooms.length + 1` counts from the current floor's rooms, but there might be a leftover room from detection or initial state.
 
-### 6. Floor picker -- can't add new floors
-The `addFloor` function works but after adding, it doesn't switch to the new floor. Fix `FloorPicker.tsx` to auto-select the newly added floor by calling `setActiveFloor` and `setView({ floorFilter: newFloorId })` after adding.
+**Fix**: 
+- Update the room naming to scan existing room names and find the next available number
+- Make the "Rensa allt" button also properly clear rooms
+- In PaintTool, if a room has no valid polygon (empty or fewer than 3 points), skip it
 
-### 7. Opening/door/window selection and editing
-Currently openings can be selected (`selection.type === 'opening'`) but there's no inspector for them. Add an `OpeningInspector` component in `BuildInspector.tsx` that shows:
-- Type (door/window)
-- Width (editable)
-- Height (editable)
-- Sill height (for windows, editable)
-- Position along wall (offset slider)
-- Delete button
+### 4. Imported 3D model -- detecting windows/doors
+This is a complex feature. A GLB/GLTF model is just geometry -- there's no automatic way to know where windows and doors are. However, we can provide a manual workflow: after importing a model, let users place "opening markers" on the model by clicking positions in 3D view.
 
-New store action needed: `updateOpening(floorId, wallId, openingId, changes)` for updating width/height/sillHeight.
+**Fix**: For now, add a note/tooltip in the Import tab explaining that windows/doors need to be placed manually on imported models. Add the ability to use the door/window tool in 3D view when an imported model is active -- clicking on the ground plane places a marker. This is a future enhancement; for this round, just add the explanatory text.
 
-### 8. Stair selection and editing
-The stair inspector exists but only has delete. Add:
-- Width (editable)
-- Length (editable)
-- Rotation slider
-- Position display
+### 5. Floor picker not switching properly
+The floor picker dropdown buttons need to ensure both `activeFloorId` and `floorFilter` are set. Looking at the code, this appears correct. The issue might be that when in 3D mode, the `InteractiveWalls3D`, `Floors3D`, `Ceilings3D`, and `Stairs3D` all filter by `activeFloorId`, so switching floors should work. The real issue might be visual -- the dropdown buttons inherit `text-foreground` but might appear grayed out due to contrast.
 
-New store action needed: `updateStair(floorId, stairId, changes)`.
+**Fix**: Add more visual distinction to floor buttons -- use brighter text and active indicators.
+
+### 6. Room resizing (drag wall, connected walls follow)
+When dragging a wall that belongs to a room, `updateRoomPolygons` is already called. But adjacent walls (sharing corners) need to update too. The `findConnectedWalls` function finds walls sharing the same endpoint, and during node drag, connected walls move. This should work. The issue might be that room polygons aren't updating correctly because the `updateRoomPolygons` action chains walls incorrectly.
+
+**Fix**: Review and improve `updateRoomPolygons` logic in the store to handle all edge cases.
 
 ---
 
 ## Technical Changes
 
-### `src/store/types.ts`
-- Add `updateOpening` action type
-- Add `updateStair` action type
-- Add `sunAzimuth` and `sunElevation` to `EnvironmentState`
-- Add `setSunPosition(azimuth, elevation)` action
-- Add `setWeather(condition)` action
-
-### `src/store/useAppStore.ts`
-- Add `sunAzimuth: 135` and `sunElevation: 45` to initial environment state
-- Implement `updateOpening(floorId, wallId, openingId, changes)` -- updates opening's width/height/sillHeight
-- Implement `updateStair(floorId, stairId, changes)` -- updates stair width/length/rotation/position
-- Implement `setSunPosition(azimuth, elevation)`
-- Implement `setWeather(condition)`
+### `src/components/build/BuildTopToolbar.tsx`
+- Wrap the toolbar in a container that has `relative z-50` so dropdown panels appear above the canvas
+- Add `pointer-events-auto` to dropdown panels
+- Add a backdrop overlay when panels are open to catch clicks outside
 
 ### `src/components/build/InteractiveWalls3D.tsx`
-- Simplify door model: remove separate left/right/top frame pieces. Keep only a single thin door panel mesh centered in the opening
-- Simplify window model: remove separate left/right/top/bottom frame pieces. Keep only the glass panel and a single thin frame box around it
-
-### `src/components/build/Stairs3D.tsx`
-- Remove the two side rail meshes (lines 44-58)
-- Keep only treads and risers
-
-### `src/components/build/Ceilings3D.tsx`
-- Change material to be shadow-casting properly: use `meshBasicMaterial` with `colorWrite={false}` and `depthWrite={true}`, or use a solid material with `side={THREE.BackSide}` so it's only visible from below (inside the room it appears as ceiling, from outside/above it's invisible)
-
-### `src/components/build/BuildScene3D.tsx`
-- Read `sunAzimuth` and `sunElevation` from store
-- Calculate directional light position from azimuth/elevation angles
-- Read weather condition and add simple rain/snow particle system component
-
-### `src/components/build/WeatherEffects3D.tsx` (new file)
-- Simple particle system for rain (falling blue lines) and snow (falling white dots)
-- Uses `useFrame` to animate particles downward
-- Only renders when weather is 'rain' or 'snow'
-
-### `src/components/build/BuildInspector.tsx`
-- Add `OpeningInspector` component for when `selection.type === 'opening'`
-  - Find the opening by searching all walls for matching opening ID
-  - Editable fields: width, height, sillHeight (window only), offset
-  - Delete button
-- Enhance `StairInspector` with editable width, length, rotation slider, position display
+- Remove `wireframe` from window frame material (line 162)
+- Replace with 4 thin frame bars (top/bottom/left/right box meshes) or just remove the frame mesh
 
 ### `src/components/build/BuildCanvas2D.tsx`
-- Fix room naming on line 904: change `'Rum'` to `` `Rum ${rooms.length + 1}` ``
+- Improve room naming: scan existing names to find next available number
+- After wall drag, ensure `updateRoomPolygons` is called for the active floor
+
+### `src/components/build/structure/PaintTool.tsx`
+- Filter out rooms with no valid polygon (less than 3 points)
+- Show room count correctly
 
 ### `src/components/build/FloorPicker.tsx`
-- After `addFloor`, get the new floor ID and call `setActiveFloor` + `setView({ floorFilter: newFloorId })`
+- Add clearer visual styling for floor buttons
+- Ensure pointer events work when over 3D canvas
 
-### `src/components/build/BuildTopToolbar.tsx`
-- Add a sun/weather controls section:
-  - Sun azimuth slider (0-360 degrees)
-  - Weather dropdown (clear/cloudy/rain/snow)
-  - Only visible in 3D camera mode
+### `src/components/build/import/ImportTools.tsx`
+- Add info text explaining that imported models need manual door/window placement
 
----
+### `src/store/useAppStore.ts`
+- Verify `updateRoomPolygons` correctly rebuilds polygons from wall chain
 
 ## Implementation Order
-1. Store changes (new actions, environment state)
-2. Fix InteractiveWalls3D (simplify door/window models)
-3. Fix Stairs3D (remove rails)
-4. Fix Ceilings3D (proper shadow casting)
-5. Fix BuildCanvas2D room naming
-6. Fix FloorPicker auto-select
-7. Add OpeningInspector and enhance StairInspector
-8. Add sun/weather controls to BuildScene3D and toolbar
-9. Create WeatherEffects3D
+1. Fix window X-pattern (quick one-liner)
+2. Fix toolbar dropdown z-index/pointer-events
+3. Fix floor picker styling and behavior
+4. Fix room naming logic
+5. Filter phantom rooms in PaintTool
+6. Add import info text
+7. Verify room polygon update logic
+
