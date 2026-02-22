@@ -901,7 +901,12 @@ export default function BuildCanvas2D() {
       const w = Math.abs(roomDrawEnd[0] - roomDrawStart[0]);
       const d = Math.abs(roomDrawEnd[1] - roomDrawStart[1]);
       if (w > 0.2 && d > 0.2) {
-        addRoomFromRect(activeFloorId, x, z, w, d, `Rum ${rooms.length + 1}`);
+        const existingNums = rooms.map((r) => {
+          const m = r.name.match(/^Rum (\d+)$/);
+          return m ? parseInt(m[1], 10) : 0;
+        });
+        const nextNum = existingNums.length > 0 ? Math.max(...existingNums) + 1 : 1;
+        addRoomFromRect(activeFloorId, x, z, w, d, `Rum ${nextNum}`);
       }
       setRoomDrawStart(null);
       setRoomDrawEnd(null);

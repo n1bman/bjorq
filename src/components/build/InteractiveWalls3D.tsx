@@ -154,12 +154,23 @@ export default function InteractiveWalls3D() {
                 />
               </mesh>
             );
-            // Thin frame around glass
+            // Thin solid frame bars around glass
+            const fw = 0.03; // frame bar width
+            const frameColor = "#c0c0c0";
+            // Top bar
             segments.push(
-              <mesh key={`${wall.id}-win-frame-${i}`} position={[opPos.x, opCenterY + elevation, opPos.z]}
+              <mesh key={`${wall.id}-win-ft-${i}`} position={[opPos.x, opCenterY + op.height / 2 - fw / 2 + elevation, opPos.z]}
                 rotation={[0, -angle, 0]}>
-                <boxGeometry args={[op.width, op.height, 0.02]} />
-                <meshStandardMaterial color="#c0c0c0" roughness={0.3} wireframe />
+                <boxGeometry args={[op.width, fw, 0.025]} />
+                <meshStandardMaterial color={frameColor} roughness={0.3} />
+              </mesh>
+            );
+            // Bottom bar
+            segments.push(
+              <mesh key={`${wall.id}-win-fb-${i}`} position={[opPos.x, opCenterY - op.height / 2 + fw / 2 + elevation, opPos.z]}
+                rotation={[0, -angle, 0]}>
+                <boxGeometry args={[op.width, fw, 0.025]} />
+                <meshStandardMaterial color={frameColor} roughness={0.3} />
               </mesh>
             );
           }

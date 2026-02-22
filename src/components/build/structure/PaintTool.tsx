@@ -9,7 +9,8 @@ export default function PaintTool() {
   const pushUndo = useAppStore((s) => s.pushUndo);
 
   const floor = floors.find((f) => f.id === activeFloorId);
-  const rooms = floor?.rooms ?? [];
+  const allRooms = floor?.rooms ?? [];
+  const rooms = allRooms.filter((r) => r.polygon && r.polygon.length >= 3);
 
   if (rooms.length === 0) {
     return (
