@@ -549,12 +549,52 @@ export const useAppStore = create<AppState>()(
 
       setPreviewDateTime: (dt) =>
         set((s) => ({ environment: { ...s.environment, previewDateTime: dt } })),
+
+      // Clear actions
+      clearFloor: (floorId) =>
+        set((s) => ({
+          layout: {
+            ...s.layout,
+            floors: s.layout.floors.map((f) =>
+              f.id === floorId ? { ...f, walls: [], rooms: [], stairs: [] } : f
+            ),
+          },
+        })),
+
+      clearAllFloors: () =>
+        set((s) => ({
+          layout: {
+            ...s.layout,
+            floors: s.layout.floors.map((f) => ({ ...f, walls: [], rooms: [], stairs: [] })),
+          },
+          props: { ...s.props, items: [] },
+        })),
+
+      // Opening offset update
+      updateOpeningOffset: (floorId, wallId, openingId, offset) =>
+        set((s) => ({
+          layout: {
+            ...s.layout,
+            floors: s.layout.floors.map((f) =>
+              f.id === floorId
+                ? {
+                    ...f,
+                    walls: f.walls.map((w) =>
+                      w.id === wallId
+                        ? { ...w, openings: w.openings.map((o) => (o.id === openingId ? { ...o, offset } : o)) }
+                        : w
+                    ),
+                  }
+                : f
+            ),
+          },
+        })),
     }),
     {
       name: 'hometwin-store',
-      version: 2,
+      version: 3,
       migrate: () => {
-        // V2: Complete state shape change — discard old data
+        // V3: Force-clear stale data
         return undefined as any;
       },
       partialize: (state) => ({
