@@ -40,25 +40,9 @@ export default function Ceilings3D() {
       });
   }, [rooms, ceilingY]);
 
-  // For imported models: large invisible ceiling plane to block light from above
-  const importedCeiling = homeSource === 'imported' ? (
-    <mesh
-      rotation={[-Math.PI / 2, 0, 0]}
-      position={[0, ceilingY, 0]}
-      castShadow
-    >
-      <planeGeometry args={[40, 40]} />
-      <meshBasicMaterial
-        colorWrite={false}
-        side={THREE.DoubleSide}
-      />
-    </mesh>
-  ) : null;
-
   return (
     <group>
       {ceilingMeshes}
-      {importedCeiling}
     </group>
   );
 }
