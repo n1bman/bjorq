@@ -9,6 +9,13 @@ const kindInfo: Record<DeviceKind, { emoji: string; label: string }> = {
   sensor: { emoji: '🌡️', label: 'Sensor' },
   climate: { emoji: '❄️', label: 'Klimat' },
   vacuum: { emoji: '🤖', label: 'Dammsugare' },
+  camera: { emoji: '📷', label: 'Kamera' },
+  fridge: { emoji: '🧊', label: 'Kylskåp' },
+  oven: { emoji: '🍳', label: 'Ugn' },
+  washer: { emoji: '🫧', label: 'Tvättmaskin' },
+  'garage-door': { emoji: '🚗', label: 'Garageport' },
+  'door-lock': { emoji: '🔒', label: 'Dörrlås' },
+  'power-outlet': { emoji: '🔌', label: 'Eluttag' },
 };
 
 export default function DevicesSection() {

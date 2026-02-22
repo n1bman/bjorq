@@ -1,10 +1,11 @@
 import { useAppStore } from '@/store/useAppStore';
-import { X, Plus, DoorOpen, RotateCcw, Move, Trash2, Layers, Home, Lightbulb } from 'lucide-react';
+import { X, Plus, DoorOpen, RotateCcw, Move, Trash2, Layers, Home, Lightbulb, ArrowRightLeft } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
 import { Input } from '@/components/ui/input';
 import { presetMaterials } from '@/lib/materials';
 import { useState } from 'react';
 import type { DeviceKind, DeviceSurface } from '@/store/types';
+import { setDeviceTransformMode } from '@/components/devices/DeviceMarkers3D';
 
 const generateId = () => Math.random().toString(36).slice(2, 10);
 
@@ -437,6 +438,13 @@ const kindLabels: Record<DeviceKind, string> = {
   sensor: 'Sensor',
   climate: 'Klimat',
   vacuum: 'Dammsugare',
+  camera: 'Kamera',
+  fridge: 'Kylskåp',
+  oven: 'Ugn',
+  washer: 'Tvättmaskin',
+  'garage-door': 'Garageport',
+  'door-lock': 'Dörrlås',
+  'power-outlet': 'Eluttag',
 };
 
 function DeviceInspector({ deviceId, close }: { deviceId: string; close: React.ReactNode }) {
@@ -510,9 +518,42 @@ function DeviceInspector({ deviceId, close }: { deviceId: string; close: React.R
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-2 text-muted-foreground">
-        <span>X:</span><span className="text-foreground">{device.position[0].toFixed(1)} m</span>
-        <span>Z:</span><span className="text-foreground">{device.position[2].toFixed(1)} m</span>
+      {/* Transform mode buttons */}
+      <div className="space-y-1">
+        <span className="text-muted-foreground text-[10px]">Gizmo-läge</span>
+        <div className="flex gap-1">
+          <button
+            onClick={() => setDeviceTransformMode('translate')}
+            className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-md text-xs bg-primary/20 text-primary hover:bg-primary/30 transition-colors"
+          >
+            <Move size={12} /> Flytta
+          </button>
+          <button
+            onClick={() => setDeviceTransformMode('rotate')}
+            className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-md text-xs bg-secondary/30 text-muted-foreground hover:bg-secondary/50 transition-colors"
+          >
+            <RotateCcw size={12} /> Rotera
+          </button>
+        </div>
+      </div>
+
+      {/* Position sliders */}
+      <div className="space-y-1.5">
+        <div className="flex items-center gap-1 text-muted-foreground"><ArrowRightLeft size={12} /> Position</div>
+        {(['X', 'Y', 'Z'] as const).map((axis, i) => (
+          <div key={axis} className="flex items-center gap-2">
+            <span className="text-[10px] text-muted-foreground w-3">{axis}</span>
+            <Slider min={-20} max={20} step={0.1} value={[device.position[i]]}
+              onValueChange={([v]) => {
+                const pos = [...device.position] as [number, number, number];
+                pos[i] = v;
+                updateDevice(device.id, { position: pos });
+              }}
+              className="flex-1"
+            />
+            <span className="text-[10px] text-foreground w-8 text-right">{device.position[i].toFixed(1)}</span>
+          </div>
+        ))}
       </div>
 
       <button onClick={handleDelete}

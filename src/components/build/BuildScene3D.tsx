@@ -46,6 +46,7 @@ function SceneContent() {
   const setSelection = useAppStore((s) => s.setSelection);
   const pushUndo = useAppStore((s) => s.pushUndo);
   const addDevice = useAppStore((s) => s.addDevice);
+  const setBuildTool = useAppStore((s) => s.setBuildTool);
   const floors = useAppStore((s) => s.layout.floors);
 
   const [cursorPos, setCursorPos] = useState<[number, number] | null>(null);
@@ -78,10 +79,11 @@ function SceneContent() {
           kind,
           name: '',
           floorId: activeFloorId,
-          surface: kind === 'light' ? 'ceiling' : 'wall',
+          surface: kind === 'light' ? 'ceiling' : 'floor',
           position: [snapped[0], yPos, snapped[1]],
           rotation: [0, 0, 0],
         });
+        setBuildTool('select');
         return;
       }
       if (activeTool === 'wall') {
@@ -96,7 +98,7 @@ function SceneContent() {
         setSelection({ type: null, id: null });
       }
     },
-    [activeTool, wallDrawing, snapToGrid, setWallDrawing, setSelection, activeFloorId, addDevice, floors]
+    [activeTool, wallDrawing, snapToGrid, setWallDrawing, setSelection, activeFloorId, addDevice, setBuildTool, floors]
   );
 
   const handleGroundPointerMove = useCallback(
