@@ -95,6 +95,8 @@ export default function BuildCanvas2D() {
   const floors = useAppStore((s) => s.layout.floors);
   const propItems = useAppStore((s) => s.props.items);
   const showGhost = useAppStore((s) => s.build.view.showOtherFloorsGhost);
+  const deviceMarkers = useAppStore((s) => s.devices.markers);
+  const addDevice = useAppStore((s) => s.addDevice);
 
   const setWallDrawing = useAppStore((s) => s.setWallDrawing);
   const addWall = useAppStore((s) => s.addWall);
@@ -497,6 +499,44 @@ export default function BuildCanvas2D() {
       ctx.restore();
     }
 
+    // ─── Draw device markers ───
+    const floorDevices = deviceMarkers.filter((m) => m.floorId === activeFloorId);
+    const deviceColors: Record<string, string> = {
+      light: '#facc15',
+      switch: '#60a5fa',
+      sensor: '#4ade80',
+      climate: '#22d3ee',
+      vacuum: '#a78bfa',
+    };
+    for (const dev of floorDevices) {
+      const [dx2, dy2] = worldToScreen(dev.position[0], dev.position[2]);
+      const isSelected = selection.type === 'device' && selection.id === dev.id;
+      const color = deviceColors[dev.kind] ?? '#fff';
+      const radius = isSelected ? 10 : 7;
+
+      ctx.beginPath();
+      ctx.arc(dx2, dy2, radius, 0, Math.PI * 2);
+      ctx.fillStyle = color;
+      ctx.globalAlpha = isSelected ? 1 : 0.85;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+
+      if (isSelected) {
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(dx2, dy2, radius + 4, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      const label = dev.name || dev.kind;
+      ctx.fillStyle = 'rgba(255,255,255,0.7)';
+      ctx.font = '9px DM Sans, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.fillText(label, dx2, dy2 + radius + 3);
+    }
+
     // Draw props as icons
     for (const prop of floorProps) {
       const [px, py] = worldToScreen(prop.position[0], prop.position[2]);
@@ -658,6 +698,30 @@ export default function BuildCanvas2D() {
         return;
       }
 
+      // ─── Device placement tools ───
+      if (activeTool.startsWith('place-') && activeFloorId) {
+        const kind = activeTool.replace('place-', '') as import('@/store/types').DeviceKind;
+        const [wx, wz] = screenToWorld(sx, sy);
+        const snapped = snapToGrid(wx, wz);
+        const fl = floors.find((f) => f.id === activeFloorId);
+        const elev = fl?.elevation ?? 0;
+        const h = fl?.heightMeters ?? 2.5;
+        let yPos = elev + 2.2;
+        if (kind === 'light') yPos = elev + h - 0.1;
+        else if (kind === 'switch' || kind === 'sensor') yPos = elev + 1.2;
+        else if (kind === 'climate') yPos = elev + 1.5;
+        addDevice({
+          id: generateId(),
+          kind,
+          name: '',
+          floorId: activeFloorId,
+          surface: kind === 'light' ? 'ceiling' : 'wall',
+          position: [snapped[0], yPos, snapped[1]],
+          rotation: [0, 0, 0],
+        });
+        return;
+      }
+
       // ─── Stairs tool ───
       if (activeTool === 'stairs' && activeFloorId) {
         const [wx, wz] = screenToWorld(sx, sy);
@@ -729,7 +793,18 @@ export default function BuildCanvas2D() {
           return;
         }
 
-        // 2. Check wall node (endpoint) for dragging
+        // 2. Check device markers
+        const [swx, swz] = screenToWorld(sx, sy);
+        const floorDevs = deviceMarkers.filter((m) => m.floorId === activeFloorId);
+        for (const dev of floorDevs) {
+          const dist = Math.sqrt((swx - dev.position[0]) ** 2 + (swz - dev.position[2]) ** 2);
+          if (dist < 0.5) {
+            setSelection({ type: 'device', id: dev.id });
+            return;
+          }
+        }
+
+        // 3. Check wall node (endpoint) for dragging
         const node = findNodeAt(sx, sy);
         if (node) {
           const connected = findConnectedWalls(node.pos, node.wallId);
@@ -792,7 +867,7 @@ export default function BuildCanvas2D() {
         }
       }
     },
-    [activeTool, activeFloorId, wallDrawing, screenToWorld, snapToGrid, setWallDrawing, findWallAt, findPropAt, findNodeAt, findConnectedWalls, findOpeningAt, findRoomAt, setSelection, pushUndo, deleteWall, measureStart, measureEnd, addStair, addOpening, stairs, worldToScreen, zoom]
+    [activeTool, activeFloorId, wallDrawing, screenToWorld, snapToGrid, setWallDrawing, findWallAt, findPropAt, findNodeAt, findConnectedWalls, findOpeningAt, findRoomAt, setSelection, pushUndo, deleteWall, measureStart, measureEnd, addStair, addOpening, stairs, worldToScreen, zoom, addDevice, floors, deviceMarkers]
   );
 
   const handlePointerMove = useCallback(

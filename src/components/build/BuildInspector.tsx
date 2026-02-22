@@ -1,8 +1,10 @@
 import { useAppStore } from '@/store/useAppStore';
-import { X, Plus, DoorOpen, RotateCcw, Move, Trash2, Layers, Home } from 'lucide-react';
+import { X, Plus, DoorOpen, RotateCcw, Move, Trash2, Layers, Home, Lightbulb } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
+import { Input } from '@/components/ui/input';
 import { presetMaterials } from '@/lib/materials';
 import { useState } from 'react';
+import type { DeviceKind, DeviceSurface } from '@/store/types';
 
 const generateId = () => Math.random().toString(36).slice(2, 10);
 
@@ -26,6 +28,7 @@ export default function BuildInspector() {
   if (selection.type === 'stair') return <StairInspector floorId={activeFloorId!} stairId={selection.id} floor={floor} close={closeBtn} />;
   if (selection.type === 'room') return <RoomInspector floorId={activeFloorId!} roomId={selection.id} floor={floor} close={closeBtn} />;
   if (selection.type === 'opening') return <OpeningInspector floorId={activeFloorId!} openingId={selection.id} floor={floor} close={closeBtn} />;
+  if (selection.type === 'device') return <DeviceInspector deviceId={selection.id} close={closeBtn} />;
 
   return null;
 }
@@ -422,6 +425,99 @@ function RoomInspector({ floorId, roomId, floor, close }: { floorId: string; roo
       <button onClick={handleDelete}
         className="w-full py-2 rounded-lg bg-destructive/20 text-destructive text-xs font-medium hover:bg-destructive/30 transition-colors min-h-[44px] flex items-center justify-center gap-1">
         <Trash2 size={14} /> Ta bort rum
+      </button>
+    </div>
+  );
+}
+
+// ─── Device Inspector Component ───
+const kindLabels: Record<DeviceKind, string> = {
+  light: 'Ljus',
+  switch: 'Knapp',
+  sensor: 'Sensor',
+  climate: 'Klimat',
+  vacuum: 'Dammsugare',
+};
+
+function DeviceInspector({ deviceId, close }: { deviceId: string; close: React.ReactNode }) {
+  const markers = useAppStore((s) => s.devices.markers);
+  const updateDevice = useAppStore((s) => s.updateDevice);
+  const removeDevice = useAppStore((s) => s.removeDevice);
+  const setSelection = useAppStore((s) => s.setSelection);
+
+  const device = markers.find((m) => m.id === deviceId);
+  if (!device) return null;
+
+  const handleDelete = () => {
+    removeDevice(device.id);
+    setSelection({ type: null, id: null });
+  };
+
+  return (
+    <div className="absolute top-3 right-3 w-56 glass-panel rounded-xl p-3 space-y-3 text-xs z-10">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-foreground font-display flex items-center gap-1">
+          <Lightbulb size={14} /> {kindLabels[device.kind]}
+        </h3>
+        {close}
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-muted-foreground text-[10px]">Namn</label>
+        <Input
+          value={device.name}
+          onChange={(e) => updateDevice(device.id, { name: e.target.value })}
+          placeholder="T.ex. Taklampa kök"
+          className="h-8 text-xs bg-secondary/30"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-muted-foreground text-[10px]">Höjd (Y) — {device.position[1].toFixed(1)} m</label>
+        <div className="flex items-center gap-2">
+          <Slider min={0} max={10} step={0.1} value={[device.position[1]]}
+            onValueChange={([v]) => {
+              const pos = [...device.position] as [number, number, number];
+              pos[1] = v;
+              updateDevice(device.id, { position: pos });
+            }}
+            className="flex-1"
+          />
+          <span className="text-[10px] text-foreground w-8 text-right">{device.position[1].toFixed(1)}</span>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-muted-foreground text-[10px]">Yta</label>
+        <select
+          value={device.surface}
+          onChange={(e) => updateDevice(device.id, { surface: e.target.value as DeviceSurface })}
+          className="w-full h-8 rounded-md bg-secondary/30 text-foreground text-xs px-2 border-none outline-none"
+        >
+          <option value="floor">Golv</option>
+          <option value="wall">Vägg</option>
+          <option value="ceiling">Tak</option>
+        </select>
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-muted-foreground text-[10px]">HA Entity ID</label>
+        <Input
+          value={device.ha?.entityId ?? ''}
+          onChange={(e) => updateDevice(device.id, { ha: { entityId: e.target.value } })}
+          placeholder="light.taklampa_kok"
+          className="h-8 text-xs bg-secondary/30"
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-2 text-muted-foreground">
+        <span>X:</span><span className="text-foreground">{device.position[0].toFixed(1)} m</span>
+        <span>Z:</span><span className="text-foreground">{device.position[2].toFixed(1)} m</span>
+      </div>
+
+      <button onClick={handleDelete}
+        className="w-full py-2 rounded-lg bg-destructive/20 text-destructive text-xs font-medium hover:bg-destructive/30 transition-colors min-h-[44px] flex items-center justify-center gap-1">
+        <Trash2 size={14} /> Ta bort enhet
       </button>
     </div>
   );

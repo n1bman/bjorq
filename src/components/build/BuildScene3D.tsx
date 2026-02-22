@@ -12,7 +12,7 @@ import ImportedHome3D from './ImportedHome3D';
 import Props3D from './Props3D';
 import WeatherEffects3D from './WeatherEffects3D';
 import { useAppStore } from '@/store/useAppStore';
-import type { WallSegment } from '@/store/types';
+import type { WallSegment, DeviceKind } from '@/store/types';
 
 const generateId = () => Math.random().toString(36).slice(2, 10);
 
@@ -44,6 +44,8 @@ function SceneContent() {
   const addWall = useAppStore((s) => s.addWall);
   const setSelection = useAppStore((s) => s.setSelection);
   const pushUndo = useAppStore((s) => s.pushUndo);
+  const addDevice = useAppStore((s) => s.addDevice);
+  const floors = useAppStore((s) => s.layout.floors);
 
   const [cursorPos, setCursorPos] = useState<[number, number] | null>(null);
   const controlsRef = useRef<any>(null);
@@ -59,6 +61,28 @@ function SceneContent() {
 
   const handleGroundPointerDown = useCallback(
     (point: THREE.Vector3, e: any) => {
+      if (activeTool.startsWith('place-') && activeFloorId) {
+        e.stopPropagation();
+        const kind = activeTool.replace('place-', '') as DeviceKind;
+        const snapped = snapToGrid(point.x, point.z);
+        const fl = floors.find((f) => f.id === activeFloorId);
+        const elev = fl?.elevation ?? 0;
+        const h = fl?.heightMeters ?? 2.5;
+        let yPos = elev + 2.2;
+        if (kind === 'light') yPos = elev + h - 0.1;
+        else if (kind === 'switch' || kind === 'sensor') yPos = elev + 1.2;
+        else if (kind === 'climate') yPos = elev + 1.5;
+        addDevice({
+          id: generateId(),
+          kind,
+          name: '',
+          floorId: activeFloorId,
+          surface: kind === 'light' ? 'ceiling' : 'wall',
+          position: [snapped[0], yPos, snapped[1]],
+          rotation: [0, 0, 0],
+        });
+        return;
+      }
       if (activeTool === 'wall') {
         e.stopPropagation();
         const snapped = snapToGrid(point.x, point.z);
@@ -71,7 +95,7 @@ function SceneContent() {
         setSelection({ type: null, id: null });
       }
     },
-    [activeTool, wallDrawing, snapToGrid, setWallDrawing, setSelection]
+    [activeTool, wallDrawing, snapToGrid, setWallDrawing, setSelection, activeFloorId, addDevice, floors]
   );
 
   const handleGroundPointerMove = useCallback(

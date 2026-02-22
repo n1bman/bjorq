@@ -63,7 +63,7 @@ export default function DevicePlacementTools() {
           <div className="flex flex-col gap-0.5 max-h-[30vh] overflow-y-auto">
             {floorMarkers.map((m) => (
               <div key={m.id} className="flex items-center justify-between px-2 py-1.5 rounded text-xs text-muted-foreground hover:bg-secondary/20">
-                <span className="hidden lg:inline truncate">{kindLabels[m.kind]}</span>
+                <span className="hidden lg:inline truncate">{m.name || kindLabels[m.kind]}</span>
                 <button
                   onClick={() => removeDevice(m.id)}
                   className="text-destructive/60 hover:text-destructive p-0.5"
