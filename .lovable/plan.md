@@ -1,280 +1,104 @@
 
 
-# Build Mode v2 -- Complete Rebuild
+# Fix Build Mode v2 -- Missing Features and Interactions
 
-## Overview
-Complete rebuild of Build Mode into a Sims/Vivaland-inspired building experience with 3 tabs (Structure, Home Import, Furnish), a top-down plan view as primary editing surface, a live 3D preview toggle, HomeGeometry layer, props catalog, and touch-first UI.
+## Problem Summary
+Build Mode v2 has the shell and UI in place but is missing critical interactive functionality. Walls and rooms are visible but cannot be moved, dragged, or interactively edited. Several tools (door/window placement, room rectangle drawing) don't work in the 2D canvas. There's also stale data persisting and no way to clear everything.
 
----
+## What Will Be Fixed
 
-## Architecture: State Redesign
+### 1. Clear All / Reset Button
+- Add a "Rensa allt" (Clear All) button to the top toolbar
+- Clears all walls, rooms, stairs, and props for the active floor (or all floors)
+- Bump persist migration version to 3 to force-clear any stale localStorage data on load
 
-### New/Modified Types (`src/store/types.ts`)
+### 2. Wall Node Dragging (Select Tool)
+- When select tool is active and user clicks near a wall endpoint (node), start dragging that node
+- On pointer move, update the wall's `from` or `to` via `updateWallNode`
+- Snap to grid during drag
+- Connected walls (sharing the same node) move together
 
-**BuildTool** expanded:
-```
-'select' | 'wall' | 'room' | 'door' | 'window' | 'stairs' | 'paint' | 'template' | 'erase' | 'copy' | 'measure'
-```
+### 3. Wall Segment Dragging
+- When select tool is active and user clicks on the middle of a wall (not near endpoints), start dragging the entire wall segment
+- Both endpoints move by the same delta
+- Snap to grid
 
-**BuildTab**: `'structure' | 'import' | 'furnish'`
+### 4. Wall Splitting
+- When select tool is active and user double-clicks on a wall segment, split it at that point using `splitWall`
 
-**SnapMode**: `'strict' | 'soft' | 'off'`
+### 5. Door/Window Placement Tool
+- When door or window tool is active, clicking on a wall places an opening at the click position
+- Calculate the offset (0-1) along the wall from the click point
+- Use `addOpening` with default dimensions
+- Push undo before placement
 
-**CameraMode**: `'topdown' | '3d' | 'floor-isolate'`
+### 6. Room Rectangle Drag Tool
+- When room tool is active, pointer down starts the rectangle, pointer move updates end point, pointer up creates the room
+- Draw rectangle preview while dragging (dashed outline)
+- On release, call `addRoomFromRect` with the snapped coordinates
+- Push undo
 
-**New BuildState**:
-- `tab: BuildTab`
-- `tool: BuildTool`
-- `grid: { enabled: boolean; sizeMeters: number; snapMode: SnapMode }`
-- `selection: { type: 'wall' | 'opening' | 'room' | 'prop' | 'stair' | null; id: string | null }`
-- `view: { cameraMode: CameraMode; showOtherFloorsGhost: boolean; floorFilter: string | 'all' }`
-- `wallDrawing: { isDrawing: boolean; nodes: [number, number][] }`
-- `roomDrawing: { isDrawing: boolean; startPoint: [number, number] | null; endPoint: [number, number] | null }`
-- `undoStack / redoStack` (snapshot-based)
-- `calibration` (same as current)
+### 7. Room Selection in 2D Canvas
+- When select tool is active, clicking inside a room polygon selects it
+- Show room inspector with rename, material, and delete options
+- Add room inspector to BuildInspector
 
-**New HomeGeometry layer**:
-```typescript
-interface HomeGeometryState {
-  source: 'procedural' | 'imported';
-  imported: {
-    url: string | null;
-    position: [number, number, number];
-    rotation: [number, number, number];
-    scale: [number, number, number];
-    groundLevelY: number;
-    northAngle: number;
-    floorBands: { id: string; name: string; minY: number; maxY: number }[];
-  };
-}
-```
+### 8. Opening Dragging Along Wall
+- When select tool is active and user clicks on an opening marker, allow dragging it along the wall to change its offset
 
-**WallOpening** gets `sillHeight` field for windows.
+### 9. Improve "Ghost Floors" Explanation
+- Rename the ghost button tooltip from "Visa andra vaningar" to a clearer label
+- Add a small descriptive text in the status bar when ghost is active: "Visar andra vaningars vaggar som skuggor"
 
-**New StairItem**:
-```typescript
-interface StairItem {
-  id: string;
-  floorId: string;
-  position: [number, number];
-  rotation: number;
-  width: number;
-  length: number;
-  fromFloorId: string;
-  toFloorId: string;
-}
-```
-
-**Floor** gets `heightMeters: number` (wall height default for that floor).
-
-**PropsState** split into:
-- `catalog: PropCatalogItem[]` (asset library with source: 'builtin' | 'user')
-- `items: PropItem[]` (placed instances referencing catalog)
-
-**RoomTemplate type**:
-```typescript
-interface RoomTemplate {
-  id: string;
-  name: string;
-  width: number;
-  depth: number;
-  category: 'bedroom' | 'kitchen' | 'livingroom' | 'bathroom';
-}
-```
-
-### Store actions added:
-- `setBuildTab(tab)`
-- `setGrid(partial)` / `setSnapMode` / `toggleGrid`
-- `setCameraMode(mode)`
-- `setSelection(sel)`
-- `addStair / removeStair`
-- `setHomeGeometrySource(source)`
-- `setImportedModel(settings)`
-- `addFloorBand / removeFloorBand / updateFloorBand`
-- `setNorthAngle(angle)`
-- `addToCatalog(item) / removeFromCatalog(id)`
-- `splitWall(floorId, wallId, point)` -- split wall at a point
-- `addRoomFromRect(floorId, x, z, w, d, name)` -- creates 4 walls + room
+### 10. Improve Clear All UX
+- Add confirmation dialog before clearing
 
 ---
 
-## Component Architecture
+## Technical Changes
 
-### Files to DELETE (replaced):
-- `src/components/build/Canvas2D.tsx` (replaced by new BuildCanvas2D)
-- `src/components/build/BuildScene3D.tsx` (replaced by new BuildScene3D)
-- `src/components/build/BuildPreview3D.tsx` (no longer needed)
-- `src/components/build/Walls3D.tsx` (replaced by new ProceduralShell3D)
+### `src/store/useAppStore.ts`
+- Add `clearFloor(floorId)` action: removes all walls, rooms, stairs from a floor
+- Add `clearAllFloors()` action: clears all floors' walls/rooms/stairs and all props
+- Bump persist version to 3
 
-### Files to CREATE:
+### `src/components/build/BuildCanvas2D.tsx` (major rewrite of interaction handlers)
+- Add state for wall node dragging: `dragNode: { wallId, endpoint: 'from'|'to', connectedWalls } | null`
+- Add state for wall segment dragging: `dragWall: { wallId, startFrom, startTo, mouseStart } | null`
+- Add state for room rectangle drawing: use existing `roomDrawing` state
+- Add `findNodeAt(sx, sy)` -- finds wall endpoint near cursor
+- Add `findRoomAt(sx, sy)` -- point-in-polygon test for room selection
+- Update `handlePointerDown`:
+  - Select tool: check node first, then prop, then wall, then room, then deselect
+  - Door/Window tool: find wall at click, place opening
+  - Room tool: start rectangle drag
+- Update `handlePointerMove`:
+  - Handle node dragging (update wall node + connected walls)
+  - Handle wall segment dragging
+  - Handle room rectangle preview
+- Update `handlePointerUp`:
+  - Finish node/wall drag
+  - Finish room rectangle (create room)
+- Add room rectangle preview rendering in draw loop
+- Add opening selection rendering
 
-**Core layout:**
-- `src/components/build/BuildModeV2.tsx` -- main layout: full-screen canvas + floating overlays
-- `src/components/build/BuildTopToolbar.tsx` -- always-visible top bar (select, copy, erase, undo/redo, grid controls, view toggle, floor picker)
-- `src/components/build/BuildTabBar.tsx` -- tab selector: Structure | Import | Furnish
-- `src/components/build/BuildLeftPanel.tsx` -- contextual left tool panel (tools change per tab)
-- `src/components/build/BuildInspector.tsx` -- right/bottom inspector for selected object properties
+### `src/components/build/BuildInspector.tsx`
+- Add Room Inspector section (when selection.type === 'room'):
+  - Room name (editable)
+  - Area display
+  - Wall/floor material color
+  - Delete room button
 
-**2D Plan View (primary editing surface):**
-- `src/components/build/BuildCanvas2D.tsx` -- new HTML Canvas top-down view with:
-  - Grid rendering (configurable size)
-  - Wall drawing (click nodes, double-click finish)
-  - Room rectangle drag tool
-  - Opening placement on walls (click wall to place door/window)
-  - Stair placement
-  - Template stamp placement
-  - Node dragging, wall dragging, wall splitting
-  - Erase tool (click to delete)
-  - Copy/eyedropper tool
-  - Measure tool
-  - Floorplan image background + calibration
-  - Room polygon fills with material colors
-  - Ghost of other floors (semi-transparent)
-  - Touch support (1-finger drag, 2-finger pinch/pan)
+### `src/components/build/BuildTopToolbar.tsx`
+- Add "Rensa allt" button with trash icon + confirmation
 
-**3D Preview (toggle):**
-- `src/components/build/BuildScene3D.tsx` -- R3F Canvas with:
-  - ProceduralShell3D (walls + floors from layout) when source=procedural
-  - ImportedHome3D (loaded GLB) when source=imported
-  - Props3D (placed props from catalog)
-  - Camera presets (top-down ortho, dollhouse, floor isolate)
-  - Environment lighting using environment store
-- `src/components/build/ProceduralShell3D.tsx` -- generates wall meshes + floor meshes from layout (replaces Walls3D + Floors3D)
-- `src/components/build/ImportedHome3D.tsx` -- loads and renders imported GLB with transform controls
-- `src/components/build/Props3D.tsx` -- renders placed prop instances
+### `src/store/types.ts`
+- No changes needed (types already support everything)
 
-**Tab-specific panels:**
-- `src/components/build/structure/StructureTools.tsx` -- wall, room, door, window, stairs, paint, templates, measure buttons
-- `src/components/build/structure/TemplatesPicker.tsx` -- room preset cards (Bedroom, Kitchen, etc.)
-- `src/components/build/structure/PaintTool.tsx` -- simple color picker for wall/floor per room
-
-- `src/components/build/import/ImportTools.tsx` -- upload, place/align, scale calibration, north alignment, floor bands
-- `src/components/build/import/ScaleCalibrationImport.tsx` -- two-point measurement on imported model
-- `src/components/build/import/NorthAlignment.tsx` -- compass overlay / rotation control
-- `src/components/build/import/FloorBandsEditor.tsx` -- define minY/maxY bands
-
-- `src/components/build/furnish/FurnishTools.tsx` -- My Models catalog, import, place/move/rotate controls
-- `src/components/build/furnish/PropsCatalog.tsx` -- grid of catalog items with import button
-
-**Shared:**
-- `src/components/build/FloorPicker.tsx` -- replaces FloorManager, horizontal floor selector (Alla / Vaning 1 / ...)
-- `src/lib/roomTemplates.ts` -- built-in room template definitions
-
-### Files to MODIFY:
-- `src/store/types.ts` -- all type changes above
-- `src/store/useAppStore.ts` -- all new actions + homeGeometry state
-- `src/pages/Index.tsx` -- swap `BuildMode` for `BuildModeV2`
-- `src/components/build/BuildMode.tsx` -- can be kept as redirect or deleted
-
-### Files to KEEP (refactored/restyled):
-- `src/components/build/GroundPlane.tsx` -- reused in 3D preview
-- `src/components/build/WallDrawing3D.tsx` -- reused in 3D preview
-- `src/components/build/Floors3D.tsx` -- absorbed into ProceduralShell3D
-- `src/components/build/InteractiveWalls3D.tsx` -- absorbed into ProceduralShell3D
-- `src/lib/roomDetection.ts` -- kept as-is
-- `src/lib/materials.ts` -- kept as-is
-- `src/components/build/ScaleCalibration.tsx` -- adapted for 2D floorplan calibration
-
----
-
-## UI Layout (Sims-inspired)
-
-```text
-+-----------------------------------------------+
-| [ModeHeader - HT logo + mode name]            |
-+-----------------------------------------------+
-|  [BuildTopToolbar - always visible]            |
-|  Select | Copy | Erase | Undo | Redo |        |
-|  Grid[on] Size[0.5m] Snap[strict]             |
-|  View[TopDown|3D|Isolate] Floor[V1|V2|Alla]   |
-+-------+---------------------------------------+
-| LEFT  |                                       |
-| PANEL |    MAIN CANVAS                        |
-|       |    (2D Plan View or 3D Preview)       |
-| [Tab] |                                       |
-| tools |                          [Inspector]  |
-| based |                          (floating    |
-| on    |                           right or    |
-| active|                           bottom)     |
-| tab   |                                       |
-+-------+---------------------------------------+
-| [TabBar: Structure | Import | Furnish]        |
-+-----------------------------------------------+
-| [BottomNav - Kontrollpanel | Enheter | Bygge] |
-+-----------------------------------------------+
-```
-
-On mobile: Left panel collapses to bottom sheet. Inspector uses bottom sheet. Touch targets >= 44px.
-
----
-
-## Implementation Order (8 batches)
-
-**Batch 1: Types + Store**
-- Rewrite `types.ts` with all new types
-- Rewrite `useAppStore.ts` with new state shape + actions
-- Create `src/lib/roomTemplates.ts`
-
-**Batch 2: Layout shell**
-- `BuildModeV2.tsx` -- main container
-- `BuildTopToolbar.tsx` -- global toolbar
-- `BuildTabBar.tsx` -- tab switcher
-- `BuildLeftPanel.tsx` -- contextual panel container
-- `BuildInspector.tsx` -- inspector container
-- `FloorPicker.tsx`
-- Update `Index.tsx`
-
-**Batch 3: Structure tab + 2D canvas**
-- `BuildCanvas2D.tsx` -- full rewrite with all tools
-- `structure/StructureTools.tsx`
-- Wall drawing, room rect, opening placement, erase, select/drag
-- Grid rendering, snap modes
-- Room detection integration
-- Floorplan image background + calibration
-
-**Batch 4: Templates + Paint**
-- `structure/TemplatesPicker.tsx`
-- `structure/PaintTool.tsx`
-- Room template stamp placement in 2D canvas
-- Color picker for wall/floor materials
-
-**Batch 5: 3D Preview**
-- `BuildScene3D.tsx` -- new R3F scene
-- `ProceduralShell3D.tsx` -- walls + floors from layout
-- Camera mode switching (top-down ortho, dollhouse, floor isolate)
-- View toggle integration
-
-**Batch 6: Home Import tab**
-- `import/ImportTools.tsx`
-- `ImportedHome3D.tsx` -- GLB loader + transform
-- `import/ScaleCalibrationImport.tsx` -- two-point measurement
-- `import/NorthAlignment.tsx`
-- `import/FloorBandsEditor.tsx`
-- Source switching logic (procedural vs imported)
-
-**Batch 7: Furnish tab**
-- `furnish/FurnishTools.tsx`
-- `furnish/PropsCatalog.tsx`
-- `Props3D.tsx` -- render placed props
-- Prop placement via raycast in 3D, drag/rotate controls
-
-**Batch 8: Polish**
-- Stairs tool (basic preset placement)
-- Ghost floors in 2D
-- Touch optimizations (pinch zoom, 44px targets)
-- Measure tool
-- Undo/redo verification across all tools
-- Mobile bottom sheets for panels
-
----
-
-## Key Rules Enforced
-- Build Mode NEVER edits Devices (read-only layer)
-- No Buy/Store marketplace
-- No curved walls
-- No boolean mesh cutting (wall segments split around openings)
-- All geometry in meters
-- Touch targets >= 44px
-- Procedural source: Structure tools enabled, Import read-only
-- Imported source: Structure tab becomes read-only, Import tools enabled
+## Implementation Order
+1. Store changes (clearFloor, clearAllFloors, persist v3)
+2. BuildCanvas2D interaction handlers (node drag, wall drag, door/window placement, room rectangle, room selection)
+3. BuildInspector room inspector
+4. BuildTopToolbar clear all button
+5. Ghost floors tooltip improvement
 
