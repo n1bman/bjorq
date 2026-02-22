@@ -1,97 +1,151 @@
 
 
-# Complete Build Mode and Sync with Dashboard/Devices
+# HA-Style Widget Dashboard -- Hem View
 
-## Overview
-The build mode has good editing tools, but the rest of the app is empty. When a user finishes building, nothing appears in the Dashboard ("Kontrollpanel") or Devices ("Enheter") views. The main 3D scene (`Scene3D`) is a static empty canvas that doesn't render any of the layout data. There's also no explicit "save" action or feedback -- though data does persist automatically via localStorage.
+## Inspiration
+The reference images show a Home Assistant "Lovelace" style dashboard: a dark full-screen grid of room cards, each showing device icons and status, plus weather/clock/power widgets. No traditional bars -- everything is floating cards on a dark background.
 
-## What's Missing
+## Design
 
-### 1. Dashboard and Devices show nothing
-The `Scene3D` component used by both Dashboard and Devices modes renders only a ground plane and grid -- no walls, rooms, floors, imported models, props, or weather effects. All the 3D components (InteractiveWalls3D, Floors3D, Ceilings3D, Stairs3D, ImportedHome3D, Props3D, WeatherEffects3D) are only used inside `BuildScene3D`.
+The Home view becomes a full-screen space with two layers:
+1. **3D scene** as background (the built home, same as now)
+2. **A semi-transparent card grid overlay** on top, HA-style
 
-### 2. No explicit save/done action
-The store auto-persists to localStorage, so data IS saved. But there's no user-facing "Spara" (Save) button or visual confirmation. Users don't know their work is saved.
+The user can toggle between "3D view" (full 3D, minimal widgets) and "Dashboard view" (the HA-style card grid over the dimmed 3D background).
 
-### 3. Devices mode has no functionality
-The Devices tab exists in the bottom nav but shows the same empty scene as Dashboard. There's no UI for placing device markers, binding to Home Assistant entities, or viewing device states.
+### Dashboard Card Grid
+A CSS grid of glassmorphic room/widget cards overlaid on the 3D scene:
 
-### 4. Dashboard has no controls
-The Dashboard should show the finished home with environment controls (time of day, weather) and device states, but currently it's just an empty 3D scene.
-
----
-
-## Plan
-
-### A. Make Scene3D render the built home
-Refactor `Scene3D` to render all layout geometry (walls, floors, ceilings, stairs, imported model, props, weather) just like `BuildScene3D` does, but in a read-only/view mode (no editing tools, no selection highlights). This is the core fix -- once the home renders in Scene3D, both Dashboard and Devices modes will show the built home.
-
-**Changes to `src/components/Scene3D.tsx`:**
-- Import and render: InteractiveWalls3D (or a view-only variant), Floors3D, Ceilings3D, Stairs3D, ImportedHome3D, Props3D, WeatherEffects3D
-- Read sun position and weather from store for lighting
-- Keep OrbitControls for viewing
-
-### B. Add a "Spara & Visa" (Save & View) button in Build mode
-Add a button in `BuildTopToolbar` or `BuildTabBar` that switches from build mode to dashboard mode. Since data auto-persists, this is just a mode switch with a toast confirmation ("Sparad!").
-
-**Changes to `src/components/build/BuildTopToolbar.tsx`:**
-- Add a "Klar" (Done) button that calls `setAppMode('dashboard')` and shows a toast
-
-### C. Add basic Dashboard overlay
-Create a `DashboardOverlay` component that shows on top of Scene3D in dashboard mode with:
-- Environment controls (sun direction, weather, time) -- reuse the same controls from BuildTopToolbar
-- Room list with temperatures (placeholder data for now)
-- A "Redigera" (Edit) button to go back to build mode
-
-**New file: `src/components/dashboard/DashboardOverlay.tsx`**
-
-### D. Add basic Devices mode UI
-Create a `DevicesPanel` component for devices mode showing:
-- List of placed device markers
-- "Lagg till enhet" (Add device) button with device type picker
-- Device placement on the 3D scene (click to place)
-- Device inspector when selected (position, type, HA entity binding)
-
-**New files:**
-- `src/components/devices/DevicesOverlay.tsx` -- panel with device list and controls
-- `src/components/devices/DeviceMarkers3D.tsx` -- renders device markers in 3D scene
-
-### E. Update Index.tsx layout
-Update the page layout so Dashboard and Devices modes show Scene3D with their respective overlays.
-
-**Changes to `src/pages/Index.tsx`:**
-- Import DashboardOverlay and DevicesOverlay
-- Render them conditionally based on appMode
-
----
-
-## Technical Details
-
-### Scene3D changes
 ```text
-Current: Empty scene (ground + grid + lights)
-After:   Full home render (walls + floors + ceilings + stairs + 
-         imported model + props + weather + sun position)
++--------------------------------------------------+
+| 12:45                    11.4C  Klart     1541 W  |
+| Torsdag                  33 km/h SSW      1.5 kr  |
++----------+----------+----------+---------+--------+
+| Vardags- | Kok      | Sovrum   | Badrum  |        |
+| rum      |          |          |         |        |
+| [icons]  | [icons]  | [icons]  | [icons] |        |
+| 21.2C    | 22.1C    | 19.8C    |         |        |
++----------+----------+----------+---------+--------+
+| Garage   | Hall     | Kontor   |  ...    |        |
+| [icons]  | [icons]  | [icons]  |         |        |
++----------+----------+----------+---------+--------+
+|                                                   |
+|         [3D vy]  [Hem]  [Bygge]                   |
++---------------------------------------------------+
 ```
 
-The key difference from BuildScene3D: no editing interactions (no wall drawing, no tool handling, no selection). Just pure rendering with orbit camera controls.
+### Key Elements
 
-### Store -- no changes needed
-The store already has all the data structures and actions needed. Layout data, environment state, and device markers are all persisted.
+**Top bar (floating, no background):**
+- Clock + date (left)
+- Weather info (center-left): temperature, wind, condition icon
+- Power/energy stats placeholder (right)
 
-### Device markers in 3D
-Each `DeviceMarker` from the store will render as a small icon/sphere in the 3D scene at its position. Clicking a marker in devices mode selects it and shows its inspector.
+**Room cards (grid):**
+- One card per room from the layout store
+- Each card shows: room name, device icons for devices in that room, temperature (placeholder)
+- Cards are dark glassmorphic with subtle borders
+- Device icons are color-coded: yellow = active, blue = sensor, gray = off
+- Tapping a card could later expand to show device controls
 
-### Dashboard environment controls
-Reuse the same sun/weather slider logic from BuildTopToolbar but in a floating panel on the dashboard view.
+**Quick-access device icons on cards:**
+- Each room card shows small icons for the devices placed in that room
+- Icons match device kinds: lightbulb, thermometer, switch, etc.
 
----
+**Bottom nav:**
+- Minimal floating pill: "3D vy" (toggle to full 3D), "Hem" (current), "Bygge"
+
+## Technical Changes
+
+### 1. Update `src/store/types.ts`
+- Change `AppMode` to `'home' | 'build'`
+- Add `homeView` state:
+  ```
+  homeView: {
+    viewMode: 'dashboard' | '3d'  // toggle between card grid and full 3D
+    cameraPreset: 'free' | 'topdown' | 'angle' | 'front'
+  }
+  ```
+- Add actions: `setHomeViewMode`, `setCameraPreset`
+
+### 2. Update `src/store/useAppStore.ts`
+- Default `appMode` to `'home'`
+- Add `homeView` state and actions
+- Bump store version to force fresh state
+
+### 3. New: `src/components/home/HomeView.tsx`
+- Full-screen wrapper component
+- When `viewMode === 'dashboard'`: renders Scene3D dimmed in background + card grid overlay
+- When `viewMode === '3d'`: renders Scene3D full-screen with minimal floating controls
+- Renders the floating bottom pill nav
+
+### 4. New: `src/components/home/DashboardGrid.tsx`
+- The main HA-style card grid overlay
+- Renders a responsive CSS grid of room cards + widget cards
+- Top section: ClockWidget, WeatherWidget, EnergyWidget
+- Main section: one RoomCard per room from store
+- Each RoomCard shows:
+  - Room name (from layout)
+  - Floor label
+  - Device icons (filtered by roomId from devices.markers)
+  - Placeholder temperature
+
+### 5. New: `src/components/home/cards/RoomCard.tsx`
+- Glassmorphic dark card
+- Shows room name, device kind icons with color states
+- Compact layout matching the HA reference style
+- Click handler (future: expand to control devices)
+
+### 6. New: `src/components/home/cards/ClockWidget.tsx`
+- Shows current time (large), date below
+- Live-updating with `useState` + `setInterval`
+- Swedish locale date formatting
+
+### 7. New: `src/components/home/cards/WeatherWidget.tsx`
+- Shows temperature, wind (placeholder), weather condition icon
+- Reads from `environment.weather` in store
+
+### 8. New: `src/components/home/cards/EnergyWidget.tsx`
+- Placeholder card showing power consumption stats
+- Static placeholder data for now (e.g., "1541 W", "1.5 kr/kWh")
+
+### 9. Update `src/components/BottomNav.tsx`
+- Change to 2 main tabs: "Hem" and "Bygge"
+- Add a "3D vy" toggle button that switches `homeView.viewMode`
+- Make it a floating semi-transparent pill
+- Only visible in home mode
+
+### 10. Update `src/components/ModeHeader.tsx`
+- Hide completely in home mode (dashboard has its own top section)
+- Only show in build mode
+
+### 11. Update `src/pages/Index.tsx`
+- Home mode: render `HomeView` (no ModeHeader, no BottomNav padding)
+- Build mode: render `BuildModeV2` with ModeHeader and BottomNav as before
+
+### 12. Update `src/components/Scene3D.tsx`
+- Accept an optional `dimmed` prop to apply a dark overlay when dashboard grid is shown
+- Add camera preset logic (animate to preset positions)
+
+### 13. Cleanup
+- Delete `src/components/dashboard/DashboardOverlay.tsx` (replaced by DashboardGrid)
+- Delete `src/components/devices/DevicesOverlay.tsx` (devices integrated into room cards)
+
+## Styling
+- All cards use the existing `glass-panel` class with the dark theme
+- Device icons use lucide-react icons, colored with amber (active), blue (sensor), gray (off)
+- Room cards have subtle `glass-border` borders
+- Responsive grid: 3-4 columns on desktop, 2 on tablet, 1 on mobile
+- Clock uses the `Space Grotesk` display font already imported
 
 ## Implementation Order
-1. Refactor Scene3D to render layout geometry (walls, floors, etc.)
-2. Add "Klar" button in build mode toolbar
-3. Create DashboardOverlay with environment controls
-4. Create DevicesOverlay with device list and placement
-5. Create DeviceMarkers3D for 3D rendering
-6. Update Index.tsx to wire everything together
+1. Update types and store (AppMode, homeView state)
+2. Create card components (RoomCard, ClockWidget, WeatherWidget, EnergyWidget)
+3. Create DashboardGrid
+4. Create HomeView wrapper
+5. Update BottomNav to floating pill with 3D toggle
+6. Update ModeHeader to hide in home mode
+7. Update Scene3D with dimming and camera presets
+8. Update Index.tsx
+9. Delete old overlay files
 
