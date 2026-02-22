@@ -47,6 +47,12 @@ export default function ImportTools() {
 
       {isImported && (
         <>
+          {/* Info about openings */}
+          <div className="rounded-lg bg-secondary/30 p-2.5 text-[10px] text-muted-foreground leading-relaxed">
+            <strong className="text-foreground">OBS:</strong> Fönster, dörrar och trappor identifieras inte automatiskt från importerade modeller. 
+            Använd verktygen under <em>Struktur</em>-fliken för att manuellt placera öppningar på den importerade modellen.
+          </div>
+
           {/* Position/Scale */}
           <div className="space-y-2">
             <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
