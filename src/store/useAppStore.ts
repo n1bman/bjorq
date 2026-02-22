@@ -552,6 +552,11 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: 'hometwin-store',
+      version: 2,
+      migrate: () => {
+        // V2: Complete state shape change — discard old data
+        return undefined as any;
+      },
       partialize: (state) => ({
         appMode: state.appMode,
         layout: state.layout,

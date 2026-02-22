@@ -6,6 +6,8 @@ import GroundPlane from './GroundPlane';
 import WallDrawing3D from './WallDrawing3D';
 import InteractiveWalls3D from './InteractiveWalls3D';
 import Floors3D from './Floors3D';
+import ImportedHome3D from './ImportedHome3D';
+import Props3D from './Props3D';
 import { useAppStore } from '@/store/useAppStore';
 import type { WallSegment } from '@/store/types';
 
@@ -111,6 +113,8 @@ function SceneContent() {
 
       <InteractiveWalls3D />
       <Floors3D />
+      <ImportedHome3D />
+      <Props3D />
       <WallDrawing3D cursorPos={cursorPos} />
 
       <Environment preset="night" />
