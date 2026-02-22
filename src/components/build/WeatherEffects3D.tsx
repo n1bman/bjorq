@@ -9,8 +9,8 @@ const MAX_HEIGHT = 6; // max spawn height in meters (stays below roof level)
 function randomRingPosition(): [number, number, number] {
   let x: number, z: number;
   do {
-    x = (Math.random() - 0.5) * 40;
-    z = (Math.random() - 0.5) * 40;
+    x = (Math.random() - 0.5) * 30;
+    z = (Math.random() - 0.5) * 30;
   } while (Math.sqrt(x * x + z * z) < MIN_RADIUS);
   const y = Math.random() * MAX_HEIGHT;
   return [x, y, z];

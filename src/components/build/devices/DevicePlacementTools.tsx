@@ -85,7 +85,7 @@ export default function DevicePlacementTools() {
               )}>
                 <span className="hidden lg:inline truncate">{m.name || kindLabels[m.kind]}</span>
                 <button
-                  onClick={() => removeDevice(m.id)}
+                  onClick={(e) => { e.stopPropagation(); removeDevice(m.id); }}
                   className="text-destructive/60 hover:text-destructive p-0.5"
                 >
                   <Trash2 size={14} />

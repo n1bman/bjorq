@@ -11,6 +11,7 @@ import PaintTool from './structure/PaintTool';
 import ImportTools from './import/ImportTools';
 import FurnishTools from './furnish/FurnishTools';
 import DevicePlacementTools from './devices/DevicePlacementTools';
+import ScaleCalibration from './ScaleCalibration';
 
 interface ToolItem {
   key: BuildTool;
@@ -45,7 +46,7 @@ export default function BuildLeftPanel() {
   const isStructureReadOnly = tab === 'structure' && homeGeometrySource === 'imported';
 
   // Show expanded sub-panel for template/paint tools
-  const showSubPanel = tab === 'structure' && (activeTool === 'template' || activeTool === 'paint');
+  const showSubPanel = tab === 'structure' && (activeTool === 'template' || activeTool === 'paint' || activeTool === 'calibrate');
 
   return (
     <div className={cn(
@@ -118,6 +119,11 @@ export default function BuildLeftPanel() {
           {activeTool === 'paint' && !isStructureReadOnly && (
             <div className="border-t border-border mt-2 pt-2 px-2 overflow-y-auto max-h-[50vh]">
               <PaintTool />
+            </div>
+          )}
+          {activeTool === 'calibrate' && !isStructureReadOnly && (
+            <div className="border-t border-border mt-2 pt-2 px-2">
+              <ScaleCalibration />
             </div>
           )}
         </>

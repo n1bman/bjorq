@@ -1,7 +1,6 @@
 import { useAppStore } from '@/store/useAppStore';
 import type { DeviceKind } from '@/store/types';
 import { Switch } from '@/components/ui/switch';
-import { useState } from 'react';
 
 const kindInfo: Record<DeviceKind, { emoji: string; label: string }> = {
   light: { emoji: '💡', label: 'Ljus' },
@@ -21,7 +20,8 @@ const kindInfo: Record<DeviceKind, { emoji: string; label: string }> = {
 export default function DevicesSection() {
   const markers = useAppStore((s) => s.devices.markers);
   const floors = useAppStore((s) => s.layout.floors);
-  const [toggledOn, setToggledOn] = useState<Record<string, boolean>>({});
+  const deviceStates = useAppStore((s) => s.devices.deviceStates);
+  const setDeviceState = useAppStore((s) => s.setDeviceState);
 
   if (markers.length === 0) {
     return (
@@ -49,22 +49,22 @@ export default function DevicesSection() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {devices.map((d) => {
               const info = kindInfo[d.kind];
-              const isOn = toggledOn[d.id] ?? (d.kind === 'light');
+              const isOn = deviceStates[d.id] ?? (d.kind === 'light');
               return (
                 <div key={d.id} className="glass-panel rounded-xl p-3 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="text-lg">{info.emoji}</span>
                     <div>
-                      <p className="text-sm font-medium text-foreground">{info.label}</p>
+                      <p className="text-sm font-medium text-foreground">{d.name || info.label}</p>
                       {d.ha?.entityId && (
                         <p className="text-[10px] text-muted-foreground">{d.ha.entityId}</p>
                       )}
                     </div>
                   </div>
-                  {(d.kind === 'light' || d.kind === 'switch') && (
+                  {(d.kind === 'light' || d.kind === 'switch' || d.kind === 'power-outlet') && (
                     <Switch
                       checked={isOn}
-                      onCheckedChange={(v) => setToggledOn((prev) => ({ ...prev, [d.id]: v }))}
+                      onCheckedChange={(v) => setDeviceState(d.id, v)}
                     />
                   )}
                 </div>

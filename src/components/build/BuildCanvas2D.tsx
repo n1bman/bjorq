@@ -82,6 +82,8 @@ export default function BuildCanvas2D() {
   const [isDraggingProp, setIsDraggingProp] = useState(false);
   const [dragPropId, setDragPropId] = useState<string | null>(null);
   const [dragPropOffset, setDragPropOffset] = useState<[number, number]>([0, 0]);
+  const [dragDeviceId, setDragDeviceId] = useState<string | null>(null);
+  const [dragDeviceOffset, setDragDeviceOffset] = useState<[number, number]>([0, 0]);
 
   // Room drawing state
   const [roomDrawStart, setRoomDrawStart] = useState<[number, number] | null>(null);
@@ -97,6 +99,7 @@ export default function BuildCanvas2D() {
   const showGhost = useAppStore((s) => s.build.view.showOtherFloorsGhost);
   const deviceMarkers = useAppStore((s) => s.devices.markers);
   const addDevice = useAppStore((s) => s.addDevice);
+  const updateDevice = useAppStore((s) => s.updateDevice);
   const homeGeometry = useAppStore((s) => s.homeGeometry);
 
   const setWallDrawing = useAppStore((s) => s.setWallDrawing);
@@ -830,6 +833,8 @@ export default function BuildCanvas2D() {
           const dist = Math.sqrt((swx - dev.position[0]) ** 2 + (swz - dev.position[2]) ** 2);
           if (dist < 0.5) {
             setSelection({ type: 'device', id: dev.id });
+            setDragDeviceId(dev.id);
+            setDragDeviceOffset([swx - dev.position[0], swz - dev.position[2]]);
             return;
           }
         }
@@ -963,13 +968,23 @@ export default function BuildCanvas2D() {
         return;
       }
 
+      // ─── Device dragging ───
+      if (dragDeviceId) {
+        const dev = deviceMarkers.find((m) => m.id === dragDeviceId);
+        if (dev) {
+          const snapped = snapToGrid(wx - dragDeviceOffset[0], wz - dragDeviceOffset[1]);
+          updateDevice(dragDeviceId, { position: [snapped[0], dev.position[1], snapped[1]] });
+        }
+        return;
+      }
+
       // ─── Room rectangle drawing ───
       if (roomDrawStart && activeTool === 'room') {
         const snapped = snapToGrid(wx, wz);
         setRoomDrawEnd(snapped);
       }
     },
-    [isPanning, panStart, zoom, offset, screenToWorld, dragNode, dragWall, dragOpening, isDraggingProp, dragPropId, dragPropOffset, roomDrawStart, activeTool, activeFloorId, snapToGrid, updateWallNode, updateOpeningOffset, updateProp, floorProps, walls]
+    [isPanning, panStart, zoom, offset, screenToWorld, dragNode, dragWall, dragOpening, isDraggingProp, dragPropId, dragPropOffset, dragDeviceId, dragDeviceOffset, roomDrawStart, activeTool, activeFloorId, snapToGrid, updateWallNode, updateOpeningOffset, updateProp, updateDevice, floorProps, walls, deviceMarkers]
   );
 
   const handlePointerUp = useCallback(() => {
@@ -999,6 +1014,12 @@ export default function BuildCanvas2D() {
       return;
     }
 
+    // Finish device drag
+    if (dragDeviceId) {
+      setDragDeviceId(null);
+      return;
+    }
+
     // Finish room rectangle
     if (roomDrawStart && roomDrawEnd && activeTool === 'room' && activeFloorId) {
       const x = Math.min(roomDrawStart[0], roomDrawEnd[0]);
@@ -1016,7 +1037,7 @@ export default function BuildCanvas2D() {
       setRoomDrawStart(null);
       setRoomDrawEnd(null);
     }
-  }, [dragNode, dragWall, dragOpening, isDraggingProp, roomDrawStart, roomDrawEnd, activeTool, activeFloorId, addRoomFromRect, updateRoomPolygons]);
+  }, [dragNode, dragWall, dragOpening, isDraggingProp, dragDeviceId, roomDrawStart, roomDrawEnd, activeTool, activeFloorId, addRoomFromRect, updateRoomPolygons]);
 
   const handleDoubleClick = useCallback(
     (e: React.MouseEvent) => {
@@ -1069,7 +1090,7 @@ export default function BuildCanvas2D() {
   );
 
   const getCursor = () => {
-    if (isDraggingProp || dragNode || dragWall || dragOpening) return 'grabbing';
+    if (isDraggingProp || dragNode || dragWall || dragOpening || dragDeviceId) return 'grabbing';
     if (activeTool === 'wall' || activeTool === 'room') return 'crosshair';
     if (activeTool === 'door' || activeTool === 'window') return 'crosshair';
     if (activeTool === 'erase') return 'not-allowed';

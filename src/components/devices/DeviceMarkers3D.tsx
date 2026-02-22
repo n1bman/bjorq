@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback } from 'react';
+import { useRef, useCallback } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { useAppStore } from '@/store/useAppStore';
 import type { DeviceKind, DeviceMarker } from '@/store/types';
@@ -23,20 +23,20 @@ function SelectionRing({ radius }: { radius: number }) {
 }
 
 function LightMarker({ position, id, onSelect, onDragStart, selected }: MarkerProps) {
-  const [on, setOn] = useState(true);
+  const isOn = useAppStore((s) => s.devices.deviceStates[id] ?? true);
   const handleClick = useCallback((e: ThreeEvent<PointerEvent>) => {
     e.stopPropagation();
-    if (onSelect) { onSelect(id); } else { setOn(!on); }
-  }, [onSelect, id, on]);
+    if (onSelect) { onSelect(id); }
+  }, [onSelect, id]);
   const handlePointerDown = useCallback((e: ThreeEvent<PointerEvent>) => {
     if (selected && onDragStart) { onDragStart(id, e); }
   }, [selected, onDragStart, id]);
   return (
     <group position={position} onClick={handleClick} onPointerDown={handlePointerDown}>
-      <pointLight color="#ffd699" intensity={on ? 3 : 0} distance={8} decay={2} />
+      <pointLight color="#ffd699" intensity={isOn ? 3 : 0} distance={8} decay={2} />
       <mesh>
         <sphereGeometry args={[selected ? 0.15 : 0.1, 16, 16]} />
-        <meshStandardMaterial color="#f5c542" emissive="#f5c542" emissiveIntensity={on ? 1.5 : 0.1} transparent opacity={on ? 0.9 : 0.4} />
+        <meshStandardMaterial color="#f5c542" emissive="#f5c542" emissiveIntensity={isOn ? 1.5 : 0.1} transparent opacity={isOn ? 0.9 : 0.4} />
       </mesh>
       {selected && <SelectionRing radius={0.2} />}
     </group>
@@ -44,18 +44,18 @@ function LightMarker({ position, id, onSelect, onDragStart, selected }: MarkerPr
 }
 
 function SwitchMarker({ position, id, onSelect, onDragStart, selected }: MarkerProps) {
-  const [on, setOn] = useState(false);
+  const isOn = useAppStore((s) => s.devices.deviceStates[id] ?? false);
   const ref = useRef<THREE.Mesh>(null);
   useFrame((_, delta) => {
     if (ref.current) {
-      const target = on ? 1.2 : 1;
+      const target = isOn ? 1.2 : 1;
       ref.current.scale.lerp(new THREE.Vector3(target, target, target), delta * 5);
     }
   });
   const handleClick = useCallback((e: ThreeEvent<PointerEvent>) => {
     e.stopPropagation();
-    if (onSelect) { onSelect(id); } else { setOn(!on); }
-  }, [onSelect, id, on]);
+    if (onSelect) { onSelect(id); }
+  }, [onSelect, id]);
   const handlePointerDown = useCallback((e: ThreeEvent<PointerEvent>) => {
     if (selected && onDragStart) { onDragStart(id, e); }
   }, [selected, onDragStart, id]);
@@ -63,7 +63,7 @@ function SwitchMarker({ position, id, onSelect, onDragStart, selected }: MarkerP
     <group position={position} onClick={handleClick} onPointerDown={handlePointerDown}>
       <mesh ref={ref} rotation={[-Math.PI / 2, 0, 0]}>
         <ringGeometry args={[0.12, 0.18, 32]} />
-        <meshStandardMaterial color={on ? '#4a9eff' : '#666'} emissive={on ? '#4a9eff' : '#333'} emissiveIntensity={on ? 0.8 : 0.1} transparent opacity={0.8} side={THREE.DoubleSide} />
+        <meshStandardMaterial color={isOn ? '#4a9eff' : '#666'} emissive={isOn ? '#4a9eff' : '#333'} emissiveIntensity={isOn ? 0.8 : 0.1} transparent opacity={0.8} side={THREE.DoubleSide} />
       </mesh>
       {selected && <SelectionRing radius={0.22} />}
     </group>

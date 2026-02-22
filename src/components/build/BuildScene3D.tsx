@@ -39,7 +39,11 @@ function SceneContent() {
     ] as [number, number, number];
   }, [sunAzimuth, sunElevation]);
 
-  const sunIntensity = sunElevation < 0 ? 0 : (weatherCondition === 'cloudy' ? 0.4 : weatherCondition === 'rain' ? 0.2 : weatherCondition === 'snow' ? 0.3 : 1.2);
+  const isNight = sunElevation < 0;
+  const isTwilight = sunElevation >= 0 && sunElevation < 15;
+  const ambientIntensity = isNight ? 0.1 : isTwilight ? 0.25 : (weatherCondition === 'cloudy' || weatherCondition === 'rain' ? 0.5 : 0.35);
+  const ambientColor = isNight ? '#1a1a3e' : isTwilight ? '#ff9966' : '#b8c4d4';
+  const sunIntensity = isNight ? 0 : (weatherCondition === 'cloudy' ? 0.4 : weatherCondition === 'rain' ? 0.2 : weatherCondition === 'snow' ? 0.3 : 1.2);
 
   const setWallDrawing = useAppStore((s) => s.setWallDrawing);
   const addWall = useAppStore((s) => s.addWall);
@@ -135,12 +139,12 @@ function SceneContent() {
 
   return (
     <>
-      <ambientLight intensity={weatherCondition === 'cloudy' || weatherCondition === 'rain' ? 0.5 : 0.35} color="#b8c4d4" />
+      <ambientLight intensity={ambientIntensity} color={ambientColor} />
       <directionalLight position={sunPos} intensity={sunIntensity} color="#ffd699" castShadow
         shadow-mapSize-width={2048} shadow-mapSize-height={2048}
         shadow-camera-far={50} shadow-camera-left={-20} shadow-camera-right={20}
         shadow-camera-top={20} shadow-camera-bottom={-20} />
-      <pointLight position={[0, 8, 0]} intensity={0.15} color="#4a9eff" />
+      {!isNight && <pointLight position={[0, 8, 0]} intensity={0.15} color="#4a9eff" />}
 
       <GroundPlane onPointerDown={handleGroundPointerDown} onPointerMove={handleGroundPointerMove} />
 
