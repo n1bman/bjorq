@@ -185,7 +185,7 @@ export default function BuildTopToolbar() {
       <button
         onClick={() => {
           toast.success('Sparad! Ditt hem är redo att visa.');
-          setAppMode('dashboard');
+          setAppMode('home');
         }}
         className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors"
       >

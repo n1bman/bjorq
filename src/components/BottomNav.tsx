@@ -1,11 +1,10 @@
 import { useAppStore } from '@/store/useAppStore';
-import type { AppMode } from '@/store/types';
-import { Eye, Cpu, PenTool } from 'lucide-react';
+import { Home, PenTool } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import type { AppMode } from '@/store/types';
 
-const modes: { key: AppMode; label: string; icon: typeof Eye }[] = [
-  { key: 'dashboard', label: 'Kontrollpanel', icon: Eye },
-  { key: 'devices', label: 'Enheter', icon: Cpu },
+const modes: { key: AppMode; label: string; icon: typeof Home }[] = [
+  { key: 'home', label: 'Hem', icon: Home },
   { key: 'build', label: 'Bygge', icon: PenTool },
 ];
 
@@ -15,7 +14,7 @@ export default function BottomNav() {
 
   return (
     <nav className="fixed bottom-0 inset-x-0 z-50 glass-panel border-t border-[hsl(var(--glass-border))]">
-      <div className="flex items-center justify-around h-16 max-w-lg mx-auto px-2">
+      <div className="flex items-center justify-around h-14 max-w-lg mx-auto px-2">
         {modes.map(({ key, label, icon: Icon }) => {
           const active = appMode === key;
           return (
@@ -29,15 +28,12 @@ export default function BottomNav() {
                   : 'text-muted-foreground hover:text-foreground'
               )}
             >
-              <Icon size={22} strokeWidth={active ? 2.5 : 1.8} />
-              <span className="text-[11px] font-medium tracking-wide">
-                {label}
-              </span>
+              <Icon size={20} strokeWidth={active ? 2.5 : 1.8} />
+              <span className="text-[11px] font-medium tracking-wide">{label}</span>
             </button>
           );
         })}
       </div>
-      {/* Safe area padding for mobile */}
       <div className="h-[env(safe-area-inset-bottom)]" />
     </nav>
   );

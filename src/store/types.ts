@@ -237,8 +237,17 @@ export interface RoomTemplate {
   category: RoomTemplateCategory;
 }
 
+// ─── Home View ───
+export type HomeViewMode = 'dashboard' | '3d';
+export type CameraPreset = 'free' | 'topdown' | 'angle' | 'front';
+
+export interface HomeViewState {
+  viewMode: HomeViewMode;
+  cameraPreset: CameraPreset;
+}
+
 // ─── App State ───
-export type AppMode = 'dashboard' | 'devices' | 'build';
+export type AppMode = 'home' | 'build';
 
 export interface AppState {
   appMode: AppMode;
@@ -251,6 +260,11 @@ export interface AppState {
   props: PropsState;
   environment: EnvironmentState;
   homeAssistant: HomeAssistantState;
+  homeView: HomeViewState;
+
+  // Home View actions
+  setHomeViewMode: (mode: HomeViewMode) => void;
+  setCameraPreset: (preset: CameraPreset) => void;
 
   // Layout actions
   addFloor: (name: string) => void;
