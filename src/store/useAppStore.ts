@@ -730,9 +730,9 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: 'hometwin-store',
-      version: 10,
+      version: 11,
       migrate: () => {
-        // V10: Force-clear stale state to fix unknown device kind crash
+        // V11: Force-clear stale state to fix unknown device kind crash
         return undefined as any;
       },
       partialize: (state) => ({

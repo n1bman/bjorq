@@ -50,6 +50,7 @@ export default function DevicesSection() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {devices.map((d) => {
               const info = kindInfo[d.kind];
+              if (!info) return null;
               const isOn = deviceStates[d.id] ?? (d.kind === 'light');
               const isScreen = d.kind === 'media_screen';
               return (
