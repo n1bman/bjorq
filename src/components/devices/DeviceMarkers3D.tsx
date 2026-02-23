@@ -22,9 +22,33 @@ function SelectionRing({ radius }: { radius: number }) {
   );
 }
 
+function miredsToColor(mireds: number): THREE.Color {
+  const t = Math.max(0, Math.min(1, (mireds - 153) / (500 - 153)));
+  const r = 255;
+  const g = Math.round(255 - t * 100);
+  const b = Math.round(255 - t * 200);
+  return new THREE.Color(r / 255, g / 255, b / 255);
+}
+
 function LightMarker({ position, id, onSelect, onDragStart, selected }: MarkerProps) {
   const state = useAppStore((s) => s.devices.deviceStates[id]);
-  const isOn = state?.kind === 'light' ? state.data.on : true;
+  const lightData = state?.kind === 'light' ? state.data : null;
+  const isOn = lightData?.on ?? false;
+
+  // Compute color from state
+  const lightColor = useMemo(() => {
+    if (!lightData || !isOn) return new THREE.Color('#555555');
+    if (lightData.colorMode === 'rgb' && lightData.rgbColor) {
+      return new THREE.Color(lightData.rgbColor[0] / 255, lightData.rgbColor[1] / 255, lightData.rgbColor[2] / 255);
+    }
+    if (lightData.colorMode === 'temp' && lightData.colorTemp) {
+      return miredsToColor(lightData.colorTemp);
+    }
+    return new THREE.Color('#f5c542');
+  }, [lightData?.colorMode, lightData?.rgbColor?.[0], lightData?.rgbColor?.[1], lightData?.rgbColor?.[2], lightData?.colorTemp, isOn]);
+
+  const brightness = isOn ? (lightData?.brightness ?? 200) / 255 : 0;
+
   const handleClick = useCallback((e: ThreeEvent<PointerEvent>) => {
     e.stopPropagation();
     if (onSelect) { onSelect(id); }
@@ -34,10 +58,10 @@ function LightMarker({ position, id, onSelect, onDragStart, selected }: MarkerPr
   }, [selected, onDragStart, id]);
   return (
     <group position={position} onClick={handleClick} onPointerDown={handlePointerDown}>
-      <pointLight color="#ffd699" intensity={isOn ? 3 : 0} distance={8} decay={2} />
+      <pointLight color={lightColor} intensity={isOn ? brightness * 5 : 0} distance={8} decay={2} />
       <mesh>
         <sphereGeometry args={[selected ? 0.15 : 0.1, 16, 16]} />
-        <meshStandardMaterial color="#f5c542" emissive="#f5c542" emissiveIntensity={isOn ? 1.5 : 0.1} transparent opacity={isOn ? 0.9 : 0.4} />
+        <meshStandardMaterial color={lightColor} emissive={lightColor} emissiveIntensity={isOn ? brightness * 2 : 0.1} transparent opacity={isOn ? 0.9 : 0.4} />
       </mesh>
       {selected && <SelectionRing radius={0.2} />}
     </group>

@@ -601,6 +601,26 @@ function DeviceInspector({ deviceId, close }: { deviceId: string; close: React.R
         </select>
       </div>
 
+      {/* Category override */}
+      <div className="space-y-2">
+        <label className="text-muted-foreground text-[10px]">Kategori</label>
+        <Input
+          value={device.userCategory ?? ''}
+          onChange={(e) => updateDevice(device.id, { userCategory: e.target.value || undefined })}
+          placeholder="Auto (baserad på typ)"
+          className="h-8 text-xs bg-secondary/30"
+        />
+      </div>
+
+      {/* Notify on home screen */}
+      <div className="flex items-center justify-between">
+        <label className="text-muted-foreground text-[10px]">Visa notiser på Hem</label>
+        <Switch
+          checked={device.notifyOnHomeScreen ?? false}
+          onCheckedChange={(v) => updateDevice(device.id, { notifyOnHomeScreen: v })}
+        />
+      </div>
+
       <div className="space-y-2">
         <label className="text-muted-foreground text-[10px]">HA Entity ID</label>
         <Input

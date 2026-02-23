@@ -187,6 +187,8 @@ export interface DeviceMarker {
   scale?: [number, number, number];
   ha?: { entityId: string };
   screenConfig?: ScreenConfig;
+  userCategory?: string;
+  notifyOnHomeScreen?: boolean;
 }
 
 // ─── Rich Device States (HA-ready) ───
@@ -330,6 +332,18 @@ export interface HomeViewState {
   visibleWidgets: VisibleWidgets;
 }
 
+// ─── Activity Log ───
+export interface ActivityEvent {
+  id: string;
+  timestamp: string;
+  deviceId?: string;
+  kind: 'state_change' | 'alert' | 'connection' | 'notification';
+  title: string;
+  detail?: string;
+  severity: 'info' | 'warning' | 'error';
+  read: boolean;
+}
+
 // ─── App State ───
 export type AppMode = 'home' | 'dashboard' | 'build';
 
@@ -345,6 +359,7 @@ export interface AppState {
   environment: EnvironmentState;
   homeAssistant: HomeAssistantState;
   homeView: HomeViewState;
+  activityLog: ActivityEvent[];
 
   // Home View actions
   setCameraPreset: (preset: CameraPreset) => void;
@@ -440,4 +455,9 @@ export interface AppState {
 
   // Room polygon recalculation
   updateRoomPolygons: (floorId: string) => void;
+
+  // Activity log actions
+  pushActivity: (event: Omit<ActivityEvent, 'id' | 'timestamp' | 'read'>) => void;
+  clearActivity: () => void;
+  markActivityRead: (id: string) => void;
 }
