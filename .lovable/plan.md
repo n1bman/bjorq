@@ -1,88 +1,48 @@
 
 
-# Synlig Skarm i 3D -- Fixplan
+# Fix: Skarm (media_screen) placeras med fel kind och saknar specialegenskaper
 
-## Problem
+## Rotorsak
 
-Skarmen placeras korrekt men syns inte i 3D-varlden av tre anledningar:
+Nar man klickar for att placera en skarm gor koden pa rad 756 i `BuildCanvas2D.tsx`:
+```
+const kind = activeTool.replace('place-', '') // 'place-media-screen' -> 'media-screen'
+```
 
-1. **For mork**: Skarmen har mork bakgrund utan emissiv belysning -- den smälter in i scenen
-2. **Ingen default-bild**: Utan HA-koppling visar den bara "Ingen media" i liten vit text pa natt-svart bakgrund
-3. **Inget sken**: En TV som ar "pa" borde lysa upp omgivningen
+Men DeviceKind-typen anvander **understreck**: `media_screen`. Darfor sparas enheten med `kind: 'media-screen'` (bindestreck) som inte matchar nagon komponent, ikon eller inspektorlogik. Det ar darfor:
 
-## Andringar
+- Inspektorn visar lampikon istallet for monitor-ikon
+- Skarmspecifika kontroller (bredd, bildformat) visas inte
+- 3D-markoren faller igenom till `markerComponents['media-screen']` som ar `undefined` och returnerar `null`
 
-### 1. MediaScreenMarker -- emissivt material och glow (DeviceMarkers3D.tsx)
+## Losning
 
-- Byt fran `meshBasicMaterial` till `meshStandardMaterial` med `emissive` och `emissiveIntensity` sa skarmen "lyser" i morka scener
-- Lagg till en `pointLight` framfor skarmen (intensitet 0.5-1) som kastar skarmsken pa vaggar/golv
-- Lagg till en tunn ljusbla glow-plane bakom skarmen (stor och transparent) for att simulera ambient screen bleed
+### 1. BuildCanvas2D.tsx -- Konvertera kind korrekt (rad 756)
 
-### 2. Default-bild nar ingen media spelas (drawScreenCanvas)
+Lagg till en mapping fran tool-namn till korrekt DeviceKind, eller ersatt bindestreck med understreck for `media-screen`:
 
-Nar det inte finns nagon media-state, rita en snygg default-vy:
+```tsx
+const rawKind = activeTool.replace('place-', '');
+const kind = rawKind === 'media-screen' ? 'media_screen' : rawKind as DeviceKind;
+```
 
-- Gradient-bakgrund (morkbla till morkilla)
-- Stor centered monitor/TV-ikon (ritad med canvas paths)
-- Text "REDO" eller "Standby" med dimmad text
-- Subtil animerad "scanline"-effekt via useFrame som uppdaterar texturen periodiskt
+### 2. BuildCanvas2D.tsx -- Satt default-egenskaper for media_screen (rad 766-774)
 
-Nar media spelar:
+Nar `kind === 'media_screen'`, satt:
+- `surface: 'free'` istallet for `'floor'`
+- `scale: [1.2, 0.675, 1]` (default TV-storlek)
+- `screenConfig: { aspectRatio: 16/9, uiStyle: 'minimal', showProgress: true }`
+- `position[1]` till vagg-hojd (t.ex. `elev + 1.5`) istallet for tak-hojd
 
-- Ljusare bakgrund med gradient
-- Storre text for titel
-- Source-label med fargad bakgrund (Netflix = rod, Spotify = gron, default = indigo)
+### 3. BuildInspector.tsx -- Skarmspecifika kontroller redan implementerade
 
-### 3. Bygglagets markering -- tydligare urval
-
-- Nar skarmen ar vald i bygglaaget: visa en tydlig glodande ram (tjockare, ljusare, pulsande)
-- Lagg till fyra smala horn-markeringar i skarmens hornn sa man ser var den ar aven nar den inte ar vald
-
-### 4. Korrigera default-rotation
-
-- Andra default-rotation fran `[0, 0, 0]` till `[0, 0, 0]` (planeGeometry ar redan vertikal)
-- Men lagg till en liten Y-rotation offset sa skarmen inte ar exakt parallell med grid-linjerna (lattare att se fran kamerans default-vinkel)
+Inspektorn har redan all logik for `isScreen` (bredd-slider, bildformat, UI-stil, rotation XYZ). Den fungerar korrekt sa fort `device.kind` ar `'media_screen'`.
 
 ## Tekniska detaljer
 
-### Filandringar
-
 | Fil | Andring |
 |-----|---------|
-| `DeviceMarkers3D.tsx` | Byt material till emissivt, lagg till pointLight, forbattra drawScreenCanvas med default-bild, lagg till horn-markeringar |
-| `BuildScene3D.tsx` | Ingen andring -- rotation och scale ar redan korrekta |
+| `BuildCanvas2D.tsx` rad 756 | Fixa kind-konvertering fran `media-screen` till `media_screen` |
+| `BuildCanvas2D.tsx` rad 766-774 | Lagg till specialfall for `media_screen` med ratt default-egenskaper |
 
-### drawScreenCanvas -- ny default-vy
-
-```text
-function drawScreenCanvas(canvas, ctx, mediaState, config):
-  if no media:
-    1. Rita gradient bakgrund (dark blue -> dark purple)
-    2. Rita stor TV-ikon i mitten (linjer, inte fylld)
-    3. Rita "Standby" text under ikonen
-    4. Rita tunn ram runt hela canvasen
-  else:
-    1. Rita morkare gradient bakgrund
-    2. Rita source-label med fargad bakgrund
-    3. Rita stor titel
-    4. Rita play/pause
-    5. Rita progress bar
-```
-
-### Emissiv belysning
-
-```text
-MediaScreenMarker:
-  <group>
-    <pointLight position={[0, 0, 0.3]} intensity={0.8} color="#818cf8" distance={3} />
-    <mesh> // Screen
-      <planeGeometry args={[w, h]} />
-      <meshStandardMaterial map={texture} emissive="#ffffff" emissiveIntensity={0.3} />
-    </mesh>
-    <mesh> // Bezel
-      ...
-    </mesh>
-    // Corner markers (4x small boxes at corners)
-  </group>
-```
-
+Inga nya filer eller beroenden kravs.
