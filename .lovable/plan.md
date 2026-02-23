@@ -1,180 +1,141 @@
 
 
-# Interaktiv kontrollpanel + HA-prepp
+# Kategoriserade enheter, aktivitetsflode och ljus-synk i 3D
 
 ## Oversikt
 
-Kontrollpanelen byggs om fran statiska on/off-switchar till enhetstypspecifika kontrollkort med rika reglage. Samtidigt preppas hela datalagret for HA-integration genom att utoka `deviceStates` fran en enkel `boolean` till ett rikt state-objekt per enhetstyp.
+Tre huvudomraden:
+1. **Kategoriserat Hem-vy** -- Google Home-liknande gruppering med mojlighet att stanga av hela kategorier
+2. **Aktivitetsflode** -- En ny flik i kontrollpanelen for notiser och handelser
+3. **Ljus-synk i 3D** -- Lampor i 3D reagerar pa ljusstyrka, fargtemperatur och RGB fran kontrollpanelen
 
-## 1. Utoka device state-modellen
+---
 
-**Fil: `src/store/types.ts`**
+## 1. Kategoriserat Hem-vy (Google Home-stil)
 
-Ersatt `deviceStates: Record<string, boolean>` med ett typat state-system:
+### Problem
+Idag visas enheter grupperade per rum/vaning. Anvandaren vill kunna:
+- Gruppera per kategori (Ljus, Klimat, Media, etc.)
+- Stanga av alla enheter i en kategori med ett klick
+- Valja kategori for en enhet vid placering (t.ex. "Datorrum" eller "Lampor")
 
+### Andringar
+
+**`src/components/home/DashboardGrid.tsx`** -- HomeCategory:
+- Lagg till kategori-flikar (Ljus, Klimat, Media, etc.) overst i Hem-vyn
+- Varje kategori visar en header med namn, antal pa/av, och en "stang av alla"-knapp
+- Klick pa kategorin expanderar/kollapsar den
+- Behall rum-gruppering inuti varje kategori
+
+**`src/components/home/cards/DevicesSection.tsx`**:
+- Ny prop `groupBy: 'room' | 'category'` -- default `'category'` for Hem-vyn
+- Nar `groupBy === 'category'`: gruppera enheter efter `kindInfo`-tabell
+- Varje kategori-header far en "Toggle all"-switch som anropar `updateDeviceState` pa alla enheter i gruppen
+
+**`src/store/types.ts`** -- DeviceMarker:
+- Lagg till ett valfritt falt `userCategory?: string` pa `DeviceMarker`
+- Anvandaren kan overskriva default-kategorin (t.ex. flytta en lampa till "Datorrum")
+
+**`src/components/build/BuildInspector.tsx`**:
+- Lagg till en dropdown for `userCategory` i enhetsinspektorn (vid placering eller redigering)
+- Forval: enhetens `kind`-baserade kategori. Alternativ: alla befintliga rum + egendefinierade
+
+---
+
+## 2. Aktivitetsflode
+
+### Problem
+Det saknas en plats for notiser, handelser och varningar (dorroppning, tappad anslutning, HA-notiser).
+
+### Andringar
+
+**`src/store/types.ts`**:
 ```typescript
-// Rikt device state per enhetstyp
-export interface LightState {
-  on: boolean;
-  brightness: number;       // 0-255
-  colorTemp?: number;       // mireds
-  rgbColor?: [number, number, number];
-  colorMode: 'temp' | 'rgb' | 'off';
+export interface ActivityEvent {
+  id: string;
+  timestamp: string;         // ISO
+  deviceId?: string;
+  kind: 'state_change' | 'alert' | 'connection' | 'notification';
+  title: string;
+  detail?: string;
+  severity: 'info' | 'warning' | 'error';
+  read: boolean;
 }
 
-export interface ClimateState {
-  on: boolean;
-  mode: 'heat' | 'cool' | 'auto' | 'off';
-  targetTemp: number;
-  currentTemp: number;
-}
-
-export interface MediaState {
-  on: boolean;
-  state: 'playing' | 'paused' | 'idle' | 'off';
-  title?: string;
-  artist?: string;
-  source?: string;
-  volume: number;           // 0-1
-  progress?: number;        // 0-1
-}
-
-export interface VacuumState {
-  on: boolean;
-  status: 'cleaning' | 'docked' | 'returning' | 'error';
-  battery: number;          // 0-100
-}
-
-export interface LockState {
-  locked: boolean;
-}
-
-export interface SensorState {
-  value: number;
-  unit: string;
-}
-
-export interface GenericDeviceState {
-  on: boolean;
-}
-
-export type DeviceState = 
-  | { kind: 'light'; data: LightState }
-  | { kind: 'climate'; data: ClimateState }
-  | { kind: 'media_screen'; data: MediaState }
-  | { kind: 'vacuum'; data: VacuumState }
-  | { kind: 'door-lock'; data: LockState }
-  | { kind: 'sensor'; data: SensorState }
-  | { kind: 'generic'; data: GenericDeviceState };
+// Lagg till i AppState:
+activityLog: ActivityEvent[];
+pushActivity: (event: Omit<ActivityEvent, 'id' | 'timestamp' | 'read'>) => void;
+clearActivity: () => void;
+markActivityRead: (id: string) => void;
 ```
 
-Uppdatera `DevicesState`:
+**`src/store/useAppStore.ts`**:
+- Implementera `activityLog` med max 100 poster (FIFO)
+- `pushActivity` genererar id och timestamp automatiskt
+- Nar `updateDeviceState` kallas, pusha automatiskt en `state_change`-event
+
+**Ny fil: `src/components/home/cards/ActivityFeed.tsx`**:
+- Visar en scrollbar lista med handelser, senaste overst
+- Varje rad: ikon + tid + titel + detalj
+- Fargkodad per severity (info=gra, warning=gul, error=rod)
+- "Rensa alla"-knapp
+
+**`src/components/home/DashboardGrid.tsx`**:
+- Lagg till ny kategori-flik "Aktivitet" med `Bell`-ikon
+- Visa ActivityFeed-komponenten
+- Badge pa fliken med antal olasta handelser
+
+**`src/store/types.ts`** -- DeviceMarker:
+- Lagg till `notifyOnHomeScreen?: boolean` pa `DeviceMarker`
+- Nar detta ar `true`, visas notiser fran denna enhet som overlay pa Hem-skarmen
+
+**`src/components/build/BuildInspector.tsx`**:
+- Lagg till en checkbox "Visa notiser pa Hem-skarmen" i enhetsinspektorn
+
+---
+
+## 3. Ljus-synk i 3D
+
+### Problem
+`LightMarker` laser bara `state.data.on` -- den ignorerar ljusstyrka, fargtemperatur och RGB helt.
+
+### Andringar
+
+**`src/components/devices/DeviceMarkers3D.tsx`** -- LightMarker:
+- Las ut `brightness`, `colorTemp`, `rgbColor`, `colorMode` fran `state.data`
+- Berakna lampans farg baserat pa `colorMode`:
+  - `'temp'`: Konvertera mireds (153-500) till RGB via en enkel lookup/lerp (kall bla till varm orange)
+  - `'rgb'`: Anvand `rgbColor` direkt
+  - `'off'`: Dimmad gra
+- Satt `pointLight.intensity` proportionellt mot `brightness / 255`
+- Satt `meshStandardMaterial.emissiveIntensity` proportionellt mot ljusstyrka
+- Satt `meshStandardMaterial.color` och `emissive` till den beraknade fargen
+- Satt `pointLight.color` till samma farg
+
+Ny hjalp-funktion:
 ```typescript
-export interface DevicesState {
-  markers: DeviceMarker[];
-  deviceStates: Record<string, DeviceState>;
+function miredsToHex(mireds: number): string {
+  // 153 = kall (bluish white ~6500K)
+  // 500 = varm (orange ~2000K)
+  const t = (mireds - 153) / (500 - 153); // 0=kall, 1=varm
+  const r = Math.round(255);
+  const g = Math.round(255 - t * 100);
+  const b = Math.round(255 - t * 200);
+  return `rgb(${r},${g},${b})`;
 }
 ```
 
-## 2. Nya store-actions
-
-**Fil: `src/store/useAppStore.ts`**
-
-Lagg till actions for att manipulera de rikare states:
-
-- `setDeviceState(id, state)` -- ersatter den gamla boolean-versionen
-- `updateDeviceState(id, partialData)` -- partial update av data
-- `getDefaultState(kind): DeviceState` -- returnerar default state for varje enhetstyp
-
-Nar en enhet placeras, skapa automatiskt en default state i `deviceStates`.
-
-## 3. Enhetstypspecifika kontrollkort
-
-**Ny fil: `src/components/home/cards/DeviceControlCard.tsx`**
-
-En komponent som renderar ratt kontrollgranssnitt baserat pa enhetstyp:
-
-### Ljus (light)
-- On/off switch
-- Ljusstyrka-slider (0-100%)
-- Fargtemperatur-slider (varm till kall)
-- RGB-fargvaljare (enkel gradient-bar)
-- Lage-knappar: Temp | RGB | Av
-
-### Klimat (climate)
-- On/off switch
-- Lage-valjare: Varme | Kyla | Auto | Av
-- Mal-temperatur med +/- knappar och stor siffra
-- Aktuell temperatur (gra, mindre)
-
-### Skarmar (media_screen)
-- On/off switch
-- Play/Pause/Stop knappar
-- Volym-slider
-- Titel + Artist visning
-- Kalla-valjare (Netflix, Spotify, etc)
-- Progress bar
-
-### Dammsugare (vacuum)
-- Start/Stop/Dock knappar
-- Status-text (Stader, Dockad, etc)
-- Batteri-indikator
-
-### Dorr-las (door-lock)
-- Stor las/lasa upp knapp med animation
-- Status-ikon (last/olast)
-
-### Sensor
-- Stort varde med enhet
-- Inga reglage (read-only)
-
-### Generiska (switch, power-outlet, garage-door, etc)
-- On/off switch
-- Status-text
-
-## 4. Ny DevicesSection med expanderbara kort
-
-**Fil: `src/components/home/cards/DevicesSection.tsx`**
-
-Bygg om fran platta rader till interaktiva kort:
-
-- Klick pa kort expanderar det och visar DeviceControlCard
-- Gruppering per rum (inte bara vaning)
-- Snabb-atgard synlig aven i komprimerat lage (t.ex. ljusstyrka-slider for lampor)
-- HA-koppling visas som liten badge
-
-## 5. Enheter-kategorin i DashboardGrid
-
-**Fil: `src/components/home/DashboardGrid.tsx`**
-
-Uppgradera `DevicesCategory` med:
-
-- Filter-knappar per enhetstyp (Lampor, Klimat, Media, etc)
-- Sokfalt for enheter
-- "Alla enheter" och "Per rum" vy-vaxling
-
-## 6. HA-prepp i typer och store
-
-All data som HA skickar mappas till vart `DeviceState`-format. Nar HA-integrationen byggs ut later behover man bara:
-
-1. Lyssna pa WebSocket-meddelanden
-2. Mappa `attributes` till ratt `DeviceState`
-3. Anropa `updateDeviceState()` 
-4. For kommandon: skicka `call_service` via WebSocket
-
-Ingen HA-WebSocket-kod skrivs nu -- bara datastrukturen preppas.
+---
 
 ## Teknisk sammanfattning
 
 | Fil | Andring |
 |-----|---------|
-| `src/store/types.ts` | Nya DeviceState-typer, uppdaterad DevicesState |
-| `src/store/useAppStore.ts` | Nya actions, getDefaultState, migration till v13 |
-| `src/components/home/cards/DeviceControlCard.tsx` | **NY** -- Enhetstypspecifika kontroller |
-| `src/components/home/cards/DevicesSection.tsx` | Ombyggd med expanderbara kort |
-| `src/components/home/DashboardGrid.tsx` | Filter och forbattrad Enheter-kategori |
-| `src/components/devices/DeviceMarkers3D.tsx` | Lasa MediaState fran nya deviceStates for skarm-rendering |
+| `src/store/types.ts` | `userCategory` pa DeviceMarker, `ActivityEvent`, `activityLog` + actions, `notifyOnHomeScreen` |
+| `src/store/useAppStore.ts` | Implementera activityLog, auto-push vid state-andringar |
+| `src/components/home/DashboardGrid.tsx` | Aktivitet-flik, kategori-gruppering i Hem-vyn |
+| `src/components/home/cards/DevicesSection.tsx` | `groupBy`-prop, kategori-headers med toggle-all |
+| `src/components/home/cards/ActivityFeed.tsx` | **NY** -- aktivitetsflode-komponent |
+| `src/components/devices/DeviceMarkers3D.tsx` | LightMarker laser brightness/color/colorTemp och applicerar pa 3D |
+| `src/components/build/BuildInspector.tsx` | userCategory-dropdown, notifyOnHomeScreen-checkbox |
 
-## Migrering
-
-Store version bumpas till 13. Befintliga `boolean`-states migreras automatiskt till det nya formatet via `getDefaultState()`.
