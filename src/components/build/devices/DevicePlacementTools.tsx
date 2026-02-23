@@ -1,6 +1,6 @@
 import { useAppStore } from '@/store/useAppStore';
 import type { DeviceKind, BuildTool } from '@/store/types';
-import { Lightbulb, ToggleLeft, Activity, Thermometer, Trash2, Camera, Bot, CookingPot, WashingMachine, DoorOpen, Lock, Plug, Refrigerator } from 'lucide-react';
+import { Lightbulb, ToggleLeft, Activity, Thermometer, Trash2, Camera, Bot, CookingPot, WashingMachine, DoorOpen, Lock, Plug, Refrigerator, Monitor } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const deviceTools: { key: BuildTool; kind: DeviceKind; label: string; icon: typeof Lightbulb; color: string }[] = [
@@ -16,6 +16,7 @@ const deviceTools: { key: BuildTool; kind: DeviceKind; label: string; icon: type
   { key: 'place-garage-door', kind: 'garage-door', label: 'Garageport', icon: DoorOpen, color: 'text-amber-500' },
   { key: 'place-door-lock', kind: 'door-lock', label: 'Dörrlås', icon: Lock, color: 'text-amber-400' },
   { key: 'place-power-outlet', kind: 'power-outlet', label: 'Eluttag', icon: Plug, color: 'text-yellow-300' },
+  { key: 'place-media-screen', kind: 'media_screen', label: 'Skärm', icon: Monitor, color: 'text-indigo-400' },
 ];
 
 const kindLabels: Record<DeviceKind, string> = {
@@ -31,6 +32,7 @@ const kindLabels: Record<DeviceKind, string> = {
   'garage-door': '🚗 Garageport',
   'door-lock': '🔒 Dörrlås',
   'power-outlet': '🔌 Eluttag',
+  media_screen: '📺 Skärm',
 };
 
 export default function DevicePlacementTools() {

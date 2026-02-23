@@ -78,15 +78,24 @@ function SceneContent() {
         if (kind === 'light') yPos = elev + h - 0.1;
         else if (kind === 'switch' || kind === 'sensor') yPos = elev + 1.2;
         else if (kind === 'climate') yPos = elev + 1.5;
-        addDevice({
+        else if (kind === 'media_screen') yPos = elev + 1.5;
+
+        const deviceData: any = {
           id: generateId(),
           kind,
           name: '',
           floorId: activeFloorId,
-          surface: kind === 'light' ? 'ceiling' : 'floor',
+          surface: kind === 'light' ? 'ceiling' : kind === 'media_screen' ? 'free' : 'floor',
           position: [snapped[0], yPos, snapped[1]],
           rotation: [0, 0, 0],
-        });
+        };
+
+        if (kind === 'media_screen') {
+          deviceData.scale = [1.2, 0.675, 1];
+          deviceData.screenConfig = { aspectRatio: 16 / 9, uiStyle: 'minimal', showProgress: true };
+        }
+
+        addDevice(deviceData);
         setBuildTool('select');
         return;
       }

@@ -539,34 +539,55 @@ export default function BuildCanvas2D() {
       'garage-door': '#f59e0b',
       'door-lock': '#fbbf24',
       'power-outlet': '#fde047',
+      media_screen: '#818cf8',
     };
     for (const dev of floorDevices) {
       const [dx2, dy2] = worldToScreen(dev.position[0], dev.position[2]);
       const isSelected = selection.type === 'device' && selection.id === dev.id;
       const color = deviceColors[dev.kind] ?? '#fff';
-      const radius = isSelected ? 10 : 7;
 
-      ctx.beginPath();
-      ctx.arc(dx2, dy2, radius, 0, Math.PI * 2);
-      ctx.fillStyle = color;
-      ctx.globalAlpha = isSelected ? 1 : 0.85;
-      ctx.fill();
-      ctx.globalAlpha = 1;
-
-      if (isSelected) {
-        ctx.strokeStyle = '#fff';
-        ctx.lineWidth = 2;
+      if (dev.kind === 'media_screen') {
+        // Draw as rectangle
+        const sc = dev.scale ?? [1.2, 0.675, 1];
+        const rw = sc[0] * zoom;
+        const rh = sc[1] * zoom;
+        ctx.fillStyle = color;
+        ctx.globalAlpha = isSelected ? 0.5 : 0.3;
+        ctx.fillRect(dx2 - rw / 2, dy2 - rh / 2, rw, rh);
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = isSelected ? '#fff' : color;
+        ctx.lineWidth = isSelected ? 2 : 1;
+        ctx.strokeRect(dx2 - rw / 2, dy2 - rh / 2, rw, rh);
+        // TV label
+        ctx.fillStyle = 'rgba(255,255,255,0.8)';
+        ctx.font = '9px DM Sans, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(dev.name || '📺 TV', dx2, dy2);
+      } else {
+        const radius = isSelected ? 10 : 7;
         ctx.beginPath();
-        ctx.arc(dx2, dy2, radius + 4, 0, Math.PI * 2);
-        ctx.stroke();
-      }
+        ctx.arc(dx2, dy2, radius, 0, Math.PI * 2);
+        ctx.fillStyle = color;
+        ctx.globalAlpha = isSelected ? 1 : 0.85;
+        ctx.fill();
+        ctx.globalAlpha = 1;
 
-      const label = dev.name || dev.kind;
-      ctx.fillStyle = 'rgba(255,255,255,0.7)';
-      ctx.font = '9px DM Sans, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'top';
-      ctx.fillText(label, dx2, dy2 + radius + 3);
+        if (isSelected) {
+          ctx.strokeStyle = '#fff';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(dx2, dy2, radius + 4, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+
+        const label = dev.name || dev.kind;
+        ctx.fillStyle = 'rgba(255,255,255,0.7)';
+        ctx.font = '9px DM Sans, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        ctx.fillText(label, dx2, dy2 + radius + 3);
+      }
     }
 
     // Draw props as icons
