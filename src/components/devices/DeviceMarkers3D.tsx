@@ -149,52 +149,104 @@ function drawScreenCanvas(
   const w = canvas.width;
   const h = canvas.height;
 
-  // Background
-  ctx.fillStyle = '#1a1a2e';
-  ctx.fillRect(0, 0, w, h);
-
-  const title = (mediaState?.attributes?.media_title as string) || 'Ingen media';
-  const source = (mediaState?.attributes?.app_name as string) || (mediaState?.attributes?.source as string) || 'Media';
+  const title = (mediaState?.attributes?.media_title as string) || '';
+  const source = (mediaState?.attributes?.app_name as string) || (mediaState?.attributes?.source as string) || '';
   const isPlaying = mediaState?.state === 'playing';
-  const position = mediaState?.attributes?.media_position as number | undefined;
-  const duration = mediaState?.attributes?.media_duration as number | undefined;
+  const hasMedia = !!(title || isPlaying);
 
-  // Source label
-  ctx.fillStyle = '#818cf8';
-  ctx.font = 'bold 28px sans-serif';
-  ctx.textAlign = 'left';
-  ctx.fillText(source.toUpperCase(), 30, 50);
+  if (!hasMedia) {
+    // ── Standby mode ──
+    const grad = ctx.createLinearGradient(0, 0, w, h);
+    grad.addColorStop(0, '#0f172a');
+    grad.addColorStop(1, '#1e1b4b');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, w, h);
 
-  // Title
-  ctx.fillStyle = '#ffffff';
-  ctx.font = '36px sans-serif';
-  ctx.fillText(title, 30, h / 2 + 10, w - 60);
+    // Border
+    ctx.strokeStyle = 'rgba(129,140,248,0.3)';
+    ctx.lineWidth = 4;
+    ctx.strokeRect(2, 2, w - 4, h - 4);
 
-  // Play/Pause icon
-  const iconX = w / 2;
-  const iconY = h / 2 + 70;
-  ctx.fillStyle = 'rgba(255,255,255,0.9)';
-  if (isPlaying) {
-    ctx.fillRect(iconX - 18, iconY - 15, 10, 30);
-    ctx.fillRect(iconX + 8, iconY - 15, 10, 30);
-  } else {
+    // TV icon (monitor outline)
+    const cx = w / 2, cy = h / 2 - 20;
+    const mw = 80, mh = 55;
+    ctx.strokeStyle = 'rgba(129,140,248,0.6)';
+    ctx.lineWidth = 4;
+    ctx.strokeRect(cx - mw / 2, cy - mh / 2, mw, mh);
+    // Stand
     ctx.beginPath();
-    ctx.moveTo(iconX - 12, iconY - 18);
-    ctx.lineTo(iconX - 12, iconY + 18);
-    ctx.lineTo(iconX + 18, iconY);
-    ctx.closePath();
-    ctx.fill();
-  }
+    ctx.moveTo(cx - 20, cy + mh / 2);
+    ctx.lineTo(cx - 30, cy + mh / 2 + 18);
+    ctx.moveTo(cx + 20, cy + mh / 2);
+    ctx.lineTo(cx + 30, cy + mh / 2 + 18);
+    ctx.stroke();
 
-  // Progress bar
-  if (config.showProgress && duration && duration > 0) {
-    const barY = h - 40;
-    const barW = w - 60;
-    ctx.fillStyle = 'rgba(255,255,255,0.15)';
-    ctx.fillRect(30, barY, barW, 6);
-    const progress = Math.min(1, (position ?? 0) / duration);
-    ctx.fillStyle = '#818cf8';
-    ctx.fillRect(30, barY, barW * progress, 6);
+    // "Standby" text
+    ctx.fillStyle = 'rgba(129,140,248,0.5)';
+    ctx.font = 'bold 28px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Standby', cx, cy + mh / 2 + 55);
+
+    // Scanline effect
+    ctx.fillStyle = 'rgba(129,140,248,0.03)';
+    const scanY = (Date.now() % 3000) / 3000 * h;
+    ctx.fillRect(0, scanY, w, 40);
+  } else {
+    // ── Now Playing ──
+    const grad = ctx.createLinearGradient(0, 0, w, h);
+    grad.addColorStop(0, '#0f172a');
+    grad.addColorStop(1, '#312e81');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, w, h);
+
+    // Source label with colored background
+    const srcLower = source.toLowerCase();
+    const srcColor = srcLower.includes('netflix') ? '#e11d48' : srcLower.includes('spotify') ? '#22c55e' : '#6366f1';
+    if (source) {
+      ctx.fillStyle = srcColor;
+      const tw = ctx.measureText(source.toUpperCase()).width + 20;
+      const labelW = Math.min(tw, 200);
+      ctx.beginPath();
+      ctx.roundRect(24, 24, labelW, 36, 6);
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 20px sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(source.toUpperCase(), 34, 49, labelW - 20);
+    }
+
+    // Title
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 36px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(title || 'Spelar…', 30, h / 2 + 10, w - 60);
+
+    // Play/Pause icon
+    const iconX = w / 2, iconY = h / 2 + 70;
+    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    if (isPlaying) {
+      ctx.fillRect(iconX - 18, iconY - 15, 10, 30);
+      ctx.fillRect(iconX + 8, iconY - 15, 10, 30);
+    } else {
+      ctx.beginPath();
+      ctx.moveTo(iconX - 12, iconY - 18);
+      ctx.lineTo(iconX - 12, iconY + 18);
+      ctx.lineTo(iconX + 18, iconY);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    // Progress bar
+    const position = mediaState?.attributes?.media_position as number | undefined;
+    const duration = mediaState?.attributes?.media_duration as number | undefined;
+    if (config.showProgress && duration && duration > 0) {
+      const barY = h - 40, barW = w - 60;
+      ctx.fillStyle = 'rgba(255,255,255,0.15)';
+      ctx.fillRect(30, barY, barW, 6);
+      const progress = Math.min(1, (position ?? 0) / duration);
+      ctx.fillStyle = '#818cf8';
+      ctx.fillRect(30, barY, barW * progress, 6);
+    }
   }
 }
 
@@ -241,6 +293,18 @@ function MediaScreenMarker({ position, id, onSelect, onDragStart, selected, mark
     if (selected && onDragStart) { onDragStart(id, e); }
   }, [selected, onDragStart, id]);
 
+  // Periodically update texture for scanline animation in standby
+  useFrame(() => {
+    if (!liveState && canvasRef.current && textureRef.current) {
+      drawScreenCanvas(canvasRef.current, null, config);
+      textureRef.current.needsUpdate = true;
+    }
+  });
+
+  const hw = scale[0] / 2;
+  const hh = scale[1] / 2;
+  const cornerSize = 0.06;
+
   return (
     <group
       position={position}
@@ -248,24 +312,44 @@ function MediaScreenMarker({ position, id, onSelect, onDragStart, selected, mark
       onClick={handleClick}
       onPointerDown={handlePointerDown}
     >
-      {/* Screen plane */}
+      {/* Screen glow light */}
+      <pointLight position={[0, 0, 0.4]} intensity={0.8} color="#818cf8" distance={4} decay={2} />
+
+      {/* Screen plane - emissive so it glows */}
       <mesh>
         <planeGeometry args={[scale[0], scale[1]]} />
         {texture ? (
-          <meshBasicMaterial map={texture} side={THREE.DoubleSide} />
+          <meshStandardMaterial map={texture} emissive="#ffffff" emissiveIntensity={0.4} side={THREE.DoubleSide} toneMapped={false} />
         ) : (
-          <meshStandardMaterial color="#1a1a2e" side={THREE.DoubleSide} />
+          <meshStandardMaterial color="#1a1a2e" emissive="#818cf8" emissiveIntensity={0.2} side={THREE.DoubleSide} />
         )}
       </mesh>
-      {/* Frame / bezel */}
+
+      {/* Bezel */}
       <mesh position={[0, 0, -0.005]}>
-        <planeGeometry args={[scale[0] + 0.04, scale[1] + 0.04]} />
+        <planeGeometry args={[scale[0] + 0.06, scale[1] + 0.06]} />
         <meshStandardMaterial color="#111" side={THREE.DoubleSide} />
       </mesh>
+
+      {/* Ambient glow plane behind */}
+      <mesh position={[0, 0, -0.02]}>
+        <planeGeometry args={[scale[0] + 0.4, scale[1] + 0.3]} />
+        <meshBasicMaterial color="#818cf8" transparent opacity={0.08} side={THREE.DoubleSide} />
+      </mesh>
+
+      {/* Corner markers (always visible) */}
+      {[[-hw, hh], [hw, hh], [-hw, -hh], [hw, -hh]].map(([cx, cy], i) => (
+        <mesh key={i} position={[cx, cy, 0.005]}>
+          <boxGeometry args={[cornerSize, cornerSize, 0.01]} />
+          <meshBasicMaterial color={selected ? '#a5b4fc' : '#818cf8'} transparent opacity={selected ? 1 : 0.6} />
+        </mesh>
+      ))}
+
+      {/* Selection glow frame */}
       {selected && (
         <mesh position={[0, 0, -0.01]}>
-          <planeGeometry args={[scale[0] + 0.1, scale[1] + 0.1]} />
-          <meshBasicMaterial color="#818cf8" transparent opacity={0.3} side={THREE.DoubleSide} />
+          <planeGeometry args={[scale[0] + 0.12, scale[1] + 0.12]} />
+          <meshBasicMaterial color="#a5b4fc" transparent opacity={0.4} side={THREE.DoubleSide} />
         </mesh>
       )}
     </group>
