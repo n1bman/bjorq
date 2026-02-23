@@ -51,6 +51,7 @@ export default function RoomCard({ roomId, roomName, floorName }: RoomCardProps)
       <div className="flex items-center gap-2 flex-wrap">
         {Object.entries(kindCounts).map(([kind, count]) => {
           const Icon = deviceIcons[kind as DeviceKind];
+          if (!Icon) return null;
           return (
             <div key={kind} className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-secondary/30">
               <Icon size={12} className="text-primary" />
