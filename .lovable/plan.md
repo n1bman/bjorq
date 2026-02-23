@@ -1,48 +1,180 @@
 
 
-# Fix: Skarm (media_screen) placeras med fel kind och saknar specialegenskaper
+# Interaktiv kontrollpanel + HA-prepp
 
-## Rotorsak
+## Oversikt
 
-Nar man klickar for att placera en skarm gor koden pa rad 756 i `BuildCanvas2D.tsx`:
+Kontrollpanelen byggs om fran statiska on/off-switchar till enhetstypspecifika kontrollkort med rika reglage. Samtidigt preppas hela datalagret for HA-integration genom att utoka `deviceStates` fran en enkel `boolean` till ett rikt state-objekt per enhetstyp.
+
+## 1. Utoka device state-modellen
+
+**Fil: `src/store/types.ts`**
+
+Ersatt `deviceStates: Record<string, boolean>` med ett typat state-system:
+
+```typescript
+// Rikt device state per enhetstyp
+export interface LightState {
+  on: boolean;
+  brightness: number;       // 0-255
+  colorTemp?: number;       // mireds
+  rgbColor?: [number, number, number];
+  colorMode: 'temp' | 'rgb' | 'off';
+}
+
+export interface ClimateState {
+  on: boolean;
+  mode: 'heat' | 'cool' | 'auto' | 'off';
+  targetTemp: number;
+  currentTemp: number;
+}
+
+export interface MediaState {
+  on: boolean;
+  state: 'playing' | 'paused' | 'idle' | 'off';
+  title?: string;
+  artist?: string;
+  source?: string;
+  volume: number;           // 0-1
+  progress?: number;        // 0-1
+}
+
+export interface VacuumState {
+  on: boolean;
+  status: 'cleaning' | 'docked' | 'returning' | 'error';
+  battery: number;          // 0-100
+}
+
+export interface LockState {
+  locked: boolean;
+}
+
+export interface SensorState {
+  value: number;
+  unit: string;
+}
+
+export interface GenericDeviceState {
+  on: boolean;
+}
+
+export type DeviceState = 
+  | { kind: 'light'; data: LightState }
+  | { kind: 'climate'; data: ClimateState }
+  | { kind: 'media_screen'; data: MediaState }
+  | { kind: 'vacuum'; data: VacuumState }
+  | { kind: 'door-lock'; data: LockState }
+  | { kind: 'sensor'; data: SensorState }
+  | { kind: 'generic'; data: GenericDeviceState };
 ```
-const kind = activeTool.replace('place-', '') // 'place-media-screen' -> 'media-screen'
+
+Uppdatera `DevicesState`:
+```typescript
+export interface DevicesState {
+  markers: DeviceMarker[];
+  deviceStates: Record<string, DeviceState>;
+}
 ```
 
-Men DeviceKind-typen anvander **understreck**: `media_screen`. Darfor sparas enheten med `kind: 'media-screen'` (bindestreck) som inte matchar nagon komponent, ikon eller inspektorlogik. Det ar darfor:
+## 2. Nya store-actions
 
-- Inspektorn visar lampikon istallet for monitor-ikon
-- Skarmspecifika kontroller (bredd, bildformat) visas inte
-- 3D-markoren faller igenom till `markerComponents['media-screen']` som ar `undefined` och returnerar `null`
+**Fil: `src/store/useAppStore.ts`**
 
-## Losning
+Lagg till actions for att manipulera de rikare states:
 
-### 1. BuildCanvas2D.tsx -- Konvertera kind korrekt (rad 756)
+- `setDeviceState(id, state)` -- ersatter den gamla boolean-versionen
+- `updateDeviceState(id, partialData)` -- partial update av data
+- `getDefaultState(kind): DeviceState` -- returnerar default state for varje enhetstyp
 
-Lagg till en mapping fran tool-namn till korrekt DeviceKind, eller ersatt bindestreck med understreck for `media-screen`:
+Nar en enhet placeras, skapa automatiskt en default state i `deviceStates`.
 
-```tsx
-const rawKind = activeTool.replace('place-', '');
-const kind = rawKind === 'media-screen' ? 'media_screen' : rawKind as DeviceKind;
-```
+## 3. Enhetstypspecifika kontrollkort
 
-### 2. BuildCanvas2D.tsx -- Satt default-egenskaper for media_screen (rad 766-774)
+**Ny fil: `src/components/home/cards/DeviceControlCard.tsx`**
 
-Nar `kind === 'media_screen'`, satt:
-- `surface: 'free'` istallet for `'floor'`
-- `scale: [1.2, 0.675, 1]` (default TV-storlek)
-- `screenConfig: { aspectRatio: 16/9, uiStyle: 'minimal', showProgress: true }`
-- `position[1]` till vagg-hojd (t.ex. `elev + 1.5`) istallet for tak-hojd
+En komponent som renderar ratt kontrollgranssnitt baserat pa enhetstyp:
 
-### 3. BuildInspector.tsx -- Skarmspecifika kontroller redan implementerade
+### Ljus (light)
+- On/off switch
+- Ljusstyrka-slider (0-100%)
+- Fargtemperatur-slider (varm till kall)
+- RGB-fargvaljare (enkel gradient-bar)
+- Lage-knappar: Temp | RGB | Av
 
-Inspektorn har redan all logik for `isScreen` (bredd-slider, bildformat, UI-stil, rotation XYZ). Den fungerar korrekt sa fort `device.kind` ar `'media_screen'`.
+### Klimat (climate)
+- On/off switch
+- Lage-valjare: Varme | Kyla | Auto | Av
+- Mal-temperatur med +/- knappar och stor siffra
+- Aktuell temperatur (gra, mindre)
 
-## Tekniska detaljer
+### Skarmar (media_screen)
+- On/off switch
+- Play/Pause/Stop knappar
+- Volym-slider
+- Titel + Artist visning
+- Kalla-valjare (Netflix, Spotify, etc)
+- Progress bar
+
+### Dammsugare (vacuum)
+- Start/Stop/Dock knappar
+- Status-text (Stader, Dockad, etc)
+- Batteri-indikator
+
+### Dorr-las (door-lock)
+- Stor las/lasa upp knapp med animation
+- Status-ikon (last/olast)
+
+### Sensor
+- Stort varde med enhet
+- Inga reglage (read-only)
+
+### Generiska (switch, power-outlet, garage-door, etc)
+- On/off switch
+- Status-text
+
+## 4. Ny DevicesSection med expanderbara kort
+
+**Fil: `src/components/home/cards/DevicesSection.tsx`**
+
+Bygg om fran platta rader till interaktiva kort:
+
+- Klick pa kort expanderar det och visar DeviceControlCard
+- Gruppering per rum (inte bara vaning)
+- Snabb-atgard synlig aven i komprimerat lage (t.ex. ljusstyrka-slider for lampor)
+- HA-koppling visas som liten badge
+
+## 5. Enheter-kategorin i DashboardGrid
+
+**Fil: `src/components/home/DashboardGrid.tsx`**
+
+Uppgradera `DevicesCategory` med:
+
+- Filter-knappar per enhetstyp (Lampor, Klimat, Media, etc)
+- Sokfalt for enheter
+- "Alla enheter" och "Per rum" vy-vaxling
+
+## 6. HA-prepp i typer och store
+
+All data som HA skickar mappas till vart `DeviceState`-format. Nar HA-integrationen byggs ut later behover man bara:
+
+1. Lyssna pa WebSocket-meddelanden
+2. Mappa `attributes` till ratt `DeviceState`
+3. Anropa `updateDeviceState()` 
+4. For kommandon: skicka `call_service` via WebSocket
+
+Ingen HA-WebSocket-kod skrivs nu -- bara datastrukturen preppas.
+
+## Teknisk sammanfattning
 
 | Fil | Andring |
 |-----|---------|
-| `BuildCanvas2D.tsx` rad 756 | Fixa kind-konvertering fran `media-screen` till `media_screen` |
-| `BuildCanvas2D.tsx` rad 766-774 | Lagg till specialfall for `media_screen` med ratt default-egenskaper |
+| `src/store/types.ts` | Nya DeviceState-typer, uppdaterad DevicesState |
+| `src/store/useAppStore.ts` | Nya actions, getDefaultState, migration till v13 |
+| `src/components/home/cards/DeviceControlCard.tsx` | **NY** -- Enhetstypspecifika kontroller |
+| `src/components/home/cards/DevicesSection.tsx` | Ombyggd med expanderbara kort |
+| `src/components/home/DashboardGrid.tsx` | Filter och forbattrad Enheter-kategori |
+| `src/components/devices/DeviceMarkers3D.tsx` | Lasa MediaState fran nya deviceStates for skarm-rendering |
 
-Inga nya filer eller beroenden kravs.
+## Migrering
+
+Store version bumpas till 13. Befintliga `boolean`-states migreras automatiskt till det nya formatet via `getDefaultState()`.
