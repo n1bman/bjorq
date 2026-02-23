@@ -1,10 +1,11 @@
 import { useAppStore } from '@/store/useAppStore';
-import { X, Plus, DoorOpen, RotateCcw, Move, Trash2, Layers, Home, Lightbulb, ArrowRightLeft } from 'lucide-react';
+import { X, Plus, DoorOpen, RotateCcw, Move, Trash2, Layers, Home, Lightbulb, ArrowRightLeft, Monitor, RectangleHorizontal } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
 import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
 import { presetMaterials } from '@/lib/materials';
 import { useState } from 'react';
-import type { DeviceKind, DeviceSurface } from '@/store/types';
+import type { DeviceKind, DeviceSurface, ScreenConfig } from '@/store/types';
 
 const generateId = () => Math.random().toString(36).slice(2, 10);
 
@@ -444,6 +445,7 @@ const kindLabels: Record<DeviceKind, string> = {
   'garage-door': 'Garageport',
   'door-lock': 'Dörrlås',
   'power-outlet': 'Eluttag',
+  media_screen: 'Skärm',
 };
 
 function DeviceInspector({ deviceId, close }: { deviceId: string; close: React.ReactNode }) {
@@ -455,16 +457,45 @@ function DeviceInspector({ deviceId, close }: { deviceId: string; close: React.R
   const device = markers.find((m) => m.id === deviceId);
   if (!device) return null;
 
+  const isScreen = device.kind === 'media_screen';
+  const screenConfig = device.screenConfig ?? { aspectRatio: 16 / 9, uiStyle: 'minimal' as const, showProgress: true };
+  const scale = device.scale ?? [1.2, 0.675, 1];
+
   const handleDelete = () => {
     removeDevice(device.id);
     setSelection({ type: null, id: null });
   };
 
+  const handleWidthChange = (w: number) => {
+    const h = w / screenConfig.aspectRatio;
+    updateDevice(device.id, { scale: [w, h, 1] });
+  };
+
+  const handleAspectChange = (ratio: number) => {
+    const h = scale[0] / ratio;
+    updateDevice(device.id, {
+      scale: [scale[0], h, 1],
+      screenConfig: { ...screenConfig, aspectRatio: ratio },
+    });
+  };
+
+  const handleFit169 = () => {
+    const h = scale[0] / (16 / 9);
+    updateDevice(device.id, {
+      scale: [scale[0], h, 1],
+      screenConfig: { ...screenConfig, aspectRatio: 16 / 9 },
+    });
+  };
+
+  const handleResetRotation = () => {
+    updateDevice(device.id, { rotation: [0, 0, 0] });
+  };
+
   return (
-    <div className="absolute top-3 right-3 w-56 glass-panel rounded-xl p-3 space-y-3 text-xs z-10">
+    <div className="absolute top-3 right-3 w-60 glass-panel rounded-xl p-3 space-y-3 text-xs z-10 max-h-[80vh] overflow-y-auto">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-foreground font-display flex items-center gap-1">
-          <Lightbulb size={14} /> {kindLabels[device.kind]}
+          {isScreen ? <Monitor size={14} /> : <Lightbulb size={14} />} {kindLabels[device.kind]}
         </h3>
         {close}
       </div>
@@ -474,25 +505,87 @@ function DeviceInspector({ deviceId, close }: { deviceId: string; close: React.R
         <Input
           value={device.name}
           onChange={(e) => updateDevice(device.id, { name: e.target.value })}
-          placeholder="T.ex. Taklampa kök"
+          placeholder={isScreen ? 'T.ex. TV Vardagsrum' : 'T.ex. Taklampa kök'}
           className="h-8 text-xs bg-secondary/30"
         />
       </div>
 
-      <div className="space-y-2">
-        <label className="text-muted-foreground text-[10px]">Höjd (Y) — {device.position[1].toFixed(1)} m</label>
-        <div className="flex items-center gap-2">
-          <Slider min={0} max={10} step={0.1} value={[device.position[1]]}
-            onValueChange={([v]) => {
-              const pos = [...device.position] as [number, number, number];
-              pos[1] = v;
-              updateDevice(device.id, { position: pos });
-            }}
-            className="flex-1"
-          />
-          <span className="text-[10px] text-foreground w-8 text-right">{device.position[1].toFixed(1)}</span>
+      {/* Screen-specific controls */}
+      {isScreen && (
+        <>
+          <div className="space-y-2">
+            <label className="text-muted-foreground text-[10px]">Bredd (m) — {scale[0].toFixed(2)}</label>
+            <div className="flex items-center gap-2">
+              <Slider min={0.3} max={3} step={0.01} value={[scale[0]]}
+                onValueChange={([v]) => handleWidthChange(v)}
+                className="flex-1"
+              />
+              <span className="text-[10px] text-foreground w-10 text-right">{scale[0].toFixed(2)}</span>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-muted-foreground text-[10px]">Bildformat</label>
+            <select
+              value={screenConfig.aspectRatio.toFixed(4)}
+              onChange={(e) => handleAspectChange(parseFloat(e.target.value))}
+              className="w-full h-8 rounded-md bg-secondary/30 text-foreground text-xs px-2 border-none outline-none"
+            >
+              <option value={(16 / 9).toFixed(4)}>16:9</option>
+              <option value={(21 / 9).toFixed(4)}>21:9</option>
+              <option value={(4 / 3).toFixed(4)}>4:3</option>
+            </select>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-muted-foreground text-[10px]">UI-stil</label>
+            <select
+              value={screenConfig.uiStyle}
+              onChange={(e) => updateDevice(device.id, { screenConfig: { ...screenConfig, uiStyle: e.target.value as 'minimal' | 'poster' } })}
+              className="w-full h-8 rounded-md bg-secondary/30 text-foreground text-xs px-2 border-none outline-none"
+            >
+              <option value="minimal">Minimal</option>
+              <option value="poster">Poster</option>
+            </select>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <label className="text-muted-foreground text-[10px]">Visa progress</label>
+            <Switch
+              checked={screenConfig.showProgress}
+              onCheckedChange={(v) => updateDevice(device.id, { screenConfig: { ...screenConfig, showProgress: v } })}
+            />
+          </div>
+
+          <div className="flex gap-1">
+            <button onClick={handleFit169}
+              className="flex-1 py-2 rounded-lg bg-secondary/50 text-foreground text-xs font-medium hover:bg-secondary transition-colors min-h-[36px] flex items-center justify-center gap-1">
+              <RectangleHorizontal size={12} /> Fit 16:9
+            </button>
+            <button onClick={handleResetRotation}
+              className="flex-1 py-2 rounded-lg bg-secondary/50 text-foreground text-xs font-medium hover:bg-secondary transition-colors min-h-[36px] flex items-center justify-center gap-1">
+              <RotateCcw size={12} /> Nollställ
+            </button>
+          </div>
+        </>
+      )}
+
+      {!isScreen && (
+        <div className="space-y-2">
+          <label className="text-muted-foreground text-[10px]">Höjd (Y) — {device.position[1].toFixed(1)} m</label>
+          <div className="flex items-center gap-2">
+            <Slider min={0} max={10} step={0.1} value={[device.position[1]]}
+              onValueChange={([v]) => {
+                const pos = [...device.position] as [number, number, number];
+                pos[1] = v;
+                updateDevice(device.id, { position: pos });
+              }}
+              className="flex-1"
+            />
+            <span className="text-[10px] text-foreground w-8 text-right">{device.position[1].toFixed(1)}</span>
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="space-y-2">
         <label className="text-muted-foreground text-[10px]">Yta</label>
@@ -504,6 +597,7 @@ function DeviceInspector({ deviceId, close }: { deviceId: string; close: React.R
           <option value="floor">Golv</option>
           <option value="wall">Vägg</option>
           <option value="ceiling">Tak</option>
+          <option value="free">Fri</option>
         </select>
       </div>
 
@@ -512,7 +606,7 @@ function DeviceInspector({ deviceId, close }: { deviceId: string; close: React.R
         <Input
           value={device.ha?.entityId ?? ''}
           onChange={(e) => updateDevice(device.id, { ha: { entityId: e.target.value } })}
-          placeholder="light.taklampa_kok"
+          placeholder={isScreen ? 'media_player.tv_vardagsrum' : 'light.taklampa_kok'}
           className="h-8 text-xs bg-secondary/30"
         />
       </div>
@@ -536,17 +630,37 @@ function DeviceInspector({ deviceId, close }: { deviceId: string; close: React.R
         ))}
       </div>
 
-      {/* Y-Rotation slider */}
+      {/* Rotation sliders -- full XYZ for screen, Y-only for others */}
       <div className="space-y-1.5">
         <div className="flex items-center gap-1 text-muted-foreground"><RotateCcw size={12} /> Rotation</div>
-        <div className="flex items-center gap-2">
-          <Slider min={0} max={360} step={1}
-            value={[device.rotation[1] * (180 / Math.PI)]}
-            onValueChange={([v]) => updateDevice(device.id, { rotation: [0, v * (Math.PI / 180), 0] })}
-            className="flex-1"
-          />
-          <span className="text-[10px] text-foreground w-8 text-right">{Math.round(device.rotation[1] * (180 / Math.PI))}°</span>
-        </div>
+        {isScreen ? (
+          <>
+            {(['X', 'Y', 'Z'] as const).map((axis, i) => (
+              <div key={axis} className="flex items-center gap-2">
+                <span className="text-[10px] text-muted-foreground w-3">{axis}</span>
+                <Slider min={-180} max={180} step={1}
+                  value={[device.rotation[i] * (180 / Math.PI)]}
+                  onValueChange={([v]) => {
+                    const rot = [...device.rotation] as [number, number, number];
+                    rot[i] = v * (Math.PI / 180);
+                    updateDevice(device.id, { rotation: rot });
+                  }}
+                  className="flex-1"
+                />
+                <span className="text-[10px] text-foreground w-8 text-right">{Math.round(device.rotation[i] * (180 / Math.PI))}°</span>
+              </div>
+            ))}
+          </>
+        ) : (
+          <div className="flex items-center gap-2">
+            <Slider min={0} max={360} step={1}
+              value={[device.rotation[1] * (180 / Math.PI)]}
+              onValueChange={([v]) => updateDevice(device.id, { rotation: [0, v * (Math.PI / 180), 0] })}
+              className="flex-1"
+            />
+            <span className="text-[10px] text-foreground w-8 text-right">{Math.round(device.rotation[1] * (180 / Math.PI))}°</span>
+          </div>
+        )}
       </div>
 
       <button onClick={handleDelete}

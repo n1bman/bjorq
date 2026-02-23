@@ -15,6 +15,7 @@ const kindInfo: Record<DeviceKind, { emoji: string; label: string }> = {
   'garage-door': { emoji: '🚗', label: 'Garageport' },
   'door-lock': { emoji: '🔒', label: 'Dörrlås' },
   'power-outlet': { emoji: '🔌', label: 'Eluttag' },
+  media_screen: { emoji: '📺', label: 'Skärm' },
 };
 
 export default function DevicesSection() {
@@ -50,6 +51,7 @@ export default function DevicesSection() {
             {devices.map((d) => {
               const info = kindInfo[d.kind];
               const isOn = deviceStates[d.id] ?? (d.kind === 'light');
+              const isScreen = d.kind === 'media_screen';
               return (
                 <div key={d.id} className="glass-panel rounded-xl p-3 flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -58,6 +60,9 @@ export default function DevicesSection() {
                       <p className="text-sm font-medium text-foreground">{d.name || info.label}</p>
                       {d.ha?.entityId && (
                         <p className="text-[10px] text-muted-foreground">{d.ha.entityId}</p>
+                      )}
+                      {isScreen && d.ha?.entityId && (
+                        <p className="text-[10px] text-muted-foreground/80">📺 Media-skärm bunden</p>
                       )}
                     </div>
                   </div>

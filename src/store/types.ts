@@ -92,7 +92,8 @@ export type BuildTool =
   | 'place-washer'
   | 'place-garage-door'
   | 'place-door-lock'
-  | 'place-power-outlet';
+  | 'place-power-outlet'
+  | 'place-media-screen';
 
 export type BuildTab = 'structure' | 'import' | 'furnish' | 'devices';
 export type SnapMode = 'strict' | 'soft' | 'off';
@@ -165,8 +166,14 @@ export interface HomeGeometryState {
 }
 
 // ─── Devices Layer ───
-export type DeviceKind = 'light' | 'switch' | 'sensor' | 'climate' | 'vacuum' | 'camera' | 'fridge' | 'oven' | 'washer' | 'garage-door' | 'door-lock' | 'power-outlet';
-export type DeviceSurface = 'floor' | 'wall' | 'ceiling';
+export type DeviceKind = 'light' | 'switch' | 'sensor' | 'climate' | 'vacuum' | 'camera' | 'fridge' | 'oven' | 'washer' | 'garage-door' | 'door-lock' | 'power-outlet' | 'media_screen';
+export type DeviceSurface = 'floor' | 'wall' | 'ceiling' | 'free';
+
+export interface ScreenConfig {
+  aspectRatio: number;
+  uiStyle: 'minimal' | 'poster';
+  showProgress: boolean;
+}
 
 export interface DeviceMarker {
   id: string;
@@ -177,7 +184,9 @@ export interface DeviceMarker {
   surface: DeviceSurface;
   position: [number, number, number];
   rotation: [number, number, number];
+  scale?: [number, number, number];
   ha?: { entityId: string };
+  screenConfig?: ScreenConfig;
 }
 
 export interface DevicesState {
