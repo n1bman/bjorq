@@ -1,6 +1,25 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { AppState, BuildState, LayoutState, WallSegment, Room } from './types';
+import type { AppState, BuildState, LayoutState, WallSegment, Room, DeviceState, DeviceKind } from './types';
+
+export function getDefaultState(kind: DeviceKind): DeviceState {
+  switch (kind) {
+    case 'light':
+      return { kind: 'light', data: { on: true, brightness: 200, colorTemp: 300, colorMode: 'temp' } };
+    case 'climate':
+      return { kind: 'climate', data: { on: false, mode: 'auto', targetTemp: 22, currentTemp: 20 } };
+    case 'media_screen':
+      return { kind: 'media_screen', data: { on: false, state: 'idle', volume: 0.5 } };
+    case 'vacuum':
+      return { kind: 'vacuum', data: { on: false, status: 'docked', battery: 100 } };
+    case 'door-lock':
+      return { kind: 'door-lock', data: { locked: true } };
+    case 'sensor':
+      return { kind: 'sensor', data: { value: 0, unit: '°C' } };
+    default:
+      return { kind: 'generic', data: { on: false } };
+  }
+}
 
 const generateId = () => Math.random().toString(36).slice(2, 10);
 
@@ -53,17 +72,54 @@ export const useAppStore = create<AppState>()(
       })),
 
       // Device actions
-      addDevice: (marker) => set((s) => ({ devices: { ...s.devices, markers: [...s.devices.markers, marker] } })),
-      removeDevice: (id) => set((s) => ({ devices: { ...s.devices, markers: s.devices.markers.filter((m) => m.id !== id) } })),
+      addDevice: (marker) => set((s) => ({
+        devices: {
+          ...s.devices,
+          markers: [...s.devices.markers, marker],
+          deviceStates: { ...s.devices.deviceStates, [marker.id]: getDefaultState(marker.kind) },
+        },
+      })),
+      removeDevice: (id) => set((s) => {
+        const { [id]: _, ...rest } = s.devices.deviceStates;
+        return { devices: { markers: s.devices.markers.filter((m) => m.id !== id), deviceStates: rest } };
+      }),
       updateDevice: (id, changes) => set((s) => ({
         devices: { ...s.devices, markers: s.devices.markers.map((m) => m.id === id ? { ...m, ...changes } : m) },
       })),
-      toggleDeviceState: (id) => set((s) => ({
-        devices: { ...s.devices, deviceStates: { ...s.devices.deviceStates, [id]: !s.devices.deviceStates[id] } },
+      toggleDeviceState: (id) => set((s) => {
+        const current = s.devices.deviceStates[id];
+        if (!current) return s;
+        if ('on' in current.data) {
+          return {
+            devices: {
+              ...s.devices,
+              deviceStates: { ...s.devices.deviceStates, [id]: { ...current, data: { ...current.data, on: !(current.data as any).on } } as DeviceState },
+            },
+          };
+        }
+        if (current.kind === 'door-lock') {
+          return {
+            devices: {
+              ...s.devices,
+              deviceStates: { ...s.devices.deviceStates, [id]: { kind: 'door-lock', data: { locked: !current.data.locked } } },
+            },
+          };
+        }
+        return s;
+      }),
+      setDeviceState: (id, state) => set((s) => ({
+        devices: { ...s.devices, deviceStates: { ...s.devices.deviceStates, [id]: state } },
       })),
-      setDeviceState: (id, on) => set((s) => ({
-        devices: { ...s.devices, deviceStates: { ...s.devices.deviceStates, [id]: on } },
-      })),
+      updateDeviceState: (id, partialData) => set((s) => {
+        const current = s.devices.deviceStates[id];
+        if (!current) return s;
+        return {
+          devices: {
+            ...s.devices,
+            deviceStates: { ...s.devices.deviceStates, [id]: { ...current, data: { ...current.data, ...partialData } } as DeviceState },
+          },
+        };
+      }),
 
       layout: initialLayout,
       build: initialBuild,
@@ -730,10 +786,33 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: 'hometwin-store',
-      version: 12,
-      migrate: () => {
-        // V12: Force-clear to get emissive screen defaults
-        return undefined as any;
+      version: 13,
+      migrate: (persisted: any) => {
+        // V13: Migrate boolean deviceStates to rich DeviceState objects
+        if (persisted && persisted.devices?.deviceStates) {
+          const oldStates = persisted.devices.deviceStates;
+          const newStates: Record<string, DeviceState> = {};
+          const markers = persisted.devices?.markers ?? [];
+          for (const [id, val] of Object.entries(oldStates)) {
+            if (typeof val === 'boolean') {
+              const marker = markers.find((m: any) => m.id === id);
+              const kind = marker?.kind ?? 'switch';
+              const def = getDefaultState(kind);
+              if ('on' in def.data) (def.data as any).on = val;
+              newStates[id] = def;
+            } else {
+              newStates[id] = val as DeviceState;
+            }
+          }
+          persisted.devices.deviceStates = newStates;
+          // Also ensure all markers have a state
+          for (const m of markers) {
+            if (!newStates[m.id]) {
+              newStates[m.id] = getDefaultState(m.kind);
+            }
+          }
+        }
+        return persisted as any;
       },
       partialize: (state) => ({
         appMode: state.appMode,

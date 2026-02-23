@@ -23,7 +23,8 @@ function SelectionRing({ radius }: { radius: number }) {
 }
 
 function LightMarker({ position, id, onSelect, onDragStart, selected }: MarkerProps) {
-  const isOn = useAppStore((s) => s.devices.deviceStates[id] ?? true);
+  const state = useAppStore((s) => s.devices.deviceStates[id]);
+  const isOn = state?.kind === 'light' ? state.data.on : true;
   const handleClick = useCallback((e: ThreeEvent<PointerEvent>) => {
     e.stopPropagation();
     if (onSelect) { onSelect(id); }
@@ -44,7 +45,8 @@ function LightMarker({ position, id, onSelect, onDragStart, selected }: MarkerPr
 }
 
 function SwitchMarker({ position, id, onSelect, onDragStart, selected }: MarkerProps) {
-  const isOn = useAppStore((s) => s.devices.deviceStates[id] ?? false);
+  const state = useAppStore((s) => s.devices.deviceStates[id]);
+  const isOn = state?.kind === 'generic' ? state.data.on : false;
   const ref = useRef<THREE.Mesh>(null);
   useFrame((_, delta) => {
     if (ref.current) {

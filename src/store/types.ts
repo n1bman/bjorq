@@ -189,9 +189,63 @@ export interface DeviceMarker {
   screenConfig?: ScreenConfig;
 }
 
+// ─── Rich Device States (HA-ready) ───
+export interface LightState {
+  on: boolean;
+  brightness: number;       // 0-255
+  colorTemp?: number;       // mireds (153=cool, 500=warm)
+  rgbColor?: [number, number, number];
+  colorMode: 'temp' | 'rgb' | 'off';
+}
+
+export interface ClimateState {
+  on: boolean;
+  mode: 'heat' | 'cool' | 'auto' | 'off';
+  targetTemp: number;
+  currentTemp: number;
+}
+
+export interface MediaState {
+  on: boolean;
+  state: 'playing' | 'paused' | 'idle' | 'off';
+  title?: string;
+  artist?: string;
+  source?: string;
+  volume: number;           // 0-1
+  progress?: number;        // 0-1
+}
+
+export interface VacuumState {
+  on: boolean;
+  status: 'cleaning' | 'docked' | 'returning' | 'error';
+  battery: number;          // 0-100
+}
+
+export interface LockState {
+  locked: boolean;
+}
+
+export interface SensorState {
+  value: number;
+  unit: string;
+}
+
+export interface GenericDeviceState {
+  on: boolean;
+}
+
+export type DeviceState =
+  | { kind: 'light'; data: LightState }
+  | { kind: 'climate'; data: ClimateState }
+  | { kind: 'media_screen'; data: MediaState }
+  | { kind: 'vacuum'; data: VacuumState }
+  | { kind: 'door-lock'; data: LockState }
+  | { kind: 'sensor'; data: SensorState }
+  | { kind: 'generic'; data: GenericDeviceState };
+
 export interface DevicesState {
   markers: DeviceMarker[];
-  deviceStates: Record<string, boolean>; // id -> on/off
+  deviceStates: Record<string, DeviceState>;
 }
 
 // ─── Props Layer ───
@@ -301,7 +355,8 @@ export interface AppState {
   removeDevice: (id: string) => void;
   updateDevice: (id: string, changes: Partial<DeviceMarker>) => void;
   toggleDeviceState: (id: string) => void;
-  setDeviceState: (id: string, on: boolean) => void;
+  setDeviceState: (id: string, state: DeviceState) => void;
+  updateDeviceState: (id: string, partialData: Record<string, unknown>) => void;
 
   // Layout actions
   addFloor: (name: string) => void;

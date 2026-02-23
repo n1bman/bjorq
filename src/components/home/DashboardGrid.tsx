@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Home, Cloud, Cpu, Zap, Settings, Wifi } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 import ClockWidget from './cards/ClockWidget';
 import WeatherWidget from './cards/WeatherWidget';
 import EnergyWidget from './cards/EnergyWidget';
@@ -8,6 +9,7 @@ import DevicesSection from './cards/DevicesSection';
 import LocationSettings from './cards/LocationSettings';
 import HomeWidgetConfig from './cards/HomeWidgetConfig';
 import HAConnectionPanel from './cards/HAConnectionPanel';
+import type { DeviceKind } from '@/store/types';
 
 type DashCategory = 'home' | 'weather' | 'devices' | 'energy' | 'settings' | 'ha';
 
@@ -18,6 +20,16 @@ const categories: { key: DashCategory; label: string; icon: typeof Home }[] = [
   { key: 'energy', label: 'Energi', icon: Zap },
   { key: 'settings', label: 'Inställningar', icon: Settings },
   { key: 'ha', label: 'HA', icon: Wifi },
+];
+
+const deviceFilters: { key: DeviceKind | 'all'; label: string; emoji: string }[] = [
+  { key: 'all', label: 'Alla', emoji: '🏠' },
+  { key: 'light', label: 'Ljus', emoji: '💡' },
+  { key: 'climate', label: 'Klimat', emoji: '❄️' },
+  { key: 'media_screen', label: 'Media', emoji: '📺' },
+  { key: 'vacuum', label: 'Robot', emoji: '🤖' },
+  { key: 'door-lock', label: 'Lås', emoji: '🔒' },
+  { key: 'sensor', label: 'Sensor', emoji: '🌡️' },
 ];
 
 function HomeCategory() {
@@ -48,10 +60,27 @@ function WeatherCategory() {
 }
 
 function DevicesCategory() {
+  const [kindFilter, setKindFilter] = useState<DeviceKind | null>(null);
+
   return (
     <div className="space-y-3">
-      <h3 className="text-sm font-semibold text-foreground">Alla enheter</h3>
-      <DevicesSection />
+      {/* Filter chips */}
+      <div className="flex gap-1 overflow-x-auto pb-1">
+        {deviceFilters.map(({ key, label, emoji }) => (
+          <Button
+            key={key}
+            size="sm"
+            variant={(key === 'all' && !kindFilter) || kindFilter === key ? 'default' : 'outline'}
+            className="h-7 text-[10px] gap-1 shrink-0"
+            onClick={() => setKindFilter(key === 'all' ? null : key as DeviceKind)}
+          >
+            <span>{emoji}</span>
+            {label}
+          </Button>
+        ))}
+      </div>
+
+      <DevicesSection filter={kindFilter} />
     </div>
   );
 }
