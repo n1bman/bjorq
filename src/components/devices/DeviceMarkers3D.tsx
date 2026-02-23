@@ -382,6 +382,7 @@ export default function DeviceMarkers3D({ buildMode }: DeviceMarkers3DProps) {
         }
 
         const Component = markerComponents[marker.kind];
+        if (!Component) return null;
         return (
           <Component
             key={marker.id}
