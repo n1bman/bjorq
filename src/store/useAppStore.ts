@@ -730,9 +730,9 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: 'hometwin-store',
-      version: 8,
+      version: 9,
       migrate: () => {
-        // V8: Added media_screen device kind — force-clear stale state
+        // V9: Force-clear stale state to fix rendering errors
         return undefined as any;
       },
       partialize: (state) => ({
