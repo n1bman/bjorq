@@ -753,7 +753,8 @@ export default function BuildCanvas2D() {
 
       // ─── Device placement tools ───
       if (activeTool.startsWith('place-') && activeFloorId) {
-        const kind = activeTool.replace('place-', '') as import('@/store/types').DeviceKind;
+        const rawKind = activeTool.replace('place-', '');
+        const kind = (rawKind === 'media-screen' ? 'media_screen' : rawKind) as import('@/store/types').DeviceKind;
         const [wx, wz] = screenToWorld(sx, sy);
         const snapped = snapToGrid(wx, wz);
         const fl = floors.find((f) => f.id === activeFloorId);
@@ -763,14 +764,21 @@ export default function BuildCanvas2D() {
         if (kind === 'light') yPos = elev + h - 0.1;
         else if (kind === 'switch' || kind === 'sensor') yPos = elev + 1.2;
         else if (kind === 'climate') yPos = elev + 1.5;
+        else if (kind === 'media_screen') yPos = elev + 1.5;
+
+        const isScreen = kind === 'media_screen';
         addDevice({
           id: generateId(),
           kind,
           name: '',
           floorId: activeFloorId,
-          surface: kind === 'light' ? 'ceiling' : 'floor',
+          surface: isScreen ? 'free' : (kind === 'light' ? 'ceiling' : 'floor'),
           position: [snapped[0], yPos, snapped[1]],
           rotation: [0, 0, 0],
+          ...(isScreen ? {
+            scale: [1.2, 0.675, 1] as [number, number, number],
+            screenConfig: { aspectRatio: 16 / 9, uiStyle: 'minimal' as const, showProgress: true },
+          } : {}),
         });
         useAppStore.getState().setBuildTool('select');
         return;
