@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { AppState, BuildState, LayoutState, WallSegment, Room, DeviceState, DeviceKind } from './types';
+import type { AppState, BuildState, LayoutState, WallSegment, Room, DeviceState, DeviceKind, ActivityEvent } from './types';
 
 export function getDefaultState(kind: DeviceKind): DeviceState {
   switch (kind) {
@@ -113,17 +113,30 @@ export const useAppStore = create<AppState>()(
       updateDeviceState: (id, partialData) => set((s) => {
         const current = s.devices.deviceStates[id];
         if (!current) return s;
+        const marker = s.devices.markers.find((m) => m.id === id);
+        const newEvent: ActivityEvent = {
+          id: Math.random().toString(36).slice(2, 10),
+          timestamp: new Date().toISOString(),
+          deviceId: id,
+          kind: 'state_change',
+          title: `${marker?.name || 'Enhet'} ändrades`,
+          detail: Object.entries(partialData).map(([k, v]) => `${k}: ${v}`).join(', '),
+          severity: 'info',
+          read: false,
+        };
         return {
           devices: {
             ...s.devices,
             deviceStates: { ...s.devices.deviceStates, [id]: { ...current, data: { ...current.data, ...partialData } } as DeviceState },
           },
+          activityLog: [newEvent, ...s.activityLog].slice(0, 100),
         };
       }),
 
       layout: initialLayout,
       build: initialBuild,
       devices: { markers: [], deviceStates: {} },
+      activityLog: [],
       props: { catalog: [], items: [] },
 
       homeGeometry: {
@@ -783,6 +796,17 @@ export const useAppStore = create<AppState>()(
             }),
           },
         })),
+      // Activity log actions
+      pushActivity: (event) => set((s) => ({
+        activityLog: [
+          { ...event, id: Math.random().toString(36).slice(2, 10), timestamp: new Date().toISOString(), read: false },
+          ...s.activityLog,
+        ].slice(0, 100),
+      })),
+      clearActivity: () => set({ activityLog: [] }),
+      markActivityRead: (id) => set((s) => ({
+        activityLog: s.activityLog.map((e) => e.id === id ? { ...e, read: true } : e),
+      })),
     }),
     {
       name: 'hometwin-store',
@@ -822,6 +846,7 @@ export const useAppStore = create<AppState>()(
         devices: state.devices,
         props: state.props,
         environment: state.environment,
+        activityLog: state.activityLog,
         homeAssistant: {
           wsUrl: state.homeAssistant.wsUrl,
           token: state.homeAssistant.token,
