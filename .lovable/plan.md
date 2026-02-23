@@ -1,26 +1,33 @@
 
 
-# Fix: DeviceMarkers3D kraschar vid okänd enhetstyp
+# Fix: Guards mot okanda enhetstyper i alla komponenter
 
 ## Problem
 
-Rad 384 i `DeviceMarkers3D.tsx` gör `const Component = markerComponents[marker.kind]` utan att kontrollera om resultatet är `undefined`. Om en enhet i localStorage har en `kind` som inte matchar något i `markerComponents`-mappen (t.ex. från korrupt eller gammal data), blir `Component` undefined och React kastar error #130.
+Trots att `media_screen` finns i alla maps (`kindInfo`, `deviceIcons`, `markerComponents`) kraschar appen for att localStorage kan innehalla enheter med en `kind` som inte matchar nagon nyckel. Felet ar i **DevicesSection.tsx rad 52** dar `kindInfo[d.kind]` returnerar `undefined` och sedan `.emoji` kraschar.
 
-## Lösning
+Samma sarbarhet finns i **RoomCard.tsx rad 53** (`deviceIcons[kind]` kan vara undefined).
 
-Två ändringar i `DeviceMarkers3D.tsx`:
+## Losning
 
-1. **Lägg till en guard efter rad 384** -- om `Component` är undefined, hoppa över markören (return null) eller använd `GenericMarker` som fallback.
+Tre andringar:
 
-2. **Bumpa store-version till 10** i `useAppStore.ts` för att rensa eventuell korrupt data som redan finns i localStorage.
+### 1. DevicesSection.tsx -- lagg till guard (rad 52)
 
-### Teknisk ändring
-
-I `DeviceMarkers3D.tsx`, efter rad 384:
+Efter `const info = kindInfo[d.kind]`, lagg till:
 ```tsx
-const Component = markerComponents[marker.kind];
-if (!Component) return null; // Skip unknown device kinds
+if (!info) return null;
+```
+Detta hoppar over enheter med okand `kind` istallet for att krasha.
+
+### 2. RoomCard.tsx -- lagg till guard (rad 53)
+
+Efter `const Icon = deviceIcons[kind as DeviceKind]`, lagg till:
+```tsx
+if (!Icon) return null;
 ```
 
-I `useAppStore.ts`: version 9 -> 10 med force-clear migration.
+### 3. useAppStore.ts -- bumpa version till 11
+
+Tvingar bort eventuell korrupt data fran localStorage.
 
