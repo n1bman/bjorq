@@ -21,8 +21,28 @@ export function mapHAEntityToDeviceState(
     }
     case 'switch':
     case 'input_boolean':
-    case 'fan':
       return { kind: 'generic', data: { on: state === 'on' } };
+
+    case 'fan': {
+      const on = state === 'on';
+      const speed = typeof attributes.percentage === 'number' ? attributes.percentage : (on ? 100 : 0);
+      const presetMap: Record<string, 'low' | 'medium' | 'high'> = { low: 'low', medium: 'medium', high: 'high' };
+      const preset = typeof attributes.preset_mode === 'string' ? presetMap[attributes.preset_mode] : undefined;
+      return { kind: 'fan', data: { on, speed, preset } };
+    }
+
+    case 'cover': {
+      const pos = typeof attributes.current_position === 'number' ? attributes.current_position : (state === 'open' ? 100 : 0);
+      const coverStateMap: Record<string, 'open' | 'closed' | 'opening' | 'closing' | 'stopped'> = {
+        open: 'open', closed: 'closed', opening: 'opening', closing: 'closing', stopped: 'stopped',
+      };
+      return { kind: 'cover', data: { position: pos, state: coverStateMap[state] || 'closed' } };
+    }
+
+    case 'scene':
+    case 'script':
+    case 'automation':
+      return { kind: 'scene', data: {} };
 
     case 'climate': {
       const on = state !== 'off';
@@ -35,9 +55,20 @@ export function mapHAEntityToDeviceState(
     }
     case 'sensor':
     case 'binary_sensor': {
+      const deviceClass = typeof attributes.device_class === 'string' ? attributes.device_class : '';
+      // Binary sensors: use on/off instead of parseFloat
+      if (domain === 'binary_sensor') {
+        if (deviceClass === 'motion') {
+          const detected = state === 'on';
+          return { kind: 'sensor', data: { value: detected ? 1 : 0, unit: '', sensorType: 'motion' as const, ...(detected ? { lastMotion: new Date().toISOString() } : {}) } };
+        }
+        if (deviceClass === 'door' || deviceClass === 'window' || deviceClass === 'opening') {
+          return { kind: 'sensor', data: { value: state === 'on' ? 1 : 0, unit: '', sensorType: 'contact' as const } };
+        }
+        return { kind: 'sensor', data: { value: state === 'on' ? 1 : 0, unit: '', sensorType: 'generic' as const } };
+      }
       const value = parseFloat(state) || 0;
       const unit = typeof attributes.unit_of_measurement === 'string' ? attributes.unit_of_measurement : '';
-      const deviceClass = typeof attributes.device_class === 'string' ? attributes.device_class : '';
       const sensorType = deviceClass === 'temperature' ? 'temperature' as const
         : deviceClass === 'motion' ? 'motion' as const
         : 'generic' as const;

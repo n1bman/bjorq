@@ -395,7 +395,10 @@ const markerComponents: Record<DeviceKind, React.FC<MarkerProps>> = {
   'garage-door': (props) => <GenericMarker {...props} color="#f59e0b" />,
   'door-lock': (props) => <GenericMarker {...props} color="#fbbf24" />,
   'power-outlet': (props) => <GenericMarker {...props} color="#fde047" emissive="#eab308" />,
-  media_screen: (props) => <GenericMarker {...props} color="#818cf8" />, // fallback, overridden below
+  media_screen: (props) => <GenericMarker {...props} color="#818cf8" />,
+  fan: (props) => <GenericMarker {...props} color="#06b6d4" />,
+  cover: (props) => <GenericMarker {...props} color="#a3a3a3" />,
+  scene: (props) => <GenericMarker {...props} color="#8b5cf6" />,
 };
 
 interface DeviceMarkers3DProps {

@@ -1,5 +1,5 @@
 import { useAppStore } from '@/store/useAppStore';
-import { Lightbulb, ToggleLeft, Thermometer, Wind, Bot, Camera, Refrigerator, CookingPot, WashingMachine, DoorOpen, Lock, Plug, Monitor } from 'lucide-react';
+import { Lightbulb, ToggleLeft, Thermometer, Wind, Bot, Camera, Refrigerator, CookingPot, WashingMachine, DoorOpen, Lock, Plug, Monitor, Fan, PanelTop, Clapperboard } from 'lucide-react';
 import type { DeviceKind } from '@/store/types';
 
 const deviceIcons: Record<DeviceKind, typeof Lightbulb> = {
@@ -16,6 +16,9 @@ const deviceIcons: Record<DeviceKind, typeof Lightbulb> = {
   'door-lock': Lock,
   'power-outlet': Plug,
   media_screen: Monitor,
+  fan: Fan,
+  cover: PanelTop,
+  scene: Clapperboard,
 };
 
 interface RoomCardProps {

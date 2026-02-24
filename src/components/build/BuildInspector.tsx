@@ -447,6 +447,9 @@ const kindLabels: Record<DeviceKind, string> = {
   'door-lock': 'Dörrlås',
   'power-outlet': 'Eluttag',
   media_screen: 'Skärm',
+  fan: 'Fläkt',
+  cover: 'Persienn/Port',
+  scene: 'Scen',
 };
 
 function DeviceInspector({ deviceId, close }: { deviceId: string; close: React.ReactNode }) {

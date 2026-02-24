@@ -48,6 +48,7 @@ const kindCategory: Record<DeviceKind, string> = {
   vacuum: 'Hem', camera: 'Säkerhet', fridge: 'Vitvaror', oven: 'Vitvaror',
   washer: 'Vitvaror', 'garage-door': 'Säkerhet', 'door-lock': 'Säkerhet',
   'power-outlet': 'Ljus', media_screen: 'Media',
+  fan: 'Klimat', cover: 'Hem', scene: 'Automation',
 };
 
 function HomeCategory() {

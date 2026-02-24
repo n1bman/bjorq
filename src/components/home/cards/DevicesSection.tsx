@@ -21,6 +21,9 @@ const kindInfo: Record<DeviceKind, { emoji: string; label: string; category: str
   'door-lock': { emoji: '🔒', label: 'Dörrlås', category: 'Säkerhet' },
   'power-outlet': { emoji: '🔌', label: 'Eluttag', category: 'Ljus' },
   media_screen: { emoji: '📺', label: 'Skärm', category: 'Media' },
+  fan: { emoji: '🌀', label: 'Fläkt', category: 'Klimat' },
+  cover: { emoji: '🪟', label: 'Persienn', category: 'Hem' },
+  scene: { emoji: '🎬', label: 'Scen', category: 'Automation' },
 };
 
 function isDeviceOn(state?: DeviceState): boolean {

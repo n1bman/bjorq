@@ -1,6 +1,6 @@
 import { useAppStore } from '@/store/useAppStore';
 import type { DeviceKind, BuildTool, DeviceMarker } from '@/store/types';
-import { Lightbulb, ToggleLeft, Activity, Thermometer, Trash2, Camera, Bot, CookingPot, WashingMachine, DoorOpen, Lock, Plug, Refrigerator, Monitor, ChevronDown, ChevronRight, Link2 } from 'lucide-react';
+import { Lightbulb, ToggleLeft, Activity, Thermometer, Trash2, Camera, Bot, CookingPot, WashingMachine, DoorOpen, Lock, Plug, Refrigerator, Monitor, ChevronDown, ChevronRight, Link2, Fan, PanelTop, Clapperboard } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useMemo, useState } from 'react';
 import { domainToKind } from '@/lib/haDomainMapping';
@@ -19,6 +19,9 @@ const deviceTools: { key: BuildTool; kind: DeviceKind; label: string; icon: type
   { key: 'place-door-lock', kind: 'door-lock', label: 'Dörrlås', icon: Lock, color: 'text-amber-400' },
   { key: 'place-power-outlet', kind: 'power-outlet', label: 'Eluttag', icon: Plug, color: 'text-yellow-300' },
   { key: 'place-media-screen', kind: 'media_screen', label: 'Skärm', icon: Monitor, color: 'text-indigo-400' },
+  { key: 'place-fan', kind: 'fan', label: 'Fläkt', icon: Fan, color: 'text-cyan-400' },
+  { key: 'place-cover', kind: 'cover', label: 'Persienn/Port', icon: PanelTop, color: 'text-stone-400' },
+  { key: 'place-scene', kind: 'scene', label: 'Scen', icon: Clapperboard, color: 'text-violet-400' },
 ];
 
 const kindLabels: Record<DeviceKind, string> = {
@@ -35,6 +38,9 @@ const kindLabels: Record<DeviceKind, string> = {
   'door-lock': '🔒 Dörrlås',
   'power-outlet': '🔌 Eluttag',
   media_screen: '📺 Skärm',
+  fan: '🌀 Fläkt',
+  cover: '🪟 Persienn',
+  scene: '🎬 Scen',
 };
 
 export default function DevicePlacementTools() {
@@ -163,6 +169,9 @@ function UnlinkedHAEntities() {
       vacuum: 'place-vacuum',
       'door-lock': 'place-door-lock',
       media_screen: 'place-media-screen',
+      fan: 'place-fan',
+      cover: 'place-cover',
+      scene: 'place-scene',
     };
     if (toolMap[kind]) setBuildTool('select');
   };

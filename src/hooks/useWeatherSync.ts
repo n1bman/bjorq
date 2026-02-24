@@ -91,12 +91,69 @@ export function useWeatherSync() {
   const sunRef = useRef<ReturnType<typeof setInterval>>();
 
   useEffect(() => {
-    if (source !== 'auto') {
+    if (source !== 'auto' && source !== 'ha') {
       if (intervalRef.current) clearInterval(intervalRef.current);
       if (sunRef.current) clearInterval(sunRef.current);
       return;
     }
 
+    // HA weather source: read from liveStates
+    if (source === 'ha') {
+      const syncFromHA = () => {
+        const liveStates = useAppStore.getState().homeAssistant.liveStates;
+        const weatherKey = Object.keys(liveStates).find((k) => k.startsWith('weather.'));
+        if (!weatherKey) return;
+        const ws = liveStates[weatherKey];
+        const attrs = ws.attributes;
+
+        const conditionMap: Record<string, WeatherCondition> = {
+          sunny: 'clear', 'clear-night': 'clear', partlycloudy: 'cloudy', cloudy: 'cloudy',
+          rainy: 'rain', pouring: 'rain', lightning: 'rain', 'lightning-rainy': 'rain',
+          snowy: 'snow', 'snowy-rainy': 'snow', hail: 'snow',
+          fog: 'cloudy', windy: 'cloudy', 'windy-variant': 'cloudy', exceptional: 'cloudy',
+        };
+        const condition = conditionMap[ws.state] || 'cloudy';
+        const temperature = typeof attrs.temperature === 'number' ? Math.round(attrs.temperature) : 0;
+        const windSpeed = typeof attrs.wind_speed === 'number' ? attrs.wind_speed : undefined;
+        const humidity = typeof attrs.humidity === 'number' ? attrs.humidity : undefined;
+        const intensity = condition === 'rain' ? 0.6 : condition === 'snow' ? 0.5 : 0;
+
+        // Parse forecast from HA attributes
+        let forecast: ForecastDay[] | undefined;
+        const haForecast = attrs.forecast as Array<{ datetime: string; condition: string; temperature: number; templow: number }> | undefined;
+        if (Array.isArray(haForecast) && haForecast.length > 0) {
+          const dayNames = ['Sön', 'Mån', 'Tis', 'Ons', 'Tor', 'Fre', 'Lör'];
+          forecast = haForecast.slice(0, 7).map((f) => {
+            const d = new Date(f.datetime);
+            return {
+              day: dayNames[d.getDay()],
+              condition: conditionMap[f.condition] || 'cloudy',
+              maxTemp: Math.round(f.temperature),
+              minTemp: Math.round(f.templow ?? f.temperature - 5),
+            };
+          });
+        }
+
+        setWeatherData({ condition, temperature, windSpeed, humidity, intensity, forecast });
+      };
+
+      syncFromHA();
+      intervalRef.current = setInterval(syncFromHA, 30_000); // re-read every 30s
+
+      const updateSun = () => {
+        const { azimuth, elevation } = calculateSunPosition(lat, lon, new Date());
+        setSunPosition(azimuth, elevation);
+      };
+      updateSun();
+      sunRef.current = setInterval(updateSun, SUN_INTERVAL);
+
+      return () => {
+        if (intervalRef.current) clearInterval(intervalRef.current);
+        if (sunRef.current) clearInterval(sunRef.current);
+      };
+    }
+
+    // Auto source: fetch from Open-Meteo
     const doFetch = async () => {
       try {
         const data = await fetchWeather(lat, lon);

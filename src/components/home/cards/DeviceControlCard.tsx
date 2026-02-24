@@ -1,5 +1,5 @@
 import { useAppStore } from '@/store/useAppStore';
-import type { DeviceMarker, LightState, ClimateState, MediaState, VacuumState, LockState, SensorState, GenericDeviceState, CameraState } from '@/store/types';
+import type { DeviceMarker, LightState, ClimateState, MediaState, VacuumState, LockState, SensorState, GenericDeviceState, CameraState, FanState, CoverState, SceneState } from '@/store/types';
 import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
 import { Button } from '@/components/ui/button';
@@ -7,6 +7,7 @@ import {
   Sun, Thermometer, Play, Pause, Square, Volume2,
   Lock, Unlock, Battery, Home as HomeIcon,
   Snowflake, Flame, RotateCcw, Eye, Camera, Video,
+  Fan, PanelTop, Clapperboard, ArrowUp, ArrowDown, StopCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -30,6 +31,9 @@ export default function DeviceControlCard({ marker, compact }: Props) {
     case 'door-lock': return <LockControl id={marker.id} data={state.data} update={updateDeviceState} />;
     case 'sensor': return <SensorControl data={state.data} />;
     case 'camera': return <CameraControl id={marker.id} data={state.data} update={updateDeviceState} />;
+    case 'fan': return <FanControl id={marker.id} data={state.data} update={updateDeviceState} />;
+    case 'cover': return <CoverControl id={marker.id} data={state.data} update={updateDeviceState} />;
+    case 'scene': return <SceneControl id={marker.id} data={state.data} update={updateDeviceState} />;
     case 'generic': return <GenericControl id={marker.id} data={state.data} update={updateDeviceState} />;
     default: return null;
   }
@@ -42,9 +46,12 @@ function CompactDeviceView({ marker, state }: { marker: DeviceMarker; state: imp
     camera: <Camera size={14} />,
     vacuum: <HomeIcon size={14} />,
     sensor: <Eye size={14} />,
+    fan: <Fan size={14} />,
+    cover: <PanelTop size={14} />,
+    scene: <Clapperboard size={14} />,
   };
 
-  const isOn = 'on' in state.data ? (state.data as any).on : state.kind === 'door-lock' ? !(state.data as LockState).locked : true;
+  const isOn = 'on' in state.data ? (state.data as any).on : state.kind === 'door-lock' ? !(state.data as LockState).locked : state.kind === 'cover' ? (state.data as CoverState).position > 0 : state.kind !== 'scene';
   const wc = marker.widgetConfig;
 
   // Camera compact: show mini preview
@@ -93,6 +100,14 @@ function CompactDeviceView({ marker, state }: { marker: DeviceMarker; state: imp
       const vd = state.data as VacuumState;
       const labels: Record<string, string> = { cleaning: 'Städar', docked: 'Dockad', returning: 'Återvänder' };
       statusText = labels[vd.status] ?? vd.status;
+    } else if (state.kind === 'fan') {
+      const fd = state.data as FanState;
+      statusText = fd.on ? `${fd.speed}%` : 'Av';
+    } else if (state.kind === 'cover') {
+      const cd = state.data as CoverState;
+      statusText = `${cd.position}%`;
+    } else if (state.kind === 'scene') {
+      statusText = 'Scen';
     }
   }
 
@@ -328,6 +343,75 @@ function GenericControl({ id, data, update }: { id: string; data: GenericDeviceS
     <div className="flex items-center justify-between pt-2">
       <span className="text-xs text-muted-foreground">{data.on ? 'På' : 'Av'}</span>
       <Switch checked={data.on} onCheckedChange={(v) => update(id, { on: v })} />
+    </div>
+  );
+}
+
+function FanControl({ id, data, update }: { id: string; data: FanState; update: UpdateFn }) {
+  return (
+    <div className="space-y-3 pt-2">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Fan size={14} />
+          <span>Hastighet {data.speed}%</span>
+        </div>
+        <Switch checked={data.on} onCheckedChange={(v) => update(id, { on: v, speed: v ? (data.speed || 50) : 0 })} />
+      </div>
+      <Slider value={[data.speed]} max={100} step={1} onValueChange={([v]) => update(id, { speed: v, on: v > 0 })} disabled={!data.on} />
+      <div className="flex gap-1">
+        {(['low', 'medium', 'high'] as const).map((preset) => (
+          <Button key={preset} size="sm" variant={data.preset === preset ? 'default' : 'outline'} className="flex-1 h-7 text-[10px]"
+            onClick={() => {
+              const speeds = { low: 25, medium: 50, high: 100 };
+              update(id, { preset, speed: speeds[preset], on: true });
+            }} disabled={!data.on}>
+            {preset === 'low' ? 'Låg' : preset === 'medium' ? 'Med' : 'Hög'}
+          </Button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function CoverControl({ id, data, update }: { id: string; data: CoverState; update: UpdateFn }) {
+  const stateLabels: Record<string, string> = { open: 'Öppen', closed: 'Stängd', opening: 'Öppnar', closing: 'Stänger', stopped: 'Stoppad' };
+  return (
+    <div className="space-y-3 pt-2">
+      <div className="flex items-center justify-between">
+        <span className="text-xs text-muted-foreground">{stateLabels[data.state] ?? data.state}</span>
+        <span className="text-xs font-medium text-foreground">{data.position}%</span>
+      </div>
+      <Slider value={[data.position]} max={100} step={1} onValueChange={([v]) => update(id, { position: v, state: v === 0 ? 'closed' : v === 100 ? 'open' : 'stopped' })} />
+      <div className="flex gap-1">
+        <Button size="sm" variant="outline" className="flex-1 h-7 text-[10px] gap-1"
+          onClick={() => update(id, { position: 100, state: 'open' })}>
+          <ArrowUp size={12} /> Öppna
+        </Button>
+        <Button size="sm" variant="outline" className="flex-1 h-7 text-[10px] gap-1"
+          onClick={() => update(id, { state: 'stopped' })}>
+          <StopCircle size={12} /> Stopp
+        </Button>
+        <Button size="sm" variant="outline" className="flex-1 h-7 text-[10px] gap-1"
+          onClick={() => update(id, { position: 0, state: 'closed' })}>
+          <ArrowDown size={12} /> Stäng
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function SceneControl({ id, data, update }: { id: string; data: SceneState; update: UpdateFn }) {
+  return (
+    <div className="space-y-2 pt-2">
+      <Button size="sm" className="w-full h-9 text-xs gap-2"
+        onClick={() => update(id, { lastTriggered: new Date().toISOString() })}>
+        <Clapperboard size={14} /> Kör scen
+      </Button>
+      {data.lastTriggered && (
+        <p className="text-[10px] text-muted-foreground text-center">
+          Senast: {new Date(data.lastTriggered).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })}
+        </p>
+      )}
     </div>
   );
 }
