@@ -1,35 +1,59 @@
 
 
-# Fix: HA-kommandon skickas inte fran appen
+# Fix: WebSocket-anslutningen maste vara en singleton
 
-## Problemet
+## Rotorsak
 
-Konsolloggarna visar tydligt: **"No callService available"** varje gang du trycker pa SPOT 2. Orsaken ar att `useHomeAssistant()`-hooken (som skapar WebSocket-anslutningen och exponerar `callService`) bara ar monterad i **HAConnectionPanel** -- en instellningspanel som inte ar synlig pa hemskermen. Sa fort du lamnar den panelen forsvinner WebSocket-anslutningen.
+`useHomeAssistant()` anvander lokala React refs (`wsRef`) for WebSocket-anslutningen. Varje komponent som anropar hooken far sin **egen separata instans** med sin egen `wsRef`. Det som hander:
 
-## Losning
+1. **HAConnectionPanel** anropar `useHomeAssistant()` -- ansluter -- `wsRef` ar giltig -- satter `haServiceCaller.current`
+2. **HomeView** anropar ocksa `useHomeAssistant()` -- ser att status redan ar `'connected'` -- hoppar over auto-connect -- dess `wsRef` forblir `null` -- **overskriver** `haServiceCaller.current` med sin egen trasiga `callService`
+3. Bridgen anropar `haServiceCaller.current` -- anvander HomeViews `callService` -- `wsRef` ar null -- "Cannot call service: not connected"
 
-Flytta `useHomeAssistant` till en hogre niva sa att WebSocket-anslutningen lever kvar sa lange appen ar oppen, inte bara nar installningspanelen visas.
+## Losning: Modul-niva singleton
 
-### Andringar
+Flytta all WebSocket-hantering (anslutning, `wsRef`, `callService`) till **modul-niva** istallet for inuti React-hooken. Da delar alla komponenter samma anslutning.
 
-**`src/hooks/useHomeAssistant.ts`**
-- Lagg till auto-reconnect-logik: om det finns sparade `wsUrl` och `token` i storen vid mount, anslut automatiskt
-- Exportera hooken som en "connection manager" som kan monteras pa toppniva
+### Andringar i `src/hooks/useHomeAssistant.ts`
 
-**`src/components/home/HomeView.tsx`**
-- Montera `useHomeAssistant()` har sa att WebSocket-anslutningen ar aktiv nar hemvyn visas
-- Hooken satter `haServiceCaller.current = callService` automatiskt, sa bridgen far tillgang
+Refaktorera sa att:
 
-**`src/components/build/BuildModeV2.tsx`**
-- Montera `useHomeAssistant()` aven har sa att anslutningen ar aktiv i bygglage
+- `wsRef`, `reconnectTimer`, `manualDisconnect` och `msgId` ar **modul-niva variabler** (utanfor hooken)
+- `connect()`, `disconnect()`, `callService()` ar **vanliga funktioner** pa modul-niva som anvander dessa delade variabler
+- `haServiceCaller.current` satts direkt i `connect()` nar anslutningen lyckas, istallet for via en React effect
+- Hooken (`useHomeAssistant()`) returnerar bara `{ connect, disconnect, callService }` och gor auto-reconnect vid mount
+- Cleanup-effecten stanger **inte** WebSocketen (den ar delad) -- bara vid manuell disconnect
 
-**`src/components/home/cards/HAConnectionPanel.tsx`**
-- Behall UI:t for att visa status och koppla in/ur, men anvand den delade anslutningen istallet for att skapa en egen
-- Anropa `connect`/`disconnect` som vanligt -- de styr samma globala WebSocket
+### Andringar i `src/hooks/useHABridge.ts`
 
-### Resultat
+Inga andringar -- bridgen anvander redan `haServiceCaller.current` korrekt.
 
-- WebSocket-anslutningen lever sa lange du ar pa hemskermen eller i bygglaget
-- `haServiceCaller.current` ar alltid satt nar HA ar anslutet
-- Nar du trycker pa SPOT 2 skickar bridgen kommandot till HA direkt
+### Andringar i `src/components/home/HomeView.tsx` och `src/components/build/BuildModeV2.tsx`
 
+Inga andringar -- de monterar redan `useHomeAssistant()` och `useHABridge()`.
+
+### Andringar i `src/components/home/cards/HAConnectionPanel.tsx`
+
+Inga andringar -- den anvander redan `useHomeAssistant()`.
+
+---
+
+## Teknisk sammanfattning
+
+```text
+FORE:
+  HAConnectionPanel -> useHomeAssistant() -> wsRef_A (ansluten)
+  HomeView          -> useHomeAssistant() -> wsRef_B (null!) -> overskriver haServiceCaller
+
+EFTER:
+  modul-niva        -> wsRef (delad singleton)
+  HAConnectionPanel -> useHomeAssistant() -> returnerar { connect, disconnect, callService } (samma instans)
+  HomeView          -> useHomeAssistant() -> returnerar { connect, disconnect, callService } (samma instans)
+  haServiceCaller.current -> pekar alltid pa singleton callService
+```
+
+| Fil | Andring |
+|-----|---------|
+| `src/hooks/useHomeAssistant.ts` | Flytta wsRef, connect, disconnect, callService till modul-niva singleton |
+
+En enda filandring loser hela problemet.
