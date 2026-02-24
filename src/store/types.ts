@@ -237,6 +237,7 @@ export interface MediaState {
   source?: string;
   volume: number;           // 0-1
   progress?: number;        // 0-1
+  _action?: 'next' | 'previous' | 'stop';
 }
 
 export interface VacuumState {

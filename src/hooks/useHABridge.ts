@@ -107,6 +107,19 @@ function sendHACommand(entityId: string, state: DeviceState) {
 
     case 'media_player': {
       const data = state.data as any;
+      // Handle media actions (next/previous/stop)
+      if (data._action === 'next') {
+        callService('media_player', 'media_next_track', { entity_id: entityId });
+        break;
+      }
+      if (data._action === 'previous') {
+        callService('media_player', 'media_previous_track', { entity_id: entityId });
+        break;
+      }
+      if (data._action === 'stop') {
+        callService('media_player', 'media_stop', { entity_id: entityId });
+        break;
+      }
       if (!data.on) {
         callService('media_player', 'turn_off', { entity_id: entityId });
       } else {
