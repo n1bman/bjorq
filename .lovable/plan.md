@@ -1,86 +1,58 @@
 
 
-# Maximera HA-synk: Nya domaner, vaderintegration och framtidsakring
+# TV-skarm: Visuella forbattringar
 
-## Oversikt
+## Andring 1: Bygglageshjalp doljs i hemvyn
 
-Efter genomgang av hela synkkedjan (`haMapping.ts` -> `haDomainMapping.ts` -> `useHABridge.ts` -> `types.ts` -> `DeviceControlCard.tsx`) finns det flera luckor och mojligheter att forbattra integrationen avsevart.
+Hornmarkorer (4 rutor) och ambient glow-planet (det ljusa lagret bakom) visas **bara i bygglageet**. `MediaScreenMarker` far en ny `buildMode`-prop.
 
-## 1. Nya enhetstyper
+## Andring 2: Morkare, mer realistisk skarm
 
-### Fan (flakt) -- idag bara on/off, borde ha hastighet
-- Ny `FanState` med `on`, `speed` (0-100%), `preset` (low/medium/high)
-- Ny DeviceKind `'fan'` och BuildTool `'place-fan'`
-- Mapping fran HA: `fan` -> `percentage`, `preset_mode`
-- Bridge: `fan.set_percentage`, `fan.turn_on/off`
-- UI-kontroll med hastighetsslider
+- Now Playing-gradient andras fran `#0f172a`/`#312e81` till `#050510`/`#0a0a1f` for OLED-kansla
+- `emissiveIntensity` pa skarmplanets material sanks fran 0.4 till 0.15
+- Standby-gradient morkare
 
-### Cover (persienner/jalusier/garageportar) -- saknas helt
-- Ny `CoverState` med `position` (0-100), `state` (open/closed/opening/closing)
-- Ny DeviceKind `'cover'`
-- Mapping fran HA: `cover` -> `current_position`
-- Bridge: `cover.open_cover`, `cover.close_cover`, `cover.set_cover_position`
-- UI-kontroll med positionsslider
-- Koppla `garage-door` (som redan finns som kind) till `cover`-domanen nar `device_class === 'garage'`
+## Andring 3: App-logotyper med fargschema
 
-### Scene / Script / Automation -- knappar att trigga
-- Ny DeviceKind `'scene'` (enkel trigger-knapp)
-- Mapping: `scene`, `script`, `automation` -> trigger-bara enheter
-- Bridge: `scene.turn_on`, `script.turn_on`, `automation.trigger`
-- Kompakt UI: enbart en "Kor"-knapp
+Branding-tabell baserat pa `app_name`/`source` fran HA:
 
-## 2. Vader fran HA (`weather.*` entiteter)
+| App | Farg | Badge-text |
+|-----|------|------------|
+| YouTube | `#FF0000` | YOUTUBE |
+| Netflix | `#E50914` | NETFLIX |
+| Prime Video | `#00A8E1` | PRIME VIDEO |
+| HBO Max | `#B535F6` | HBO MAX |
+| SVT Play | `#2DAB4F` | SVT PLAY |
+| Spotify | `#1DB954` | SPOTIFY |
+| Disney+ | `#113CCF` | DISNEY+ |
+| Plex | `#E5A00D` | PLEX |
 
-Home Assistants `weather.*`-entiteter innehaller rikare data an Open-Meteo:
-- `temperature`, `humidity`, `wind_speed`, `condition`
-- `forecast` (attribut med timvis/daglig prognos)
+Badgen ritas storre och snyggare med rundade horn. `media_artist` visas under titeln nar det finns.
 
-### Plan
-- Lagg till `'ha'` som mojlig `environment.source` (redan finns i typen!)
-- Nar `source === 'ha'`: hitta forsta `weather.*`-entiteten i `liveStates`
-- Mappa `weather.*` condition -> var `WeatherCondition`
-- Mappa forecast-attributet -> var `ForecastDay[]`
-- Uppdatera `useWeatherSync` att prenumerera pa HA-vader nar `source === 'ha'`
-- Lagg till val i LocationSettings for att valja HA-vader som kalla
+## Andring 4: Pulserande ambient-ljus
 
-## 3. Energidata fran HA-sensorer
+Nar skarmen ar pa (state !== "off"/"standby"/"idle"/"unavailable"):
 
-Manga HA-installationer har `sensor.*_power` och `sensor.*_energy`. Dessa kan kopplas till `EnergyTracking` pa enhetsmarkorer:
-- Nar en enhet har en kopplad HA-entitet, sok automatiskt efter relaterade energi-sensorer (via `device_id` i attribut eller namnmonster)
-- Alternativt: lat anvandaren manuellt valja en energi-sensor per enhet i inspektorn
-- Synka `currentWatts` live fran HA-sensorvarde
+- `pointLight` far en `useRef` och animeras med `useFrame`
+- Intensiteten pulserar mjukt: `0.3 + sin(time * 0.002) * 0.2`
+- Ljusfarg foljer app-branding (rod for YouTube, gron for Spotify, etc.)
+- Nar skarmen ar av: intensitet ~0.05
 
-## 4. Forbattrad befintlig synk
-
-### Binary sensors: korrekt mappning
-- `binary_sensor` med `device_class: motion` -> `value: 1/0` baserat pa `on/off` (inte `parseFloat`)
-- `binary_sensor` med `device_class: door/window` -> ny `'contact'` sensorType
-- Uppdatera `lastMotion` tidstampel automatiskt nar rorelse detekteras
-
-### Number / Select / Input entities
-- `number.*` och `input_number.*` -> sensor med redigerbart varde
-- `select.*` och `input_select.*` -> dropdown-kontroll
-- Bridge: `number.set_value`, `input_select.select_option`
-
-## Filandringar
+## Fil som andras
 
 | Fil | Andring |
 |-----|---------|
-| `src/store/types.ts` | Nya typer: `FanState`, `CoverState`, `SceneState`. Nya DeviceKind: `fan`, `cover`, `scene`. Utoka `DeviceState` union. Nya `BuildTool` varianter. |
-| `src/lib/haMapping.ts` | Nya case: `fan`, `cover`, `scene`, `script`, `automation`, `weather`. Fix `binary_sensor` mappning for motion/door. |
-| `src/lib/haDomainMapping.ts` | Lagg till `fan`, `cover`, `scene`/`script`/`automation` i bade `kindToDomains` och `domainToKind`. Koppla `garage-door` till `cover`. |
-| `src/hooks/useHABridge.ts` | Nya case i `sendHACommand`: `fan` (hastighet), `cover` (position), `scene`/`script`/`automation` (trigger). |
-| `src/hooks/useWeatherSync.ts` | Ny gren: om `source === 'ha'`, hamta vader fran `liveStates['weather.*']` istallet for Open-Meteo. |
-| `src/store/useAppStore.ts` | Nya defaultStates for `fan`, `cover`, `scene`. |
-| `src/components/home/cards/DeviceControlCard.tsx` | Nya kontrollkomponenter: `FanControl`, `CoverControl`, `SceneControl`. |
-| `src/components/build/devices/DevicePlacementTools.tsx` | Nya knappar for fan, cover, scene. |
-| `src/components/home/cards/LocationSettings.tsx` | Nytt val for "Anvand HA-vader" nar HA ar anslutet. |
+| `src/components/devices/DeviceMarkers3D.tsx` | Allt ovan: buildMode-prop till MediaScreenMarker, villkorlig rendering av horn/glow, morkare canvas, app-branding, pulserande ljus, artist-text |
 
-## Prioritetsordning
+Renderingsflode efter andring:
 
-1. **Fan + Cover** -- vanligaste saknade typerna
-2. **Weather fran HA** -- direkt nytta for vader-widgeten
-3. **Binary sensor fix** -- korrekta rorelse/dorrvardem
-4. **Scene/Script/Automation** -- bekvamlighet
-5. **Energikoppling** -- avancerat men vardefullt
+```text
+MediaScreenMarker
+  +-- pointLight (ref-styrd, pulserande i useFrame)
+  +-- Screen plane (morkare emissive)
+  +-- Bezel (alltid -- ser ut som TV-ram)
+  +-- [buildMode] Ambient glow plane
+  +-- [buildMode] Corner markers
+  +-- [selected] Selection glow frame
+```
 
