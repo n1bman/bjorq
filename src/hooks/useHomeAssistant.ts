@@ -2,11 +2,18 @@ import { useEffect, useRef, useCallback } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import type { HAEntity } from '@/store/types';
 
+import { isSuppressed } from './useHABridge';
+
 let msgId = 10; // start above reserved IDs
 
 function nextId() {
   return ++msgId;
 }
+
+/** Global ref so useHABridge can call services without being in the same component */
+export const haServiceCaller: { current: ((domain: string, service: string, data: Record<string, unknown>) => void) | null } = {
+  current: null,
+};
 
 /**
  * Hook that manages a real WebSocket connection to Home Assistant.
@@ -107,10 +114,15 @@ export function useHomeAssistant() {
             break;
 
           case 'event':
-            if (msg.event?.event_type === 'state_changed') {
+          if (msg.event?.event_type === 'state_changed') {
               const newState = msg.event.data?.new_state;
               if (newState) {
                 const entityId = newState.entity_id;
+                // Skip if we just sent a command for this entity (prevent feedback loop)
+                if (isSuppressed(entityId)) {
+                  console.log('[HA] Suppressing echo for', entityId);
+                  break;
+                }
                 updateHALiveState(entityId, newState.state, newState.attributes || {});
 
                 // Update entity in list
@@ -175,6 +187,7 @@ export function useHomeAssistant() {
       console.warn('[HA] Cannot call service: not connected');
       return;
     }
+    console.log('[HA] Calling service:', domain, service, serviceData);
     ws.send(JSON.stringify({
       type: 'call_service',
       domain,
@@ -183,6 +196,12 @@ export function useHomeAssistant() {
       id: nextId(),
     }));
   }, []);
+
+  // Expose callService globally for the bridge
+  useEffect(() => {
+    haServiceCaller.current = callService;
+    return () => { haServiceCaller.current = null; };
+  }, [callService]);
 
   return { connect, disconnect, callService };
 }

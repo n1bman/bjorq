@@ -91,9 +91,25 @@ export const useAppStore = create<AppState>()(
         const { [id]: _, ...rest } = s.devices.deviceStates;
         return { devices: { markers: s.devices.markers.filter((m) => m.id !== id), deviceStates: rest } };
       }),
-      updateDevice: (id, changes) => set((s) => ({
-        devices: { ...s.devices, markers: s.devices.markers.map((m) => m.id === id ? { ...m, ...changes } : m) },
-      })),
+      updateDevice: (id, changes) => set((s) => {
+        const newMarkers = s.devices.markers.map((m) => m.id === id ? { ...m, ...changes } : m);
+        let newDeviceStates = s.devices.deviceStates;
+
+        // If ha.entityId was just set, sync initial state from liveStates
+        if (changes.ha?.entityId) {
+          const entityId = changes.ha.entityId;
+          const live = s.homeAssistant.liveStates[entityId];
+          if (live) {
+            const domain = entityId.split('.')[0];
+            const mapped = mapHAEntityToDeviceState(domain, live.state, live.attributes);
+            if (mapped) {
+              newDeviceStates = { ...newDeviceStates, [id]: mapped };
+            }
+          }
+        }
+
+        return { devices: { ...s.devices, markers: newMarkers, deviceStates: newDeviceStates } };
+      }),
       toggleDeviceState: (id) => set((s) => {
         const current = s.devices.deviceStates[id];
         if (!current) return s;
