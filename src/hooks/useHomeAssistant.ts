@@ -36,11 +36,22 @@ export function useHomeAssistant() {
     wsRef.current?.close();
     clearTimeout(reconnectTimer.current);
 
-    setHAConnection(url, token);
+    // Auto-fix URL format
+    let finalUrl = url.trim();
+    if (finalUrl.startsWith('https://')) finalUrl = finalUrl.replace('https://', 'wss://');
+    if (finalUrl.startsWith('http://')) finalUrl = finalUrl.replace('http://', 'ws://');
+    // Remove trailing slash before check
+    if (finalUrl.endsWith('/')) finalUrl = finalUrl.slice(0, -1);
+    if (!finalUrl.endsWith('/api/websocket')) {
+      finalUrl = `${finalUrl}/api/websocket`;
+    }
+
+    console.log('[HA] Connecting to:', finalUrl);
+    setHAConnection(finalUrl, token);
     setHAStatus('connecting');
 
     try {
-      const ws = new WebSocket(url);
+      const ws = new WebSocket(finalUrl);
       wsRef.current = ws;
 
       ws.onopen = () => {
