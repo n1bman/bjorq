@@ -20,6 +20,7 @@ export default function WeatherWidget() {
   const temperature = useAppStore((s) => s.environment.weather.temperature);
   const windSpeed = useAppStore((s) => s.environment.weather.windSpeed);
   const humidity = useAppStore((s) => s.environment.weather.humidity);
+  const forecast = useAppStore((s) => s.environment.forecast);
 
   return (
     <div className="glass-panel rounded-2xl p-4 min-w-[160px]">
@@ -43,6 +44,31 @@ export default function WeatherWidget() {
           <span className="text-[10px] text-muted-foreground">{humidity ?? 62}%</span>
         </div>
       </div>
+
+      {/* 7-day forecast */}
+      {forecast && forecast.length > 0 && (
+        <div className="mt-3 pt-3 border-t border-border/30">
+          <div className="flex gap-1 overflow-x-auto pb-1">
+            {forecast.map((day, i) => (
+              <div
+                key={i}
+                className={`flex flex-col items-center gap-0.5 min-w-[40px] px-1.5 py-1 rounded-lg ${
+                  i === 0 ? 'bg-primary/10' : ''
+                }`}
+              >
+                <span className="text-[9px] font-medium text-muted-foreground">
+                  {i === 0 ? 'Idag' : day.day}
+                </span>
+                <span className="text-sm">{weatherIcons[day.condition] ?? '☁️'}</span>
+                <div className="flex items-center gap-0.5">
+                  <span className="text-[9px] font-semibold text-foreground">{day.maxTemp}°</span>
+                  <span className="text-[9px] text-muted-foreground">{day.minTemp}°</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
