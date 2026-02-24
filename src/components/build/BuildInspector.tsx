@@ -6,6 +6,7 @@ import { Switch } from '@/components/ui/switch';
 import { presetMaterials } from '@/lib/materials';
 import { useState } from 'react';
 import type { DeviceKind, DeviceSurface, ScreenConfig } from '@/store/types';
+import HAEntityPicker from './devices/HAEntityPicker';
 
 const generateId = () => Math.random().toString(36).slice(2, 10);
 
@@ -621,15 +622,13 @@ function DeviceInspector({ deviceId, close }: { deviceId: string; close: React.R
         />
       </div>
 
-      <div className="space-y-2">
-        <label className="text-muted-foreground text-[10px]">HA Entity ID</label>
-        <Input
-          value={device.ha?.entityId ?? ''}
-          onChange={(e) => updateDevice(device.id, { ha: { entityId: e.target.value } })}
-          placeholder={isScreen ? 'media_player.tv_vardagsrum' : 'light.taklampa_kok'}
-          className="h-8 text-xs bg-secondary/30"
-        />
-      </div>
+      <HAEntityPicker
+        deviceId={device.id}
+        kind={device.kind}
+        currentEntityId={device.ha?.entityId}
+        onSelect={(entityId) => updateDevice(device.id, { ha: { entityId } })}
+        onClear={() => updateDevice(device.id, { ha: undefined })}
+      />
 
       {/* Position sliders */}
       <div className="space-y-1.5">

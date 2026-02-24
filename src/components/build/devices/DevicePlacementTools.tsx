@@ -1,7 +1,9 @@
 import { useAppStore } from '@/store/useAppStore';
-import type { DeviceKind, BuildTool } from '@/store/types';
-import { Lightbulb, ToggleLeft, Activity, Thermometer, Trash2, Camera, Bot, CookingPot, WashingMachine, DoorOpen, Lock, Plug, Refrigerator, Monitor } from 'lucide-react';
+import type { DeviceKind, BuildTool, DeviceMarker } from '@/store/types';
+import { Lightbulb, ToggleLeft, Activity, Thermometer, Trash2, Camera, Bot, CookingPot, WashingMachine, DoorOpen, Lock, Plug, Refrigerator, Monitor, ChevronDown, ChevronRight, Link2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useMemo, useState } from 'react';
+import { domainToKind } from '@/lib/haDomainMapping';
 
 const deviceTools: { key: BuildTool; kind: DeviceKind; label: string; icon: typeof Lightbulb; color: string }[] = [
   { key: 'place-light', kind: 'light', label: 'Ljus', icon: Lightbulb, color: 'text-yellow-400' },
@@ -95,6 +97,121 @@ export default function DevicePlacementTools() {
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      <UnlinkedHAEntities />
+    </div>
+  );
+}
+
+const generateId = () => Math.random().toString(36).slice(2, 10);
+
+function UnlinkedHAEntities() {
+  const [expanded, setExpanded] = useState(false);
+  const status = useAppStore((s) => s.homeAssistant.status);
+  const entities = useAppStore((s) => s.homeAssistant.entities);
+  const markers = useAppStore((s) => s.devices.markers);
+  const addDevice = useAppStore((s) => s.addDevice);
+  const activeFloorId = useAppStore((s) => s.layout.activeFloorId);
+  const setBuildTool = useAppStore((s) => s.setBuildTool);
+
+  const linkedEntityIds = useMemo(
+    () => new Set(markers.filter((m) => m.ha?.entityId).map((m) => m.ha!.entityId)),
+    [markers]
+  );
+
+  const unlinked = useMemo(
+    () => entities.filter((e) => !linkedEntityIds.has(e.entityId)),
+    [entities, linkedEntityIds]
+  );
+
+  // Group by domain
+  const grouped = useMemo(() => {
+    const map = new Map<string, typeof unlinked>();
+    for (const e of unlinked) {
+      const list = map.get(e.domain) || [];
+      list.push(e);
+      map.set(e.domain, list);
+    }
+    return map;
+  }, [unlinked]);
+
+  if (status !== 'connected' || entities.length === 0) return null;
+
+  const handlePlace = (entity: typeof entities[0]) => {
+    const kind = domainToKind(entity.domain);
+    if (!kind || !activeFloorId) return;
+    const marker: DeviceMarker = {
+      id: generateId(),
+      kind,
+      name: entity.friendlyName,
+      floorId: activeFloorId,
+      surface: 'floor',
+      position: [0, 0, 0],
+      rotation: [0, 0, 0],
+      ha: { entityId: entity.entityId },
+    };
+    addDevice(marker);
+    // Switch to the matching placement tool so user can reposition
+    const toolMap: Partial<Record<DeviceKind, BuildTool>> = {
+      light: 'place-light',
+      switch: 'place-switch',
+      sensor: 'place-sensor',
+      climate: 'place-climate',
+      camera: 'place-camera',
+      vacuum: 'place-vacuum',
+      'door-lock': 'place-door-lock',
+      media_screen: 'place-media-screen',
+    };
+    if (toolMap[kind]) setBuildTool('select');
+  };
+
+  return (
+    <div className="border-t border-border mt-2 pt-2 px-2">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="flex items-center gap-1 text-[10px] text-muted-foreground uppercase tracking-wider w-full hover:text-foreground transition-colors"
+      >
+        {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+        <Link2 size={10} />
+        <span className="hidden lg:inline">HA-entiteter</span>
+        <span className="ml-auto text-[9px]">
+          {linkedEntityIds.size}/{entities.length}
+        </span>
+      </button>
+
+      {expanded && (
+        <div className="mt-1.5 flex flex-col gap-1 max-h-[35vh] overflow-y-auto">
+          {unlinked.length === 0 ? (
+            <p className="text-[9px] text-muted-foreground py-2 text-center">Alla entiteter är kopplade ✓</p>
+          ) : (
+            Array.from(grouped.entries()).map(([domain, items]) => (
+              <div key={domain}>
+                <p className="text-[9px] font-semibold text-muted-foreground mt-1 mb-0.5">{domain}</p>
+                {items.map((entity) => {
+                  const kind = domainToKind(entity.domain);
+                  return (
+                    <button
+                      key={entity.entityId}
+                      onClick={() => handlePlace(entity)}
+                      disabled={!kind}
+                      title={kind ? `Placera som ${kind}` : 'Kan ej mappas till enhetstyp'}
+                      className={cn(
+                        'w-full flex items-start gap-1.5 px-1.5 py-1 rounded text-[10px] text-left transition-colors',
+                        kind
+                          ? 'text-muted-foreground hover:text-foreground hover:bg-secondary/30 cursor-pointer'
+                          : 'text-muted-foreground/40 cursor-not-allowed'
+                      )}
+                    >
+                      <span className="truncate flex-1">{entity.friendlyName}</span>
+                      <span className="text-[8px] text-muted-foreground/60 shrink-0">{entity.state}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            ))
+          )}
         </div>
       )}
     </div>
