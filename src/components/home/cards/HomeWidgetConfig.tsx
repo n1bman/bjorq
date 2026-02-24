@@ -14,7 +14,7 @@ export default function HomeWidgetConfig() {
   const visibleWidgets = useAppStore((s) => s.homeView.visibleWidgets);
   const toggleHomeWidget = useAppStore((s) => s.toggleHomeWidget);
   const markers = useAppStore((s) => s.devices.markers);
-  const homeScreenDevices = useAppStore((s) => s.homeView.homeScreenDevices);
+  const homeScreenDevices = useAppStore((s) => s.homeView.homeScreenDevices ?? []);
   const toggleHomeScreenDevice = useAppStore((s) => s.toggleHomeScreenDevice);
 
   return (
