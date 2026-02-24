@@ -4,6 +4,7 @@ import { Lightbulb, ToggleLeft, Activity, Thermometer, Trash2, Camera, Bot, Cook
 import { cn } from '@/lib/utils';
 import { useMemo, useState } from 'react';
 import { domainToKind } from '@/lib/haDomainMapping';
+import VacuumMappingTools from './VacuumMappingTools';
 
 const deviceTools: { key: BuildTool; kind: DeviceKind; label: string; icon: typeof Lightbulb; color: string }[] = [
   { key: 'place-light', kind: 'light', label: 'Ljus', icon: Lightbulb, color: 'text-yellow-400' },
@@ -106,6 +107,7 @@ export default function DevicePlacementTools() {
         </div>
       )}
 
+      <VacuumMappingTools />
       <UnlinkedHAEntities />
     </div>
   );

@@ -1,9 +1,10 @@
-import { useRef, useCallback, useMemo, useEffect } from 'react';
+import { useRef, useCallback, useMemo, useEffect, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { useAppStore } from '@/store/useAppStore';
-import type { DeviceKind, DeviceMarker } from '@/store/types';
+import type { DeviceKind, DeviceMarker, VacuumZone } from '@/store/types';
 import * as THREE from 'three';
 import type { ThreeEvent } from '@react-three/fiber';
+import { randomPointInPolygon } from '@/lib/vacuumGeometry';
 
 interface MarkerProps {
   position: [number, number, number];
@@ -461,9 +462,20 @@ function VacuumMarker3D({ position, id, onSelect, onDragStart, selected }: Marke
   const vacData = state?.kind === 'vacuum' ? state.data : null;
   const status = vacData?.status ?? 'docked';
   const battery = vacData?.battery ?? 100;
+  const currentRoom = vacData?.currentRoom;
+  const marker = useAppStore((s) => s.devices.markers.find((m) => m.id === id));
+  const floorId = marker?.floorId;
+  const floor = useAppStore((s) => s.layout.floors.find((f) => f.id === floorId));
+  const mapping = floor?.vacuumMapping;
+  const rooms = floor?.rooms ?? [];
+
   const meshRef = useRef<THREE.Group>(null);
   const ledRef = useRef<THREE.Mesh>(null);
   const batteryRingRef = useRef<THREE.Mesh>(null);
+  const currentTarget = useRef<[number, number] | null>(null);
+  const smoothRotation = useRef(0);
+  const prevRoom = useRef<string | undefined>(undefined);
+  const transitionProgress = useRef(1); // 1 = done transitioning
 
   const statusColor = useMemo(() => {
     switch (status) {
@@ -482,27 +494,93 @@ function VacuumMarker3D({ position, id, onSelect, onDragStart, selected }: Marke
     return new THREE.Color('#ef4444');
   }, [battery]);
 
-  useFrame(({ clock }) => {
+  // Find the active zone for the current room
+  const activeZone = useMemo((): VacuumZone | null => {
+    if (!currentRoom || !mapping?.zones) return null;
+    // Match by room name (case-insensitive)
+    const zone = mapping.zones.find((z) => {
+      const room = rooms.find((r) => r.id === z.roomId);
+      return room?.name.toLowerCase() === currentRoom.toLowerCase() || z.roomId === currentRoom;
+    });
+    return zone ?? null;
+  }, [currentRoom, mapping?.zones, rooms]);
+
+  // Detect room change
+  useEffect(() => {
+    if (currentRoom !== prevRoom.current) {
+      prevRoom.current = currentRoom;
+      transitionProgress.current = 0;
+      currentTarget.current = null; // Force new target in new zone
+    }
+  }, [currentRoom]);
+
+  useFrame((_, delta) => {
     if (!meshRef.current) return;
-    const t = clock.elapsedTime;
+    const speed = 0.2; // m/s
 
-    // Rotation when cleaning
-    if (status === 'cleaning') {
-      meshRef.current.rotation.y += 0.005;
-    }
-
-    // LED pulsing
-    if (ledRef.current) {
-      const mat = ledRef.current.material as THREE.MeshStandardMaterial;
-      const pulse = status === 'cleaning' ? 0.5 + Math.sin(t * 3) * 0.5 : (status === 'docked' ? 0.3 : 0.7);
-      mat.emissiveIntensity = pulse;
-    }
-
-    // Position interpolation
+    // If Valetudo XY is available, use it directly (future upgrade path)
     if (vacData?.position) {
       const [tx, tz] = vacData.position;
       meshRef.current.position.x = THREE.MathUtils.lerp(meshRef.current.position.x, tx, 0.05);
       meshRef.current.position.z = THREE.MathUtils.lerp(meshRef.current.position.z, tz, 0.05);
+    } else if (status === 'cleaning' && activeZone && activeZone.polygon.length >= 3) {
+      // Room-based wandering
+      if (!currentTarget.current) {
+        currentTarget.current = randomPointInPolygon(activeZone.polygon);
+      }
+
+      const cx = meshRef.current.position.x;
+      const cz = meshRef.current.position.z;
+      const [tx, tz] = currentTarget.current;
+      const dx = tx - cx;
+      const dz = tz - cz;
+      const dist = Math.sqrt(dx * dx + dz * dz);
+
+      if (dist < 0.1) {
+        // Pick new target
+        currentTarget.current = randomPointInPolygon(activeZone.polygon);
+      } else {
+        // Move toward target
+        const step = Math.min(speed * delta, dist);
+        meshRef.current.position.x += (dx / dist) * step;
+        meshRef.current.position.z += (dz / dist) * step;
+
+        // Smooth rotation toward movement direction
+        const targetAngle = Math.atan2(dx, dz);
+        smoothRotation.current = THREE.MathUtils.lerp(smoothRotation.current, targetAngle, delta * 3);
+        meshRef.current.rotation.y = smoothRotation.current;
+      }
+
+      // Room transition smoothing
+      if (transitionProgress.current < 1) {
+        transitionProgress.current = Math.min(1, transitionProgress.current + delta * 0.5);
+      }
+    } else if ((status === 'returning' || status === 'docked') && mapping?.dockPosition) {
+      const [dx2, dz2] = mapping.dockPosition;
+      const cx = meshRef.current.position.x;
+      const cz = meshRef.current.position.z;
+      const ddx = dx2 - cx;
+      const ddz = dz2 - cz;
+      const dist = Math.sqrt(ddx * ddx + ddz * ddz);
+      if (dist > 0.05) {
+        const step = Math.min(speed * delta, dist);
+        meshRef.current.position.x += (ddx / dist) * step;
+        meshRef.current.position.z += (ddz / dist) * step;
+        const targetAngle = Math.atan2(ddx, ddz);
+        smoothRotation.current = THREE.MathUtils.lerp(smoothRotation.current, targetAngle, delta * 3);
+        meshRef.current.rotation.y = smoothRotation.current;
+      }
+    }
+    // paused: stay in place
+
+    // LED pulsing
+    if (ledRef.current) {
+      const mat = ledRef.current.material as THREE.MeshStandardMaterial;
+      const t = performance.now() / 1000;
+      const pulse = status === 'cleaning' ? 0.5 + Math.sin(t * 3) * 0.5
+        : status === 'paused' ? 0.3 + Math.sin(t * 1.5) * 0.2
+        : status === 'docked' ? 0.3 : 0.7;
+      mat.emissiveIntensity = pulse;
     }
   });
 

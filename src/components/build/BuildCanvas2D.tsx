@@ -90,6 +90,8 @@ export default function BuildCanvas2D() {
   const [roomDrawEnd, setRoomDrawEnd] = useState<[number, number] | null>(null);
 
   const activeTool = useAppStore((s) => s.build.activeTool);
+  const vacuumZoneDrawing = useRef<[number, number][]>([]);
+  const [vacZoneNodes, setVacZoneNodes] = useState<[number, number][]>([]);
   const grid = useAppStore((s) => s.build.grid);
   const wallDrawing = useAppStore((s) => s.build.wallDrawing);
   const selection = useAppStore((s) => s.build.selection);
@@ -101,6 +103,8 @@ export default function BuildCanvas2D() {
   const addDevice = useAppStore((s) => s.addDevice);
   const updateDevice = useAppStore((s) => s.updateDevice);
   const homeGeometry = useAppStore((s) => s.homeGeometry);
+  const setVacuumDock = useAppStore((s) => s.setVacuumDock);
+  const addVacuumZone = useAppStore((s) => s.addVacuumZone);
 
   const setWallDrawing = useAppStore((s) => s.setWallDrawing);
   const addWall = useAppStore((s) => s.addWall);
@@ -524,6 +528,54 @@ export default function BuildCanvas2D() {
       ctx.fillText('Importerad modell', (ix1 + ix2) / 2, (iy1 + iy2) / 2);
     }
 
+    // ─── Draw vacuum mapping ───
+    if (floor?.vacuumMapping) {
+      const vm = floor.vacuumMapping;
+      // Draw zones
+      for (const zone of vm.zones) {
+        if (zone.polygon.length < 3) continue;
+        ctx.beginPath();
+        const [zx0, zy0] = worldToScreen(zone.polygon[0][0], zone.polygon[0][1]);
+        ctx.moveTo(zx0, zy0);
+        for (let i = 1; i < zone.polygon.length; i++) {
+          const [zpx, zpy] = worldToScreen(zone.polygon[i][0], zone.polygon[i][1]);
+          ctx.lineTo(zpx, zpy);
+        }
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(74, 158, 255, 0.12)';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(74, 158, 255, 0.5)';
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([4, 3]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Zone label
+        const cx2 = zone.polygon.reduce((a, p) => a + p[0], 0) / zone.polygon.length;
+        const cz2 = zone.polygon.reduce((a, p) => a + p[1], 0) / zone.polygon.length;
+        const [tx2, ty2] = worldToScreen(cx2, cz2);
+        ctx.fillStyle = 'rgba(74, 158, 255, 0.6)';
+        ctx.font = '9px DM Sans, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(`🤖 ${zone.roomId}`, tx2, ty2);
+      }
+
+      // Draw dock
+      if (vm.dockPosition) {
+        const [dx, dy] = worldToScreen(vm.dockPosition[0], vm.dockPosition[1]);
+        ctx.fillStyle = '#22c55e';
+        ctx.beginPath();
+        ctx.arc(dx, dy, 8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.font = '10px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('⌂', dx, dy);
+      }
+    }
+
     // ─── Draw device markers ───
     const floorDevices = deviceMarkers.filter((m) => m.floorId === activeFloorId);
     const deviceColors: Record<string, string> = {
@@ -656,11 +708,39 @@ export default function BuildCanvas2D() {
       }
     }
 
+    // ─── Vacuum zone drawing preview ───
+    if (vacZoneNodes.length > 0) {
+      ctx.strokeStyle = 'rgba(74, 158, 255, 0.8)';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([6, 3]);
+      ctx.beginPath();
+      const [vx0, vy0] = worldToScreen(vacZoneNodes[0][0], vacZoneNodes[0][1]);
+      ctx.moveTo(vx0, vy0);
+      for (let i = 1; i < vacZoneNodes.length; i++) {
+        const [vx, vy] = worldToScreen(vacZoneNodes[i][0], vacZoneNodes[i][1]);
+        ctx.lineTo(vx, vy);
+      }
+      if (cursorWorld && activeTool === 'vacuum-zone') {
+        const snapped = snapToGrid(cursorWorld[0], cursorWorld[1]);
+        const [cx, cy] = worldToScreen(snapped[0], snapped[1]);
+        ctx.lineTo(cx, cy);
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
+      for (const node of vacZoneNodes) {
+        const [nx, ny] = worldToScreen(node[0], node[1]);
+        ctx.fillStyle = '#4a9eff';
+        ctx.beginPath();
+        ctx.arc(nx, ny, 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
     // Cursor crosshair
-    if (cursorWorld && (activeTool === 'wall' || activeTool === 'room' || activeTool === 'stairs' || activeTool === 'measure')) {
+    if (cursorWorld && (activeTool === 'wall' || activeTool === 'room' || activeTool === 'stairs' || activeTool === 'measure' || activeTool === 'vacuum-zone' || activeTool === 'place-vacuum-dock')) {
       const snapped = snapToGrid(cursorWorld[0], cursorWorld[1]);
       const [cx, cy] = worldToScreen(snapped[0], snapped[1]);
-      ctx.strokeStyle = activeTool === 'measure' ? COLORS.measure : COLORS.cursor;
+      ctx.strokeStyle = activeTool === 'measure' ? COLORS.measure : (activeTool === 'vacuum-zone' || activeTool === 'place-vacuum-dock' ? '#4a9eff' : COLORS.cursor);
       ctx.lineWidth = 1;
       ctx.setLineDash([4, 4]);
       ctx.beginPath();
@@ -748,6 +828,23 @@ export default function BuildCanvas2D() {
         } else {
           setMeasureEnd(snapped);
         }
+        return;
+      }
+
+      // ─── Vacuum dock placement ───
+      if (activeTool === 'place-vacuum-dock' && activeFloorId) {
+        const [wx, wz] = screenToWorld(sx, sy);
+        const snapped = snapToGrid(wx, wz);
+        setVacuumDock(activeFloorId, snapped);
+        useAppStore.getState().setBuildTool('select');
+        return;
+      }
+
+      // ─── Vacuum zone drawing ───
+      if (activeTool === 'vacuum-zone' && activeFloorId) {
+        const [wx, wz] = screenToWorld(sx, sy);
+        const snapped = snapToGrid(wx, wz);
+        setVacZoneNodes((prev) => [...prev, snapped]);
         return;
       }
 
@@ -1070,6 +1167,27 @@ export default function BuildCanvas2D() {
 
   const handleDoubleClick = useCallback(
     (e: React.MouseEvent) => {
+      // Finish vacuum zone drawing
+      if (activeTool === 'vacuum-zone' && vacZoneNodes.length >= 3 && activeFloorId) {
+        // Find which room this polygon is in (use centroid)
+        const cx = vacZoneNodes.reduce((a, p) => a + p[0], 0) / vacZoneNodes.length;
+        const cz = vacZoneNodes.reduce((a, p) => a + p[1], 0) / vacZoneNodes.length;
+        const room = rooms.find((r) => {
+          if (!r.polygon || r.polygon.length < 3) return false;
+          let inside = false;
+          for (let i = 0, j = r.polygon.length - 1; i < r.polygon.length; j = i++) {
+            const xi = r.polygon[i][0], yi = r.polygon[i][1];
+            const xj = r.polygon[j][0], yj = r.polygon[j][1];
+            if ((yi > cz) !== (yj > cz) && cx < ((xj - xi) * (cz - yi)) / (yj - yi) + xi) inside = !inside;
+          }
+          return inside;
+        });
+        const roomId = room?.name ?? `Zon ${Date.now()}`;
+        addVacuumZone(activeFloorId, { roomId, polygon: [...vacZoneNodes] });
+        setVacZoneNodes([]);
+        return;
+      }
+
       // Finish wall drawing
       if (activeTool === 'wall' && wallDrawing.isDrawing && activeFloorId) {
         pushUndo();
@@ -1106,7 +1224,7 @@ export default function BuildCanvas2D() {
         }
       }
     },
-    [activeTool, wallDrawing, activeFloorId, floor, pushUndo, addWall, setWallDrawing, findWallAt, screenToWorld, snapToGrid, splitWall, setSelection]
+    [activeTool, wallDrawing, activeFloorId, floor, pushUndo, addWall, setWallDrawing, findWallAt, screenToWorld, snapToGrid, splitWall, setSelection, vacZoneNodes, rooms, addVacuumZone]
   );
 
   const handleWheel = useCallback(
@@ -1125,6 +1243,7 @@ export default function BuildCanvas2D() {
     if (activeTool === 'erase') return 'not-allowed';
     if (activeTool === 'measure') return 'crosshair';
     if (activeTool === 'stairs') return 'copy';
+    if (activeTool === 'vacuum-zone' || activeTool === 'place-vacuum-dock') return 'crosshair';
     return 'default';
   };
 
@@ -1176,6 +1295,15 @@ export default function BuildCanvas2D() {
         )}
         {activeTool === 'stairs' && (
           <span className="text-primary font-medium">Klicka för att placera trappa</span>
+        )}
+        {activeTool === 'place-vacuum-dock' && (
+          <span className="text-primary font-medium">Klicka för att placera docka</span>
+        )}
+        {activeTool === 'vacuum-zone' && vacZoneNodes.length === 0 && (
+          <span className="text-primary font-medium">Klicka för att börja rita robotzon</span>
+        )}
+        {activeTool === 'vacuum-zone' && vacZoneNodes.length > 0 && (
+          <span className="text-primary font-medium">Dubbelklicka för att stänga zon ({vacZoneNodes.length} pkt)</span>
         )}
         {showGhost && (
           <span className="text-muted-foreground/60">Visar andra våningars väggar som skuggor</span>

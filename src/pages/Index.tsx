@@ -4,12 +4,13 @@ import DashboardView from '@/components/home/DashboardView';
 import ModeHeader from '@/components/ModeHeader';
 import { useAppStore } from '@/store/useAppStore';
 import { useHomeAssistant } from '@/hooks/useHomeAssistant';
-import { useHABridge } from '@/hooks/useHABridge';
+import { useHABridge, useVacuumRoomSync } from '@/hooks/useHABridge';
 
 const Index = () => {
   const appMode = useAppStore((s) => s.appMode);
   useHomeAssistant();
   useHABridge();
+  useVacuumRoomSync();
 
   if (appMode === 'home') {
     return <HomeView />;
