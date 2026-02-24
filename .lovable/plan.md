@@ -1,61 +1,113 @@
 
+# Robotdammsugare: Live 3D-modell, dashboard-flik och zonmappning
 
-# TV-skarm: Frontljus, tid, centrerad text och mediakontroller i widget
+## Oversikt
 
-## 1. Frontljus istallet for bakomliggande puls
+En dedikerad robotdammsugare-upplevelse med en animerad 3D-modell i scenen, en ny kontrollpanelsflik, utokad HA-synkronisering, och mojlighet att definiera stadzoner i bygglageet.
 
-Det pulserande ljuset ska inte lysa bakom skarmen utan istallet simulera ett svagt sken fran skarmytan framat. Andring:
+---
 
-- Flytta `pointLight` fran `position={[0, 0, 0.4]}` till `position={[0, 0, 0.8]}` och rikta det framat
-- Byt till en `spotLight` med `ref` som riktas framat (mot kameran), med begransad vinkel sa ljuset "sprider sig" fran skarmytan
-- Alternativt: lagg till ett transparent `meshBasicMaterial`-plan precis framfor skarmen som pulserar i opacity (0.02-0.06) for att simulera ett mjukt sken over skarmytan -- enklare och snyggare
-- Pulsfrekvensen behalles (`sin(Date.now() * 0.002)`)
+## 1. Utokad VacuumState (types.ts)
 
-## 2. Visa tid pa skarmen (forlopp)
+Lagga till fler attribut fran HA for att stodja Roborock S5 Max fullt ut:
 
-I `drawScreenCanvas`, nar media spelas och `media_position`/`media_duration` finns:
+| Nytt falt | Typ | Beskrivning |
+|-----------|-----|-------------|
+| `fanSpeed` | `number` | Sugeffekt 0-100% |
+| `fanSpeedList` | `string[]` | Tillgangliga lagesnamn (Silent, Standard, etc.) |
+| `cleaningArea` | `number` | Stadad yta i m2 |
+| `cleaningTime` | `number` | Stadtid i minuter |
+| `position` | `[number, number]` | Vakuumens x,z-koordinat i meter (mappat fran HA:s pixelkoordinater) |
+| `dockPosition` | `[number, number]` | Dockningsstationens position |
+| `errorMessage` | `string` | Felmeddelande |
 
-- Formatera `position` och `duration` som `MM:SS` eller `H:MM:SS`
-- Rita tidstexten bredvid progressbaren: `"12:34 / 45:00"`
-- Placera den centrerat under progressbaren
+## 2. Animerad 3D-modell (DeviceMarkers3D.tsx)
 
-## 3. Centrera "Spelar..."-texten och all medieinfo
+Byt ut den generiska lila kuben mot en dedikerad `VacuumMarker`:
 
-Just nu ar titeln vansterjusterad (`textAlign = 'left'`, x=30). Andra till:
+- **Form**: En platt cylindrisk kropp (som en riktig robotdammsugare) med en liten LED-ring pa toppen
+- **Geometri**: `cylinderGeometry` (radie ~0.17m, hojd ~0.05m) med rundade kanter
+- **Fargkodning**: Vit kropp med statusfargad LED-ring -- gron (dockad), bla (stadar), orange (atervander), rod (fel)
+- **Animation med useFrame**:
+  - Nar status ar `cleaning`: roboten roterar sakta och ringlens ljus pulserar
+  - Nar status ar `returning`: roboten "glider" tillbaka mot dockningspositionen (om `position`-data finns)
+  - Nar status ar `docked`: statisk, dampat ljus
+- **Positionssynk**: Om `position` finns i state, interpolerar roboten mjukt (lerp) till den positionen varje frame
+- **Batteri-indikator**: En tunn progress-ring runt basen som visar batteriniva (gron > 50%, gul 20-50%, rod < 20%)
 
-- `textAlign = 'center'` for titel, artist och status
-- x-koordinat andras till `w / 2`
-- Badge (app-logotyp) centreras ocksa hogre upp
-- Play/pause-ikonen ar redan centrerad -- behalls
+## 3. Ny dashboard-flik: "Robot" (DashboardGrid.tsx)
 
-## 4. Mediakontroller i hemskarmens widget
+Lagg till en ny flik `'robot'` i kontrollpanelens navigation, placerad efter "Overvakning":
 
-Nar en `media_screen`-widget visas pa hemskarten och enheten spelar, ska widgeten expanderas med kontrollknappar istallet for att bara vara en toggle:
+```text
+Hem | Vader | Kalender | Enheter | Energi | Overvakning | Robot | Aktivitet | Profil | Widgets
+```
 
-### I `HomeView.tsx`:
-- For `media_screen`-enheter som ar "on": visa en utokad widget med kontrollknappar istallet for enkel toggle
-- Klick pa widgeten ska INTE toggle:a av/pa utan istallet visa kontroller
+### RobotPanel-komponent (ny fil: `src/components/home/cards/RobotPanel.tsx`)
 
-### I `DeviceControlCard.tsx` (compact media):
-- Lagg till en ny `CompactMediaControl`-komponent som visas i compact-laget for media_screen
-- Knappar: **Bakåt** (SkipBack), **Play/Pause**, **Framåt** (SkipForward), **Stopp** (Square)
-- Dessa anropar `updateDeviceState` med ratt state-andringar
+Innehall:
 
-### I `useHABridge.ts`:
-- Lagg till stod for `media_next_track` och `media_previous_track` kommandon
-- Ny logik: om `data._action === 'next'` -> `media_player.media_next_track`, liknande for `'previous'`
-- Alternativt: exponera `callService` direkt via store/hook sa widgeten kan anropa HA-tjanster utan att ga via deviceState
+- **Status-sektion**: Stor statusikon + text (Stadar / Dockad / Atervander / Fel)
+- **Batteri**: Visuell batteriindikator med procent
+- **Kontrollknappar**: Starta, Stoppa, Hem (atergang till docka), Lokalisera (piper)
+- **Sugeffekt**: Slider eller knappar for fanSpeed-nivåer (Silent / Standard / Turbo / Max)
+- **Statistik**: Stadad yta (m2) och stadtid sedan senaste start
+- **Karta**: Placeholder for framtida kartintegration (Valetudo-karta)
+- **Senaste fel**: Visa felmeddelande om status ar "error"
 
-### Nytt i `MediaState` (types.ts):
-- Lagg till optional `_action?: 'next' | 'previous'` som bridge:n reagerar pa och sedan rensar
+## 4. Utokad HA-mappning (haMapping.ts)
+
+Utoka vacuum-case:n for att hamta fler attribut:
+
+- `fan_speed` -> `fanSpeed` (numeriskt, mappat fran procent eller namngivna lagen)
+- `fan_speed_list` -> `fanSpeedList`
+- `cleaned_area` -> `cleaningArea` (m2, ev. konvertering)
+- `cleaning_time` -> `cleaningTime` (minuter)
+- `error` -> `errorMessage`
+- `status` -> finare mappning med fler tilstand
+
+## 5. Utokad HA-bridge (useHABridge.ts)
+
+Lagg till stod for:
+
+- `vacuum.set_fan_speed` -- nar fanSpeed andras
+- `vacuum.locate` -- skicka "pip"-kommando for att hitta roboten
+- `vacuum.clean_spot` -- punktstadning (framtida)
+
+Ny `_action`-logik for vacuum:
+
+```text
+_action: 'locate' -> vacuum.locate
+_action: 'spot_clean' -> vacuum.clean_spot
+fanSpeed andras -> vacuum.set_fan_speed med fan_speed_list-mappning
+```
+
+## 6. Utokad VacuumControl (DeviceControlCard.tsx)
+
+Forbattra den befintliga `VacuumControl`:
+
+- Lagg till sugeffekt-valjare (slider eller knappar baserat pa `fanSpeedList`)
+- Lagg till "Lokalisera"-knapp
+- Visa stadstatistik (yta + tid)
+- Visa felmeddelande med varningsikon om status ar "error"
+
+## 7. Zonmappning i bygglageet (framtida forberedelse)
+
+I denna forsta iteration:
+- Roboten rör sig enbart inom de rum/polygoner som definieras pa dess våning
+- Position klamras automatiskt till inuti husvaggarna om `position`-data finns
+- Framtida: mojlighet att rita "no-go zones" i 2D-planvyn
+
+---
 
 ## Filandringar
 
 | Fil | Andring |
 |-----|---------|
-| `src/components/devices/DeviceMarkers3D.tsx` | 1) Flytta/andra pulserande ljus till framsida-sken. 2) Centrera all text pa canvas. 3) Lagg till tidsvisning vid progress. |
-| `src/components/home/HomeView.tsx` | Media_screen-widgets far expanderad vy med kontroller istallet for enkel toggle. |
-| `src/components/home/cards/DeviceControlCard.tsx` | Ny `CompactMediaControl` med skip/play/pause/stop-knappar i compact-laget. |
-| `src/store/types.ts` | Lagg till `_action?: 'next' \| 'previous'` i `MediaState`. |
-| `src/hooks/useHABridge.ts` | Hantera `_action` for media_player: `media_next_track`, `media_previous_track`. |
-
+| `src/store/types.ts` | Utoka `VacuumState` med nya falt |
+| `src/components/devices/DeviceMarkers3D.tsx` | Ny `VacuumMarker` med cylindergeometri, statusfarg, animation, batteriindikator |
+| `src/components/home/DashboardGrid.tsx` | Lagg till `'robot'`-flik i navigation och rendera `RobotPanel` |
+| `src/components/home/cards/RobotPanel.tsx` | **Ny fil** -- Fullstandig robotpanel med status, kontroller, sugeffekt, statistik |
+| `src/components/home/cards/DeviceControlCard.tsx` | Utoka `VacuumControl` med sugeffekt, lokalisera, statistik |
+| `src/lib/haMapping.ts` | Utoka vacuum-mappning med fan_speed, cleaned_area, cleaning_time, error |
+| `src/hooks/useHABridge.ts` | Lagg till `set_fan_speed`, `locate`, `_action`-hantering for vacuum |
