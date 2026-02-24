@@ -1,102 +1,139 @@
 
-# Robotdammsugare: Live 3D-modell, dashboard-flik och zonmappning
+
+# Robotdammsugare: Rumsbaserad rorelssimulering V1
 
 ## Oversikt
 
-En dedikerad robotdammsugare-upplevelse med en animerad 3D-modell i scenen, en ny kontrollpanelsflik, utokad HA-synkronisering, och mojlighet att definiera stadzoner i bygglageet.
+Istallet for att forlita sig pa exakta XY-koordinater fran Valetudo implementeras en rumsbaserad rorelsesimulering. Roboten "vandrar" realistiskt inuti det rum som HA-sensorn (`sensor.s5_max_nuvarande_rum`) rapporterar, med mjuka overganger mellan rum. Systemet designas sa att det enkelt kan uppgraderas till exakt XY-positionering i framtiden.
 
 ---
 
-## 1. Utokad VacuumState (types.ts)
+## 1. Nya typer (types.ts)
 
-Lagga till fler attribut fran HA for att stodja Roborock S5 Max fullt ut:
+### VacuumState -- nya falt
 
-| Nytt falt | Typ | Beskrivning |
-|-----------|-----|-------------|
-| `fanSpeed` | `number` | Sugeffekt 0-100% |
-| `fanSpeedList` | `string[]` | Tillgangliga lagesnamn (Silent, Standard, etc.) |
-| `cleaningArea` | `number` | Stadad yta i m2 |
-| `cleaningTime` | `number` | Stadtid i minuter |
-| `position` | `[number, number]` | Vakuumens x,z-koordinat i meter (mappat fran HA:s pixelkoordinater) |
-| `dockPosition` | `[number, number]` | Dockningsstationens position |
-| `errorMessage` | `string` | Felmeddelande |
+| Falt | Typ | Beskrivning |
+|------|-----|-------------|
+| `currentRoom` | `string` | Rumsnamn fran HA-sensor (t.ex. "Kok") |
 
-## 2. Animerad 3D-modell (DeviceMarkers3D.tsx)
-
-Byt ut den generiska lila kuben mot en dedikerad `VacuumMarker`:
-
-- **Form**: En platt cylindrisk kropp (som en riktig robotdammsugare) med en liten LED-ring pa toppen
-- **Geometri**: `cylinderGeometry` (radie ~0.17m, hojd ~0.05m) med rundade kanter
-- **Fargkodning**: Vit kropp med statusfargad LED-ring -- gron (dockad), bla (stadar), orange (atervander), rod (fel)
-- **Animation med useFrame**:
-  - Nar status ar `cleaning`: roboten roterar sakta och ringlens ljus pulserar
-  - Nar status ar `returning`: roboten "glider" tillbaka mot dockningspositionen (om `position`-data finns)
-  - Nar status ar `docked`: statisk, dampat ljus
-- **Positionssynk**: Om `position` finns i state, interpolerar roboten mjukt (lerp) till den positionen varje frame
-- **Batteri-indikator**: En tunn progress-ring runt basen som visar batteriniva (gron > 50%, gul 20-50%, rod < 20%)
-
-## 3. Ny dashboard-flik: "Robot" (DashboardGrid.tsx)
-
-Lagg till en ny flik `'robot'` i kontrollpanelens navigation, placerad efter "Overvakning":
+### Ny typ: VacuumZone
 
 ```text
-Hem | Vader | Kalender | Enheter | Energi | Overvakning | Robot | Aktivitet | Profil | Widgets
+interface VacuumZone {
+  roomId: string;
+  polygon: [number, number][];  // x,z-koordinater i meter
+}
 ```
 
-### RobotPanel-komponent (ny fil: `src/components/home/cards/RobotPanel.tsx`)
-
-Innehall:
-
-- **Status-sektion**: Stor statusikon + text (Stadar / Dockad / Atervander / Fel)
-- **Batteri**: Visuell batteriindikator med procent
-- **Kontrollknappar**: Starta, Stoppa, Hem (atergang till docka), Lokalisera (piper)
-- **Sugeffekt**: Slider eller knappar for fanSpeed-nivåer (Silent / Standard / Turbo / Max)
-- **Statistik**: Stadad yta (m2) och stadtid sedan senaste start
-- **Karta**: Placeholder for framtida kartintegration (Valetudo-karta)
-- **Senaste fel**: Visa felmeddelande om status ar "error"
-
-## 4. Utokad HA-mappning (haMapping.ts)
-
-Utoka vacuum-case:n for att hamta fler attribut:
-
-- `fan_speed` -> `fanSpeed` (numeriskt, mappat fran procent eller namngivna lagen)
-- `fan_speed_list` -> `fanSpeedList`
-- `cleaned_area` -> `cleaningArea` (m2, ev. konvertering)
-- `cleaning_time` -> `cleaningTime` (minuter)
-- `error` -> `errorMessage`
-- `status` -> finare mappning med fler tilstand
-
-## 5. Utokad HA-bridge (useHABridge.ts)
-
-Lagg till stod for:
-
-- `vacuum.set_fan_speed` -- nar fanSpeed andras
-- `vacuum.locate` -- skicka "pip"-kommando for att hitta roboten
-- `vacuum.clean_spot` -- punktstadning (framtida)
-
-Ny `_action`-logik for vacuum:
+### Ny typ: VacuumMapping (lagras per floor)
 
 ```text
-_action: 'locate' -> vacuum.locate
-_action: 'spot_clean' -> vacuum.clean_spot
-fanSpeed andras -> vacuum.set_fan_speed med fan_speed_list-mappning
+interface VacuumMapping {
+  dockPosition: [number, number] | null;  // x,z i meter
+  zones: VacuumZone[];                     // rorelsezoner per rum
+}
 ```
 
-## 6. Utokad VacuumControl (DeviceControlCard.tsx)
+### BuildTool -- nytt verktyg
 
-Forbattra den befintliga `VacuumControl`:
+Lagg till `'place-vacuum-dock'` och `'vacuum-zone'` i `BuildTool`-unionen.
 
-- Lagg till sugeffekt-valjare (slider eller knappar baserat pa `fanSpeedList`)
-- Lagg till "Lokalisera"-knapp
-- Visa stadstatistik (yta + tid)
-- Visa felmeddelande med varningsikon om status ar "error"
+### AppState -- nya actions
 
-## 7. Zonmappning i bygglageet (framtida forberedelse)
+- `setVacuumMapping(floorId, mapping)` -- spara dock + zoner
+- `setVacuumDock(floorId, pos)` -- satt dockposition
+- `addVacuumZone(floorId, zone)` -- lagg till zon
+- `removeVacuumZone(floorId, roomId)` -- ta bort zon
 
-I denna forsta iteration:
-- Roboten rör sig enbart inom de rum/polygoner som definieras pa dess våning
-- Position klamras automatiskt till inuti husvaggarna om `position`-data finns
-- Framtida: mojlighet att rita "no-go zones" i 2D-planvyn
+### Floor -- utokat
+
+Lagg till `vacuumMapping?: VacuumMapping` pa `Floor`-interfacet.
+
+---
+
+## 2. HA-mappning (haMapping.ts)
+
+I vacuum-case:n, lagg till:
+
+- `currentRoom`: hamtas INTE fran vacuum-entiteten, utan fran en separat sensor. Hanteras i bridge:en (se nedan).
+
+---
+
+## 3. HA-bridge: Rumssynk (useHABridge.ts)
+
+Ny logik for att lyssna pa `sensor.s5_max_nuvarande_rum`:
+
+- Nar sensorn andras -> uppdatera vacuum-enhetens `currentRoom` i deviceState
+- Mappningen sker via enhetsnamn: matcha sensorns state-string mot rum-namn i layouten
+- Hitta matchande `VacuumZone` for det rummet
+- Uppdatera `vacuumState.currentRoom`
+
+---
+
+## 4. Rorelsemotor i 3D (DeviceMarkers3D.tsx)
+
+### Ny wandering-algoritm i VacuumMarker3D
+
+Ersatt den enkla `position`-lerp med en komplett rorelsemotor:
+
+```text
+Tillstand:
+  - currentTarget: [x, z] -- aktuellt mal inuti polygon
+  - speed: 0.2 m/s
+  - smoothRotation: robotens riktning interpoleras mjukt
+
+Logik (useFrame):
+  1. Om status === 'cleaning':
+     a. Hamta aktiv zon fran currentRoom -> VacuumZone.polygon
+     b. Om inget currentTarget eller nara nog -> valj ny random punkt inuti polygonen
+     c. Flytta roboten mot target med speed * delta
+     d. Rotera roboten mjukt mot rorelsriktningen
+     e. Vid rumsbyte: interpolera mot ny zon over ~2 sekunder
+
+  2. Om status === 'returning' eller 'docked':
+     a. Flytta mot dockPosition (fran VacuumMapping)
+     b. Nar framme: stanna
+
+  3. Om status === 'paused':
+     a. Stanna pa plats, LED pulserar langsamt
+
+Random-punkt-i-polygon:
+  - Anvand bounding-box + rejection sampling
+  - Fungerar med pointInPolygon-test (finns redan i BuildCanvas2D)
+```
+
+### Framtidssaker (`setRobotPosition`)
+
+Om `vacuumState.position` har ett varde (fran Valetudo) -- anvand det direkt istallet for wandering. Sa uppgradering blir automatisk.
+
+---
+
+## 5. Byggverktyg: Robot Mapping (BuildCanvas2D + ny panel)
+
+### Ny panel: VacuumMappingTools
+
+Visas under Enheter-fliken i bygglageet nar en vacuum finns. Innehaller:
+
+- **Placera docka** -- klicka pa kartan for att satta dockPosition
+- **Rita zon** -- polygoneredigerare (liknar vaggritning) for att definiera rorelsezoner per rum
+- **Zonlista** -- visa/ta bort zoner, kopplade till rum
+
+### I BuildCanvas2D
+
+Nytt ritlager for vacuum-zoner:
+
+- Rita ifyllda halvtransparenta polygoner i bla/gront
+- Dockmarkorn ritas som en liten ikon (typ hemikon)
+- Nar `vacuum-zone`-verktyget ar aktivt: klicka for att lagga till polygonnoder (som vaggritning), dubbelklicka for att stanga polygon
+
+---
+
+## 6. RobotPanel -- uppdatering
+
+Uppdatera RobotPanel med:
+
+- Visa aktuellt rum: `"Stadar i: Koket"`
+- Kartvyn: istallet for placeholder, visa en enkel 2D-planvy med rummen och robotens position som en animerad prick
 
 ---
 
@@ -104,10 +141,12 @@ I denna forsta iteration:
 
 | Fil | Andring |
 |-----|---------|
-| `src/store/types.ts` | Utoka `VacuumState` med nya falt |
-| `src/components/devices/DeviceMarkers3D.tsx` | Ny `VacuumMarker` med cylindergeometri, statusfarg, animation, batteriindikator |
-| `src/components/home/DashboardGrid.tsx` | Lagg till `'robot'`-flik i navigation och rendera `RobotPanel` |
-| `src/components/home/cards/RobotPanel.tsx` | **Ny fil** -- Fullstandig robotpanel med status, kontroller, sugeffekt, statistik |
-| `src/components/home/cards/DeviceControlCard.tsx` | Utoka `VacuumControl` med sugeffekt, lokalisera, statistik |
-| `src/lib/haMapping.ts` | Utoka vacuum-mappning med fan_speed, cleaned_area, cleaning_time, error |
-| `src/hooks/useHABridge.ts` | Lagg till `set_fan_speed`, `locate`, `_action`-hantering for vacuum |
+| `src/store/types.ts` | Nya typer: `VacuumZone`, `VacuumMapping`. Nya falt pa `Floor` och `VacuumState`. Nya `BuildTool`-varianter. Nya store-actions. |
+| `src/store/useAppStore.ts` | Implementera `setVacuumMapping`, `setVacuumDock`, `addVacuumZone`, `removeVacuumZone`. |
+| `src/lib/haMapping.ts` | Lagg till `currentRoom`-stod i vacuum-mappningen. |
+| `src/hooks/useHABridge.ts` | Lyssna pa rumssensor och uppdatera vacuum `currentRoom`. |
+| `src/components/devices/DeviceMarkers3D.tsx` | Ny wandering-algoritm i `VacuumMarker3D`: rumsbaserad rorelse med mjuk interpolering, rotationsanimation, zon-medvetenhet. Fallback till `position` om tillgangligt (Valetudo-redo). |
+| `src/components/build/devices/VacuumMappingTools.tsx` | **Ny fil** -- Panel for att placera docka och rita rorelsezoner i bygglageet. |
+| `src/components/build/BuildCanvas2D.tsx` | Nytt ritlager for vacuum-zoner och dockmarkorer. Stod for `vacuum-zone`-verktyget. |
+| `src/components/home/cards/RobotPanel.tsx` | Visa aktuellt rum. Ersatt kart-placeholder med enkel 2D mini-karta. |
+
