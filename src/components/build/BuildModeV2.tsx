@@ -1,4 +1,5 @@
 import { useAppStore } from '@/store/useAppStore';
+import { useHABridge } from '@/hooks/useHABridge';
 import BuildTopToolbar from './BuildTopToolbar';
 import BuildTabBar from './BuildTabBar';
 import BuildLeftPanel from './BuildLeftPanel';
@@ -8,6 +9,7 @@ import BuildScene3D from './BuildScene3D';
 
 export default function BuildModeV2() {
   const cameraMode = useAppStore((s) => s.build.view.cameraMode);
+  useHABridge();
 
   return (
     <div className="w-full h-full relative flex flex-col">
