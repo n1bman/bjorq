@@ -23,6 +23,7 @@ export function useHomeAssistant() {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimer = useRef<ReturnType<typeof setTimeout>>();
   const manualDisconnect = useRef(false);
+  const hasAutoConnected = useRef(false);
 
   const setHAStatus = useAppStore((s) => s.setHAStatus);
   const setHAEntities = useAppStore((s) => s.setHAEntities);
@@ -202,6 +203,17 @@ export function useHomeAssistant() {
     haServiceCaller.current = callService;
     return () => { haServiceCaller.current = null; };
   }, [callService]);
+
+  // Auto-reconnect on mount if we have stored credentials
+  useEffect(() => {
+    if (hasAutoConnected.current) return;
+    const { wsUrl, token, status } = useAppStore.getState().homeAssistant;
+    if (wsUrl && token && status !== 'connected' && status !== 'connecting') {
+      hasAutoConnected.current = true;
+      console.log('[HA] Auto-reconnecting with stored credentials');
+      connect(wsUrl, token);
+    }
+  }, [connect]);
 
   return { connect, disconnect, callService };
 }

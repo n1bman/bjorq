@@ -1,5 +1,6 @@
 import { useAppStore } from '@/store/useAppStore';
 import { useHABridge } from '@/hooks/useHABridge';
+import { useHomeAssistant } from '@/hooks/useHomeAssistant';
 import BuildTopToolbar from './BuildTopToolbar';
 import BuildTabBar from './BuildTabBar';
 import BuildLeftPanel from './BuildLeftPanel';
@@ -9,6 +10,7 @@ import BuildScene3D from './BuildScene3D';
 
 export default function BuildModeV2() {
   const cameraMode = useAppStore((s) => s.build.view.cameraMode);
+  useHomeAssistant();
   useHABridge();
 
   return (

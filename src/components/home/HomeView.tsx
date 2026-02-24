@@ -9,6 +9,7 @@ import TemperatureWidget from './cards/TemperatureWidget';
 import DeviceControlCard from './cards/DeviceControlCard';
 import { useWeatherSync } from '@/hooks/useWeatherSync';
 import { useHABridge } from '@/hooks/useHABridge';
+import { useHomeAssistant } from '@/hooks/useHomeAssistant';
 import { Eye, EyeOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -23,6 +24,7 @@ export default function HomeView() {
   const toggleDeviceState = useAppStore((s) => s.toggleDeviceState);
   const deviceStates = useAppStore((s) => s.devices.deviceStates);
   useWeatherSync();
+  useHomeAssistant();
   useHABridge();
 
   const selectedMarkers = markers.filter((m) => homeScreenDevices.includes(m.id));
