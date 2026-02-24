@@ -1,129 +1,144 @@
 
 
-# Kategoriserade enheter, aktivitetsflode och ljus-synk i 3D
+# Flytande kontrollpanel, sensorer, overvakning och profil
 
 ## Oversikt
 
-Tre huvudomraden:
-1. **Kategoriserat Hem-vy** -- Google Home-liknande gruppering med mojlighet att stanga av hela kategorier
-2. **Aktivitetsflode** -- En ny flik i kontrollpanelen for notiser och handelser
-3. **Ljus-synk i 3D** -- Lampor i 3D reagerar pa ljusstyrka, fargtemperatur och RGB fran kontrollpanelen
+Kontrollpanelen byggs om till en flytande grid-layout inspirerad av referensbilderna (Google Home / HA-dashboards). Kategorier visas som kompakta kort sida vid sida istallet for fulla rader. Dessutom laggs nya sensortyper, en overvakningsflik och en profilflik till.
 
 ---
 
-## 1. Kategoriserat Hem-vy (Google Home-stil)
+## 1. Flytande grid-layout for Hem-vyn
 
 ### Problem
-Idag visas enheter grupperade per rum/vaning. Anvandaren vill kunna:
-- Gruppera per kategori (Ljus, Klimat, Media, etc.)
-- Stanga av alla enheter i en kategori med ett klick
-- Valja kategori for en enhet vid placering (t.ex. "Datorrum" eller "Lampor")
+Idag tar varje kategori (Ljus, Sensorer, Klimat) hela sidans bredd i en enkel lista. Det ser stelt ut och slösar plats.
+
+### Losning
+Bygg om `HomeCategory` i `DashboardGrid.tsx` sa att varje enhetskategori renderas som ett kompakt **glasmorfism-kort** i en CSS grid (`grid-cols-2` pa mobil, `grid-cols-3` pa desktop). Kort med fa enheter tar 1 kolumn, kort med manga kan spanna 2.
+
+**Fil: `src/components/home/DashboardGrid.tsx`** -- HomeCategory:
+- Widgets (klocka, vader, energi) ligger kvar som en rad overst
+- Under widgets: en `grid grid-cols-2 lg:grid-cols-3 gap-3 auto-rows-auto` med ett kort per kategori
+- Varje kategorikort visar:
+  - Header med ikon + namn + antal pa/av
+  - Toggle-all switch
+  - Kompakt lista av enheter med snabb-switch och mini-slider
+  - Om kortet ar expanderat: visar DeviceControlCard inline
+- Kategorier utan enheter doljs automatiskt
+- Kortstorleken anpassas -- en kategori med 1-2 enheter tar 1 kolumn, 5+ enheter tar `col-span-2`
+
+**Ny komponent: `src/components/home/cards/CategoryCard.tsx`**:
+- Glasmorfism-kort med header, toggle-all, och enhetslista
+- Kollapsbar -- klick pa headern expanderar/kollapsar
+- Kompakt enhetslista med emoji + namn + switch pa en rad
+- Klick pa enskild enhet oppnar inline DeviceControlCard
+
+### Paverkan pa DevicesSection
+`DevicesSection` anvands fortfarande for "Enheter"-fliken (fullstandig vy med filter). `CategoryCard` ar en separat, mer kompakt komponent for Hem-vyns grid.
+
+---
+
+## 2. Nya sensortyper: temperatursensor och rorelsesensor
+
+### Problem
+Idag finns bara en generisk `sensor`-typ. Anvandaren vill ha separata sensorer for temperatur och rorelse.
 
 ### Andringar
 
-**`src/components/home/DashboardGrid.tsx`** -- HomeCategory:
-- Lagg till kategori-flikar (Ljus, Klimat, Media, etc.) overst i Hem-vyn
-- Varje kategori visar en header med namn, antal pa/av, och en "stang av alla"-knapp
-- Klick pa kategorin expanderar/kollapsar den
-- Behall rum-gruppering inuti varje kategori
+**`src/store/types.ts`**:
+- Utoka `SensorState` med ett `sensorType`-falt:
+```typescript
+export interface SensorState {
+  value: number;
+  unit: string;
+  sensorType: 'temperature' | 'motion' | 'generic';
+}
+```
 
-**`src/components/home/cards/DevicesSection.tsx`**:
-- Ny prop `groupBy: 'room' | 'category'` -- default `'category'` for Hem-vyn
-- Nar `groupBy === 'category'`: gruppera enheter efter `kindInfo`-tabell
-- Varje kategori-header far en "Toggle all"-switch som anropar `updateDeviceState` pa alla enheter i gruppen
+**`src/components/home/cards/DevicesSection.tsx`** och `DeviceControlCard.tsx`:
+- Temperatursensor: visar stort temperaturvarde med termometer-ikon
+- Rorelsesensor: visar "Rorelse detekterad" / "Lugnt" med tidsstampel for senaste rorelse
+- Rorelsesensorn kan visuellt grupperas under "Sakerhet" (samma som kamera)
 
-**`src/store/types.ts`** -- DeviceMarker:
-- Lagg till ett valfritt falt `userCategory?: string` pa `DeviceMarker`
-- Anvandaren kan overskriva default-kategorin (t.ex. flytta en lampa till "Datorrum")
+**`src/components/build/devices/DevicePlacementTools.tsx`**:
+- Behall `place-sensor` men lagg till en submeny/dialog som fragar vilken sensortyp vid placering
+- Alternativt: gor det konfigurerbart i inspektorn efter placering via ett dropdown
 
-**`src/components/build/BuildInspector.tsx`**:
-- Lagg till en dropdown for `userCategory` i enhetsinspektorn (vid placering eller redigering)
-- Forval: enhetens `kind`-baserade kategori. Alternativ: alla befintliga rum + egendefinierade
+**`src/components/home/cards/CategoryCard.tsx`**:
+- Rorelsesensor visar en liten ikon (oga/rorelse) istallet for termometer
 
 ---
 
-## 2. Aktivitetsflode
+## 3. Overvakningsflik med live-kameror
 
 ### Problem
-Det saknas en plats for notiser, handelser och varningar (dorroppning, tappad anslutning, HA-notiser).
+Det saknas en dedikerad plats for att se kamerabilder.
+
+### Andringar
+
+**`src/components/home/DashboardGrid.tsx`**:
+- Lagg till ny flik i menyn: `'surveillance'` med `Video`-ikon, label "Overvakning"
+- Placera den mellan Energi och Aktivitet
+
+**Ny komponent: `src/components/home/cards/SurveillancePanel.tsx`**:
+- Visar ett grid med kamerakort (2 kolumner)
+- Varje kamerakort visar:
+  - Kameranamn
+  - Placeholder-bild (morkt kort med kamera-ikon) -- riktig stream nar HA ar kopplad
+  - Status: "Live" / "Offline"
+  - Rorelsesensor-status om kopplad
+- Kameror hamtas fran `devices.markers` med `kind === 'camera'`
+- Tom-state: "Inga kameror placerade. Ga till Bygge for att lagga till."
+
+---
+
+## 4. Battre 3D-bakgrund i kontrollpanelen
+
+### Problem
+3D-scenen i bakgrunden ar svart att se forandringar igenom alla overlay-element.
+
+### Andringar
+
+**`src/components/home/DashboardView.tsx`**:
+- Flytta 3D-scenen fran fullskarm bakgrund till en **avgransad vy** overst pa sidan
+- Alternativ layout:
+  - Overst: 3D-scen i en avgransad ruta (ca 30-40% av skarmhojden) med top-down kamera
+  - Under: scrollbar dashboard-innehall
+- 3D-rutan far lite border-radius och `overflow: hidden`
+- Kameran satt till `topdown` preset i kontrollpanelen for battre oversikt
+- Opacity okas fran 30% till 60-70% sa man ser andringar battre
+
+---
+
+## 5. Profilflik
+
+### Problem
+Det saknas mojlighet att andra tema, bakgrund eller andra personliga installningar.
 
 ### Andringar
 
 **`src/store/types.ts`**:
 ```typescript
-export interface ActivityEvent {
-  id: string;
-  timestamp: string;         // ISO
-  deviceId?: string;
-  kind: 'state_change' | 'alert' | 'connection' | 'notification';
-  title: string;
-  detail?: string;
-  severity: 'info' | 'warning' | 'error';
-  read: boolean;
+export interface UserProfile {
+  name: string;
+  theme: 'dark' | 'midnight' | 'light';
+  accentColor: string;     // hex
+  dashboardBg: 'scene3d' | 'gradient' | 'solid';
 }
-
-// Lagg till i AppState:
-activityLog: ActivityEvent[];
-pushActivity: (event: Omit<ActivityEvent, 'id' | 'timestamp' | 'read'>) => void;
-clearActivity: () => void;
-markActivityRead: (id: string) => void;
 ```
-
-**`src/store/useAppStore.ts`**:
-- Implementera `activityLog` med max 100 poster (FIFO)
-- `pushActivity` genererar id och timestamp automatiskt
-- Nar `updateDeviceState` kallas, pusha automatiskt en `state_change`-event
-
-**Ny fil: `src/components/home/cards/ActivityFeed.tsx`**:
-- Visar en scrollbar lista med handelser, senaste overst
-- Varje rad: ikon + tid + titel + detalj
-- Fargkodad per severity (info=gra, warning=gul, error=rod)
-- "Rensa alla"-knapp
+Lagg till `profile: UserProfile` i `AppState` och `setProfile`-action.
 
 **`src/components/home/DashboardGrid.tsx`**:
-- Lagg till ny kategori-flik "Aktivitet" med `Bell`-ikon
-- Visa ActivityFeed-komponenten
-- Badge pa fliken med antal olasta handelser
+- Bygg om "Installningar"-kategorin till tva delar: Installningar + Profil
+- Eller lagg till en separat "Profil"-flik med `User`-ikon
 
-**`src/store/types.ts`** -- DeviceMarker:
-- Lagg till `notifyOnHomeScreen?: boolean` pa `DeviceMarker`
-- Nar detta ar `true`, visas notiser fran denna enhet som overlay pa Hem-skarmen
-
-**`src/components/build/BuildInspector.tsx`**:
-- Lagg till en checkbox "Visa notiser pa Hem-skarmen" i enhetsinspektorn
-
----
-
-## 3. Ljus-synk i 3D
-
-### Problem
-`LightMarker` laser bara `state.data.on` -- den ignorerar ljusstyrka, fargtemperatur och RGB helt.
-
-### Andringar
-
-**`src/components/devices/DeviceMarkers3D.tsx`** -- LightMarker:
-- Las ut `brightness`, `colorTemp`, `rgbColor`, `colorMode` fran `state.data`
-- Berakna lampans farg baserat pa `colorMode`:
-  - `'temp'`: Konvertera mireds (153-500) till RGB via en enkel lookup/lerp (kall bla till varm orange)
-  - `'rgb'`: Anvand `rgbColor` direkt
-  - `'off'`: Dimmad gra
-- Satt `pointLight.intensity` proportionellt mot `brightness / 255`
-- Satt `meshStandardMaterial.emissiveIntensity` proportionellt mot ljusstyrka
-- Satt `meshStandardMaterial.color` och `emissive` till den beraknade fargen
-- Satt `pointLight.color` till samma farg
-
-Ny hjalp-funktion:
-```typescript
-function miredsToHex(mireds: number): string {
-  // 153 = kall (bluish white ~6500K)
-  // 500 = varm (orange ~2000K)
-  const t = (mireds - 153) / (500 - 153); // 0=kall, 1=varm
-  const r = Math.round(255);
-  const g = Math.round(255 - t * 100);
-  const b = Math.round(255 - t * 200);
-  return `rgb(${r},${g},${b})`;
-}
-```
+**Ny komponent: `src/components/home/cards/ProfilePanel.tsx`**:
+- Visa profilkort med:
+  - Namn (textruta)
+  - Tema-valjare: 3 knappar (Dark / Midnight / Light)
+  - Accentfarg-valjare: fargade cirklar (guld, bla, gron, rod, lila)
+  - Bakgrund: Scene3D / Gradient / Enfargad
+- Andringar sparas direkt till store (localStorage)
 
 ---
 
@@ -131,11 +146,13 @@ function miredsToHex(mireds: number): string {
 
 | Fil | Andring |
 |-----|---------|
-| `src/store/types.ts` | `userCategory` pa DeviceMarker, `ActivityEvent`, `activityLog` + actions, `notifyOnHomeScreen` |
-| `src/store/useAppStore.ts` | Implementera activityLog, auto-push vid state-andringar |
-| `src/components/home/DashboardGrid.tsx` | Aktivitet-flik, kategori-gruppering i Hem-vyn |
-| `src/components/home/cards/DevicesSection.tsx` | `groupBy`-prop, kategori-headers med toggle-all |
-| `src/components/home/cards/ActivityFeed.tsx` | **NY** -- aktivitetsflode-komponent |
-| `src/components/devices/DeviceMarkers3D.tsx` | LightMarker laser brightness/color/colorTemp och applicerar pa 3D |
-| `src/components/build/BuildInspector.tsx` | userCategory-dropdown, notifyOnHomeScreen-checkbox |
+| `src/store/types.ts` | `SensorState.sensorType`, `UserProfile`, utokad `AppState` |
+| `src/store/useAppStore.ts` | `profile` default, `setProfile` action, store version bump |
+| `src/components/home/DashboardGrid.tsx` | Ny overvakning-flik, profil-flik, ombyggd HomeCategory till grid |
+| `src/components/home/cards/CategoryCard.tsx` | **NY** -- kompakt kategorikort for grid-layout |
+| `src/components/home/cards/SurveillancePanel.tsx` | **NY** -- kameraovervakning |
+| `src/components/home/cards/ProfilePanel.tsx` | **NY** -- profil och tema |
+| `src/components/home/cards/DeviceControlCard.tsx` | Uppdatera SensorControl for temp/rorelse |
+| `src/components/home/DashboardView.tsx` | 3D-vy som avgransad ruta istallet for fullskarm bakgrund |
+| `src/components/home/cards/DevicesSection.tsx` | `kindInfo` uppdaterad for sensortyper |
 
