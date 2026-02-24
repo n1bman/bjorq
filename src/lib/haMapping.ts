@@ -81,11 +81,30 @@ export function mapHAEntityToDeviceState(
       return { kind: 'door-lock', data: { locked: state === 'locked' } };
 
     case 'vacuum': {
-      const statusMap: Record<string, 'cleaning' | 'docked' | 'returning' | 'error'> = {
-        cleaning: 'cleaning', docked: 'docked', returning: 'returning', error: 'error',
+      const statusMap: Record<string, 'cleaning' | 'docked' | 'returning' | 'paused' | 'idle' | 'error'> = {
+        cleaning: 'cleaning', docked: 'docked', returning: 'returning',
+        paused: 'paused', idle: 'idle', error: 'error',
       };
       const battery = typeof attributes.battery_level === 'number' ? attributes.battery_level : 100;
-      return { kind: 'vacuum', data: { on: state === 'cleaning', status: statusMap[state] || 'docked', battery } };
+      const fanSpeed = typeof attributes.fan_speed === 'number' ? attributes.fan_speed
+        : typeof attributes.fan_speed === 'string' ? parseInt(attributes.fan_speed, 10) || 0 : undefined;
+      const fanSpeedList = Array.isArray(attributes.fan_speed_list) ? attributes.fan_speed_list as string[] : undefined;
+      const cleaningArea = typeof attributes.cleaned_area === 'number' ? attributes.cleaned_area : undefined;
+      const cleaningTime = typeof attributes.cleaning_time === 'number' ? attributes.cleaning_time : undefined;
+      const errorMessage = typeof attributes.error === 'string' && attributes.error ? attributes.error : undefined;
+      return {
+        kind: 'vacuum',
+        data: {
+          on: state === 'cleaning',
+          status: statusMap[state] || 'docked',
+          battery,
+          ...(fanSpeed !== undefined && { fanSpeed }),
+          ...(fanSpeedList && { fanSpeedList }),
+          ...(cleaningArea !== undefined && { cleaningArea }),
+          ...(cleaningTime !== undefined && { cleaningTime }),
+          ...(errorMessage && { errorMessage }),
+        },
+      };
     }
     case 'media_player': {
       const stateMap: Record<string, 'playing' | 'paused' | 'idle' | 'off'> = {
