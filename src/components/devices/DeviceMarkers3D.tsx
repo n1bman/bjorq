@@ -401,7 +401,7 @@ function MediaScreenMarker({ position, id, onSelect, onDragStart, selected, mark
       <mesh>
         <planeGeometry args={[scale[0], scale[1]]} />
         {texture ? (
-          <meshStandardMaterial map={texture} emissive="#ffffff" emissiveIntensity={0.15} side={THREE.DoubleSide} toneMapped={false} />
+          <meshStandardMaterial map={texture} emissive="#000000" emissiveIntensity={0.02} side={THREE.DoubleSide} toneMapped={false} />
         ) : (
           <meshStandardMaterial color="#1a1a2e" emissive="#818cf8" emissiveIntensity={0.1} side={THREE.DoubleSide} />
         )}
