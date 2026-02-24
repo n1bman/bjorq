@@ -62,6 +62,7 @@ export const useAppStore = create<AppState>()(
       homeView: {
         cameraPreset: 'angle',
         visibleWidgets: { clock: true, weather: true, temperature: true, energy: true },
+        homeScreenDevices: [],
       },
       setCameraPreset: (preset) => set((s) => ({ homeView: { ...s.homeView, cameraPreset: preset } })),
       toggleHomeWidget: (widget) => set((s) => ({
@@ -137,6 +138,7 @@ export const useAppStore = create<AppState>()(
       build: initialBuild,
       devices: { markers: [], deviceStates: {} },
       activityLog: [],
+      customCategories: [],
       profile: { name: '', theme: 'dark', accentColor: '#f59e0b', dashboardBg: 'scene3d' },
       props: { catalog: [], items: [] },
 
@@ -154,7 +156,7 @@ export const useAppStore = create<AppState>()(
       },
 
       environment: {
-        source: 'manual',
+        source: 'auto',
         location: { lat: 59.33, lon: 18.07, timezone: 'Europe/Stockholm' },
         timeMode: 'live',
         previewDateTime: new Date().toISOString(),
@@ -812,10 +814,48 @@ export const useAppStore = create<AppState>()(
       setProfile: (changes) => set((s) => ({
         profile: { ...s.profile, ...changes },
       })),
+
+      // Category actions
+      addCategory: (name, icon) => set((s) => ({
+        customCategories: [...s.customCategories, { id: generateId(), name, icon, deviceIds: [] }],
+      })),
+      removeCategory: (id) => set((s) => ({
+        customCategories: s.customCategories.filter((c) => c.id !== id),
+      })),
+      renameCategory: (id, name) => set((s) => ({
+        customCategories: s.customCategories.map((c) => c.id === id ? { ...c, name } : c),
+      })),
+      setCategoryIcon: (id, icon) => set((s) => ({
+        customCategories: s.customCategories.map((c) => c.id === id ? { ...c, icon } : c),
+      })),
+      moveDeviceToCategory: (deviceId, categoryId) => set((s) => ({
+        customCategories: s.customCategories.map((c) => ({
+          ...c,
+          deviceIds: c.id === categoryId
+            ? (c.deviceIds.includes(deviceId) ? c.deviceIds : [...c.deviceIds, deviceId])
+            : c.deviceIds.filter((d) => d !== deviceId),
+        })),
+      })),
+      reorderDeviceInCategory: (categoryId, deviceId, newIndex) => set((s) => ({
+        customCategories: s.customCategories.map((c) => {
+          if (c.id !== categoryId) return c;
+          const ids = c.deviceIds.filter((d) => d !== deviceId);
+          ids.splice(newIndex, 0, deviceId);
+          return { ...c, deviceIds: ids };
+        }),
+      })),
+      toggleHomeScreenDevice: (deviceId) => set((s) => ({
+        homeView: {
+          ...s.homeView,
+          homeScreenDevices: s.homeView.homeScreenDevices.includes(deviceId)
+            ? s.homeView.homeScreenDevices.filter((d) => d !== deviceId)
+            : [...s.homeView.homeScreenDevices, deviceId],
+        },
+      })),
     }),
     {
       name: 'hometwin-store',
-      version: 14,
+      version: 15,
       migrate: (persisted: any) => {
         // V13: Migrate boolean deviceStates to rich DeviceState objects
         if (persisted && persisted.devices?.deviceStates) {
@@ -853,6 +893,7 @@ export const useAppStore = create<AppState>()(
         environment: state.environment,
         activityLog: state.activityLog,
         profile: state.profile,
+        customCategories: state.customCategories,
         homeAssistant: {
           wsUrl: state.homeAssistant.wsUrl,
           token: state.homeAssistant.token,

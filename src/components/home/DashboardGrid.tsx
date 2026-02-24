@@ -14,6 +14,7 @@ import ActivityFeed from './cards/ActivityFeed';
 import SurveillancePanel from './cards/SurveillancePanel';
 import ProfilePanel from './cards/ProfilePanel';
 import CategoryCard from './cards/CategoryCard';
+import CategoryManager from './cards/CategoryManager';
 import type { DeviceKind, DeviceMarker } from '@/store/types';
 
 type DashCategory = 'home' | 'weather' | 'devices' | 'energy' | 'surveillance' | 'activity' | 'settings' | 'ha' | 'profile';
@@ -49,16 +50,38 @@ const kindCategory: Record<DeviceKind, string> = {
 
 function HomeCategory() {
   const markers = useAppStore((s) => s.devices.markers);
+  const customCategories = useAppStore((s) => s.customCategories);
+  const [showManager, setShowManager] = useState(false);
 
-  // Group by category
-  const grouped: Record<string, DeviceMarker[]> = {};
-  for (const m of markers) {
-    const cat = m.userCategory || kindCategory[m.kind] || 'Övrigt';
-    if (!grouped[cat]) grouped[cat] = [];
-    grouped[cat].push(m);
+  // Use custom categories if they exist, otherwise auto-group
+  let entries: [string, DeviceMarker[]][];
+
+  if (customCategories.length > 0) {
+    const categorizedIds = new Set(customCategories.flatMap((c) => c.deviceIds));
+    entries = customCategories
+      .map((cat) => {
+        const devices = cat.deviceIds
+          .map((id) => markers.find((m) => m.id === id))
+          .filter(Boolean) as DeviceMarker[];
+        return [`${cat.icon} ${cat.name}`, devices] as [string, DeviceMarker[]];
+      })
+      .filter(([, devices]) => devices.length > 0);
+
+    // Add uncategorized
+    const uncategorized = markers.filter((m) => !categorizedIds.has(m.id));
+    if (uncategorized.length > 0) {
+      entries.push(['⚙️ Övrigt', uncategorized]);
+    }
+  } else {
+    // Auto-group by kind category
+    const grouped: Record<string, DeviceMarker[]> = {};
+    for (const m of markers) {
+      const cat = m.userCategory || kindCategory[m.kind] || 'Övrigt';
+      if (!grouped[cat]) grouped[cat] = [];
+      grouped[cat].push(m);
+    }
+    entries = Object.entries(grouped);
   }
-
-  const entries = Object.entries(grouped);
 
   return (
     <div className="space-y-4">
@@ -68,6 +91,16 @@ function HomeCategory() {
         <WeatherWidget />
         <EnergyWidget />
       </div>
+
+      {/* Manage categories button */}
+      <div className="flex justify-end">
+        <Button size="sm" variant="outline" className="h-7 text-[10px]"
+          onClick={() => setShowManager(!showManager)}>
+          {showManager ? 'Stäng' : 'Hantera kategorier'}
+        </Button>
+      </div>
+
+      {showManager && <CategoryManager />}
 
       {/* Floating category grid */}
       {entries.length > 0 ? (
@@ -192,7 +225,7 @@ export default function DashboardGrid() {
           ))}
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4">
+        <div className="flex-1 overflow-y-auto p-4 pb-28">
           <Content />
         </div>
       </div>
