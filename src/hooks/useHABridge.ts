@@ -118,6 +118,50 @@ function sendHACommand(entityId: string, state: DeviceState) {
       }
       break;
     }
+
+    case 'fan': {
+      const data = state.data as any;
+      if (!data.on) {
+        callService('fan', 'turn_off', { entity_id: entityId });
+      } else {
+        const serviceData: Record<string, unknown> = { entity_id: entityId };
+        if (typeof data.speed === 'number') serviceData.percentage = data.speed;
+        callService('fan', 'turn_on', serviceData);
+        if (typeof data.speed === 'number') {
+          callService('fan', 'set_percentage', { entity_id: entityId, percentage: data.speed });
+        }
+      }
+      break;
+    }
+
+    case 'cover': {
+      const data = state.data as any;
+      if (typeof data.position === 'number') {
+        callService('cover', 'set_cover_position', { entity_id: entityId, position: data.position });
+      } else if (data.state === 'open') {
+        callService('cover', 'open_cover', { entity_id: entityId });
+      } else if (data.state === 'closed') {
+        callService('cover', 'close_cover', { entity_id: entityId });
+      } else {
+        callService('cover', 'stop_cover', { entity_id: entityId });
+      }
+      break;
+    }
+
+    case 'scene': {
+      callService(domain, 'turn_on', { entity_id: entityId });
+      break;
+    }
+
+    case 'script': {
+      callService('script', 'turn_on', { entity_id: entityId });
+      break;
+    }
+
+    case 'automation': {
+      callService('automation', 'trigger', { entity_id: entityId });
+      break;
+    }
   }
 }
 

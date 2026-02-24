@@ -11,10 +11,13 @@ export const kindToDomains: Record<DeviceKind, string[] | null> = {
   vacuum: ['vacuum'],
   'door-lock': ['lock'],
   media_screen: ['media_player'],
+  fan: ['fan'],
+  cover: ['cover'],
+  scene: ['scene', 'script', 'automation'],
   fridge: null,
   oven: null,
   washer: null,
-  'garage-door': null,
+  'garage-door': ['cover'],
 };
 
 /** Infer DeviceKind from an HA domain */
@@ -30,6 +33,11 @@ export function domainToKind(domain: string): DeviceKind | null {
     case 'vacuum': return 'vacuum';
     case 'lock': return 'door-lock';
     case 'media_player': return 'media_screen';
+    case 'fan': return 'fan';
+    case 'cover': return 'cover';
+    case 'scene':
+    case 'script':
+    case 'automation': return 'scene';
     default: return null;
   }
 }

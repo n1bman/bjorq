@@ -93,7 +93,10 @@ export type BuildTool =
   | 'place-garage-door'
   | 'place-door-lock'
   | 'place-power-outlet'
-  | 'place-media-screen';
+  | 'place-media-screen'
+  | 'place-fan'
+  | 'place-cover'
+  | 'place-scene';
 
 export type BuildTab = 'structure' | 'import' | 'furnish' | 'devices';
 export type SnapMode = 'strict' | 'soft' | 'off';
@@ -166,7 +169,7 @@ export interface HomeGeometryState {
 }
 
 // ─── Devices Layer ───
-export type DeviceKind = 'light' | 'switch' | 'sensor' | 'climate' | 'vacuum' | 'camera' | 'fridge' | 'oven' | 'washer' | 'garage-door' | 'door-lock' | 'power-outlet' | 'media_screen';
+export type DeviceKind = 'light' | 'switch' | 'sensor' | 'climate' | 'vacuum' | 'camera' | 'fridge' | 'oven' | 'washer' | 'garage-door' | 'door-lock' | 'power-outlet' | 'media_screen' | 'fan' | 'cover' | 'scene';
 export type DeviceSurface = 'floor' | 'wall' | 'ceiling' | 'free';
 
 export interface ScreenConfig {
@@ -249,8 +252,23 @@ export interface LockState {
 export interface SensorState {
   value: number;
   unit: string;
-  sensorType?: 'temperature' | 'motion' | 'generic';
+  sensorType?: 'temperature' | 'motion' | 'contact' | 'generic';
   lastMotion?: string; // ISO timestamp
+}
+
+export interface FanState {
+  on: boolean;
+  speed: number; // 0-100 percentage
+  preset?: 'low' | 'medium' | 'high';
+}
+
+export interface CoverState {
+  position: number; // 0=closed, 100=open
+  state: 'open' | 'closed' | 'opening' | 'closing' | 'stopped';
+}
+
+export interface SceneState {
+  lastTriggered?: string; // ISO timestamp
 }
 
 export interface GenericDeviceState {
@@ -271,6 +289,9 @@ export type DeviceState =
   | { kind: 'door-lock'; data: LockState }
   | { kind: 'sensor'; data: SensorState }
   | { kind: 'camera'; data: CameraState }
+  | { kind: 'fan'; data: FanState }
+  | { kind: 'cover'; data: CoverState }
+  | { kind: 'scene'; data: SceneState }
   | { kind: 'generic'; data: GenericDeviceState };
 
 export interface DevicesState {

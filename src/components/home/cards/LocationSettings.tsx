@@ -6,6 +6,7 @@ import { MapPin, Navigation, Search } from 'lucide-react';
 import { useState } from 'react';
 
 export default function LocationSettings() {
+  const haConnected = useAppStore((s) => s.homeAssistant.status === 'connected');
   const lat = useAppStore((s) => s.environment.location.lat);
   const lon = useAppStore((s) => s.environment.location.lon);
   const timezone = useAppStore((s) => s.environment.location.timezone);
@@ -66,12 +67,23 @@ export default function LocationSettings() {
         <h4 className="text-sm font-semibold text-foreground">Plats</h4>
       </div>
 
-      <div className="flex items-center justify-between">
-        <span className="text-xs text-foreground">Live väder</span>
-        <Switch
-          checked={source === 'auto'}
-          onCheckedChange={(v) => setWeatherSource(v ? 'auto' : 'manual')}
-        />
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-foreground">Live väder</span>
+          <Switch
+            checked={source === 'auto' || source === 'ha'}
+            onCheckedChange={(v) => setWeatherSource(v ? 'auto' : 'manual')}
+          />
+        </div>
+        {(source === 'auto' || source === 'ha') && haConnected && (
+          <div className="flex items-center justify-between pl-2">
+            <span className="text-[10px] text-muted-foreground">Använd HA-väder</span>
+            <Switch
+              checked={source === 'ha'}
+              onCheckedChange={(v) => setWeatherSource(v ? 'ha' : 'auto')}
+            />
+          </div>
+        )}
       </div>
 
       {/* Address search */}
@@ -138,7 +150,7 @@ export default function LocationSettings() {
         </div>
       </div>
       <p className="text-[10px] text-muted-foreground">
-        Tidszon: {timezone} · Källa: {source === 'auto' ? 'Open-Meteo' : 'Manuell'}
+        Tidszon: {timezone} · Källa: {source === 'ha' ? 'Home Assistant' : source === 'auto' ? 'Open-Meteo' : 'Manuell'}
       </p>
     </div>
   );

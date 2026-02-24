@@ -20,6 +20,12 @@ export function getDefaultState(kind: DeviceKind): DeviceState {
       return { kind: 'door-lock', data: { locked: true } };
     case 'sensor':
       return { kind: 'sensor', data: { value: 0, unit: '°C' } };
+    case 'fan':
+      return { kind: 'fan', data: { on: false, speed: 0 } };
+    case 'cover':
+      return { kind: 'cover', data: { position: 100, state: 'open' } };
+    case 'scene':
+      return { kind: 'scene', data: {} };
     default:
       return { kind: 'generic', data: { on: false } };
   }
