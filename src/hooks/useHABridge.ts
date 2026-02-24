@@ -239,3 +239,36 @@ export function useHABridge() {
     return unsub;
   }, []);
 }
+
+/**
+ * Hook that listens to `sensor.s5_max_nuvarande_rum` and updates
+ * vacuum device currentRoom in deviceState.
+ */
+export function useVacuumRoomSync() {
+  const prevRoomRef = useRef<string>('');
+
+  useEffect(() => {
+    const unsub = useAppStore.subscribe((state) => {
+      const roomSensorId = 'sensor.s5_max_nuvarande_rum';
+      const live = state.homeAssistant.liveStates[roomSensorId];
+      if (!live) return;
+
+      const roomName = live.state;
+      if (roomName === prevRoomRef.current) return;
+      prevRoomRef.current = roomName;
+
+      // Find vacuum device markers and update their currentRoom
+      const vacuumMarkers = state.devices.markers.filter((m) => m.kind === 'vacuum');
+      for (const marker of vacuumMarkers) {
+        const ds = state.devices.deviceStates[marker.id];
+        if (ds?.kind === 'vacuum') {
+          setFromHA(true);
+          useAppStore.getState().updateDeviceState(marker.id, { currentRoom: roomName });
+          queueMicrotask(() => setFromHA(false));
+        }
+      }
+    });
+
+    return unsub;
+  }, []);
+}

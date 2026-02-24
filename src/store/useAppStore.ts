@@ -895,6 +895,65 @@ export const useAppStore = create<AppState>()(
         return { customCategories: cats };
       }),
 
+      // Vacuum mapping actions
+      setVacuumMapping: (floorId, mapping) =>
+        set((s) => ({
+          layout: {
+            ...s.layout,
+            floors: s.layout.floors.map((f) =>
+              f.id === floorId ? { ...f, vacuumMapping: mapping } : f
+            ),
+          },
+        })),
+
+      setVacuumDock: (floorId, pos) =>
+        set((s) => ({
+          layout: {
+            ...s.layout,
+            floors: s.layout.floors.map((f) =>
+              f.id === floorId
+                ? { ...f, vacuumMapping: { ...(f.vacuumMapping ?? { dockPosition: null, zones: [] }), dockPosition: pos } }
+                : f
+            ),
+          },
+        })),
+
+      addVacuumZone: (floorId, zone) =>
+        set((s) => ({
+          layout: {
+            ...s.layout,
+            floors: s.layout.floors.map((f) =>
+              f.id === floorId
+                ? {
+                    ...f,
+                    vacuumMapping: {
+                      ...(f.vacuumMapping ?? { dockPosition: null, zones: [] }),
+                      zones: [...(f.vacuumMapping?.zones ?? []).filter((z) => z.roomId !== zone.roomId), zone],
+                    },
+                  }
+                : f
+            ),
+          },
+        })),
+
+      removeVacuumZone: (floorId, roomId) =>
+        set((s) => ({
+          layout: {
+            ...s.layout,
+            floors: s.layout.floors.map((f) =>
+              f.id === floorId
+                ? {
+                    ...f,
+                    vacuumMapping: {
+                      ...(f.vacuumMapping ?? { dockPosition: null, zones: [] }),
+                      zones: (f.vacuumMapping?.zones ?? []).filter((z) => z.roomId !== roomId),
+                    },
+                  }
+                : f
+            ),
+          },
+        })),
+
       // Home Assistant actions
       setHAEntities: (entities) => set((s) => ({
         homeAssistant: { ...s.homeAssistant, entities },

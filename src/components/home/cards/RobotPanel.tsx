@@ -8,6 +8,7 @@ import {
   Clock, Ruler, Wind, Pause,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useEffect, useRef } from 'react';
 
 const statusLabels: Record<string, string> = {
   cleaning: 'Städar', docked: 'Dockad', returning: 'Återvänder',
@@ -63,6 +64,144 @@ function FanSpeedSelector({ data, id, update }: { data: VacuumState; id: string;
   );
 }
 
+/** Mini 2D map showing rooms and robot position */
+function VacuumMiniMap({ marker, data }: { marker: DeviceMarker; data: VacuumState }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const floors = useAppStore((s) => s.layout.floors);
+  const floor = floors.find((f) => f.id === marker.floorId);
+  const rooms = floor?.rooms ?? [];
+  const mapping = floor?.vacuumMapping;
+  const animRef = useRef<number>(0);
+
+  useEffect(() => {
+    const draw = () => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      const dpr = window.devicePixelRatio || 1;
+      const w = canvas.clientWidth;
+      const h = canvas.clientHeight;
+      canvas.width = w * dpr;
+      canvas.height = h * dpr;
+      ctx.scale(dpr, dpr);
+
+      ctx.fillStyle = 'hsl(220, 20%, 12%)';
+      ctx.fillRect(0, 0, w, h);
+
+      if (rooms.length === 0) {
+        ctx.fillStyle = 'rgba(255,255,255,0.3)';
+        ctx.font = '10px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('Inga rum definierade', w / 2, h / 2);
+        return;
+      }
+
+      // Compute bounds
+      let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+      for (const room of rooms) {
+        if (!room.polygon) continue;
+        for (const [x, z] of room.polygon) {
+          if (x < minX) minX = x;
+          if (x > maxX) maxX = x;
+          if (z < minZ) minZ = z;
+          if (z > maxZ) maxZ = z;
+        }
+      }
+      if (!isFinite(minX)) return;
+
+      const padding = 16;
+      const rangeX = maxX - minX || 1;
+      const rangeZ = maxZ - minZ || 1;
+      const scale = Math.min((w - padding * 2) / rangeX, (h - padding * 2) / rangeZ);
+      const offX = (w - rangeX * scale) / 2;
+      const offZ = (h - rangeZ * scale) / 2;
+
+      const toScreen = (x: number, z: number): [number, number] => [
+        offX + (x - minX) * scale,
+        offZ + (z - minZ) * scale,
+      ];
+
+      // Draw rooms
+      for (const room of rooms) {
+        if (!room.polygon || room.polygon.length < 3) continue;
+        const isActive = data.currentRoom && room.name.toLowerCase() === data.currentRoom.toLowerCase();
+        ctx.beginPath();
+        const [sx, sy] = toScreen(room.polygon[0][0], room.polygon[0][1]);
+        ctx.moveTo(sx, sy);
+        for (let i = 1; i < room.polygon.length; i++) {
+          const [px, py] = toScreen(room.polygon[i][0], room.polygon[i][1]);
+          ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.fillStyle = isActive ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255,255,255,0.05)';
+        ctx.fill();
+        ctx.strokeStyle = isActive ? 'rgba(59, 130, 246, 0.6)' : 'rgba(255,255,255,0.15)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // Room label
+        const cx = room.polygon.reduce((a, p) => a + p[0], 0) / room.polygon.length;
+        const cz = room.polygon.reduce((a, p) => a + p[1], 0) / room.polygon.length;
+        const [tx, ty] = toScreen(cx, cz);
+        ctx.fillStyle = isActive ? 'rgba(59, 130, 246, 0.8)' : 'rgba(255,255,255,0.3)';
+        ctx.font = '9px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(room.name, tx, ty);
+      }
+
+      // Draw dock
+      if (mapping?.dockPosition) {
+        const [dx, dy] = toScreen(mapping.dockPosition[0], mapping.dockPosition[1]);
+        ctx.fillStyle = '#22c55e';
+        ctx.beginPath();
+        ctx.arc(dx, dy, 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Draw robot position (animated pulse)
+      if (data.currentRoom) {
+        const zone = mapping?.zones?.find((z) => {
+          const room = rooms.find((r) => r.id === z.roomId);
+          return room?.name.toLowerCase() === data.currentRoom!.toLowerCase();
+        });
+        if (zone && zone.polygon.length > 0) {
+          const cx = zone.polygon.reduce((a, p) => a + p[0], 0) / zone.polygon.length;
+          const cz = zone.polygon.reduce((a, p) => a + p[1], 0) / zone.polygon.length;
+          const [rx, ry] = toScreen(cx, cz);
+          const pulse = 3 + Math.sin(Date.now() / 300) * 2;
+
+          ctx.fillStyle = 'rgba(59, 130, 246, 0.3)';
+          ctx.beginPath();
+          ctx.arc(rx, ry, pulse + 4, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.fillStyle = '#3b82f6';
+          ctx.beginPath();
+          ctx.arc(rx, ry, 4, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      animRef.current = requestAnimationFrame(draw);
+    };
+
+    draw();
+    return () => cancelAnimationFrame(animRef.current);
+  }, [rooms, mapping, data.currentRoom, data.status]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      className="w-full aspect-video rounded-lg"
+      style={{ display: 'block' }}
+    />
+  );
+}
+
 export default function RobotPanel() {
   const markers = useAppStore((s) => s.devices.markers);
   const deviceStates = useAppStore((s) => s.devices.deviceStates);
@@ -107,13 +246,26 @@ function VacuumCard({ marker, data, update }: { marker: DeviceMarker; data: Vacu
           </div>
           <div>
             <h3 className="text-sm font-semibold text-foreground">{marker.name || 'Robotdammsugare'}</h3>
-            <p className={cn('text-xs font-medium', statusColor)}>{statusLabel}</p>
+            <p className={cn('text-xs font-medium', statusColor)}>
+              {statusLabel}
+              {data.currentRoom && data.status === 'cleaning' && (
+                <span className="text-muted-foreground ml-1">· {data.currentRoom}</span>
+              )}
+            </p>
           </div>
         </div>
         {marker.ha?.entityId && (
           <span className="text-[9px] text-muted-foreground/50 font-mono">{marker.ha.entityId}</span>
         )}
       </div>
+
+      {/* Current room indicator */}
+      {data.currentRoom && (
+        <div className="flex items-center gap-2 bg-primary/5 border border-primary/10 rounded-lg px-3 py-1.5">
+          <MapPin size={14} className="text-primary" />
+          <span className="text-xs text-foreground">Städar i: <strong>{data.currentRoom}</strong></span>
+        </div>
+      )}
 
       {/* Error message */}
       {data.status === 'error' && data.errorMessage && (
@@ -175,10 +327,8 @@ function VacuumCard({ marker, data, update }: { marker: DeviceMarker; data: Vacu
         </div>
       )}
 
-      {/* Map placeholder */}
-      <div className="rounded-lg bg-secondary/50 border border-border aspect-video flex items-center justify-center">
-        <p className="text-[10px] text-muted-foreground">Karta (framtida Valetudo-integration)</p>
-      </div>
+      {/* Mini map */}
+      <VacuumMiniMap marker={marker} data={data} />
     </div>
   );
 }

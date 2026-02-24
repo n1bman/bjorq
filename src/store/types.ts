@@ -48,6 +48,17 @@ export interface StairItem {
   toFloorId: string;
 }
 
+// ─── Vacuum Mapping ───
+export interface VacuumZone {
+  roomId: string;
+  polygon: [number, number][]; // x,z coordinates in meters
+}
+
+export interface VacuumMapping {
+  dockPosition: [number, number] | null; // x,z in meters
+  zones: VacuumZone[];
+}
+
 export interface Floor {
   id: string;
   name: string;
@@ -59,6 +70,7 @@ export interface Floor {
   stairs: StairItem[];
   floorplanImage?: string;
   pixelsPerMeter?: number;
+  vacuumMapping?: VacuumMapping;
 }
 
 export interface LayoutState {
@@ -96,7 +108,9 @@ export type BuildTool =
   | 'place-media-screen'
   | 'place-fan'
   | 'place-cover'
-  | 'place-scene';
+  | 'place-scene'
+  | 'place-vacuum-dock'
+  | 'vacuum-zone';
 
 export type BuildTab = 'structure' | 'import' | 'furnish' | 'devices';
 export type SnapMode = 'strict' | 'soft' | 'off';
@@ -248,10 +262,11 @@ export interface VacuumState {
   fanSpeedList?: string[];  // e.g. ['Silent','Standard','Medium','Turbo','Max']
   cleaningArea?: number;    // m²
   cleaningTime?: number;    // minutes
-  position?: [number, number]; // [x, z] in meters
+  position?: [number, number]; // [x, z] in meters (Valetudo XY)
   dockPosition?: [number, number];
   errorMessage?: string;
   _action?: 'locate' | 'spot_clean';
+  currentRoom?: string;     // Room name from HA sensor
 }
 
 export interface LockState {
@@ -566,6 +581,12 @@ export interface AppState {
 
   // Category reorder
   reorderCategories: (fromIndex: number, toIndex: number) => void;
+
+  // Vacuum mapping actions
+  setVacuumMapping: (floorId: string, mapping: VacuumMapping) => void;
+  setVacuumDock: (floorId: string, pos: [number, number]) => void;
+  addVacuumZone: (floorId: string, zone: VacuumZone) => void;
+  removeVacuumZone: (floorId: string, roomId: string) => void;
 
   // Home Assistant actions
   setHAEntities: (entities: HAEntity[]) => void;
