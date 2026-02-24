@@ -163,6 +163,32 @@ function GenericMarker({ position, id, onSelect, onDragStart, selected, color, e
 // ─── Media Screen Marker ───
 interface MediaScreenMarkerProps extends MarkerProps {
   marker: DeviceMarker;
+  buildMode?: boolean;
+}
+
+// ─── App Branding ───
+const APP_BRANDING: Record<string, { color: string; label: string }> = {
+  youtube:    { color: '#FF0000', label: 'YOUTUBE' },
+  netflix:    { color: '#E50914', label: 'NETFLIX' },
+  primevideo: { color: '#00A8E1', label: 'PRIME VIDEO' },
+  'prime video': { color: '#00A8E1', label: 'PRIME VIDEO' },
+  'amazon prime video': { color: '#00A8E1', label: 'PRIME VIDEO' },
+  hbo:        { color: '#B535F6', label: 'HBO MAX' },
+  'hbo max':  { color: '#B535F6', label: 'HBO MAX' },
+  spotify:    { color: '#1DB954', label: 'SPOTIFY' },
+  'svt play': { color: '#2DAB4F', label: 'SVT PLAY' },
+  svt:        { color: '#2DAB4F', label: 'SVT PLAY' },
+  'disney+':  { color: '#113CCF', label: 'DISNEY+' },
+  disney:     { color: '#113CCF', label: 'DISNEY+' },
+  plex:       { color: '#E5A00D', label: 'PLEX' },
+};
+
+function getAppBranding(source: string): { color: string; label: string } | null {
+  const key = source.toLowerCase().trim();
+  for (const [k, v] of Object.entries(APP_BRANDING)) {
+    if (key.includes(k)) return v;
+  }
+  return null;
 }
 
 function drawScreenCanvas(
@@ -180,26 +206,27 @@ function drawScreenCanvas(
   const isPlaying = mediaState?.state === 'playing';
   const hasMedia = !!(title || isPlaying);
 
+  const artist = (mediaState?.attributes?.media_artist as string) || '';
+
   if (!hasMedia) {
     // ── Standby mode ──
     const grad = ctx.createLinearGradient(0, 0, w, h);
-    grad.addColorStop(0, '#0f172a');
-    grad.addColorStop(1, '#1e1b4b');
+    grad.addColorStop(0, '#030308');
+    grad.addColorStop(1, '#0a0a18');
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, w, h);
 
     // Border
-    ctx.strokeStyle = 'rgba(129,140,248,0.3)';
+    ctx.strokeStyle = 'rgba(129,140,248,0.15)';
     ctx.lineWidth = 4;
     ctx.strokeRect(2, 2, w - 4, h - 4);
 
     // TV icon (monitor outline)
     const cx = w / 2, cy = h / 2 - 20;
     const mw = 80, mh = 55;
-    ctx.strokeStyle = 'rgba(129,140,248,0.6)';
+    ctx.strokeStyle = 'rgba(129,140,248,0.4)';
     ctx.lineWidth = 4;
     ctx.strokeRect(cx - mw / 2, cy - mh / 2, mw, mh);
-    // Stand
     ctx.beginPath();
     ctx.moveTo(cx - 20, cy + mh / 2);
     ctx.lineTo(cx - 30, cy + mh / 2 + 18);
@@ -207,49 +234,61 @@ function drawScreenCanvas(
     ctx.lineTo(cx + 30, cy + mh / 2 + 18);
     ctx.stroke();
 
-    // "Standby" text
-    ctx.fillStyle = 'rgba(129,140,248,0.5)';
+    ctx.fillStyle = 'rgba(129,140,248,0.35)';
     ctx.font = 'bold 28px sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText('Standby', cx, cy + mh / 2 + 55);
 
     // Scanline effect
-    ctx.fillStyle = 'rgba(129,140,248,0.03)';
+    ctx.fillStyle = 'rgba(129,140,248,0.02)';
     const scanY = (Date.now() % 3000) / 3000 * h;
     ctx.fillRect(0, scanY, w, 40);
   } else {
     // ── Now Playing ──
     const grad = ctx.createLinearGradient(0, 0, w, h);
-    grad.addColorStop(0, '#0f172a');
-    grad.addColorStop(1, '#312e81');
+    grad.addColorStop(0, '#050510');
+    grad.addColorStop(1, '#0a0a1f');
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, w, h);
 
-    // Source label with colored background
-    const srcLower = source.toLowerCase();
-    const srcColor = srcLower.includes('netflix') ? '#e11d48' : srcLower.includes('spotify') ? '#22c55e' : '#6366f1';
+    // App branding badge
+    const branding = getAppBranding(source);
+    const badgeColor = branding?.color ?? '#6366f1';
+    const badgeLabel = branding?.label ?? source.toUpperCase();
+
     if (source) {
-      ctx.fillStyle = srcColor;
-      const tw = ctx.measureText(source.toUpperCase()).width + 20;
-      const labelW = Math.min(tw, 200);
+      ctx.font = 'bold 22px sans-serif';
+      const tw = ctx.measureText(badgeLabel).width + 28;
+      const labelW = Math.min(tw, 220);
+      const labelH = 40;
+      const labelX = 24;
+      const labelY = 20;
+      // Rounded badge
+      ctx.fillStyle = badgeColor;
       ctx.beginPath();
-      ctx.roundRect(24, 24, labelW, 36, 6);
+      ctx.roundRect(labelX, labelY, labelW, labelH, 8);
       ctx.fill();
       ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 20px sans-serif';
       ctx.textAlign = 'left';
-      ctx.fillText(source.toUpperCase(), 34, 49, labelW - 20);
+      ctx.fillText(badgeLabel, labelX + 14, labelY + 28, labelW - 28);
     }
 
     // Title
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 36px sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.95)';
+    ctx.font = 'bold 34px sans-serif';
     ctx.textAlign = 'left';
-    ctx.fillText(title || 'Spelar…', 30, h / 2 + 10, w - 60);
+    ctx.fillText(title || 'Spelar…', 30, h / 2, w - 60);
+
+    // Artist
+    if (artist) {
+      ctx.fillStyle = 'rgba(255,255,255,0.55)';
+      ctx.font = '24px sans-serif';
+      ctx.fillText(artist, 30, h / 2 + 34, w - 60);
+    }
 
     // Play/Pause icon
-    const iconX = w / 2, iconY = h / 2 + 70;
-    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    const iconX = w / 2, iconY = h / 2 + 80;
+    ctx.fillStyle = 'rgba(255,255,255,0.7)';
     if (isPlaying) {
       ctx.fillRect(iconX - 18, iconY - 15, 10, 30);
       ctx.fillRect(iconX + 8, iconY - 15, 10, 30);
@@ -267,21 +306,31 @@ function drawScreenCanvas(
     const duration = mediaState?.attributes?.media_duration as number | undefined;
     if (config.showProgress && duration && duration > 0) {
       const barY = h - 40, barW = w - 60;
-      ctx.fillStyle = 'rgba(255,255,255,0.15)';
+      ctx.fillStyle = 'rgba(255,255,255,0.1)';
       ctx.fillRect(30, barY, barW, 6);
       const progress = Math.min(1, (position ?? 0) / duration);
-      ctx.fillStyle = '#818cf8';
+      ctx.fillStyle = badgeColor;
       ctx.fillRect(30, barY, barW * progress, 6);
     }
   }
 }
 
-function MediaScreenMarker({ position, id, onSelect, onDragStart, selected, marker }: MediaScreenMarkerProps) {
+function MediaScreenMarker({ position, id, onSelect, onDragStart, selected, marker, buildMode }: MediaScreenMarkerProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const textureRef = useRef<THREE.CanvasTexture | null>(null);
+  const lightRef = useRef<THREE.PointLight>(null);
   const liveState = useAppStore((s) => marker.ha?.entityId ? s.homeAssistant.liveStates[marker.ha.entityId] : null);
   const config = marker.screenConfig ?? { aspectRatio: 16 / 9, uiStyle: 'minimal' as const, showProgress: true };
   const scale = marker.scale ?? [1.2, 0.675, 1];
+
+  // Determine if screen is "on"
+  const screenState = liveState?.state ?? '';
+  const isScreenOn = !!screenState && !['off', 'standby', 'idle', 'unavailable', ''].includes(screenState);
+
+  // Get branding color for ambient light
+  const source = (liveState?.attributes?.app_name as string) || (liveState?.attributes?.source as string) || '';
+  const brandingInfo = getAppBranding(source);
+  const ambientColor = brandingInfo?.color ?? '#818cf8';
 
   // Create canvas once
   if (!canvasRef.current) {
@@ -319,8 +368,15 @@ function MediaScreenMarker({ position, id, onSelect, onDragStart, selected, mark
     if (selected && onDragStart) { onDragStart(id, e); }
   }, [selected, onDragStart, id]);
 
-  // Periodically update texture for scanline animation in standby
+  // Animate: pulsing ambient light + scanline refresh
   useFrame(() => {
+    if (lightRef.current) {
+      if (isScreenOn) {
+        lightRef.current.intensity = 0.3 + Math.sin(Date.now() * 0.002) * 0.2;
+      } else {
+        lightRef.current.intensity = 0.05;
+      }
+    }
     if (!liveState && canvasRef.current && textureRef.current) {
       drawScreenCanvas(canvasRef.current, null, config);
       textureRef.current.needsUpdate = true;
@@ -338,33 +394,35 @@ function MediaScreenMarker({ position, id, onSelect, onDragStart, selected, mark
       onClick={handleClick}
       onPointerDown={handlePointerDown}
     >
-      {/* Screen glow light */}
-      <pointLight position={[0, 0, 0.4]} intensity={0.8} color="#818cf8" distance={4} decay={2} />
+      {/* Pulsing ambient light — color follows app branding */}
+      <pointLight ref={lightRef} position={[0, 0, 0.4]} intensity={0.05} color={ambientColor} distance={4} decay={2} />
 
-      {/* Screen plane - emissive so it glows */}
+      {/* Screen plane — darker emissive */}
       <mesh>
         <planeGeometry args={[scale[0], scale[1]]} />
         {texture ? (
-          <meshStandardMaterial map={texture} emissive="#ffffff" emissiveIntensity={0.4} side={THREE.DoubleSide} toneMapped={false} />
+          <meshStandardMaterial map={texture} emissive="#ffffff" emissiveIntensity={0.15} side={THREE.DoubleSide} toneMapped={false} />
         ) : (
-          <meshStandardMaterial color="#1a1a2e" emissive="#818cf8" emissiveIntensity={0.2} side={THREE.DoubleSide} />
+          <meshStandardMaterial color="#1a1a2e" emissive="#818cf8" emissiveIntensity={0.1} side={THREE.DoubleSide} />
         )}
       </mesh>
 
-      {/* Bezel */}
+      {/* Bezel — always visible */}
       <mesh position={[0, 0, -0.005]}>
         <planeGeometry args={[scale[0] + 0.06, scale[1] + 0.06]} />
         <meshStandardMaterial color="#111" side={THREE.DoubleSide} />
       </mesh>
 
-      {/* Ambient glow plane behind */}
-      <mesh position={[0, 0, -0.02]}>
-        <planeGeometry args={[scale[0] + 0.4, scale[1] + 0.3]} />
-        <meshBasicMaterial color="#818cf8" transparent opacity={0.08} side={THREE.DoubleSide} />
-      </mesh>
+      {/* Ambient glow plane — build mode only */}
+      {buildMode && (
+        <mesh position={[0, 0, -0.02]}>
+          <planeGeometry args={[scale[0] + 0.4, scale[1] + 0.3]} />
+          <meshBasicMaterial color="#818cf8" transparent opacity={0.08} side={THREE.DoubleSide} />
+        </mesh>
+      )}
 
-      {/* Corner markers (always visible) */}
-      {[[-hw, hh], [hw, hh], [-hw, -hh], [hw, -hh]].map(([cx, cy], i) => (
+      {/* Corner markers — build mode only */}
+      {buildMode && [[-hw, hh], [hw, hh], [-hw, -hh], [hw, -hh]].map(([cx, cy], i) => (
         <mesh key={i} position={[cx, cy, 0.005]}>
           <boxGeometry args={[cornerSize, cornerSize, 0.01]} />
           <meshBasicMaterial color={selected ? '#a5b4fc' : '#818cf8'} transparent opacity={selected ? 1 : 0.6} />
@@ -500,6 +558,7 @@ export default function DeviceMarkers3D({ buildMode }: DeviceMarkers3DProps) {
               position={marker.position}
               id={marker.id}
               marker={marker}
+              buildMode={buildMode}
               onSelect={buildMode ? handleSelect : undefined}
               onDragStart={buildMode ? handleDragStart : undefined}
               selected={!!isSelected}
