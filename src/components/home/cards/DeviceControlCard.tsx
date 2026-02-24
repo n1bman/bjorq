@@ -8,6 +8,7 @@ import {
   Lock, Unlock, Battery, Home as HomeIcon,
   Snowflake, Flame, RotateCcw, Eye, Camera, Video,
   Fan, PanelTop, Clapperboard, ArrowUp, ArrowDown, StopCircle,
+  SkipBack, SkipForward, Tv,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -82,6 +83,13 @@ function CompactDeviceView({ marker, state }: { marker: DeviceMarker; state: imp
     );
   }
 
+  // Media screen compact: show inline controls when on
+  if (state.kind === 'media_screen') {
+    const md = state.data as MediaState;
+    const updateDeviceState = useAppStore.getState().updateDeviceState;
+    return <CompactMediaControl id={marker.id} data={md} update={updateDeviceState} label={wc?.customLabel || marker.name || 'TV'} />;
+  }
+
   // Build status text per type
   let statusText = '';
   if (wc?.showValue !== false) {
@@ -90,9 +98,6 @@ function CompactDeviceView({ marker, state }: { marker: DeviceMarker; state: imp
       statusText = isOn ? `${pct}%` : 'Av';
     } else if (state.kind === 'climate') {
       statusText = `${(state.data as ClimateState).targetTemp}°`;
-    } else if (state.kind === 'media_screen') {
-      const md = state.data as MediaState;
-      statusText = md.title || (md.on ? md.state : 'Av');
     } else if (state.kind === 'sensor') {
       const sd = state.data as SensorState;
       statusText = `${sd.value} ${sd.unit}`;
@@ -121,6 +126,40 @@ function CompactDeviceView({ marker, state }: { marker: DeviceMarker; state: imp
         {statusText && <span className="text-[10px] text-muted-foreground truncate block">{statusText}</span>}
       </div>
       <span className={cn('w-2 h-2 rounded-full shrink-0', isOn ? 'bg-green-400' : 'bg-muted-foreground/30')} />
+    </div>
+  );
+}
+
+function CompactMediaControl({ id, data, update, label }: { id: string; data: MediaState; update: (id: string, partial: Record<string, unknown>) => void; label: string }) {
+  const isPlaying = data.state === 'playing';
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center gap-2">
+        <Tv size={14} className="text-primary shrink-0" />
+        <span className="text-xs text-foreground truncate flex-1">{label}</span>
+        <span className={cn('w-2 h-2 rounded-full shrink-0', data.on ? 'bg-green-400' : 'bg-muted-foreground/30')} />
+      </div>
+      {data.title && <p className="text-[10px] text-muted-foreground truncate">{data.title}</p>}
+      {data.on && (
+        <div className="flex items-center justify-center gap-1">
+          <Button size="sm" variant="ghost" className="h-7 w-7 p-0"
+            onClick={(e) => { e.stopPropagation(); update(id, { _action: 'previous' }); }}>
+            <SkipBack size={12} />
+          </Button>
+          <Button size="sm" variant="ghost" className="h-7 w-7 p-0"
+            onClick={(e) => { e.stopPropagation(); update(id, { state: isPlaying ? 'paused' : 'playing' }); }}>
+            {isPlaying ? <Pause size={14} /> : <Play size={14} />}
+          </Button>
+          <Button size="sm" variant="ghost" className="h-7 w-7 p-0"
+            onClick={(e) => { e.stopPropagation(); update(id, { _action: 'next' }); }}>
+            <SkipForward size={12} />
+          </Button>
+          <Button size="sm" variant="ghost" className="h-7 w-7 p-0"
+            onClick={(e) => { e.stopPropagation(); update(id, { _action: 'stop' }); }}>
+            <Square size={10} />
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

@@ -54,15 +54,16 @@ export default function HomeView() {
             {selectedMarkers.map((m) => {
               const isOn = getDeviceIsOn(m.id);
               const canToggle = TOGGLEABLE_KINDS.has(m.kind);
+              const isMediaOn = m.kind === 'media_screen' && isOn;
               return (
                 <div
                   key={m.id}
                   className={cn(
                     'glass-panel rounded-xl p-3 min-w-[180px] max-w-[220px] shrink-0 transition-all',
-                    canToggle && 'cursor-pointer active:scale-95',
+                    canToggle && !isMediaOn && 'cursor-pointer active:scale-95',
                     !isOn && 'opacity-50 grayscale'
                   )}
-                  onClick={() => canToggle && toggleDeviceState(m.id)}
+                  onClick={() => canToggle && !isMediaOn && toggleDeviceState(m.id)}
                 >
                   <p className="text-xs font-medium text-foreground mb-1 truncate">{m.name || m.kind}</p>
                   <DeviceControlCard marker={m} compact />

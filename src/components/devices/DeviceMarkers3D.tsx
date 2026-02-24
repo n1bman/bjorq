@@ -261,7 +261,7 @@ function drawScreenCanvas(
       const tw = ctx.measureText(badgeLabel).width + 28;
       const labelW = Math.min(tw, 220);
       const labelH = 40;
-      const labelX = 24;
+      const labelX = (w - labelW) / 2; // centered
       const labelY = 20;
       // Rounded badge
       ctx.fillStyle = badgeColor;
@@ -269,21 +269,22 @@ function drawScreenCanvas(
       ctx.roundRect(labelX, labelY, labelW, labelH, 8);
       ctx.fill();
       ctx.fillStyle = '#ffffff';
-      ctx.textAlign = 'left';
-      ctx.fillText(badgeLabel, labelX + 14, labelY + 28, labelW - 28);
+      ctx.textAlign = 'center';
+      ctx.fillText(badgeLabel, w / 2, labelY + 28, labelW - 28);
     }
 
-    // Title
+    // Title — centered
     ctx.fillStyle = 'rgba(255,255,255,0.95)';
     ctx.font = 'bold 34px sans-serif';
-    ctx.textAlign = 'left';
-    ctx.fillText(title || 'Spelar…', 30, h / 2, w - 60);
+    ctx.textAlign = 'center';
+    ctx.fillText(title || 'Spelar…', w / 2, h / 2, w - 60);
 
-    // Artist
+    // Artist — centered
     if (artist) {
       ctx.fillStyle = 'rgba(255,255,255,0.55)';
       ctx.font = '24px sans-serif';
-      ctx.fillText(artist, 30, h / 2 + 34, w - 60);
+      ctx.textAlign = 'center';
+      ctx.fillText(artist, w / 2, h / 2 + 34, w - 60);
     }
 
     // Play/Pause icon
@@ -301,16 +302,27 @@ function drawScreenCanvas(
       ctx.fill();
     }
 
-    // Progress bar
-    const position = mediaState?.attributes?.media_position as number | undefined;
+    // Progress bar + time
+    const mediaPos = mediaState?.attributes?.media_position as number | undefined;
     const duration = mediaState?.attributes?.media_duration as number | undefined;
     if (config.showProgress && duration && duration > 0) {
-      const barY = h - 40, barW = w - 60;
+      const barY = h - 50, barW = w - 60;
       ctx.fillStyle = 'rgba(255,255,255,0.1)';
       ctx.fillRect(30, barY, barW, 6);
-      const progress = Math.min(1, (position ?? 0) / duration);
+      const progress = Math.min(1, (mediaPos ?? 0) / duration);
       ctx.fillStyle = badgeColor;
       ctx.fillRect(30, barY, barW * progress, 6);
+
+      // Time display
+      const fmtTime = (s: number) => {
+        const m = Math.floor(s / 60);
+        const sec = Math.floor(s % 60);
+        return `${m}:${sec.toString().padStart(2, '0')}`;
+      };
+      ctx.fillStyle = 'rgba(255,255,255,0.5)';
+      ctx.font = '18px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(`${fmtTime(mediaPos ?? 0)} / ${fmtTime(duration)}`, w / 2, barY + 26);
     }
   }
 }
@@ -318,7 +330,7 @@ function drawScreenCanvas(
 function MediaScreenMarker({ position, id, onSelect, onDragStart, selected, marker, buildMode }: MediaScreenMarkerProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const textureRef = useRef<THREE.CanvasTexture | null>(null);
-  const lightRef = useRef<THREE.PointLight>(null);
+  const glowMeshRef = useRef<THREE.Mesh>(null);
   const liveState = useAppStore((s) => marker.ha?.entityId ? s.homeAssistant.liveStates[marker.ha.entityId] : null);
   const config = marker.screenConfig ?? { aspectRatio: 16 / 9, uiStyle: 'minimal' as const, showProgress: true };
   const scale = marker.scale ?? [1.2, 0.675, 1];
@@ -368,13 +380,14 @@ function MediaScreenMarker({ position, id, onSelect, onDragStart, selected, mark
     if (selected && onDragStart) { onDragStart(id, e); }
   }, [selected, onDragStart, id]);
 
-  // Animate: pulsing ambient light + scanline refresh
+  // Animate: pulsing front glow + scanline refresh
   useFrame(() => {
-    if (lightRef.current) {
+    if (glowMeshRef.current) {
+      const mat = glowMeshRef.current.material as THREE.MeshBasicMaterial;
       if (isScreenOn) {
-        lightRef.current.intensity = 0.3 + Math.sin(Date.now() * 0.002) * 0.2;
+        mat.opacity = 0.03 + Math.sin(Date.now() * 0.002) * 0.02;
       } else {
-        lightRef.current.intensity = 0.05;
+        mat.opacity = 0.0;
       }
     }
     if (!liveState && canvasRef.current && textureRef.current) {
@@ -394,8 +407,11 @@ function MediaScreenMarker({ position, id, onSelect, onDragStart, selected, mark
       onClick={handleClick}
       onPointerDown={handlePointerDown}
     >
-      {/* Pulsing ambient light — color follows app branding */}
-      <pointLight ref={lightRef} position={[0, 0, 0.4]} intensity={0.05} color={ambientColor} distance={4} decay={2} />
+      {/* Front glow overlay — pulsing transparent plane in front of screen */}
+      <mesh position={[0, 0, 0.015]} ref={glowMeshRef as any}>
+        <planeGeometry args={[scale[0], scale[1]]} />
+        <meshBasicMaterial color={ambientColor} transparent opacity={0.0} side={THREE.FrontSide} depthWrite={false} />
+      </mesh>
 
       {/* Screen plane — darker emissive */}
       <mesh>
