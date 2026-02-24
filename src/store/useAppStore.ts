@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { AppState, BuildState, LayoutState, WallSegment, Room, DeviceState, DeviceKind, ActivityEvent } from './types';
+import { mapHAEntityToDeviceState } from '@/lib/haMapping';
 
 export function getDefaultState(kind: DeviceKind): DeviceState {
   switch (kind) {
@@ -870,6 +871,39 @@ export const useAppStore = create<AppState>()(
         cats.splice(toIndex, 0, moved);
         return { customCategories: cats };
       }),
+
+      // Home Assistant actions
+      setHAEntities: (entities) => set((s) => ({
+        homeAssistant: { ...s.homeAssistant, entities },
+      })),
+
+      updateHALiveState: (entityId, state, attributes) => set((s) => {
+        const domain = entityId.split('.')[0];
+        const newLiveStates = { ...s.homeAssistant.liveStates, [entityId]: { state, attributes } };
+
+        // Auto-sync to matching DeviceMarker
+        const marker = s.devices.markers.find((m) => m.ha?.entityId === entityId);
+        let newDeviceStates = s.devices.deviceStates;
+        if (marker) {
+          const mapped = mapHAEntityToDeviceState(domain, state, attributes);
+          if (mapped) {
+            newDeviceStates = { ...newDeviceStates, [marker.id]: mapped };
+          }
+        }
+
+        return {
+          homeAssistant: { ...s.homeAssistant, liveStates: newLiveStates },
+          devices: { ...s.devices, deviceStates: newDeviceStates },
+        };
+      }),
+
+      setHAStatus: (status) => set((s) => ({
+        homeAssistant: { ...s.homeAssistant, status },
+      })),
+
+      setHAConnection: (wsUrl, token) => set((s) => ({
+        homeAssistant: { ...s.homeAssistant, wsUrl, token },
+      })),
     }),
     {
       name: 'hometwin-store',

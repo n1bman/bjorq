@@ -536,4 +536,10 @@ export interface AppState {
 
   // Category reorder
   reorderCategories: (fromIndex: number, toIndex: number) => void;
+
+  // Home Assistant actions
+  setHAEntities: (entities: HAEntity[]) => void;
+  updateHALiveState: (entityId: string, state: string, attributes: Record<string, unknown>) => void;
+  setHAStatus: (status: HAConnectionStatus) => void;
+  setHAConnection: (wsUrl: string, token: string) => void;
 }
