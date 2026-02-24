@@ -9,6 +9,15 @@ import type { DeviceState } from '@/store/types';
 const suppressedEntities = new Set<string>();
 const suppressTimers: Record<string, ReturnType<typeof setTimeout>> = {};
 
+/**
+ * When true, deviceState changes originated from HA — bridge should NOT send commands back.
+ */
+let fromHA = false;
+
+export function setFromHA(val: boolean) {
+  fromHA = val;
+}
+
 export function isSuppressed(entityId: string): boolean {
   return suppressedEntities.has(entityId);
 }
@@ -27,10 +36,15 @@ function suppressEntity(entityId: string, ms = 1500) {
  */
 function sendHACommand(entityId: string, state: DeviceState) {
   const callService = haServiceCaller.current;
-  if (!callService) return;
+  if (!callService) {
+    console.warn('[HABridge] No callService available');
+    return;
+  }
 
   const domain = entityId.split('.')[0];
   suppressEntity(entityId);
+
+  console.log('[HABridge] Sending command to', entityId, 'domain:', domain, 'state:', state.data);
 
   switch (domain) {
     case 'light': {
@@ -119,6 +133,12 @@ export function useHABridge() {
     prevStatesRef.current = { ...useAppStore.getState().devices.deviceStates };
 
     const unsub = useAppStore.subscribe((state) => {
+      // If this change originated from HA, don't send commands back
+      if (fromHA) {
+        prevStatesRef.current = { ...state.devices.deviceStates };
+        return;
+      }
+
       const currentStates = state.devices.deviceStates;
       const markers = state.devices.markers;
       const haStatus = state.homeAssistant.status;
