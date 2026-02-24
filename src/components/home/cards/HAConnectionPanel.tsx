@@ -12,7 +12,7 @@ export default function HAConnectionPanel() {
   const token = useAppStore((s) => s.homeAssistant.token);
   const entities = useAppStore((s) => s.homeAssistant.entities);
 
-  const [localUrl, setLocalUrl] = useState(wsUrl || 'ws://homeassistant.local:8123/api/websocket');
+  const [localUrl, setLocalUrl] = useState(wsUrl || '');
   const [localToken, setLocalToken] = useState(token);
 
   const { connect, disconnect } = useHomeAssistant();
@@ -46,8 +46,11 @@ export default function HAConnectionPanel() {
       </div>
 
       {status === 'error' && (
-        <div className="text-xs text-destructive bg-destructive/10 rounded-lg p-2">
-          Kunde inte ansluta. Kontrollera URL och token.
+        <div className="text-xs text-destructive bg-destructive/10 rounded-lg p-2 space-y-1">
+          <p>Kunde inte ansluta. Kontrollera URL och token.</p>
+          {localUrl.startsWith('ws://') && (
+            <p className="font-medium">⚠️ Använd wss:// istället för ws:// (krävs på HTTPS).</p>
+          )}
         </div>
       )}
 
@@ -56,10 +59,13 @@ export default function HAConnectionPanel() {
         <Input
           value={localUrl}
           onChange={(e) => setLocalUrl(e.target.value)}
-          placeholder="ws://homeassistant.local:8123/api/websocket"
+          placeholder="wss://xxxxxxxx.ui.nabu.casa"
           className="h-8 text-xs bg-secondary/30"
           disabled={status === 'connecting' || status === 'connected'}
         />
+        <p className="text-[10px] text-muted-foreground">
+          Tips: Klistra in din Nabu Casa-URL (t.ex. wss://xxx.ui.nabu.casa). /api/websocket läggs till automatiskt.
+        </p>
       </div>
 
       <div className="space-y-2">
