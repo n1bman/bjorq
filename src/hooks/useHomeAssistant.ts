@@ -15,6 +15,7 @@ function nextId() {
 export function useHomeAssistant() {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimer = useRef<ReturnType<typeof setTimeout>>();
+  const manualDisconnect = useRef(false);
 
   const setHAStatus = useAppStore((s) => s.setHAStatus);
   const setHAEntities = useAppStore((s) => s.setHAEntities);
@@ -31,6 +32,7 @@ export function useHomeAssistant() {
 
   const connect = useCallback((url: string, token: string) => {
     // Close existing
+    manualDisconnect.current = false;
     wsRef.current?.close();
     clearTimeout(reconnectTimer.current);
 
@@ -127,8 +129,8 @@ export function useHomeAssistant() {
 
       ws.onclose = () => {
         console.log('[HA] WebSocket closed');
+        if (manualDisconnect.current) return;
         const currentStatus = useAppStore.getState().homeAssistant.status;
-        // Only attempt reconnect if we were connected (not manually disconnected)
         if (currentStatus === 'connected' || currentStatus === 'connecting') {
           setHAStatus('connecting');
           reconnectTimer.current = setTimeout(() => {
@@ -144,6 +146,7 @@ export function useHomeAssistant() {
   }, [setHAStatus, setHAEntities, updateHALiveState, setHAConnection]);
 
   const disconnect = useCallback(() => {
+    manualDisconnect.current = true;
     clearTimeout(reconnectTimer.current);
     setHAStatus('disconnected');
     wsRef.current?.close();
