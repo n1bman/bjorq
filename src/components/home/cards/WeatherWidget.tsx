@@ -30,7 +30,7 @@ export default function WeatherWidget() {
             <Thermometer size={14} className="text-primary" />
             <span className="text-lg font-semibold font-display text-foreground">{temperature}°C</span>
           </div>
-          <p className="text-[10px] text-muted-foreground">{conditionLabels[condition] ?? condition}</p>
+          <p className="text-[10px] text-muted-foreground">{conditionLabels[condition] ?? condition} · Utomhus</p>
         </div>
       </div>
       <div className="flex items-center gap-3 mt-2 pt-2 border-t border-border/30">

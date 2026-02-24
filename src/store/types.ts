@@ -319,6 +319,15 @@ export interface RoomTemplate {
   category: RoomTemplateCategory;
 }
 
+// ─── Device Categories ───
+export interface DeviceCategory {
+  id: string;
+  name: string;
+  icon: string; // emoji
+  deviceIds: string[];
+  color?: string;
+}
+
 // ─── Home View ───
 export type CameraPreset = 'free' | 'topdown' | 'angle' | 'front';
 
@@ -332,6 +341,7 @@ export interface VisibleWidgets {
 export interface HomeViewState {
   cameraPreset: CameraPreset;
   visibleWidgets: VisibleWidgets;
+  homeScreenDevices: string[];
 }
 
 // ─── Activity Log ───
@@ -371,6 +381,7 @@ export interface AppState {
   homeView: HomeViewState;
   activityLog: ActivityEvent[];
   profile: UserProfile;
+  customCategories: DeviceCategory[];
 
   // Home View actions
   setCameraPreset: (preset: CameraPreset) => void;
@@ -474,4 +485,15 @@ export interface AppState {
 
   // Profile actions
   setProfile: (changes: Partial<UserProfile>) => void;
+
+  // Category actions
+  addCategory: (name: string, icon: string) => void;
+  removeCategory: (id: string) => void;
+  renameCategory: (id: string, name: string) => void;
+  setCategoryIcon: (id: string, icon: string) => void;
+  moveDeviceToCategory: (deviceId: string, categoryId: string) => void;
+  reorderDeviceInCategory: (categoryId: string, deviceId: string, newIndex: number) => void;
+
+  // Home screen device widgets
+  toggleHomeScreenDevice: (deviceId: string) => void;
 }

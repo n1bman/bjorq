@@ -1,12 +1,34 @@
 import { useAppStore } from '@/store/useAppStore';
 import { Input } from '@/components/ui/input';
-import { MapPin } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
+import { MapPin, Navigation } from 'lucide-react';
+import { useState } from 'react';
 
 export default function LocationSettings() {
   const lat = useAppStore((s) => s.environment.location.lat);
   const lon = useAppStore((s) => s.environment.location.lon);
   const timezone = useAppStore((s) => s.environment.location.timezone);
+  const source = useAppStore((s) => s.environment.source);
   const setLocation = useAppStore((s) => s.setLocation);
+  const setWeatherSource = useAppStore((s) => s.setWeatherSource);
+  const [locating, setLocating] = useState(false);
+
+  const useMyLocation = () => {
+    if (!navigator.geolocation) return;
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setLocation(
+          Math.round(pos.coords.latitude * 100) / 100,
+          Math.round(pos.coords.longitude * 100) / 100
+        );
+        setLocating(false);
+      },
+      () => setLocating(false),
+      { enableHighAccuracy: true }
+    );
+  };
 
   return (
     <div className="glass-panel rounded-2xl p-4 space-y-3">
@@ -14,6 +36,26 @@ export default function LocationSettings() {
         <MapPin size={16} className="text-primary" />
         <h4 className="text-sm font-semibold text-foreground">Plats</h4>
       </div>
+
+      <div className="flex items-center justify-between">
+        <span className="text-xs text-foreground">Live väder</span>
+        <Switch
+          checked={source === 'auto'}
+          onCheckedChange={(v) => setWeatherSource(v ? 'auto' : 'manual')}
+        />
+      </div>
+
+      <Button
+        size="sm"
+        variant="outline"
+        className="w-full h-8 text-xs gap-1.5"
+        onClick={useMyLocation}
+        disabled={locating}
+      >
+        <Navigation size={12} />
+        {locating ? 'Hämtar...' : 'Använd min plats'}
+      </Button>
+
       <div className="grid grid-cols-2 gap-2">
         <div>
           <label className="text-[10px] text-muted-foreground">Latitud</label>
@@ -36,7 +78,9 @@ export default function LocationSettings() {
           />
         </div>
       </div>
-      <p className="text-[10px] text-muted-foreground">Tidszon: {timezone}</p>
+      <p className="text-[10px] text-muted-foreground">
+        Tidszon: {timezone} · Källa: {source === 'auto' ? 'Open-Meteo' : 'Manuell'}
+      </p>
     </div>
   );
 }
