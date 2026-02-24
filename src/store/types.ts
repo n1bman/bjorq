@@ -279,12 +279,20 @@ export interface PropsState {
 // ─── Environment Layer ───
 export type WeatherCondition = 'clear' | 'cloudy' | 'rain' | 'snow';
 
+export interface ForecastDay {
+  day: string;
+  condition: WeatherCondition;
+  maxTemp: number;
+  minTemp: number;
+}
+
 export interface EnvironmentState {
   source: 'ha' | 'manual' | 'auto';
   location: { lat: number; lon: number; timezone: string };
   timeMode: 'live' | 'preview';
   previewDateTime: string;
   weather: { condition: WeatherCondition; temperature: number; windSpeed?: number; humidity?: number; intensity: number };
+  forecast?: ForecastDay[];
   sunAzimuth: number;
   sunElevation: number;
 }
@@ -336,6 +344,7 @@ export interface VisibleWidgets {
   weather: boolean;
   temperature: boolean;
   energy: boolean;
+  calendar: boolean;
 }
 
 export interface HomeViewState {
@@ -460,7 +469,7 @@ export interface AppState {
   setPreviewDateTime: (dt: string) => void;
   setSunPosition: (azimuth: number, elevation: number) => void;
   setWeather: (condition: WeatherCondition) => void;
-  setWeatherData: (data: { condition: WeatherCondition; temperature: number; windSpeed?: number; humidity?: number; intensity?: number }) => void;
+  setWeatherData: (data: { condition: WeatherCondition; temperature: number; windSpeed?: number; humidity?: number; intensity?: number; forecast?: ForecastDay[] }) => void;
   setWeatherSource: (source: 'manual' | 'auto' | 'ha') => void;
   setLocation: (lat: number, lon: number) => void;
 
@@ -496,4 +505,7 @@ export interface AppState {
 
   // Home screen device widgets
   toggleHomeScreenDevice: (deviceId: string) => void;
+
+  // Category reorder
+  reorderCategories: (fromIndex: number, toIndex: number) => void;
 }

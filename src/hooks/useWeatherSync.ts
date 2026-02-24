@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useAppStore } from '@/store/useAppStore';
-import type { WeatherCondition } from '@/store/types';
+import type { WeatherCondition, ForecastDay } from '@/store/types';
 
 // Map WMO weather codes to our conditions
 function wmoToCondition(code: number): WeatherCondition {
@@ -46,8 +46,10 @@ export function calculateSunPosition(lat: number, lon: number, date: Date): { az
   return { azimuth, elevation };
 }
 
+const dayNames = ['Sön', 'Mån', 'Tis', 'Ons', 'Tor', 'Fre', 'Lör'];
+
 async function fetchWeather(lat: number, lon: number) {
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&hourly=relative_humidity_2m&forecast_days=1`;
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&hourly=relative_humidity_2m&daily=weathercode,temperature_2m_max,temperature_2m_min&forecast_days=7&timezone=auto`;
   const res = await fetch(url);
   if (!res.ok) throw new Error('Weather fetch failed');
   const data = await res.json();
@@ -55,12 +57,24 @@ async function fetchWeather(lat: number, lon: number) {
   const nowHour = new Date().getHours();
   const humidity = data.hourly?.relative_humidity_2m?.[nowHour] ?? undefined;
   const weatherCode = cw.weathercode as number;
+
+  const forecast: ForecastDay[] = (data.daily?.time ?? []).map((dateStr: string, i: number) => {
+    const d = new Date(dateStr + 'T12:00:00');
+    return {
+      day: dayNames[d.getDay()],
+      condition: wmoToCondition(data.daily.weathercode[i]),
+      maxTemp: Math.round(data.daily.temperature_2m_max[i]),
+      minTemp: Math.round(data.daily.temperature_2m_min[i]),
+    };
+  });
+
   return {
     condition: wmoToCondition(weatherCode),
     temperature: Math.round(cw.temperature as number),
     windSpeed: cw.windspeed as number,
     humidity: humidity as number | undefined,
     intensity: wmoToIntensity(weatherCode),
+    forecast,
   };
 }
 

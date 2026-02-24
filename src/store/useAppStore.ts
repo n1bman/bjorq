@@ -61,7 +61,7 @@ export const useAppStore = create<AppState>()(
 
       homeView: {
         cameraPreset: 'angle',
-        visibleWidgets: { clock: true, weather: true, temperature: true, energy: true },
+        visibleWidgets: { clock: true, weather: true, temperature: true, energy: true, calendar: true },
         homeScreenDevices: [],
       },
       setCameraPreset: (preset) => set((s) => ({ homeView: { ...s.homeView, cameraPreset: preset } })),
@@ -656,7 +656,13 @@ export const useAppStore = create<AppState>()(
         set((s) => ({ environment: { ...s.environment, weather: { ...s.environment.weather, condition } } })),
 
       setWeatherData: (data) =>
-        set((s) => ({ environment: { ...s.environment, weather: { ...s.environment.weather, ...data } } })),
+        set((s) => ({
+          environment: {
+            ...s.environment,
+            weather: { ...s.environment.weather, condition: data.condition, temperature: data.temperature, windSpeed: data.windSpeed, humidity: data.humidity, intensity: data.intensity ?? s.environment.weather.intensity },
+            ...(data.forecast ? { forecast: data.forecast } : {}),
+          },
+        })),
 
       setWeatherSource: (source) =>
         set((s) => ({ environment: { ...s.environment, source } })),
@@ -847,11 +853,17 @@ export const useAppStore = create<AppState>()(
       toggleHomeScreenDevice: (deviceId) => set((s) => ({
         homeView: {
           ...s.homeView,
-          homeScreenDevices: s.homeView.homeScreenDevices.includes(deviceId)
-            ? s.homeView.homeScreenDevices.filter((d) => d !== deviceId)
-            : [...s.homeView.homeScreenDevices, deviceId],
+          homeScreenDevices: (s.homeView.homeScreenDevices ?? []).includes(deviceId)
+            ? (s.homeView.homeScreenDevices ?? []).filter((d) => d !== deviceId)
+            : [...(s.homeView.homeScreenDevices ?? []), deviceId],
         },
       })),
+      reorderCategories: (fromIndex, toIndex) => set((s) => {
+        const cats = [...s.customCategories];
+        const [moved] = cats.splice(fromIndex, 1);
+        cats.splice(toIndex, 0, moved);
+        return { customCategories: cats };
+      }),
     }),
     {
       name: 'hometwin-store',

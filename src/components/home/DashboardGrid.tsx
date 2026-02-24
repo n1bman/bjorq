@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Home, Cloud, Cpu, Zap, Settings, Wifi, Bell, Video, User } from 'lucide-react';
+import { Home, Cloud, Cpu, Zap, Settings, Wifi, Bell, Video, User, Pencil, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useAppStore } from '@/store/useAppStore';
@@ -15,6 +15,7 @@ import SurveillancePanel from './cards/SurveillancePanel';
 import ProfilePanel from './cards/ProfilePanel';
 import CategoryCard from './cards/CategoryCard';
 import CategoryManager from './cards/CategoryManager';
+import CalendarWidget from './cards/CalendarWidget';
 import type { DeviceKind, DeviceMarker } from '@/store/types';
 
 type DashCategory = 'home' | 'weather' | 'devices' | 'energy' | 'surveillance' | 'activity' | 'settings' | 'ha' | 'profile';
@@ -51,10 +52,14 @@ const kindCategory: Record<DeviceKind, string> = {
 function HomeCategory() {
   const markers = useAppStore((s) => s.devices.markers);
   const customCategories = useAppStore((s) => s.customCategories);
+  const moveDeviceToCategory = useAppStore((s) => s.moveDeviceToCategory);
+  const reorderCategories = useAppStore((s) => s.reorderCategories);
   const [showManager, setShowManager] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [draggingCatIndex, setDraggingCatIndex] = useState<number | null>(null);
 
   // Use custom categories if they exist, otherwise auto-group
-  let entries: [string, DeviceMarker[]][];
+  let entries: { key: string; label: string; catId?: string; devices: DeviceMarker[] }[];
 
   if (customCategories.length > 0) {
     const categorizedIds = new Set(customCategories.flatMap((c) => c.deviceIds));
@@ -63,25 +68,36 @@ function HomeCategory() {
         const devices = cat.deviceIds
           .map((id) => markers.find((m) => m.id === id))
           .filter(Boolean) as DeviceMarker[];
-        return [`${cat.icon} ${cat.name}`, devices] as [string, DeviceMarker[]];
+        return { key: cat.id, label: `${cat.icon} ${cat.name}`, catId: cat.id, devices };
       })
-      .filter(([, devices]) => devices.length > 0);
+      .filter((e) => e.devices.length > 0 || editMode);
 
-    // Add uncategorized
     const uncategorized = markers.filter((m) => !categorizedIds.has(m.id));
     if (uncategorized.length > 0) {
-      entries.push(['⚙️ Övrigt', uncategorized]);
+      entries.push({ key: 'uncategorized', label: '⚙️ Övrigt', devices: uncategorized });
     }
   } else {
-    // Auto-group by kind category
     const grouped: Record<string, DeviceMarker[]> = {};
     for (const m of markers) {
       const cat = m.userCategory || kindCategory[m.kind] || 'Övrigt';
       if (!grouped[cat]) grouped[cat] = [];
       grouped[cat].push(m);
     }
-    entries = Object.entries(grouped);
+    entries = Object.entries(grouped).map(([label, devices]) => ({ key: label, label, devices }));
   }
+
+  const handleDropDevice = (categoryId: string, deviceId: string) => {
+    if (categoryId) {
+      moveDeviceToCategory(deviceId, categoryId);
+    }
+  };
+
+  const handleDropCategory = (targetIndex: number) => {
+    if (draggingCatIndex !== null && draggingCatIndex !== targetIndex) {
+      reorderCategories(draggingCatIndex, targetIndex);
+    }
+    setDraggingCatIndex(null);
+  };
 
   return (
     <div className="space-y-4">
@@ -90,27 +106,48 @@ function HomeCategory() {
         <ClockWidget />
         <WeatherWidget />
         <EnergyWidget />
+        <CalendarWidget />
       </div>
 
-      {/* Manage categories button */}
-      <div className="flex justify-end">
+      {/* Edit / manage bar */}
+      <div className="flex justify-end gap-2">
+        <Button
+          size="sm"
+          variant={editMode ? 'default' : 'outline'}
+          className="h-7 text-[10px] gap-1"
+          onClick={() => setEditMode(!editMode)}
+        >
+          {editMode ? <><X size={10} /> Klar</> : <><Pencil size={10} /> Redigera</>}
+        </Button>
         <Button size="sm" variant="outline" className="h-7 text-[10px]"
           onClick={() => setShowManager(!showManager)}>
           {showManager ? 'Stäng' : 'Hantera kategorier'}
         </Button>
       </div>
 
+      {editMode && (
+        <p className="text-[10px] text-muted-foreground text-center animate-pulse">
+          Dra enheter mellan kategorier · Dra kategorier för att omordna
+        </p>
+      )}
+
       {showManager && <CategoryManager />}
 
       {/* Floating category grid */}
       {entries.length > 0 ? (
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 auto-rows-auto">
-          {entries.map(([cat, devices]) => (
+          {entries.map((entry, index) => (
             <CategoryCard
-              key={cat}
-              category={cat}
-              devices={devices}
-              span={devices.length >= 5}
+              key={entry.key}
+              category={entry.label}
+              categoryId={entry.catId}
+              devices={entry.devices}
+              span={entry.devices.length >= 5}
+              editMode={editMode}
+              categoryIndex={index}
+              onDropDevice={entry.catId ? (deviceId) => handleDropDevice(entry.catId!, deviceId) : undefined}
+              onDragCategoryStart={() => setDraggingCatIndex(index)}
+              onDropCategory={() => handleDropCategory(index)}
             />
           ))}
         </div>
@@ -130,7 +167,7 @@ function WeatherCategory() {
       <WeatherWidget />
       <div className="glass-panel rounded-2xl p-4">
         <p className="text-xs text-muted-foreground">
-          Detaljerad väderprognos med timvis data kommer snart.
+          Väderprognosen synkas automatiskt med din plats.
           Aktivera "Live väder" under Inställningar för att synka med din plats.
         </p>
       </div>
