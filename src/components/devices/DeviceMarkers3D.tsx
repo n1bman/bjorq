@@ -404,6 +404,7 @@ interface DeviceMarkers3DProps {
 
 export default function DeviceMarkers3D({ buildMode }: DeviceMarkers3DProps) {
   const markers = useAppStore((s) => s.devices.markers);
+  const showDeviceMarkers = useAppStore((s) => s.homeView.showDeviceMarkers ?? true);
   const setSelection = useAppStore((s) => s.setSelection);
   const updateDevice = useAppStore((s) => s.updateDevice);
   const selectedId = useAppStore((s) => s.build.selection.id);
@@ -470,6 +471,7 @@ export default function DeviceMarkers3D({ buildMode }: DeviceMarkers3DProps) {
   }, [buildMode, markers, camera, raycaster, gl, updateDevice]);
 
   if (markers.length === 0) return null;
+  if (!buildMode && !showDeviceMarkers) return null;
 
   return (
     <group>

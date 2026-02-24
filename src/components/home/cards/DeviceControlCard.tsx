@@ -1,22 +1,26 @@
 import { useAppStore } from '@/store/useAppStore';
-import type { DeviceMarker, LightState, ClimateState, MediaState, VacuumState, LockState, SensorState, GenericDeviceState } from '@/store/types';
+import type { DeviceMarker, LightState, ClimateState, MediaState, VacuumState, LockState, SensorState, GenericDeviceState, CameraState } from '@/store/types';
 import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
 import { Button } from '@/components/ui/button';
 import {
   Sun, Thermometer, Play, Pause, Square, Volume2,
   Lock, Unlock, Battery, Home as HomeIcon,
-  Snowflake, Flame, RotateCcw, Eye,
+  Snowflake, Flame, RotateCcw, Eye, Camera, Video,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-interface Props { marker: DeviceMarker }
+interface Props { marker: DeviceMarker; compact?: boolean }
 type UpdateFn = (id: string, partial: Record<string, unknown>) => void;
 
-export default function DeviceControlCard({ marker }: Props) {
+export default function DeviceControlCard({ marker, compact }: Props) {
   const state = useAppStore((s) => s.devices.deviceStates[marker.id]);
   const updateDeviceState = useAppStore((s) => s.updateDeviceState);
   if (!state) return null;
+
+  if (compact) {
+    return <CompactDeviceView marker={marker} state={state} />;
+  }
 
   switch (state.kind) {
     case 'light': return <LightControl id={marker.id} data={state.data} update={updateDeviceState} />;
@@ -25,9 +29,69 @@ export default function DeviceControlCard({ marker }: Props) {
     case 'vacuum': return <VacuumControl id={marker.id} data={state.data} update={updateDeviceState} />;
     case 'door-lock': return <LockControl id={marker.id} data={state.data} update={updateDeviceState} />;
     case 'sensor': return <SensorControl data={state.data} />;
+    case 'camera': return <CameraControl id={marker.id} data={state.data} update={updateDeviceState} />;
     case 'generic': return <GenericControl id={marker.id} data={state.data} update={updateDeviceState} />;
     default: return null;
   }
+}
+
+function CompactDeviceView({ marker, state }: { marker: DeviceMarker; state: import('@/store/types').DeviceState }) {
+  const kindIcons: Record<string, React.ReactNode> = {
+    light: <Sun size={14} />,
+    climate: <Thermometer size={14} />,
+    camera: <Camera size={14} />,
+    vacuum: <HomeIcon size={14} />,
+    sensor: <Eye size={14} />,
+  };
+
+  const isOn = 'on' in state.data ? (state.data as any).on : state.kind === 'door-lock' ? !(state.data as LockState).locked : true;
+
+  return (
+    <div className={cn('flex items-center gap-2', !isOn && 'opacity-50')}>
+      <span className="text-primary">{kindIcons[marker.kind] || <Sun size={14} />}</span>
+      <span className="text-xs text-foreground truncate flex-1">{marker.name || marker.kind}</span>
+      <span className={cn('w-2 h-2 rounded-full', isOn ? 'bg-green-400' : 'bg-muted-foreground/30')} />
+    </div>
+  );
+}
+
+function CameraControl({ id, data, update }: { id: string; data: CameraState; update: UpdateFn }) {
+  return (
+    <div className="space-y-3 pt-2">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Camera size={14} />
+          <span>{data.streaming ? 'Strömmar' : 'Standby'}</span>
+        </div>
+        <Switch checked={data.on} onCheckedChange={(v) => update(id, { on: v })} />
+      </div>
+      {/* Camera preview placeholder */}
+      <div className={cn(
+        'relative rounded-lg overflow-hidden aspect-video',
+        data.on ? 'bg-gradient-to-br from-slate-800 to-slate-900' : 'bg-muted'
+      )}>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <Video size={32} className={cn('text-muted-foreground', data.on && 'text-primary/60')} />
+        </div>
+        {data.on && (
+          <div className="absolute top-2 left-2 flex items-center gap-1 bg-red-500/80 rounded px-1.5 py-0.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+            <span className="text-[9px] text-white font-bold">LIVE</span>
+          </div>
+        )}
+      </div>
+      {data.on && (
+        <Button
+          size="sm"
+          variant={data.streaming ? 'default' : 'outline'}
+          className="w-full h-7 text-[10px]"
+          onClick={() => update(id, { streaming: !data.streaming })}
+        >
+          {data.streaming ? 'Stoppa ström' : 'Starta ström'}
+        </Button>
+      )}
+    </div>
+  );
 }
 
 function LightControl({ id, data, update }: { id: string; data: LightState; update: UpdateFn }) {
