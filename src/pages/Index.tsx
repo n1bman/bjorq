@@ -3,9 +3,13 @@ import HomeView from '@/components/home/HomeView';
 import DashboardView from '@/components/home/DashboardView';
 import ModeHeader from '@/components/ModeHeader';
 import { useAppStore } from '@/store/useAppStore';
+import { useHomeAssistant } from '@/hooks/useHomeAssistant';
+import { useHABridge } from '@/hooks/useHABridge';
 
 const Index = () => {
   const appMode = useAppStore((s) => s.appMode);
+  useHomeAssistant();
+  useHABridge();
 
   if (appMode === 'home') {
     return <HomeView />;
