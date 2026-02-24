@@ -242,8 +242,16 @@ export interface MediaState {
 
 export interface VacuumState {
   on: boolean;
-  status: 'cleaning' | 'docked' | 'returning' | 'error';
+  status: 'cleaning' | 'docked' | 'returning' | 'paused' | 'idle' | 'error';
   battery: number;          // 0-100
+  fanSpeed?: number;        // 0-100%
+  fanSpeedList?: string[];  // e.g. ['Silent','Standard','Medium','Turbo','Max']
+  cleaningArea?: number;    // m²
+  cleaningTime?: number;    // minutes
+  position?: [number, number]; // [x, z] in meters
+  dockPosition?: [number, number];
+  errorMessage?: string;
+  _action?: 'locate' | 'spot_clean';
 }
 
 export interface LockState {

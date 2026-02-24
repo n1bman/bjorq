@@ -8,7 +8,7 @@ import {
   Lock, Unlock, Battery, Home as HomeIcon,
   Snowflake, Flame, RotateCcw, Eye, Camera, Video,
   Fan, PanelTop, Clapperboard, ArrowUp, ArrowDown, StopCircle,
-  SkipBack, SkipForward, Tv,
+  SkipBack, SkipForward, Tv, MapPin, Wind, Ruler, Clock, AlertTriangle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -315,21 +315,54 @@ function MediaControl({ id, data, update }: { id: string; data: MediaState; upda
 }
 
 function VacuumControl({ id, data, update }: { id: string; data: VacuumState; update: UpdateFn }) {
-  const labels: Record<string, string> = { cleaning: 'Städar', docked: 'Dockad', returning: 'Återvänder', error: 'Fel' };
+  const labels: Record<string, string> = { cleaning: 'Städar', docked: 'Dockad', returning: 'Återvänder', paused: 'Pausad', idle: 'Väntar', error: 'Fel' };
+  const presets = data.fanSpeedList ?? ['Silent', 'Standard', 'Turbo', 'Max'];
+  const presetSpeeds: Record<string, number> = { silent: 20, standard: 40, medium: 60, turbo: 80, max: 100 };
   return (
     <div className="space-y-3 pt-2">
       <div className="flex items-center justify-between">
         <span className="text-sm font-medium text-foreground">{labels[data.status] ?? data.status}</span>
         <div className="flex items-center gap-1 text-xs text-muted-foreground"><Battery size={14} /><span>{data.battery}%</span></div>
       </div>
+      {data.status === 'error' && data.errorMessage && (
+        <div className="flex items-center gap-2 bg-destructive/10 rounded p-1.5">
+          <AlertTriangle size={12} className="text-destructive" />
+          <span className="text-[10px] text-destructive">{data.errorMessage}</span>
+        </div>
+      )}
       <div className="flex gap-1">
         <Button size="sm" variant={data.status === 'cleaning' ? 'default' : 'outline'} className="flex-1 h-7 text-[10px]"
           onClick={() => update(id, { on: true, status: 'cleaning' })}>Starta</Button>
         <Button size="sm" variant="outline" className="flex-1 h-7 text-[10px]"
-          onClick={() => update(id, { on: false, status: 'docked' })}>Stoppa</Button>
+          onClick={() => update(id, { status: 'paused' })}>Pausa</Button>
         <Button size="sm" variant="outline" className="flex-1 h-7 text-[10px]"
+          onClick={() => update(id, { on: false, status: 'docked' })}>Stoppa</Button>
+        <Button size="sm" variant="outline" className="h-7 text-[10px]"
           onClick={() => update(id, { status: 'returning' })}><HomeIcon size={12} /></Button>
       </div>
+      <Button size="sm" variant="ghost" className="w-full h-6 text-[10px] gap-1"
+        onClick={() => update(id, { _action: 'locate' })}>
+        <MapPin size={12} /> Lokalisera
+      </Button>
+      {/* Fan speed */}
+      <div className="space-y-1">
+        <div className="flex items-center gap-1 text-[10px] text-muted-foreground"><Wind size={12} /><span>Sugeffekt {data.fanSpeed ?? 0}%</span></div>
+        <Slider value={[data.fanSpeed ?? 50]} max={100} step={5} onValueChange={([v]) => update(id, { fanSpeed: v })} />
+        <div className="flex gap-1">
+          {presets.map((p) => (
+            <Button key={p} size="sm" variant={Math.abs((data.fanSpeed ?? 0) - (presetSpeeds[p.toLowerCase()] ?? 50)) < 10 ? 'default' : 'outline'}
+              className="flex-1 h-6 text-[9px]"
+              onClick={() => update(id, { fanSpeed: presetSpeeds[p.toLowerCase()] ?? 50 })}>{p}</Button>
+          ))}
+        </div>
+      </div>
+      {/* Stats */}
+      {(data.cleaningArea !== undefined || data.cleaningTime !== undefined) && (
+        <div className="flex gap-3 text-[10px] text-muted-foreground">
+          {data.cleaningArea !== undefined && <span className="flex items-center gap-1"><Ruler size={10} />{data.cleaningArea} m²</span>}
+          {data.cleaningTime !== undefined && <span className="flex items-center gap-1"><Clock size={10} />{data.cleaningTime} min</span>}
+        </div>
+      )}
     </div>
   );
 }

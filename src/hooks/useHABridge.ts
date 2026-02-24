@@ -95,10 +95,25 @@ function sendHACommand(entityId: string, state: DeviceState) {
 
     case 'vacuum': {
       const data = state.data as any;
+      // Handle special actions
+      if (data._action === 'locate') {
+        callService('vacuum', 'locate', { entity_id: entityId });
+        break;
+      }
+      if (data._action === 'spot_clean') {
+        callService('vacuum', 'clean_spot', { entity_id: entityId });
+        break;
+      }
+      // Handle fan speed change
+      if (typeof data.fanSpeed === 'number' && data.fanSpeed > 0) {
+        callService('vacuum', 'set_fan_speed', { entity_id: entityId, fan_speed: data.fanSpeed });
+      }
       if (data.status === 'cleaning') {
         callService('vacuum', 'start', { entity_id: entityId });
       } else if (data.status === 'docked' || data.status === 'returning') {
         callService('vacuum', 'return_to_base', { entity_id: entityId });
+      } else if (data.status === 'paused') {
+        callService('vacuum', 'pause', { entity_id: entityId });
       } else {
         callService('vacuum', 'stop', { entity_id: entityId });
       }

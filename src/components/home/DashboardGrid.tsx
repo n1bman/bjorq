@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Home, Cloud, Cpu, Zap, Bell, Video, User, Pencil, X, CalendarDays, LayoutGrid } from 'lucide-react';
+import { Home, Cloud, Cpu, Zap, Bell, Video, User, Pencil, X, CalendarDays, LayoutGrid, Bot } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useAppStore } from '@/store/useAppStore';
@@ -17,9 +17,10 @@ import ProfilePanel from './cards/ProfilePanel';
 import CategoryCard from './cards/CategoryCard';
 import CategoryManager from './cards/CategoryManager';
 import CalendarWidget from './cards/CalendarWidget';
+import RobotPanel from './cards/RobotPanel';
 import type { DeviceKind, DeviceMarker } from '@/store/types';
 
-type DashCategory = 'home' | 'weather' | 'calendar' | 'devices' | 'energy' | 'surveillance' | 'activity' | 'profile' | 'widgets';
+type DashCategory = 'home' | 'weather' | 'calendar' | 'devices' | 'energy' | 'surveillance' | 'robot' | 'activity' | 'profile' | 'widgets';
 
 const categories: { key: DashCategory; label: string; icon: typeof Home }[] = [
   { key: 'home', label: 'Hem', icon: Home },
@@ -28,6 +29,7 @@ const categories: { key: DashCategory; label: string; icon: typeof Home }[] = [
   { key: 'devices', label: 'Enheter', icon: Cpu },
   { key: 'energy', label: 'Energi', icon: Zap },
   { key: 'surveillance', label: 'Övervakning', icon: Video },
+  { key: 'robot', label: 'Robot', icon: Bot },
   { key: 'activity', label: 'Aktivitet', icon: Bell },
   { key: 'profile', label: 'Profil', icon: User },
   { key: 'widgets', label: 'Widgets', icon: LayoutGrid },
@@ -220,6 +222,7 @@ const categoryContent: Record<DashCategory, React.FC> = {
   devices: DevicesCategory,
   energy: EnergyCategory,
   surveillance: SurveillancePanel,
+  robot: RobotPanel,
   activity: ActivityFeed,
   profile: ProfileSettingsCategory,
   widgets: WidgetsCategory,

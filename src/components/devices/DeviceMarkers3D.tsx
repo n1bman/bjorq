@@ -456,12 +456,102 @@ function MediaScreenMarker({ position, id, onSelect, onDragStart, selected, mark
   );
 }
 
+function VacuumMarker3D({ position, id, onSelect, onDragStart, selected }: MarkerProps) {
+  const state = useAppStore((s) => s.devices.deviceStates[id]);
+  const vacData = state?.kind === 'vacuum' ? state.data : null;
+  const status = vacData?.status ?? 'docked';
+  const battery = vacData?.battery ?? 100;
+  const meshRef = useRef<THREE.Group>(null);
+  const ledRef = useRef<THREE.Mesh>(null);
+  const batteryRingRef = useRef<THREE.Mesh>(null);
+
+  const statusColor = useMemo(() => {
+    switch (status) {
+      case 'cleaning': return new THREE.Color('#3b82f6');
+      case 'docked': return new THREE.Color('#22c55e');
+      case 'returning': return new THREE.Color('#f97316');
+      case 'paused': return new THREE.Color('#eab308');
+      case 'error': return new THREE.Color('#ef4444');
+      default: return new THREE.Color('#6b7280');
+    }
+  }, [status]);
+
+  const batteryColor = useMemo(() => {
+    if (battery > 50) return new THREE.Color('#22c55e');
+    if (battery > 20) return new THREE.Color('#eab308');
+    return new THREE.Color('#ef4444');
+  }, [battery]);
+
+  useFrame(({ clock }) => {
+    if (!meshRef.current) return;
+    const t = clock.elapsedTime;
+
+    // Rotation when cleaning
+    if (status === 'cleaning') {
+      meshRef.current.rotation.y += 0.005;
+    }
+
+    // LED pulsing
+    if (ledRef.current) {
+      const mat = ledRef.current.material as THREE.MeshStandardMaterial;
+      const pulse = status === 'cleaning' ? 0.5 + Math.sin(t * 3) * 0.5 : (status === 'docked' ? 0.3 : 0.7);
+      mat.emissiveIntensity = pulse;
+    }
+
+    // Position interpolation
+    if (vacData?.position) {
+      const [tx, tz] = vacData.position;
+      meshRef.current.position.x = THREE.MathUtils.lerp(meshRef.current.position.x, tx, 0.05);
+      meshRef.current.position.z = THREE.MathUtils.lerp(meshRef.current.position.z, tz, 0.05);
+    }
+  });
+
+  const handleClick = useCallback((e: ThreeEvent<PointerEvent>) => {
+    e.stopPropagation();
+    if (onSelect) onSelect(id);
+  }, [onSelect, id]);
+  const handlePointerDown = useCallback((e: ThreeEvent<PointerEvent>) => {
+    if (selected && onDragStart) onDragStart(id, e);
+  }, [selected, onDragStart, id]);
+
+  return (
+    <group ref={meshRef} position={position} onClick={handleClick} onPointerDown={handlePointerDown}>
+      {/* Body — flat cylinder */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.17, 0.17, 0.05, 32]} />
+        <meshStandardMaterial color="#e5e5e5" roughness={0.3} metalness={0.1} />
+      </mesh>
+
+      {/* LED ring on top */}
+      <mesh ref={ledRef} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]}>
+        <torusGeometry args={[0.12, 0.012, 8, 32]} />
+        <meshStandardMaterial color={statusColor} emissive={statusColor} emissiveIntensity={0.5} transparent opacity={0.9} />
+      </mesh>
+
+      {/* Battery ring at base */}
+      <mesh ref={batteryRingRef} rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]}>
+        <ringGeometry args={[0.17, 0.19, 32, 1, 0, Math.PI * 2 * (battery / 100)]} />
+        <meshBasicMaterial color={batteryColor} transparent opacity={0.8} side={THREE.DoubleSide} />
+      </mesh>
+
+      {/* Selection ring */}
+      {selected && (
+        <mesh rotation={[-Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[0.22, 0.27, 32]} />
+          <meshBasicMaterial color="#fff" transparent opacity={0.6} side={THREE.DoubleSide} />
+        </mesh>
+      )}
+    </group>
+  );
+}
+
+
 const markerComponents: Record<DeviceKind, React.FC<MarkerProps>> = {
   light: LightMarker,
   switch: SwitchMarker,
   sensor: SensorMarker,
   climate: ClimateMarker,
-  vacuum: (props) => <GenericMarker {...props} color="#a78bfa" />,
+  vacuum: VacuumMarker3D,
   camera: (props) => <GenericMarker {...props} color="#ef4444" />,
   fridge: (props) => <GenericMarker {...props} color="#cbd5e1" emissive="#94a3b8" />,
   oven: (props) => <GenericMarker {...props} color="#f97316" />,
