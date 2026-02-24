@@ -6,6 +6,7 @@ import { useAppStore } from '@/store/useAppStore';
 import ClockWidget from './cards/ClockWidget';
 import WeatherWidget from './cards/WeatherWidget';
 import EnergyWidget from './cards/EnergyWidget';
+import EnergyDeviceList from './cards/EnergyDeviceList';
 import DevicesSection from './cards/DevicesSection';
 import LocationSettings from './cards/LocationSettings';
 import HomeWidgetConfig from './cards/HomeWidgetConfig';
@@ -192,14 +193,7 @@ function EnergyCategory() {
   return (
     <div className="space-y-3">
       <EnergyWidget />
-      <div className="glass-panel rounded-2xl p-4 space-y-2">
-        <h4 className="text-sm font-semibold text-foreground">Solpaneler</h4>
-        <p className="text-xs text-muted-foreground">Anslut dina solpaneler via Home Assistant för att se produktion och förbrukning i realtid.</p>
-      </div>
-      <div className="glass-panel rounded-2xl p-4 space-y-2">
-        <h4 className="text-sm font-semibold text-foreground">Förbrukning</h4>
-        <p className="text-xs text-muted-foreground">Energiförbrukningsdata visas här när Home Assistant är ansluten.</p>
-      </div>
+      <EnergyDeviceList />
     </div>
   );
 }

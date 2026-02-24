@@ -73,10 +73,10 @@ export default function HomeView() {
         </div>
       )}
 
-      {/* Toggle device markers visibility */}
+      {/* Toggle device markers visibility - positioned above camera FAB */}
       <button
         onClick={toggleShowDeviceMarkers}
-        className="absolute bottom-24 right-4 z-10 pointer-events-auto glass-panel rounded-full w-10 h-10 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+        className="fixed bottom-36 right-4 z-50 pointer-events-auto glass-panel rounded-full w-10 h-10 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
         title={showDeviceMarkers ? 'Dölj enheter' : 'Visa enheter'}
       >
         {showDeviceMarkers ? <Eye size={18} /> : <EyeOff size={18} />}

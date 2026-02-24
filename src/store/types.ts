@@ -175,6 +175,23 @@ export interface ScreenConfig {
   showProgress: boolean;
 }
 
+export interface WidgetConfig {
+  showImage?: boolean;
+  showToggle?: boolean;
+  showValue?: boolean;
+  showLabel?: boolean;
+  size?: 'small' | 'medium' | 'large';
+  customLabel?: string;
+}
+
+export interface EnergyTracking {
+  enabled: boolean;
+  currentWatts?: number;
+  dailyKwh?: number;
+  weeklyKwh?: number;
+  monthlyKwh?: number;
+}
+
 export interface DeviceMarker {
   id: string;
   kind: DeviceKind;
@@ -189,6 +206,8 @@ export interface DeviceMarker {
   screenConfig?: ScreenConfig;
   userCategory?: string;
   notifyOnHomeScreen?: boolean;
+  widgetConfig?: WidgetConfig;
+  energyTracking?: EnergyTracking;
 }
 
 // ─── Rich Device States (HA-ready) ───
