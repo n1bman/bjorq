@@ -1,144 +1,114 @@
 
 
-# Flytande kontrollpanel, sensorer, overvakning och profil
+# Vader-synk, temperatur-uppdelning och modernt kategori-system
 
-## Oversikt
+## Problem att losa
 
-Kontrollpanelen byggs om till en flytande grid-layout inspirerad av referensbilderna (Google Home / HA-dashboards). Kategorier visas som kompakta kort sida vid sida istallet for fulla rader. Dessutom laggs nya sensortyper, en overvakningsflik och en profilflik till.
-
----
-
-## 1. Flytande grid-layout for Hem-vyn
-
-### Problem
-Idag tar varje kategori (Ljus, Sensorer, Klimat) hela sidans bredd i en enkel lista. Det ser stelt ut och slösar plats.
-
-### Losning
-Bygg om `HomeCategory` i `DashboardGrid.tsx` sa att varje enhetskategori renderas som ett kompakt **glasmorfism-kort** i en CSS grid (`grid-cols-2` pa mobil, `grid-cols-3` pa desktop). Kort med fa enheter tar 1 kolumn, kort med manga kan spanna 2.
-
-**Fil: `src/components/home/DashboardGrid.tsx`** -- HomeCategory:
-- Widgets (klocka, vader, energi) ligger kvar som en rad overst
-- Under widgets: en `grid grid-cols-2 lg:grid-cols-3 gap-3 auto-rows-auto` med ett kort per kategori
-- Varje kategorikort visar:
-  - Header med ikon + namn + antal pa/av
-  - Toggle-all switch
-  - Kompakt lista av enheter med snabb-switch och mini-slider
-  - Om kortet ar expanderat: visar DeviceControlCard inline
-- Kategorier utan enheter doljs automatiskt
-- Kortstorleken anpassas -- en kategori med 1-2 enheter tar 1 kolumn, 5+ enheter tar `col-span-2`
-
-**Ny komponent: `src/components/home/cards/CategoryCard.tsx`**:
-- Glasmorfism-kort med header, toggle-all, och enhetslista
-- Kollapsbar -- klick pa headern expanderar/kollapsar
-- Kompakt enhetslista med emoji + namn + switch pa en rad
-- Klick pa enskild enhet oppnar inline DeviceControlCard
-
-### Paverkan pa DevicesSection
-`DevicesSection` anvands fortfarande for "Enheter"-fliken (fullstandig vy med filter). `CategoryCard` ar en separat, mer kompakt komponent for Hem-vyns grid.
+1. **Vaderdata stammer inte** -- Environment source ar satt till `'manual'` som standard, sa live-vader fran Open-Meteo aktiveras aldrig. Koordinaterna (59.33, 18.07 = Stockholm) kan dessutom behova justeras till din faktiska plats.
+2. **Tva identiska temperatur-widgets** -- Bade WeatherWidget och TemperatureWidget visar samma `environment.weather.temperature` (utomhus). Den ena borde visa inomhustemperatur fran klimatsensorer.
+3. **Menyn (Hem/Kontrollpanel/Bygge) tackes av kategori-kort** -- HomeNav ligger `fixed bottom-6 z-50` men dashboard-innehallet scrollar under den utan tillracklig padding.
+4. **Kategori-systemet ar for statiskt** -- Anvandaren vill kunna skapa egna kategorier, flytta enheter mellan dem, och valja vilka enheter som visas som widgets pa hemskermen.
 
 ---
 
-## 2. Nya sensortyper: temperatursensor och rorelsesensor
+## 1. Fixa vader-synk
 
-### Problem
-Idag finns bara en generisk `sensor`-typ. Anvandaren vill ha separata sensorer for temperatur och rorelse.
+**`src/store/useAppStore.ts`**:
+- Andra default `environment.source` fran `'manual'` till `'auto'` sa att live-vader aktiveras direkt
+- Alternativt: lagg till en tydlig "Aktivera live vader"-knapp i LocationSettings
 
-### Andringar
+**`src/components/home/cards/LocationSettings.tsx`**:
+- Lagg till en switch for att valja mellan `manual` och `auto` vader-kalla
+- Lagg till en "Anvand min plats"-knapp som anropar `navigator.geolocation` for att hamta korrekta koordinater automatiskt
+- Visa aktuell vader-status (senast uppdaterad, kalla) under koordinaterna
 
-**`src/store/types.ts`**:
-- Utoka `SensorState` med ett `sensorType`-falt:
-```typescript
-export interface SensorState {
-  value: number;
-  unit: string;
-  sensorType: 'temperature' | 'motion' | 'generic';
-}
-```
-
-**`src/components/home/cards/DevicesSection.tsx`** och `DeviceControlCard.tsx`:
-- Temperatursensor: visar stort temperaturvarde med termometer-ikon
-- Rorelsesensor: visar "Rorelse detekterad" / "Lugnt" med tidsstampel for senaste rorelse
-- Rorelsesensorn kan visuellt grupperas under "Sakerhet" (samma som kamera)
-
-**`src/components/build/devices/DevicePlacementTools.tsx`**:
-- Behall `place-sensor` men lagg till en submeny/dialog som fragar vilken sensortyp vid placering
-- Alternativt: gor det konfigurerbart i inspektorn efter placering via ett dropdown
-
-**`src/components/home/cards/CategoryCard.tsx`**:
-- Rorelsesensor visar en liten ikon (oga/rorelse) istallet for termometer
+**`src/hooks/useWeatherSync.ts`**:
+- Inga stora forandringar behovs -- hooken fungerar korrekt, den aktiveras bara inte eftersom source ar `'manual'`
 
 ---
 
-## 3. Overvakningsflik med live-kameror
+## 2. Separera utomhus- och inomhustemperatur
 
-### Problem
-Det saknas en dedikerad plats for att se kamerabilder.
+**`src/components/home/cards/TemperatureWidget.tsx`**:
+- Andra fran att visa `environment.weather.temperature` till att visa **genomsnittlig inomhustemperatur** fran klimat-enheter
+- Las alla `deviceStates` dar `kind === 'climate'` och berakna medelvarde av `currentTemp`
+- Visa "Inomhus" som etikett istallet for "Utomhus"
+- Om inga klimat-enheter finns: visa "--°C" med en liten text "Lagg till klimatenhet"
 
-### Andringar
+**`src/components/home/cards/WeatherWidget.tsx`**:
+- Behalls som den ar -- den visar utomhustemperatur korrekt
+- Lagg till etiketten "Utomhus" for tydlighet
+
+---
+
+## 3. Fixa nav-overlap
 
 **`src/components/home/DashboardGrid.tsx`**:
-- Lagg till ny flik i menyn: `'surveillance'` med `Video`-ikon, label "Overvakning"
-- Placera den mellan Energi och Aktivitet
-
-**Ny komponent: `src/components/home/cards/SurveillancePanel.tsx`**:
-- Visar ett grid med kamerakort (2 kolumner)
-- Varje kamerakort visar:
-  - Kameranamn
-  - Placeholder-bild (morkt kort med kamera-ikon) -- riktig stream nar HA ar kopplad
-  - Status: "Live" / "Offline"
-  - Rorelsesensor-status om kopplad
-- Kameror hamtas fran `devices.markers` med `kind === 'camera'`
-- Tom-state: "Inga kameror placerade. Ga till Bygge for att lagga till."
+- Lagg till `pb-24` (eller `pb-28`) pa den scrollbara content-containern sa att innehallet aldrig doljs bakom HomeNav-pillen
 
 ---
 
-## 4. Battre 3D-bakgrund i kontrollpanelen
+## 4. Modernt kategori-system med drag-and-drop
 
-### Problem
-3D-scenen i bakgrunden ar svart att se forandringar igenom alla overlay-element.
-
-### Andringar
-
-**`src/components/home/DashboardView.tsx`**:
-- Flytta 3D-scenen fran fullskarm bakgrund till en **avgransad vy** overst pa sidan
-- Alternativ layout:
-  - Overst: 3D-scen i en avgransad ruta (ca 30-40% av skarmhojden) med top-down kamera
-  - Under: scrollbar dashboard-innehall
-- 3D-rutan far lite border-radius och `overflow: hidden`
-- Kameran satt till `topdown` preset i kontrollpanelen for battre oversikt
-- Opacity okas fran 30% till 60-70% sa man ser andringar battre
-
----
-
-## 5. Profilflik
-
-### Problem
-Det saknas mojlighet att andra tema, bakgrund eller andra personliga installningar.
-
-### Andringar
+### 4a. Store-andringar
 
 **`src/store/types.ts`**:
-```typescript
-export interface UserProfile {
+```text
+// Ny typ for anpassade kategorier
+interface DeviceCategory {
+  id: string;
   name: string;
-  theme: 'dark' | 'midnight' | 'light';
-  accentColor: string;     // hex
-  dashboardBg: 'scene3d' | 'gradient' | 'solid';
+  icon: string;        // emoji
+  deviceIds: string[]; // ordnade enhets-ID:n
+  color?: string;      // accent-farg for kategorin
 }
+
+// Lagg till i AppState:
+customCategories: DeviceCategory[];
+addCategory: (name: string, icon: string) => void;
+removeCategory: (id: string) => void;
+renameCategory: (id: string, name: string) => void;
+moveDeviceToCategory: (deviceId: string, categoryId: string) => void;
+reorderDeviceInCategory: (categoryId: string, deviceId: string, newIndex: number) => void;
 ```
-Lagg till `profile: UserProfile` i `AppState` och `setProfile`-action.
 
-**`src/components/home/DashboardGrid.tsx`**:
-- Bygg om "Installningar"-kategorin till tva delar: Installningar + Profil
-- Eller lagg till en separat "Profil"-flik med `User`-ikon
+**`src/store/useAppStore.ts`**:
+- Implementera CRUD-actions for `customCategories`
+- Nar en enhet placeras (`addDevice`), tilldela den automatiskt en default-kategori baserat pa `kindCategory`-tabellen
+- Tillat att enheter ligger i max en kategori at gangen
 
-**Ny komponent: `src/components/home/cards/ProfilePanel.tsx`**:
-- Visa profilkort med:
-  - Namn (textruta)
-  - Tema-valjare: 3 knappar (Dark / Midnight / Light)
-  - Accentfarg-valjare: fargade cirklar (guld, bla, gron, rod, lila)
-  - Bakgrund: Scene3D / Gradient / Enfargad
-- Andringar sparas direkt till store (localStorage)
+### 4b. Hem-vy med flytande kategorier
+
+**`src/components/home/DashboardGrid.tsx`** -- HomeCategory:
+- Anvand `customCategories` fran store istallet for att berakna kategorier fran `kindCategory`
+- Om inga anpassade kategorier finns, fall tillbaka pa auto-gruppering (som idag)
+- Lagg till en "Hantera kategorier"-knapp som oppnar en modal/panel
+
+### 4c. Kategori-hantering
+
+**Ny komponent: `src/components/home/cards/CategoryManager.tsx`**:
+- Visa alla kategorier i en lista
+- "Skapa ny kategori" med namn + emoji-valjare
+- Klick pa en kategori visar dess enheter
+- Drag-and-drop for att flytta enheter mellan kategorier (enkelt: klick + "Flytta till..."-meny som forsta steg, drag-and-drop som framtida forstorkning)
+- Ta bort kategori (enheter flyttas tillbaka till "Okategoriserade")
+- Byt namn och ikon pa befintlig kategori
+
+---
+
+## 5. Widget-valjare for hemskermen
+
+**`src/store/types.ts`**:
+- Utoka `VisibleWidgets` eller lagg till `homeScreenDevices: string[]` i `HomeViewState` for att spara vilka enskilda enheter som ska visas som flytande widgets pa Hem-skermen (3D-vyn)
+
+**`src/components/home/cards/HomeWidgetConfig.tsx`**:
+- Behall befintliga widget-toggles (klocka, vader, energi)
+- Lagg till en sektion "Enhets-widgets" dar man kan bocka av enskilda enheter som ska visas pa Hem-skermen
+- Visa en kompakt lista av alla enheter med checkboxar
+
+**`src/components/home/HomeView.tsx`**:
+- Rendera valda enheter som kompakta flytande kort (mini-DeviceControlCard) pa 3D-vyn
+- Placera dem i en scrollbar rad langst ned, ovanfor HomeNav
 
 ---
 
@@ -146,13 +116,20 @@ Lagg till `profile: UserProfile` i `AppState` och `setProfile`-action.
 
 | Fil | Andring |
 |-----|---------|
-| `src/store/types.ts` | `SensorState.sensorType`, `UserProfile`, utokad `AppState` |
-| `src/store/useAppStore.ts` | `profile` default, `setProfile` action, store version bump |
-| `src/components/home/DashboardGrid.tsx` | Ny overvakning-flik, profil-flik, ombyggd HomeCategory till grid |
-| `src/components/home/cards/CategoryCard.tsx` | **NY** -- kompakt kategorikort for grid-layout |
-| `src/components/home/cards/SurveillancePanel.tsx` | **NY** -- kameraovervakning |
-| `src/components/home/cards/ProfilePanel.tsx` | **NY** -- profil och tema |
-| `src/components/home/cards/DeviceControlCard.tsx` | Uppdatera SensorControl for temp/rorelse |
-| `src/components/home/DashboardView.tsx` | 3D-vy som avgransad ruta istallet for fullskarm bakgrund |
-| `src/components/home/cards/DevicesSection.tsx` | `kindInfo` uppdaterad for sensortyper |
+| `src/store/types.ts` | `DeviceCategory`, `customCategories`, nya actions, `homeScreenDevices` i HomeViewState |
+| `src/store/useAppStore.ts` | Default source = `'auto'`, kategori-CRUD, homeScreenDevices |
+| `src/components/home/cards/LocationSettings.tsx` | Auto/manual-switch, geolocation-knapp |
+| `src/components/home/cards/TemperatureWidget.tsx` | Visa inomhustemperatur fran klimat-enheter |
+| `src/components/home/cards/WeatherWidget.tsx` | Lagg till "Utomhus"-etikett |
+| `src/components/home/DashboardGrid.tsx` | `pb-24` for nav-utrymme, anvand customCategories |
+| `src/components/home/cards/CategoryManager.tsx` | **NY** -- skapa/redigera/flytta kategorier |
+| `src/components/home/cards/HomeWidgetConfig.tsx` | Enhets-widget-valjare for hemskermen |
+| `src/components/home/HomeView.tsx` | Rendera valda enhets-widgets pa 3D-vyn |
 
+## Prioritetsordning
+
+1. Vader-fix (source = auto + geolocation) -- snabb fix, stor effekt
+2. Temperatur-uppdelning (inomhus vs utomhus)
+3. Nav-overlap fix (pb-24)
+4. Kategori-system med hantering
+5. Widget-valjare for hemskermen
