@@ -1,141 +1,74 @@
 
 
-# Forbattrad hemskarm, widgets och energi
+# Riktig Home Assistant WebSocket-integration
 
-## Oversikt
+## Problem
+Anslutningen till Home Assistant ar helt simulerad idag -- den satter bara statusen till "connected" utan att oppna nagon faktisk WebSocket-forbindelse. Inga entiteter hamtas och inga tillstandsandringar synkas.
 
-Sex huvudomraden att forbattra: (1) fixa klick-interaktion pa enhets-widgets i hemskarm, (2) andrad logik for "dolj markeringar" sa ljuseffekter finns kvar men bollarna forsvinner, (3) flytta dolj-knappen sa den inte doljs bakom kamera-knappen, (4) forbattrad kamera-widget med kamera-vy, (5) widget-anpassning per enhet, och (6) energi-tracking per enhet med vecko/manadsstatistik.
+## Losning
 
----
+### 1. Ny WebSocket-hook (`src/hooks/useHomeAssistant.ts`)
 
-## 1. Fixa klick pa enhets-widgets i hemskarm
+Skapar en hook som hanterar hela HA-kommunikationen:
 
-Problemet: Enhets-widgetarna i HomeView har redan `onClick` som anropar `toggleDeviceState`, men den kompakta vyn (`CompactDeviceView`) visar bara status utan interaktivitet.
+- **Anslutning**: Oppnar en WebSocket till den angivna URL:en
+- **Autentisering**: Skickar `{"type": "auth", "access_token": "..."}` vid anslutning
+- **Hamta entiteter**: Skickar `{"type": "get_states", "id": 1}` efter autentisering
+- **Prenumerera pa andringar**: Skickar `{"type": "subscribe_events", "event_type": "state_changed", "id": 2}` for realtidsuppdateringar
+- **Mappning**: Konverterar HA-entiteter till appens `HAEntity`-format och uppdaterar `liveStates`
+- **Felhantering**: Satter status till `error` vid anslutningsfel, forsoker ateransluta
+- **Synk till enheter**: Nar en `state_changed`-haendelse kommer in, och det finns en `DeviceMarker` med matchande `ha.entityId`, uppdateras enhetens `deviceState` automatiskt
 
-**`src/components/home/HomeView.tsx`**:
-- Bekrafta att `onClick` pa enhets-widget-diven (rad 65) fungerar korrekt
-- Lagga till visuell feedback (ripple-effekt eller puls) vid klick
-- For icke-togglebara enheter (sensor, door-lock): oppna en expanderad vy istallet
+### HA WebSocket-protokoll (forenklat)
 
-**`src/components/home/cards/DeviceControlCard.tsx`**:
-- Uppdatera `CompactDeviceView` att visa mer relevant info per enhetstyp:
-  - **Kamera**: Visa kamera-ikon med Live-badge
-  - **Lampa**: Visa ljusstyrka-procent
-  - **Klimat**: Visa maltemperatur
-  - **Media**: Visa titel/status
-  - **Sensor**: Visa varde + enhet
-
----
-
-## 2. Dolj markeringar = dolj bollar, behall ljuseffekter
-
-Nuvarande beteende: `showDeviceMarkers === false` returnerar `null` fran hela `DeviceMarkers3D`, vilket tar bort allt inklusive ljus.
-
-**`src/components/devices/DeviceMarkers3D.tsx`**:
-- Nar `showDeviceMarkers === false` och `buildMode === false`:
-  - **Behall** `<pointLight>` fran LightMarker (lampor ska fortfarande lysa)
-  - **Dolj** visuella mesh-objekt (sfarer, ringar, etc.) genom att satta `visible={false}` pa mesh-noder
-  - Skapa ett nytt "light-only" rendering-lage for varje marker-typ
-- Specifik implementation:
-  - `LightMarker`: Rendera bara `<pointLight>` utan mesh nar dolj ar aktivt
-  - Alla andra markeringar: returnera null nar dolj ar aktivt
-  - Eventuellt behall en osynlig klickbar mesh (transparent, opacity=0) om vi vill att klick i 3D ska fungera
-
----
-
-## 3. Flytta dolj-knappen
-
-**`src/components/home/HomeView.tsx`**:
-- Flytta "dolj enheter"-knappen fran `bottom-24 right-4` (overlappar med CameraFab som ar `bottom-20 right-4`)
-- Ny position: `bottom-36 right-4` (ovanfor kameraknappen)
-- Alternativt: placera den till vanster om kameraknappen, eller i ovre hogra hornet
-
----
-
-## 4. Forbattrad kamera-widget
-
-**`src/components/home/cards/DeviceControlCard.tsx`**:
-- Uppdatera `CompactDeviceView` for kameror:
-  - Visa en mini-kamera-forhandsvisning (gradient-bakgrund med kamera-ikon + LIVE-badge)
-  - Storre widget-storlek for kameror (aspect-video)
-- Uppdatera `CameraControl` (full vy):
-  - Behall kamera-preview med gradient-bakgrund och LIVE-badge (redan implementerat)
-  - Lagg till knapp for fullskarmslage (placeholder for framtida RTSP/HLS)
-  - Visa senaste snapshot-tid om tillganglig
-
-**`src/components/home/HomeView.tsx`**:
-- For kamera-widgets i hemskarm: anvand en storre widget-storlek
-- Visa kamera-forhandsvisning direkt i widgeten (mini aspect-video vy)
-
----
-
-## 5. Widget-anpassning per enhet
-
-**`src/store/types.ts`**:
-- Lagg till `widgetConfig` pa `DeviceMarker`:
-```typescript
-widgetConfig?: {
-  showImage?: boolean;      // visa kamera/bild
-  showToggle?: boolean;     // visa av/pa-knapp
-  showValue?: boolean;      // visa varde (temp, ljusstyrka)
-  showLabel?: boolean;      // visa namn
-  size?: 'small' | 'medium' | 'large';
-  customLabel?: string;     // anpassad text
-};
+```text
+1. Client oppnar WebSocket till ws://ha:8123/api/websocket
+2. Server skickar: {"type": "auth_required"}
+3. Client skickar: {"type": "auth", "access_token": "TOKEN"}
+4. Server skickar: {"type": "auth_ok"} eller {"type": "auth_invalid"}
+5. Client skickar: {"type": "get_states", "id": 1}
+6. Server svarar med alla entiteter
+7. Client skickar: {"type": "subscribe_events", "event_type": "state_changed", "id": 2}
+8. Server skickar "state_changed"-events i realtid
 ```
 
-**`src/components/home/cards/HomeWidgetConfig.tsx`**:
-- Nar en enhet ar vald for hemskarm, visa konfigurationsalternativ:
-  - Storlek (liten/medium/stor)
-  - Vilka delar som ska synas (bild, knapp, varde, namn)
-  - Anpassad text
-- Anvand ett expanderbart avsnitt per enhet i listan
+### 2. Uppdatera HAConnectionPanel (`src/components/home/cards/HAConnectionPanel.tsx`)
 
-**`src/components/home/cards/DeviceControlCard.tsx`**:
-- Las `widgetConfig` fran marker och respektera installningarna i bade kompakt och full vy
+- Ta bort simulerad `setTimeout`-logik
+- Anropa den nya hooken for att starta/stoppa anslutningen
+- Visa anslutningsstatus, antal entiteter och senaste uppdatering
+- Visa felmeddelande om autentisering misslyckas
 
----
+### 3. Uppdatera store (`src/store/useAppStore.ts`)
 
-## 6. Energi per enhet + statistik
+- Lagg till actions for att uppdatera `homeAssistant.entities` och `homeAssistant.liveStates` fran WebSocket-data
+- Lagg till `setHAEntities` och `updateHALiveState` actions
+- Automatisk mappning: nar `liveStates` uppdateras for en entitet som ar kopplad till en `DeviceMarker`, uppdatera aven `deviceStates`
 
-**`src/store/types.ts`**:
-- Lagg till `energyTracking` pa `DeviceMarker`:
-```typescript
-energyTracking?: {
-  enabled: boolean;
-  currentWatts?: number;
-  dailyKwh?: number;
-  weeklyKwh?: number;
-  monthlyKwh?: number;
-};
-```
+### 4. Mappningsfunktion HA-entitet till DeviceState
 
-**`src/components/home/DashboardGrid.tsx`** (EnergyCategory):
-- Visa lista over enheter som har `energyTracking.enabled === true`
-- Visa per enhet: namn, aktuell forbrukning (W), daglig/veckovis/manatlig forbrukning (kWh)
-- Lagg till en sammanfattningssektion med total forbrukning och vilken enhet som dragit mest
-- Visa ett enkelt stapeldiagram (med Recharts) for vecko-/manadsforbrukning
-- Lagg till en toggle per enhet i enhetslistan for att aktivera energi-tracking
+Konverterar HA-attribut till appens format:
+- `light.*`: `on`, `brightness` (0-255), `color_temp`, `rgb_color`
+- `switch.*`: `on/off`
+- `climate.*`: `mode`, `temperature`, `current_temperature`
+- `sensor.*`: `state` (numeriskt varde), `unit_of_measurement`
+- `camera.*`: `on/off`, `entity_picture`
+- `lock.*`: `locked/unlocked`
+- `vacuum.*`: `status`, `battery_level`
+- `media_player.*`: `state`, `media_title`, `media_artist`, `volume_level`
 
-**`src/components/home/cards/DevicesSection.tsx`** eller nytt **`src/components/home/cards/EnergyDeviceList.tsx`**:
-- Visa enheter med energi-tracking i en sorterad lista
-- Visa forbrukningsbar (procentuell jamforelse med andra enheter)
+### 5. Skicka kommandon tillbaka till HA
 
-**`src/components/home/cards/HomeWidgetConfig.tsx`**:
-- Lagg till toggle "Visa energi" per enhet som satter `energyTracking.enabled`
+Nar anvandaren andrar en enhet i appen (t.ex. slacker av en lampa), skicka service-anrop till HA:
+- `{"type": "call_service", "domain": "light", "service": "turn_on", "service_data": {"entity_id": "light.xxx", "brightness": 200}, "id": N}`
 
 ---
 
-## Teknisk sammanfattning
+## Filandringar
 
 | Fil | Andring |
 |-----|---------|
-| `src/store/types.ts` | `widgetConfig` och `energyTracking` pa DeviceMarker |
-| `src/store/useAppStore.ts` | Default-varden for nya falt, updateDevice hantering |
-| `src/components/devices/DeviceMarkers3D.tsx` | Dolj bollar men behall ljus nar `showDeviceMarkers=false` |
-| `src/components/home/HomeView.tsx` | Flytta dolj-knapp, storre kamera-widgets, klick-feedback |
-| `src/components/home/cards/DeviceControlCard.tsx` | Forbattrad CompactView per typ, kamera-preview, respektera widgetConfig |
-| `src/components/home/cards/HomeWidgetConfig.tsx` | Widget-anpassning per enhet, energi-toggle |
-| `src/components/home/DashboardGrid.tsx` | Utokad EnergyCategory med enhetslista och statistik |
-| `src/components/home/cards/EnergyDeviceList.tsx` | **NY** -- energi-enhetslista med forbrukningsjamforelse |
-
+| `src/hooks/useHomeAssistant.ts` | **NY** -- WebSocket-klient med auth, entitetshantning och realtidsprenumeration |
+| `src/components/home/cards/HAConnectionPanel.tsx` | Ersatt simulering med riktig anslutningslogik |
+| `src/store/useAppStore.ts` | Nya actions: `setHAEntities`, `updateHALiveState`, `callHAService` |
+| `src/store/types.ts` | Lagg till `callHAService` action-typ, `wsRef` for att halla WebSocket-referens |
