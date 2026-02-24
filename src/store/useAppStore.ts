@@ -6,6 +6,8 @@ export function getDefaultState(kind: DeviceKind): DeviceState {
   switch (kind) {
     case 'light':
       return { kind: 'light', data: { on: true, brightness: 200, colorTemp: 300, colorMode: 'temp' } };
+    case 'camera':
+      return { kind: 'camera', data: { on: true, streaming: false } };
     case 'climate':
       return { kind: 'climate', data: { on: false, mode: 'auto', targetTemp: 22, currentTemp: 20 } };
     case 'media_screen':
@@ -63,6 +65,7 @@ export const useAppStore = create<AppState>()(
         cameraPreset: 'angle',
         visibleWidgets: { clock: true, weather: true, temperature: true, energy: true, calendar: true },
         homeScreenDevices: [],
+        showDeviceMarkers: true,
       },
       setCameraPreset: (preset) => set((s) => ({ homeView: { ...s.homeView, cameraPreset: preset } })),
       toggleHomeWidget: (widget) => set((s) => ({
@@ -70,6 +73,9 @@ export const useAppStore = create<AppState>()(
           ...s.homeView,
           visibleWidgets: { ...s.homeView.visibleWidgets, [widget]: !s.homeView.visibleWidgets[widget] },
         },
+      })),
+      toggleShowDeviceMarkers: () => set((s) => ({
+        homeView: { ...s.homeView, showDeviceMarkers: !s.homeView.showDeviceMarkers },
       })),
 
       // Device actions

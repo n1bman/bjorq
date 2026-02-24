@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Home, Cloud, Cpu, Zap, Settings, Wifi, Bell, Video, User, Pencil, X } from 'lucide-react';
+import { Home, Cloud, Cpu, Zap, Bell, Video, User, Pencil, X, CalendarDays, LayoutGrid } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useAppStore } from '@/store/useAppStore';
@@ -18,18 +18,18 @@ import CategoryManager from './cards/CategoryManager';
 import CalendarWidget from './cards/CalendarWidget';
 import type { DeviceKind, DeviceMarker } from '@/store/types';
 
-type DashCategory = 'home' | 'weather' | 'devices' | 'energy' | 'surveillance' | 'activity' | 'settings' | 'ha' | 'profile';
+type DashCategory = 'home' | 'weather' | 'calendar' | 'devices' | 'energy' | 'surveillance' | 'activity' | 'profile' | 'widgets';
 
 const categories: { key: DashCategory; label: string; icon: typeof Home }[] = [
   { key: 'home', label: 'Hem', icon: Home },
   { key: 'weather', label: 'Väder', icon: Cloud },
+  { key: 'calendar', label: 'Kalender', icon: CalendarDays },
   { key: 'devices', label: 'Enheter', icon: Cpu },
   { key: 'energy', label: 'Energi', icon: Zap },
   { key: 'surveillance', label: 'Övervakning', icon: Video },
   { key: 'activity', label: 'Aktivitet', icon: Bell },
-  { key: 'settings', label: 'Inställningar', icon: Settings },
-  { key: 'ha', label: 'HA', icon: Wifi },
   { key: 'profile', label: 'Profil', icon: User },
+  { key: 'widgets', label: 'Widgets', icon: LayoutGrid },
 ];
 
 const deviceFilters: { key: DeviceKind | 'all'; label: string; emoji: string }[] = [
@@ -58,7 +58,6 @@ function HomeCategory() {
   const [editMode, setEditMode] = useState(false);
   const [draggingCatIndex, setDraggingCatIndex] = useState<number | null>(null);
 
-  // Use custom categories if they exist, otherwise auto-group
   let entries: { key: string; label: string; catId?: string; devices: DeviceMarker[] }[];
 
   if (customCategories.length > 0) {
@@ -87,9 +86,7 @@ function HomeCategory() {
   }
 
   const handleDropDevice = (categoryId: string, deviceId: string) => {
-    if (categoryId) {
-      moveDeviceToCategory(deviceId, categoryId);
-    }
+    if (categoryId) moveDeviceToCategory(deviceId, categoryId);
   };
 
   const handleDropCategory = (targetIndex: number) => {
@@ -101,22 +98,15 @@ function HomeCategory() {
 
   return (
     <div className="space-y-4">
-      {/* Widgets row */}
       <div className="flex items-start gap-3 flex-wrap">
         <ClockWidget />
         <WeatherWidget />
         <EnergyWidget />
-        <CalendarWidget />
       </div>
 
-      {/* Edit / manage bar */}
       <div className="flex justify-end gap-2">
-        <Button
-          size="sm"
-          variant={editMode ? 'default' : 'outline'}
-          className="h-7 text-[10px] gap-1"
-          onClick={() => setEditMode(!editMode)}
-        >
+        <Button size="sm" variant={editMode ? 'default' : 'outline'} className="h-7 text-[10px] gap-1"
+          onClick={() => setEditMode(!editMode)}>
           {editMode ? <><X size={10} /> Klar</> : <><Pencil size={10} /> Redigera</>}
         </Button>
         <Button size="sm" variant="outline" className="h-7 text-[10px]"
@@ -133,7 +123,6 @@ function HomeCategory() {
 
       {showManager && <CategoryManager />}
 
-      {/* Floating category grid */}
       {entries.length > 0 ? (
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 auto-rows-auto">
           {entries.map((entry, index) => (
@@ -165,14 +154,19 @@ function WeatherCategory() {
   return (
     <div className="space-y-4">
       <WeatherWidget />
+      <LocationSettings />
       <div className="glass-panel rounded-2xl p-4">
         <p className="text-xs text-muted-foreground">
           Väderprognosen synkas automatiskt med din plats.
-          Aktivera "Live väder" under Inställningar för att synka med din plats.
+          Aktivera "Live väder" för att synka med Open-Meteo.
         </p>
       </div>
     </div>
   );
+}
+
+function CalendarCategory() {
+  return <CalendarWidget />;
 }
 
 function DevicesCategory() {
@@ -210,25 +204,30 @@ function EnergyCategory() {
   );
 }
 
-function SettingsCategory() {
+function ProfileSettingsCategory() {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+    <div className="space-y-4">
+      <ProfilePanel />
       <LocationSettings />
-      <HomeWidgetConfig />
+      <HAConnectionPanel />
     </div>
   );
+}
+
+function WidgetsCategory() {
+  return <HomeWidgetConfig />;
 }
 
 const categoryContent: Record<DashCategory, React.FC> = {
   home: HomeCategory,
   weather: WeatherCategory,
+  calendar: CalendarCategory,
   devices: DevicesCategory,
   energy: EnergyCategory,
   surveillance: SurveillancePanel,
   activity: ActivityFeed,
-  settings: SettingsCategory,
-  ha: HAConnectionPanel,
-  profile: ProfilePanel,
+  profile: ProfileSettingsCategory,
+  widgets: WidgetsCategory,
 };
 
 export default function DashboardGrid() {

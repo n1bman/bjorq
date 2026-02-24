@@ -2,7 +2,7 @@ import { useAppStore } from '@/store/useAppStore';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { MapPin, Navigation } from 'lucide-react';
+import { MapPin, Navigation, Search } from 'lucide-react';
 import { useState } from 'react';
 
 export default function LocationSettings() {
@@ -13,6 +13,10 @@ export default function LocationSettings() {
   const setLocation = useAppStore((s) => s.setLocation);
   const setWeatherSource = useAppStore((s) => s.setWeatherSource);
   const [locating, setLocating] = useState(false);
+  const [address, setAddress] = useState('');
+  const [country, setCountry] = useState('');
+  const [searching, setSearching] = useState(false);
+  const [foundPlace, setFoundPlace] = useState<string | null>(null);
 
   const useMyLocation = () => {
     if (!navigator.geolocation) return;
@@ -24,10 +28,35 @@ export default function LocationSettings() {
           Math.round(pos.coords.longitude * 100) / 100
         );
         setLocating(false);
+        setFoundPlace(null);
       },
       () => setLocating(false),
       { enableHighAccuracy: true }
     );
+  };
+
+  const searchPlace = async () => {
+    const query = [address, country].filter(Boolean).join(', ');
+    if (!query) return;
+    setSearching(true);
+    setFoundPlace(null);
+    try {
+      const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=1&language=sv`);
+      const data = await res.json();
+      if (data.results && data.results.length > 0) {
+        const r = data.results[0];
+        setLocation(
+          Math.round(r.latitude * 100) / 100,
+          Math.round(r.longitude * 100) / 100
+        );
+        setFoundPlace(`${r.name}${r.admin1 ? `, ${r.admin1}` : ''}, ${r.country}`);
+      } else {
+        setFoundPlace('Ingen plats hittades');
+      }
+    } catch {
+      setFoundPlace('Sökning misslyckades');
+    }
+    setSearching(false);
   };
 
   return (
@@ -43,6 +72,36 @@ export default function LocationSettings() {
           checked={source === 'auto'}
           onCheckedChange={(v) => setWeatherSource(v ? 'auto' : 'manual')}
         />
+      </div>
+
+      {/* Address search */}
+      <div className="space-y-2 border-t border-border/30 pt-3">
+        <p className="text-[10px] text-muted-foreground font-medium">Sök efter plats</p>
+        <Input
+          placeholder="Adress / Stad"
+          value={address}
+          onChange={(e) => setAddress(e.target.value)}
+          className="h-8 text-xs"
+        />
+        <Input
+          placeholder="Land"
+          value={country}
+          onChange={(e) => setCountry(e.target.value)}
+          className="h-8 text-xs"
+        />
+        <Button
+          size="sm"
+          variant="outline"
+          className="w-full h-8 text-xs gap-1.5"
+          onClick={searchPlace}
+          disabled={searching || (!address && !country)}
+        >
+          <Search size={12} />
+          {searching ? 'Söker...' : 'Sök plats'}
+        </Button>
+        {foundPlace && (
+          <p className="text-[10px] text-primary font-medium">{foundPlace}</p>
+        )}
       </div>
 
       <Button

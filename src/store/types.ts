@@ -238,6 +238,12 @@ export interface GenericDeviceState {
   on: boolean;
 }
 
+export interface CameraState {
+  on: boolean;
+  streaming: boolean;
+  lastSnapshot?: string;
+}
+
 export type DeviceState =
   | { kind: 'light'; data: LightState }
   | { kind: 'climate'; data: ClimateState }
@@ -245,6 +251,7 @@ export type DeviceState =
   | { kind: 'vacuum'; data: VacuumState }
   | { kind: 'door-lock'; data: LockState }
   | { kind: 'sensor'; data: SensorState }
+  | { kind: 'camera'; data: CameraState }
   | { kind: 'generic'; data: GenericDeviceState };
 
 export interface DevicesState {
@@ -351,6 +358,7 @@ export interface HomeViewState {
   cameraPreset: CameraPreset;
   visibleWidgets: VisibleWidgets;
   homeScreenDevices: string[];
+  showDeviceMarkers: boolean;
 }
 
 // ─── Activity Log ───
@@ -395,6 +403,7 @@ export interface AppState {
   // Home View actions
   setCameraPreset: (preset: CameraPreset) => void;
   toggleHomeWidget: (widget: keyof VisibleWidgets) => void;
+  toggleShowDeviceMarkers: () => void;
 
   // Device actions
   addDevice: (marker: DeviceMarker) => void;
