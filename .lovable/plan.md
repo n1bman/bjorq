@@ -1,58 +1,61 @@
 
 
-# TV-skarm: Visuella forbattringar
+# TV-skarm: Frontljus, tid, centrerad text och mediakontroller i widget
 
-## Andring 1: Bygglageshjalp doljs i hemvyn
+## 1. Frontljus istallet for bakomliggande puls
 
-Hornmarkorer (4 rutor) och ambient glow-planet (det ljusa lagret bakom) visas **bara i bygglageet**. `MediaScreenMarker` far en ny `buildMode`-prop.
+Det pulserande ljuset ska inte lysa bakom skarmen utan istallet simulera ett svagt sken fran skarmytan framat. Andring:
 
-## Andring 2: Morkare, mer realistisk skarm
+- Flytta `pointLight` fran `position={[0, 0, 0.4]}` till `position={[0, 0, 0.8]}` och rikta det framat
+- Byt till en `spotLight` med `ref` som riktas framat (mot kameran), med begransad vinkel sa ljuset "sprider sig" fran skarmytan
+- Alternativt: lagg till ett transparent `meshBasicMaterial`-plan precis framfor skarmen som pulserar i opacity (0.02-0.06) for att simulera ett mjukt sken over skarmytan -- enklare och snyggare
+- Pulsfrekvensen behalles (`sin(Date.now() * 0.002)`)
 
-- Now Playing-gradient andras fran `#0f172a`/`#312e81` till `#050510`/`#0a0a1f` for OLED-kansla
-- `emissiveIntensity` pa skarmplanets material sanks fran 0.4 till 0.15
-- Standby-gradient morkare
+## 2. Visa tid pa skarmen (forlopp)
 
-## Andring 3: App-logotyper med fargschema
+I `drawScreenCanvas`, nar media spelas och `media_position`/`media_duration` finns:
 
-Branding-tabell baserat pa `app_name`/`source` fran HA:
+- Formatera `position` och `duration` som `MM:SS` eller `H:MM:SS`
+- Rita tidstexten bredvid progressbaren: `"12:34 / 45:00"`
+- Placera den centrerat under progressbaren
 
-| App | Farg | Badge-text |
-|-----|------|------------|
-| YouTube | `#FF0000` | YOUTUBE |
-| Netflix | `#E50914` | NETFLIX |
-| Prime Video | `#00A8E1` | PRIME VIDEO |
-| HBO Max | `#B535F6` | HBO MAX |
-| SVT Play | `#2DAB4F` | SVT PLAY |
-| Spotify | `#1DB954` | SPOTIFY |
-| Disney+ | `#113CCF` | DISNEY+ |
-| Plex | `#E5A00D` | PLEX |
+## 3. Centrera "Spelar..."-texten och all medieinfo
 
-Badgen ritas storre och snyggare med rundade horn. `media_artist` visas under titeln nar det finns.
+Just nu ar titeln vansterjusterad (`textAlign = 'left'`, x=30). Andra till:
 
-## Andring 4: Pulserande ambient-ljus
+- `textAlign = 'center'` for titel, artist och status
+- x-koordinat andras till `w / 2`
+- Badge (app-logotyp) centreras ocksa hogre upp
+- Play/pause-ikonen ar redan centrerad -- behalls
 
-Nar skarmen ar pa (state !== "off"/"standby"/"idle"/"unavailable"):
+## 4. Mediakontroller i hemskarmens widget
 
-- `pointLight` far en `useRef` och animeras med `useFrame`
-- Intensiteten pulserar mjukt: `0.3 + sin(time * 0.002) * 0.2`
-- Ljusfarg foljer app-branding (rod for YouTube, gron for Spotify, etc.)
-- Nar skarmen ar av: intensitet ~0.05
+Nar en `media_screen`-widget visas pa hemskarten och enheten spelar, ska widgeten expanderas med kontrollknappar istallet for att bara vara en toggle:
 
-## Fil som andras
+### I `HomeView.tsx`:
+- For `media_screen`-enheter som ar "on": visa en utokad widget med kontrollknappar istallet for enkel toggle
+- Klick pa widgeten ska INTE toggle:a av/pa utan istallet visa kontroller
+
+### I `DeviceControlCard.tsx` (compact media):
+- Lagg till en ny `CompactMediaControl`-komponent som visas i compact-laget for media_screen
+- Knappar: **Bakåt** (SkipBack), **Play/Pause**, **Framåt** (SkipForward), **Stopp** (Square)
+- Dessa anropar `updateDeviceState` med ratt state-andringar
+
+### I `useHABridge.ts`:
+- Lagg till stod for `media_next_track` och `media_previous_track` kommandon
+- Ny logik: om `data._action === 'next'` -> `media_player.media_next_track`, liknande for `'previous'`
+- Alternativt: exponera `callService` direkt via store/hook sa widgeten kan anropa HA-tjanster utan att ga via deviceState
+
+### Nytt i `MediaState` (types.ts):
+- Lagg till optional `_action?: 'next' | 'previous'` som bridge:n reagerar pa och sedan rensar
+
+## Filandringar
 
 | Fil | Andring |
 |-----|---------|
-| `src/components/devices/DeviceMarkers3D.tsx` | Allt ovan: buildMode-prop till MediaScreenMarker, villkorlig rendering av horn/glow, morkare canvas, app-branding, pulserande ljus, artist-text |
-
-Renderingsflode efter andring:
-
-```text
-MediaScreenMarker
-  +-- pointLight (ref-styrd, pulserande i useFrame)
-  +-- Screen plane (morkare emissive)
-  +-- Bezel (alltid -- ser ut som TV-ram)
-  +-- [buildMode] Ambient glow plane
-  +-- [buildMode] Corner markers
-  +-- [selected] Selection glow frame
-```
+| `src/components/devices/DeviceMarkers3D.tsx` | 1) Flytta/andra pulserande ljus till framsida-sken. 2) Centrera all text pa canvas. 3) Lagg till tidsvisning vid progress. |
+| `src/components/home/HomeView.tsx` | Media_screen-widgets far expanderad vy med kontroller istallet for enkel toggle. |
+| `src/components/home/cards/DeviceControlCard.tsx` | Ny `CompactMediaControl` med skip/play/pause/stop-knappar i compact-laget. |
+| `src/store/types.ts` | Lagg till `_action?: 'next' \| 'previous'` i `MediaState`. |
+| `src/hooks/useHABridge.ts` | Hantera `_action` for media_player: `media_next_track`, `media_previous_track`. |
 
