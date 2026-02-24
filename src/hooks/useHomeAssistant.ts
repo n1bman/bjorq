@@ -1,10 +1,14 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import type { HAEntity } from '@/store/types';
-
 import { isSuppressed } from './useHABridge';
 
-let msgId = 10; // start above reserved IDs
+// ── Module-level singleton state ──────────────────────────────────
+let msgId = 10;
+let ws: WebSocket | null = null;
+let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
+let manualDisconnect = false;
+let hasAutoConnected = false;
 
 function nextId() {
   return ++msgId;
@@ -15,205 +19,168 @@ export const haServiceCaller: { current: ((domain: string, service: string, data
   current: null,
 };
 
-/**
- * Hook that manages a real WebSocket connection to Home Assistant.
- * Call connect()/disconnect() from the UI.
- */
-export function useHomeAssistant() {
-  const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimer = useRef<ReturnType<typeof setTimeout>>();
-  const manualDisconnect = useRef(false);
-  const hasAutoConnected = useRef(false);
+// ── Module-level functions (singleton) ────────────────────────────
 
-  const setHAStatus = useAppStore((s) => s.setHAStatus);
-  const setHAEntities = useAppStore((s) => s.setHAEntities);
-  const updateHALiveState = useAppStore((s) => s.updateHALiveState);
-  const setHAConnection = useAppStore((s) => s.setHAConnection);
+function callService(domain: string, service: string, serviceData: Record<string, unknown>) {
+  if (!ws || ws.readyState !== WebSocket.OPEN) {
+    console.warn('[HA] Cannot call service: not connected');
+    return;
+  }
+  console.log('[HA] Calling service:', domain, service, serviceData);
+  ws.send(JSON.stringify({
+    type: 'call_service',
+    domain,
+    service,
+    service_data: serviceData,
+    id: nextId(),
+  }));
+}
 
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      wsRef.current?.close();
-      clearTimeout(reconnectTimer.current);
+function connect(url: string, token: string) {
+  manualDisconnect = false;
+  ws?.close();
+  clearTimeout(reconnectTimer);
+
+  let finalUrl = url.trim();
+  if (finalUrl.startsWith('https://')) finalUrl = finalUrl.replace('https://', 'wss://');
+  if (finalUrl.startsWith('http://')) finalUrl = finalUrl.replace('http://', 'ws://');
+  if (finalUrl.endsWith('/')) finalUrl = finalUrl.slice(0, -1);
+  if (!finalUrl.endsWith('/api/websocket')) {
+    finalUrl = `${finalUrl}/api/websocket`;
+  }
+
+  const store = useAppStore.getState();
+  console.log('[HA] Connecting to:', finalUrl);
+  store.setHAConnection(finalUrl, token);
+  store.setHAStatus('connecting');
+
+  try {
+    const socket = new WebSocket(finalUrl);
+    ws = socket;
+
+    socket.onopen = () => {
+      console.log('[HA] WebSocket opened');
     };
-  }, []);
 
-  const connect = useCallback((url: string, token: string) => {
-    // Close existing
-    manualDisconnect.current = false;
-    wsRef.current?.close();
-    clearTimeout(reconnectTimer.current);
+    socket.onmessage = (event) => {
+      let msg: any;
+      try { msg = JSON.parse(event.data); } catch { return; }
 
-    // Auto-fix URL format
-    let finalUrl = url.trim();
-    if (finalUrl.startsWith('https://')) finalUrl = finalUrl.replace('https://', 'wss://');
-    if (finalUrl.startsWith('http://')) finalUrl = finalUrl.replace('http://', 'ws://');
-    // Remove trailing slash before check
-    if (finalUrl.endsWith('/')) finalUrl = finalUrl.slice(0, -1);
-    if (!finalUrl.endsWith('/api/websocket')) {
-      finalUrl = `${finalUrl}/api/websocket`;
-    }
+      const s = useAppStore.getState();
 
-    console.log('[HA] Connecting to:', finalUrl);
-    setHAConnection(finalUrl, token);
-    setHAStatus('connecting');
+      switch (msg.type) {
+        case 'auth_required':
+          socket.send(JSON.stringify({ type: 'auth', access_token: token }));
+          break;
 
-    try {
-      const ws = new WebSocket(finalUrl);
-      wsRef.current = ws;
+        case 'auth_ok':
+          console.log('[HA] Authenticated');
+          s.setHAStatus('connected');
+          // Set global caller immediately
+          haServiceCaller.current = callService;
+          socket.send(JSON.stringify({ type: 'get_states', id: nextId() }));
+          socket.send(JSON.stringify({ type: 'subscribe_events', event_type: 'state_changed', id: nextId() }));
+          break;
 
-      ws.onopen = () => {
-        console.log('[HA] WebSocket opened');
-      };
+        case 'auth_invalid':
+          console.error('[HA] Auth invalid:', msg.message);
+          s.setHAStatus('error');
+          socket.close();
+          break;
 
-      ws.onmessage = (event) => {
-        let msg: any;
-        try {
-          msg = JSON.parse(event.data);
-        } catch {
-          return;
-        }
-
-        switch (msg.type) {
-          case 'auth_required':
-            // Send auth
-            ws.send(JSON.stringify({ type: 'auth', access_token: token }));
-            break;
-
-          case 'auth_ok':
-            console.log('[HA] Authenticated');
-            setHAStatus('connected');
-            // Request all states
-            ws.send(JSON.stringify({ type: 'get_states', id: nextId() }));
-            // Subscribe to state changes
-            ws.send(JSON.stringify({ type: 'subscribe_events', event_type: 'state_changed', id: nextId() }));
-            break;
-
-          case 'auth_invalid':
-            console.error('[HA] Auth invalid:', msg.message);
-            setHAStatus('error');
-            ws.close();
-            break;
-
-          case 'result':
-            if (msg.success && Array.isArray(msg.result)) {
-              // This is the get_states response
-              const entities: HAEntity[] = msg.result.map((e: any) => ({
-                entityId: e.entity_id,
-                domain: e.entity_id.split('.')[0],
-                friendlyName: e.attributes?.friendly_name || e.entity_id,
-                state: e.state,
-                attributes: e.attributes || {},
-              }));
-              setHAEntities(entities);
-
-              // Also sync live states
-              for (const e of msg.result) {
-                updateHALiveState(e.entity_id, e.state, e.attributes || {});
-              }
+        case 'result':
+          if (msg.success && Array.isArray(msg.result)) {
+            const entities: HAEntity[] = msg.result.map((e: any) => ({
+              entityId: e.entity_id,
+              domain: e.entity_id.split('.')[0],
+              friendlyName: e.attributes?.friendly_name || e.entity_id,
+              state: e.state,
+              attributes: e.attributes || {},
+            }));
+            s.setHAEntities(entities);
+            for (const e of msg.result) {
+              s.updateHALiveState(e.entity_id, e.state, e.attributes || {});
             }
-            break;
+          }
+          break;
 
-          case 'event':
+        case 'event':
           if (msg.event?.event_type === 'state_changed') {
-              const newState = msg.event.data?.new_state;
-              if (newState) {
-                const entityId = newState.entity_id;
-                // Skip if we just sent a command for this entity (prevent feedback loop)
-                if (isSuppressed(entityId)) {
-                  console.log('[HA] Suppressing echo for', entityId);
-                  break;
-                }
-                updateHALiveState(entityId, newState.state, newState.attributes || {});
-
-                // Update entity in list
-                const store = useAppStore.getState();
-                const existing = store.homeAssistant.entities;
-                const idx = existing.findIndex((e) => e.entityId === entityId);
-                if (idx >= 0) {
-                  const updated = [...existing];
-                  updated[idx] = {
-                    ...updated[idx],
-                    state: newState.state,
-                    attributes: newState.attributes || {},
-                    friendlyName: newState.attributes?.friendly_name || updated[idx].friendlyName,
-                  };
-                  setHAEntities(updated);
-                }
+            const newState = msg.event.data?.new_state;
+            if (newState) {
+              const entityId = newState.entity_id;
+              if (isSuppressed(entityId)) {
+                console.log('[HA] Suppressing echo for', entityId);
+                break;
+              }
+              s.updateHALiveState(entityId, newState.state, newState.attributes || {});
+              const existing = s.homeAssistant.entities;
+              const idx = existing.findIndex((e) => e.entityId === entityId);
+              if (idx >= 0) {
+                const updated = [...existing];
+                updated[idx] = {
+                  ...updated[idx],
+                  state: newState.state,
+                  attributes: newState.attributes || {},
+                  friendlyName: newState.attributes?.friendly_name || updated[idx].friendlyName,
+                };
+                s.setHAEntities(updated);
               }
             }
-            break;
-        }
-      };
+          }
+          break;
+      }
+    };
 
-      ws.onerror = (err) => {
-        console.error('[HA] WebSocket error:', err);
-        setHAStatus('error');
-      };
+    socket.onerror = (err) => {
+      console.error('[HA] WebSocket error:', err);
+      useAppStore.getState().setHAStatus('error');
+    };
 
-      ws.onclose = () => {
-        console.log('[HA] WebSocket closed');
-        if (manualDisconnect.current) return;
-        const currentStatus = useAppStore.getState().homeAssistant.status;
-        if (currentStatus === 'connected' || currentStatus === 'connecting') {
-          setHAStatus('connecting');
-          reconnectTimer.current = setTimeout(() => {
-            console.log('[HA] Attempting reconnect...');
-            connect(url, token);
-          }, 5000);
-        }
-      };
-    } catch (err) {
-      console.error('[HA] Connection failed:', err);
-      setHAStatus('error');
-    }
-  }, [setHAStatus, setHAEntities, updateHALiveState, setHAConnection]);
+    socket.onclose = () => {
+      console.log('[HA] WebSocket closed');
+      if (manualDisconnect) return;
+      const currentStatus = useAppStore.getState().homeAssistant.status;
+      if (currentStatus === 'connected' || currentStatus === 'connecting') {
+        useAppStore.getState().setHAStatus('connecting');
+        reconnectTimer = setTimeout(() => {
+          console.log('[HA] Attempting reconnect...');
+          connect(url, token);
+        }, 5000);
+      }
+    };
+  } catch (err) {
+    console.error('[HA] Connection failed:', err);
+    useAppStore.getState().setHAStatus('error');
+  }
+}
 
-  const disconnect = useCallback(() => {
-    manualDisconnect.current = true;
-    clearTimeout(reconnectTimer.current);
-    setHAStatus('disconnected');
-    wsRef.current?.close();
-    wsRef.current = null;
-    // Clear entities
-    setHAEntities([]);
-    useAppStore.setState((s) => ({
-      homeAssistant: { ...s.homeAssistant, liveStates: {} },
-    }));
-  }, [setHAStatus, setHAEntities]);
+function disconnect() {
+  manualDisconnect = true;
+  clearTimeout(reconnectTimer);
+  haServiceCaller.current = null;
+  useAppStore.getState().setHAStatus('disconnected');
+  ws?.close();
+  ws = null;
+  useAppStore.getState().setHAEntities([]);
+  useAppStore.setState((s) => ({
+    homeAssistant: { ...s.homeAssistant, liveStates: {} },
+  }));
+}
 
-  const callService = useCallback((domain: string, service: string, serviceData: Record<string, unknown>) => {
-    const ws = wsRef.current;
-    if (!ws || ws.readyState !== WebSocket.OPEN) {
-      console.warn('[HA] Cannot call service: not connected');
-      return;
-    }
-    console.log('[HA] Calling service:', domain, service, serviceData);
-    ws.send(JSON.stringify({
-      type: 'call_service',
-      domain,
-      service,
-      service_data: serviceData,
-      id: nextId(),
-    }));
-  }, []);
+// ── React hook (thin wrapper) ─────────────────────────────────────
 
-  // Expose callService globally for the bridge
+export function useHomeAssistant() {
+  // Auto-reconnect on first mount if stored credentials exist
   useEffect(() => {
-    haServiceCaller.current = callService;
-    return () => { haServiceCaller.current = null; };
-  }, [callService]);
-
-  // Auto-reconnect on mount if we have stored credentials
-  useEffect(() => {
-    if (hasAutoConnected.current) return;
+    if (hasAutoConnected) return;
     const { wsUrl, token, status } = useAppStore.getState().homeAssistant;
     if (wsUrl && token && status !== 'connected' && status !== 'connecting') {
-      hasAutoConnected.current = true;
+      hasAutoConnected = true;
       console.log('[HA] Auto-reconnecting with stored credentials');
       connect(wsUrl, token);
     }
-  }, [connect]);
+  }, []);
 
   return { connect, disconnect, callService };
 }
