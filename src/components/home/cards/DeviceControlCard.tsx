@@ -6,8 +6,9 @@ import { Button } from '@/components/ui/button';
 import {
   Sun, Thermometer, Play, Pause, Square, Volume2,
   Lock, Unlock, Battery, Home as HomeIcon,
-  Snowflake, Flame, RotateCcw,
+  Snowflake, Flame, RotateCcw, Eye,
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface Props { marker: DeviceMarker }
 type UpdateFn = (id: string, partial: Record<string, unknown>) => void;
@@ -173,6 +174,27 @@ function LockControl({ id, data, update }: { id: string; data: LockState; update
 }
 
 function SensorControl({ data }: { data: SensorState }) {
+  const isMotion = data.sensorType === 'motion';
+  const detected = isMotion && data.value > 0;
+
+  if (isMotion) {
+    return (
+      <div className="flex items-center justify-center py-3 gap-2">
+        <Eye size={20} className={detected ? 'text-amber-400' : 'text-muted-foreground'} />
+        <div>
+          <span className={cn('text-sm font-semibold', detected ? 'text-amber-400' : 'text-foreground')}>
+            {detected ? 'Rörelse detekterad' : 'Lugnt'}
+          </span>
+          {data.lastMotion && (
+            <p className="text-[10px] text-muted-foreground">
+              Senast: {new Date(data.lastMotion).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })}
+            </p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex items-center justify-center py-3">
       <Thermometer size={20} className="text-muted-foreground mr-2" />

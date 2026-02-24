@@ -137,6 +137,7 @@ export const useAppStore = create<AppState>()(
       build: initialBuild,
       devices: { markers: [], deviceStates: {} },
       activityLog: [],
+      profile: { name: '', theme: 'dark', accentColor: '#f59e0b', dashboardBg: 'scene3d' },
       props: { catalog: [], items: [] },
 
       homeGeometry: {
@@ -807,10 +808,14 @@ export const useAppStore = create<AppState>()(
       markActivityRead: (id) => set((s) => ({
         activityLog: s.activityLog.map((e) => e.id === id ? { ...e, read: true } : e),
       })),
+      // Profile actions
+      setProfile: (changes) => set((s) => ({
+        profile: { ...s.profile, ...changes },
+      })),
     }),
     {
       name: 'hometwin-store',
-      version: 13,
+      version: 14,
       migrate: (persisted: any) => {
         // V13: Migrate boolean deviceStates to rich DeviceState objects
         if (persisted && persisted.devices?.deviceStates) {
@@ -847,6 +852,7 @@ export const useAppStore = create<AppState>()(
         props: state.props,
         environment: state.environment,
         activityLog: state.activityLog,
+        profile: state.profile,
         homeAssistant: {
           wsUrl: state.homeAssistant.wsUrl,
           token: state.homeAssistant.token,

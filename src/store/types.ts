@@ -230,6 +230,8 @@ export interface LockState {
 export interface SensorState {
   value: number;
   unit: string;
+  sensorType?: 'temperature' | 'motion' | 'generic';
+  lastMotion?: string; // ISO timestamp
 }
 
 export interface GenericDeviceState {
@@ -344,6 +346,14 @@ export interface ActivityEvent {
   read: boolean;
 }
 
+// ─── User Profile ───
+export interface UserProfile {
+  name: string;
+  theme: 'dark' | 'midnight' | 'light';
+  accentColor: string;
+  dashboardBg: 'scene3d' | 'gradient' | 'solid';
+}
+
 // ─── App State ───
 export type AppMode = 'home' | 'dashboard' | 'build';
 
@@ -360,6 +370,7 @@ export interface AppState {
   homeAssistant: HomeAssistantState;
   homeView: HomeViewState;
   activityLog: ActivityEvent[];
+  profile: UserProfile;
 
   // Home View actions
   setCameraPreset: (preset: CameraPreset) => void;
@@ -460,4 +471,7 @@ export interface AppState {
   pushActivity: (event: Omit<ActivityEvent, 'id' | 'timestamp' | 'read'>) => void;
   clearActivity: () => void;
   markActivityRead: (id: string) => void;
+
+  // Profile actions
+  setProfile: (changes: Partial<UserProfile>) => void;
 }

@@ -1,8 +1,7 @@
 import { useState } from 'react';
-import { Home, Cloud, Cpu, Zap, Settings, Wifi, Bell } from 'lucide-react';
+import { Home, Cloud, Cpu, Zap, Settings, Wifi, Bell, Video, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
 import { useAppStore } from '@/store/useAppStore';
 import ClockWidget from './cards/ClockWidget';
 import WeatherWidget from './cards/WeatherWidget';
@@ -12,18 +11,23 @@ import LocationSettings from './cards/LocationSettings';
 import HomeWidgetConfig from './cards/HomeWidgetConfig';
 import HAConnectionPanel from './cards/HAConnectionPanel';
 import ActivityFeed from './cards/ActivityFeed';
-import type { DeviceKind } from '@/store/types';
+import SurveillancePanel from './cards/SurveillancePanel';
+import ProfilePanel from './cards/ProfilePanel';
+import CategoryCard from './cards/CategoryCard';
+import type { DeviceKind, DeviceMarker } from '@/store/types';
 
-type DashCategory = 'home' | 'weather' | 'devices' | 'energy' | 'activity' | 'settings' | 'ha';
+type DashCategory = 'home' | 'weather' | 'devices' | 'energy' | 'surveillance' | 'activity' | 'settings' | 'ha' | 'profile';
 
 const categories: { key: DashCategory; label: string; icon: typeof Home }[] = [
   { key: 'home', label: 'Hem', icon: Home },
   { key: 'weather', label: 'Väder', icon: Cloud },
   { key: 'devices', label: 'Enheter', icon: Cpu },
   { key: 'energy', label: 'Energi', icon: Zap },
+  { key: 'surveillance', label: 'Övervakning', icon: Video },
   { key: 'activity', label: 'Aktivitet', icon: Bell },
   { key: 'settings', label: 'Inställningar', icon: Settings },
   { key: 'ha', label: 'HA', icon: Wifi },
+  { key: 'profile', label: 'Profil', icon: User },
 ];
 
 const deviceFilters: { key: DeviceKind | 'all'; label: string; emoji: string }[] = [
@@ -36,15 +40,53 @@ const deviceFilters: { key: DeviceKind | 'all'; label: string; emoji: string }[]
   { key: 'sensor', label: 'Sensor', emoji: '🌡️' },
 ];
 
+const kindCategory: Record<DeviceKind, string> = {
+  light: 'Ljus', switch: 'Ljus', sensor: 'Sensorer', climate: 'Klimat',
+  vacuum: 'Hem', camera: 'Säkerhet', fridge: 'Vitvaror', oven: 'Vitvaror',
+  washer: 'Vitvaror', 'garage-door': 'Säkerhet', 'door-lock': 'Säkerhet',
+  'power-outlet': 'Ljus', media_screen: 'Media',
+};
+
 function HomeCategory() {
+  const markers = useAppStore((s) => s.devices.markers);
+
+  // Group by category
+  const grouped: Record<string, DeviceMarker[]> = {};
+  for (const m of markers) {
+    const cat = m.userCategory || kindCategory[m.kind] || 'Övrigt';
+    if (!grouped[cat]) grouped[cat] = [];
+    grouped[cat].push(m);
+  }
+
+  const entries = Object.entries(grouped);
+
   return (
     <div className="space-y-4">
+      {/* Widgets row */}
       <div className="flex items-start gap-3 flex-wrap">
         <ClockWidget />
         <WeatherWidget />
         <EnergyWidget />
       </div>
-      <DevicesSection groupBy="category" />
+
+      {/* Floating category grid */}
+      {entries.length > 0 ? (
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 auto-rows-auto">
+          {entries.map(([cat, devices]) => (
+            <CategoryCard
+              key={cat}
+              category={cat}
+              devices={devices}
+              span={devices.length >= 5}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-6">
+          <p className="text-sm text-muted-foreground">Inga enheter ännu</p>
+          <p className="text-xs text-muted-foreground/60 mt-1">Gå till Bygge → Enheter för att placera</p>
+        </div>
+      )}
     </div>
   );
 }
@@ -65,20 +107,15 @@ function WeatherCategory() {
 
 function DevicesCategory() {
   const [kindFilter, setKindFilter] = useState<DeviceKind | null>(null);
-
   return (
     <div className="space-y-3">
       <div className="flex gap-1 overflow-x-auto pb-1">
         {deviceFilters.map(({ key, label, emoji }) => (
-          <Button
-            key={key}
-            size="sm"
+          <Button key={key} size="sm"
             variant={(key === 'all' && !kindFilter) || kindFilter === key ? 'default' : 'outline'}
             className="h-7 text-[10px] gap-1 shrink-0"
-            onClick={() => setKindFilter(key === 'all' ? null : key as DeviceKind)}
-          >
-            <span>{emoji}</span>
-            {label}
+            onClick={() => setKindFilter(key === 'all' ? null : key as DeviceKind)}>
+            <span>{emoji}</span>{label}
           </Button>
         ))}
       </div>
@@ -103,10 +140,6 @@ function EnergyCategory() {
   );
 }
 
-function ActivityCategory() {
-  return <ActivityFeed />;
-}
-
 function SettingsCategory() {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -116,18 +149,16 @@ function SettingsCategory() {
   );
 }
 
-function HACategory() {
-  return <HAConnectionPanel />;
-}
-
 const categoryContent: Record<DashCategory, React.FC> = {
   home: HomeCategory,
   weather: WeatherCategory,
   devices: DevicesCategory,
   energy: EnergyCategory,
-  activity: ActivityCategory,
+  surveillance: SurveillancePanel,
+  activity: ActivityFeed,
   settings: SettingsCategory,
-  ha: HACategory,
+  ha: HAConnectionPanel,
+  profile: ProfilePanel,
 };
 
 export default function DashboardGrid() {
