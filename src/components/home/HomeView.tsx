@@ -11,7 +11,7 @@ import { useWeatherSync } from '@/hooks/useWeatherSync';
 
 export default function HomeView() {
   const visibleWidgets = useAppStore((s) => s.homeView.visibleWidgets);
-  const homeScreenDevices = useAppStore((s) => s.homeView.homeScreenDevices);
+  const homeScreenDevices = useAppStore((s) => s.homeView.homeScreenDevices ?? []);
   const markers = useAppStore((s) => s.devices.markers);
   useWeatherSync();
 
