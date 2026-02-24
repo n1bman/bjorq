@@ -471,12 +471,23 @@ export default function DeviceMarkers3D({ buildMode }: DeviceMarkers3DProps) {
   }, [buildMode, markers, camera, raycaster, gl, updateDevice]);
 
   if (markers.length === 0) return null;
-  if (!buildMode && !showDeviceMarkers) return null;
+
+  // When not in build mode and markers hidden: only render lights (for pointLight effect)
+  const hideVisuals = !buildMode && !showDeviceMarkers;
 
   return (
     <group>
       {markers.map((marker) => {
         const isSelected = buildMode && selectedId === marker.id && selectedType === 'device';
+
+        // When hiding visuals, only render light pointLights
+        if (hideVisuals) {
+          if (marker.kind === 'light') {
+            return <LightMarkerLightOnly key={marker.id} position={marker.position} id={marker.id} />;
+          }
+          // Skip all other markers
+          return null;
+        }
 
         // Use special renderer for media_screen
         if (marker.kind === 'media_screen') {
@@ -506,6 +517,32 @@ export default function DeviceMarkers3D({ buildMode }: DeviceMarkers3DProps) {
           />
         );
       })}
+    </group>
+  );
+}
+
+/** Light-only marker: renders just the pointLight without any visible mesh */
+function LightMarkerLightOnly({ position, id }: { position: [number, number, number]; id: string }) {
+  const state = useAppStore((s) => s.devices.deviceStates[id]);
+  const lightData = state?.kind === 'light' ? state.data : null;
+  const isOn = lightData?.on ?? false;
+
+  const lightColor = useMemo(() => {
+    if (!lightData || !isOn) return new THREE.Color('#555555');
+    if (lightData.colorMode === 'rgb' && lightData.rgbColor) {
+      return new THREE.Color(lightData.rgbColor[0] / 255, lightData.rgbColor[1] / 255, lightData.rgbColor[2] / 255);
+    }
+    if (lightData.colorMode === 'temp' && lightData.colorTemp) {
+      return miredsToColor(lightData.colorTemp);
+    }
+    return new THREE.Color('#f5c542');
+  }, [lightData?.colorMode, lightData?.rgbColor?.[0], lightData?.rgbColor?.[1], lightData?.rgbColor?.[2], lightData?.colorTemp, isOn]);
+
+  const brightness = isOn ? (lightData?.brightness ?? 200) / 255 : 0;
+
+  return (
+    <group position={position}>
+      <pointLight color={lightColor} intensity={isOn ? brightness * 5 : 0} distance={8} decay={2} />
     </group>
   );
 }

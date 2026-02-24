@@ -45,12 +45,67 @@ function CompactDeviceView({ marker, state }: { marker: DeviceMarker; state: imp
   };
 
   const isOn = 'on' in state.data ? (state.data as any).on : state.kind === 'door-lock' ? !(state.data as LockState).locked : true;
+  const wc = marker.widgetConfig;
+
+  // Camera compact: show mini preview
+  if (state.kind === 'camera') {
+    const camData = state.data as CameraState;
+    return (
+      <div className="space-y-1.5">
+        {(wc?.showImage !== false) && (
+          <div className={cn(
+            'relative rounded-lg overflow-hidden aspect-video',
+            camData.on ? 'bg-gradient-to-br from-slate-800 to-slate-900' : 'bg-muted'
+          )}>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <Video size={20} className={cn('text-muted-foreground', camData.on && 'text-primary/60')} />
+            </div>
+            {camData.on && (
+              <div className="absolute top-1 left-1 flex items-center gap-0.5 bg-red-500/80 rounded px-1 py-0.5">
+                <span className="w-1 h-1 rounded-full bg-white animate-pulse" />
+                <span className="text-[8px] text-white font-bold">LIVE</span>
+              </div>
+            )}
+          </div>
+        )}
+        {(wc?.showLabel !== false) && (
+          <p className="text-[10px] text-muted-foreground truncate">{wc?.customLabel || marker.name || 'Kamera'}</p>
+        )}
+      </div>
+    );
+  }
+
+  // Build status text per type
+  let statusText = '';
+  if (wc?.showValue !== false) {
+    if (state.kind === 'light') {
+      const pct = Math.round(((state.data as LightState).brightness / 255) * 100);
+      statusText = isOn ? `${pct}%` : 'Av';
+    } else if (state.kind === 'climate') {
+      statusText = `${(state.data as ClimateState).targetTemp}°`;
+    } else if (state.kind === 'media_screen') {
+      const md = state.data as MediaState;
+      statusText = md.title || (md.on ? md.state : 'Av');
+    } else if (state.kind === 'sensor') {
+      const sd = state.data as SensorState;
+      statusText = `${sd.value} ${sd.unit}`;
+    } else if (state.kind === 'vacuum') {
+      const vd = state.data as VacuumState;
+      const labels: Record<string, string> = { cleaning: 'Städar', docked: 'Dockad', returning: 'Återvänder' };
+      statusText = labels[vd.status] ?? vd.status;
+    }
+  }
 
   return (
     <div className={cn('flex items-center gap-2', !isOn && 'opacity-50')}>
       <span className="text-primary">{kindIcons[marker.kind] || <Sun size={14} />}</span>
-      <span className="text-xs text-foreground truncate flex-1">{marker.name || marker.kind}</span>
-      <span className={cn('w-2 h-2 rounded-full', isOn ? 'bg-green-400' : 'bg-muted-foreground/30')} />
+      <div className="flex-1 min-w-0">
+        {(wc?.showLabel !== false) && (
+          <span className="text-xs text-foreground truncate block">{wc?.customLabel || marker.name || marker.kind}</span>
+        )}
+        {statusText && <span className="text-[10px] text-muted-foreground truncate block">{statusText}</span>}
+      </div>
+      <span className={cn('w-2 h-2 rounded-full shrink-0', isOn ? 'bg-green-400' : 'bg-muted-foreground/30')} />
     </div>
   );
 }
