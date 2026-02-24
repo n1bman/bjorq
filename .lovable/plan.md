@@ -1,111 +1,96 @@
 
-# Drag-and-drop kategorier, veckovaeder och kalender
 
-## Oversikt
+# Omstrukturering av flikar, widgets och enhetsinteraktion
 
-Tre stora tillagg: (1) ett telefon-inspirerat drag-and-drop-system for att flytta enheter mellan kategorier och omordna kategorier, (2) en vecko-vaderprognos som synkas med din plats, och (3) en kalender-widget.
+## 1. Ny flikstruktur i kontrollpanelen
 
----
+Nuvarande flikar: Hem, Vader, Enheter, Energi, Overvakning, Aktivitet, Installningar, HA, Profil
 
-## 1. Drag-and-drop for enheter och kategorier
+Ny ordning:
 
-### Hur det fungerar
-- **Lang-tryck (600ms)** pa en enhet i CategoryCard aktiverar "redigera-lage"
-- Enheten far en visuell "lyft"-effekt (skala upp, skugga, halvtransparent)
-- Alla kategorier visar en "slapp har"-zon (blinkande kantlinje)
-- Slapp enheten pa en annan kategori = `moveDeviceToCategory()`
-- Klick pa bakgrunden avbryter
-- Samma princip for att flytta enheter inom en kategori (omordning)
+| Flik | Ikon | Innehall |
+|------|------|----------|
+| Hem | Home | Kategorier, enhetsgrupper (som idag) |
+| Vader | Cloud | Veckovaeder, platsinstallningar |
+| Kalender | CalendarDays | Kalender-widget (flyttas fran Hem) |
+| Enheter | Cpu | Enhetsfilter + lista |
+| Energi | Zap | Energi-widget |
+| Overvakning | Video | Kameror |
+| Aktivitet | Bell | Logg |
+| Profil | User | Profil + Installningar + HA (sammanslagen) |
+| Widgets | LayoutGrid | Widget-konfiguration for hemskarm |
 
-### Kategori-omordning
-- Lang-tryck pa en kategori-header aktiverar kategori-drag
-- Kategorier kan dras och omordnas i gridet
-- Ny store-action: `reorderCategories(fromIndex, toIndex)`
+Totalt: 9 flikar (bort: separata Installningar och Profil, in: Kalender och Widgets)
 
-### Teknisk approach
-Anvander **HTML Drag and Drop API** (inbyggt, inget extra bibliotek):
-- `draggable` attribut satt vid lang-tryck
-- `onDragStart`, `onDragOver`, `onDrop` handlers
-- CSS-klasser for visuell feedback
-- Touch-stod via `onTouchStart` + timer for lang-tryck, sedan fallback till klick-baserad flytt pa mobil
-
-### Filandringar
-
-**`src/store/types.ts`**:
-- Lagg till `reorderCategories: (fromIndex: number, toIndex: number) => void` i AppState
-
-**`src/store/useAppStore.ts`**:
-- Implementera `reorderCategories` action som flyttar en kategori i arrayen
-
-**`src/components/home/cards/CategoryCard.tsx`**:
-- Acceptera nya props: `onDragDevice`, `onDropDevice`, `editMode`, `onDragCategory`, `onDropCategory`
-- Enheter far `draggable` + visuell feedback i edit-lage
-- Kategorikort far `onDragOver` + `onDrop` som drop-zon
-- Lang-tryck-handler pa enheter (600ms timer)
-
-**`src/components/home/DashboardGrid.tsx` (HomeCategory)**:
-- Haller "editMode"-state och "draggingDeviceId"-state
-- Skickar drag-handlers till alla CategoryCard-instanser
-- Visar en "Redigera"-knapp som manuellt aktiverar edit-lage (alternativ till lang-tryck)
-- Kategorier far drag-handlers for omordning
-- Visar instruktionstext nar edit-lage ar aktivt: "Dra enheter mellan kategorier"
+**`src/components/home/DashboardGrid.tsx`**: Uppdatera `DashCategory`-typ och `categories`-array. Sla ihop `SettingsCategory` och `ProfilePanel` till en ny `ProfileSettingsCategory` som visar profil, plats, tema och HA-anslutning i samma vy. Flytta `HomeWidgetConfig` till en egen `WidgetsCategory`-komponent.
 
 ---
 
-## 2. Vecko-vaderprognos
+## 2. Adress-baserad plats under Vader
 
-### Hur det fungerar
-- Utoka Open-Meteo-anropet att hamta 7-dagars prognos
-- Visa en snygg rad med veckodagar, var med ikon + max/min-temp
-
-### Filandringar
-
-**`src/hooks/useWeatherSync.ts`**:
-- Utoka `fetchWeather()` att aven hamta `daily` data fran Open-Meteo:
-```
-&daily=weathercode,temperature_2m_max,temperature_2m_min&forecast_days=7
-```
-- Returnera `forecast: { day: string; condition: WeatherCondition; maxTemp: number; minTemp: number }[]`
-
-**`src/store/types.ts`**:
-- Lagg till i EnvironmentState:
-```typescript
-forecast?: { day: string; condition: WeatherCondition; maxTemp: number; minTemp: number }[];
-```
-- Utoka `setWeatherData` att acceptera forecast
-
-**`src/store/useAppStore.ts`**:
-- Spara forecast i environment state
-
-**`src/components/home/cards/WeatherWidget.tsx`**:
-- Under nuvarande vader: visa en kompakt rad med 7 dagar
-- Varje dag visar: kortnamn (Mån, Tis...), vader-ikon, max/min-temp
-- Horisontell scroll pa mobil
-- Stilren glasmorfism-design
+**`src/components/home/cards/LocationSettings.tsx`**:
+- Lagg till tva textfalt: "Adress / Stad" och "Land"
+- En "Sok plats"-knapp som anvandar Open-Meteo Geocoding API (`https://geocoding-api.open-meteo.com/v1/search?name={query}&count=1`) for att konvertera adress till koordinater
+- Behall befintlig "Anvand min plats"-knapp och manuella lat/lon-falt som fallback
+- Visa den hittade platsen som bekraftelse
 
 ---
 
-## 3. Kalender-widget
+## 3. Standardiserade widgets med expanderbar detalj
 
-### Hur det fungerar
-- Enkel kalender-widget som visar manadsvy
-- Framtida koppling till e-postkalender (Google Calendar API) -- forbereds med placeholder
-- Visar dagens datum markerat och kommande handelser
+Alla widgets (Clock, Weather, Energy, Temperature, enhets-widgets) far ett standardiserat utseende:
+- **Kompakt lage** (default): fast storlek ca 160x90px, visar nyckelvardet
+- **Expanderat lage**: klick pa widgeten expanderar den till en storre detaljvy med mer info
 
-### Filandringar
+**Beror filer**:
+- `ClockWidget.tsx` -- klick visar datum, veckodag, tidszon
+- `WeatherWidget.tsx` -- klick expanderar till full veckoprognos
+- `EnergyWidget.tsx` -- klick visar detaljer
+- `TemperatureWidget.tsx` -- klick visar alla klimat-enheter
+- `DeviceControlCard.tsx` -- anvands i hemskarm-widgets, klick expanderar kontroller
 
-**`src/components/home/cards/CalendarWidget.tsx`** (NY):
-- Visar en kompakt manadskalender med shadcn Calendar-komponent
-- Under kalendern: lista med kommande handelser (placeholder-data forst)
-- Knapp "Koppla kalender" som forbereder for Google Calendar-integration
-- Design: glasmorfism-kort, kompakt storlek
+**Implementation**: Varje widget far en `expanded` boolean state. I kompakt lage visas en rad med ikon + varde. Klick togglear `expanded` och visar fullstandigt innehall.
 
-**`src/components/home/DashboardGrid.tsx`**:
-- Lagg till `CalendarWidget` i Hem-vyns widget-rad (bredvid klocka, vader, energi)
-- Alternativt: ny flik "Kalender" med `CalendarDays`-ikon
+---
+
+## 4. Kamera-widget
+
+**`src/components/home/cards/DeviceControlCard.tsx`**:
+- Lagg till en `CameraControl`-komponent for `kind === 'camera'`
+- Kompakt: visar en placeholder-bild (gradient eller kamera-ikon) med "Live"-badge
+- Expanderat: visar storre vy med placeholder for videoflode
+- Forberedd for framtida integration med riktig RTSP/HLS-stream via HA
 
 **`src/store/types.ts`**:
-- Lagg till `calendar` i VisibleWidgets: `calendar: boolean`
+- Lagg till `CameraState` typ: `{ on: boolean; streaming: boolean; lastSnapshot?: string }`
+- Lagg till i `DeviceState` union
+
+---
+
+## 5. Ett-klick av/pa for enheter pa hemskarm
+
+**`src/components/home/HomeView.tsx`**:
+- For enheter med pa/av-funktion (light, switch, climate, vacuum, media_screen, generic, power-outlet): klick pa widgeten togglear `on`-state direkt via `toggleDeviceState`
+- Langa trycket (eller dubbel-klick) oppnar expanderad kontroll
+- Visuell feedback: av = daempad/grayscale widget, pa = normal/ljus
+
+**Beror aven**: `DeviceControlCard.tsx` -- lagg till en `compact`-prop som bara visar ikon + namn + on/off-status utan alla kontroller.
+
+---
+
+## 6. Dolj/visa enhetsmarkeringar i 3D-vyn
+
+**`src/store/types.ts`**:
+- Lagg till `showDeviceMarkers: boolean` i `HomeViewState` (default: true)
+
+**`src/components/home/HomeView.tsx`**:
+- Lagg till en liten flytande knapp (t.ex. Eye/EyeOff-ikon) bredvid CameraFab
+- Klick togglear `showDeviceMarkers`
+- Nar `false`: enhetsmarkorer i 3D-scenen doljs, men enhets-widgetarna (valda enheter langst ned) forblir synliga och klickbara
+
+**`src/components/devices/DeviceMarkers3D.tsx`**:
+- Las `showDeviceMarkers` fran store
+- Returnera null om `false` (eller saett `visible={false}`)
 
 ---
 
@@ -113,10 +98,15 @@ forecast?: { day: string; condition: WeatherCondition; maxTemp: number; minTemp:
 
 | Fil | Andring |
 |-----|---------|
-| `src/store/types.ts` | `reorderCategories`, `forecast` i EnvironmentState, `calendar` i VisibleWidgets |
-| `src/store/useAppStore.ts` | `reorderCategories` action, spara forecast |
-| `src/hooks/useWeatherSync.ts` | Hamta 7-dagars prognos fran Open-Meteo |
-| `src/components/home/cards/CategoryCard.tsx` | Drag-and-drop stod med lang-tryck |
-| `src/components/home/DashboardGrid.tsx` | Edit-lage, drag-state, CalendarWidget, redigera-knapp |
-| `src/components/home/cards/WeatherWidget.tsx` | Vecko-prognos-rad |
-| `src/components/home/cards/CalendarWidget.tsx` | **NY** -- kalender-widget |
+| `src/components/home/DashboardGrid.tsx` | Ny flikstruktur: Kalender + Widgets som egna flikar, Profil+Installningar+HA ihop |
+| `src/components/home/cards/LocationSettings.tsx` | Adress/stad/land-falt + geocoding-API-anrop |
+| `src/components/home/cards/ClockWidget.tsx` | Kompakt/expanderad toggle |
+| `src/components/home/cards/WeatherWidget.tsx` | Kompakt/expanderad toggle |
+| `src/components/home/cards/EnergyWidget.tsx` | Kompakt/expanderad toggle |
+| `src/components/home/cards/TemperatureWidget.tsx` | Kompakt/expanderad toggle |
+| `src/components/home/cards/DeviceControlCard.tsx` | CameraControl, compact-prop, ett-klick toggle |
+| `src/store/types.ts` | CameraState, showDeviceMarkers i HomeViewState |
+| `src/store/useAppStore.ts` | toggleShowDeviceMarkers, CameraState default |
+| `src/components/home/HomeView.tsx` | Dolj-knapp, ett-klick toggle pa enhets-widgets |
+| `src/components/devices/DeviceMarkers3D.tsx` | Respektera showDeviceMarkers |
+
