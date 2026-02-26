@@ -357,11 +357,28 @@ export function useHABridge() {
  */
 export function useVacuumRoomSync() {
   const prevRoomRef = useRef<string>('');
+  const sensorIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     const unsub = useAppStore.subscribe((state) => {
-      const roomSensorId = 'sensor.s5_max_nuvarande_rum';
-      const live = state.homeAssistant.liveStates[roomSensorId];
+      // Dynamically discover room sensor (matches *nuvarande_rum, *current_room, etc.)
+      if (!sensorIdRef.current) {
+        const candidates = Object.keys(state.homeAssistant.liveStates).filter(
+          (id) => id.startsWith('sensor.') && (/nuvarande.rum/i.test(id) || /current.room/i.test(id))
+        );
+        if (candidates.length > 0) sensorIdRef.current = candidates[0];
+        // Also check HA entities for sensors with 'options' attribute containing room names
+        if (!sensorIdRef.current) {
+          const entity = state.homeAssistant.entities.find(
+            (e) => e.domain === 'sensor' && (e.attributes?.['options'] || e.attributes?.['room_list'])
+              && (/nuvarande|current.room/i.test(e.entityId))
+          );
+          if (entity) sensorIdRef.current = entity.entityId;
+        }
+      }
+      if (!sensorIdRef.current) return;
+
+      const live = state.homeAssistant.liveStates[sensorIdRef.current];
       if (!live) return;
 
       const roomName = live.state;
