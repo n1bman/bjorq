@@ -524,7 +524,7 @@ function VacuumMarker3D({ position, id, onSelect, onDragStart, selected }: Marke
       meshRef.current.position.x = THREE.MathUtils.lerp(meshRef.current.position.x, tx, 0.05);
       meshRef.current.position.z = THREE.MathUtils.lerp(meshRef.current.position.z, tz, 0.05);
     } else if (status === 'cleaning' && activeZone && activeZone.polygon.length >= 3) {
-      // Room-based wandering
+      // Room-based wandering with curved paths
       if (!currentTarget.current) {
         currentTarget.current = randomPointInPolygon(activeZone.polygon);
       }
@@ -536,18 +536,24 @@ function VacuumMarker3D({ position, id, onSelect, onDragStart, selected }: Marke
       const dz = tz - cz;
       const dist = Math.sqrt(dx * dx + dz * dz);
 
-      if (dist < 0.1) {
+      if (dist < 0.05) {
         // Pick new target
         currentTarget.current = randomPointInPolygon(activeZone.polygon);
       } else {
-        // Move toward target
+        // Add a subtle sine-wave perpendicular offset for curved movement
         const step = Math.min(speed * delta, dist);
-        meshRef.current.position.x += (dx / dist) * step;
-        meshRef.current.position.z += (dz / dist) * step;
+        const progress = 1 - dist / (dist + step);
+        const perpX = -dz / dist;
+        const perpZ = dx / dist;
+        const wobble = Math.sin(Date.now() * 0.003) * 0.03;
 
-        // Smooth rotation toward movement direction
+        meshRef.current.position.x += (dx / dist) * step + perpX * wobble;
+        meshRef.current.position.z += (dz / dist) * step + perpZ * wobble;
+
+        // Smooth rotation toward movement direction with slight wobble
         const targetAngle = Math.atan2(dx, dz);
-        smoothRotation.current = THREE.MathUtils.lerp(smoothRotation.current, targetAngle, delta * 3);
+        const rotWobble = Math.sin(Date.now() * 0.005) * 0.08;
+        smoothRotation.current = THREE.MathUtils.lerp(smoothRotation.current, targetAngle + rotWobble, delta * 3);
         meshRef.current.rotation.y = smoothRotation.current;
       }
 

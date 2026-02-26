@@ -980,7 +980,26 @@ export const useAppStore = create<AppState>()(
           },
         })),
 
-      // Home Assistant actions
+      updateVacuumZoneSegmentId: (floorId, roomId, segmentId) =>
+        set((s) => ({
+          layout: {
+            ...s.layout,
+            floors: s.layout.floors.map((f) =>
+              f.id === floorId
+                ? {
+                    ...f,
+                    vacuumMapping: {
+                      ...(f.vacuumMapping ?? { dockPosition: null, zones: [] }),
+                      zones: (f.vacuumMapping?.zones ?? []).map((z) =>
+                        z.roomId === roomId ? { ...z, segmentId } : z
+                      ),
+                    },
+                  }
+                : f
+            ),
+          },
+        })),
+
       setHAEntities: (entities) => set((s) => ({
         homeAssistant: { ...s.homeAssistant, entities },
       })),

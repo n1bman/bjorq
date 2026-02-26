@@ -1,5 +1,6 @@
 import { useAppStore } from '@/store/useAppStore';
 import type { VacuumState, DeviceMarker } from '@/store/types';
+import { pointInPolygon } from '@/lib/vacuumGeometry';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { Progress } from '@/components/ui/progress';
@@ -236,8 +237,18 @@ function VacuumMiniMap({ marker, data }: { marker: DeviceMarker; data: VacuumSta
           // Label
           const roomObj = rooms.find(r => r.id === zone.roomId || r.name === zone.roomId);
           const label = roomObj?.name ?? zone.roomId;
-          const cx = zone.polygon.reduce((a, p) => a + p[0], 0) / zone.polygon.length;
-          const cz = zone.polygon.reduce((a, p) => a + p[1], 0) / zone.polygon.length;
+          let cx = zone.polygon.reduce((a, p) => a + p[0], 0) / zone.polygon.length;
+          let cz = zone.polygon.reduce((a, p) => a + p[1], 0) / zone.polygon.length;
+          if (!pointInPolygon(cx, cz, zone.polygon)) {
+            for (let ei = 0; ei < zone.polygon.length; ei++) {
+              const next = (ei + 1) % zone.polygon.length;
+              const mx = (zone.polygon[ei][0] + zone.polygon[next][0]) / 2;
+              const mz = (zone.polygon[ei][1] + zone.polygon[next][1]) / 2;
+              if (pointInPolygon(mx, mz, zone.polygon)) {
+                cx = mx; cz = mz; break;
+              }
+            }
+          }
           const [tx, ty] = toScreen(cx, cz);
           ctx.fillStyle = isActive ? '#fff' : zc.label;
           ctx.font = `${isActive ? 'bold ' : ''}9px sans-serif`;
