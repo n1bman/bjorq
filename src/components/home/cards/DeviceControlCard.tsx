@@ -438,10 +438,13 @@ function VacuumControl({ id, data, update }: { id: string; data: VacuumState; up
         </div>
       )}
 
-      {data.status === 'error' && data.errorMessage && (
-        <div className="flex items-center gap-2 bg-destructive/10 rounded p-1.5">
-          <AlertTriangle size={12} className="text-destructive" />
-          <span className="text-[10px] text-destructive">{data.errorMessage}</span>
+      {(data.status === 'error' || data.errorMessage) && (
+        <div className="flex items-center gap-2 bg-destructive/20 border border-destructive/30 rounded p-2 animate-pulse">
+          <AlertTriangle size={14} className="text-destructive shrink-0" />
+          <div>
+            <span className="text-[10px] font-semibold text-destructive block">Fel på robot</span>
+            {data.errorMessage && <span className="text-[9px] text-destructive/80">{data.errorMessage}</span>}
+          </div>
         </div>
       )}
 
@@ -452,7 +455,7 @@ function VacuumControl({ id, data, update }: { id: string; data: VacuumState; up
         <Button size="sm" variant={data.status === 'paused' ? 'default' : 'outline'} className="flex-1 h-8 text-[10px] gap-1"
           onClick={() => update(id, { status: 'paused' })}><Pause size={12} /> Pausa</Button>
         <Button size="sm" variant="outline" className="flex-1 h-8 text-[10px] gap-1"
-          onClick={() => update(id, { on: false, status: 'docked', targetRoom: undefined })}><Square size={12} /> Stopp</Button>
+          onClick={() => update(id, { on: false, status: 'idle', targetRoom: undefined })}><Square size={12} /> Stopp</Button>
         <Button size="sm" variant="outline" className="h-8 text-[10px] gap-1"
           onClick={() => update(id, { status: 'returning', targetRoom: undefined })}><HomeIcon size={12} /> Hem</Button>
       </div>
@@ -856,7 +859,7 @@ function CompactVacuumControl({ marker, data: vd, update, labels: vacLabels, lab
           <Pause size={10} />
         </Button>
         <Button size="sm" variant="ghost" className="h-6 px-1.5 text-[9px] gap-0.5"
-          onClick={(e) => { e.stopPropagation(); update(marker.id, { on: false, status: 'docked' }); }}>
+          onClick={(e) => { e.stopPropagation(); update(marker.id, { on: false, status: 'idle' }); }}>
           <Square size={10} />
         </Button>
         <Button size="sm" variant="ghost" className="h-6 px-1.5 text-[9px] gap-0.5"

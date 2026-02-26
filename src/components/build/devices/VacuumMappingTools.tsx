@@ -221,12 +221,23 @@ export default function VacuumMappingTools() {
             );
           })}
 
-          {/* HA sync hint */}
-          {Object.keys(vacuumSegmentMap).length > 0 ? (
-            <p className="text-[8px] text-green-400/70 px-1 mt-1 hidden lg:block">
-              ✅ Segment-ID auto-upptäckta via roborock.get_maps
-            </p>
-          ) : (
+      {/* HA segment map reference */}
+          {Object.keys(vacuumSegmentMap).length > 0 && (
+            <div className="mt-2 px-1 hidden lg:block">
+              <p className="text-[8px] text-green-400/70 mb-1">
+                ✅ Segment-ID via roborock.get_maps:
+              </p>
+              <div className="space-y-0.5">
+                {Object.entries(vacuumSegmentMap).map(([name, segId]) => (
+                  <div key={name} className="flex items-center justify-between text-[8px]">
+                    <span className="text-muted-foreground truncate">{name}</span>
+                    <span className="text-green-400 font-mono ml-1">#{segId}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {Object.keys(vacuumSegmentMap).length === 0 && (
             <p className="text-[8px] text-muted-foreground/50 px-1 mt-1 hidden lg:block">
               💡 Anslut till HA för automatisk segment-ID-upptäckt via roborock.get_maps
             </p>
