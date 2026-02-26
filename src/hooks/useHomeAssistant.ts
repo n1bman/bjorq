@@ -9,6 +9,7 @@ let ws: WebSocket | null = null;
 let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
 let manualDisconnect = false;
 let hasAutoConnected = false;
+let getMapsId: number | null = null; // Track roborock.get_maps request ID
 
 function nextId() {
   return ++msgId;
@@ -80,6 +81,24 @@ function connect(url: string, token: string) {
           haServiceCaller.current = callService;
           socket.send(JSON.stringify({ type: 'get_states', id: nextId() }));
           socket.send(JSON.stringify({ type: 'subscribe_events', event_type: 'state_changed', id: nextId() }));
+          // Request Roborock room mapping (will be handled in result handler)
+          // Delay slightly to let entities load first
+          setTimeout(() => {
+            const entities = useAppStore.getState().homeAssistant.entities;
+            const vacuumEntity = entities.find((e) => e.domain === 'vacuum');
+            const vacuumId = vacuumEntity?.entityId || 'vacuum.s5_max';
+            getMapsId = nextId();
+            console.log('[HA] Requesting roborock.get_maps for', vacuumId, 'id:', getMapsId);
+            socket.send(JSON.stringify({
+              type: 'call_service',
+              domain: 'roborock',
+              service: 'get_maps',
+              target: { entity_id: vacuumId },
+              service_data: {},
+              return_response: true,
+              id: getMapsId,
+            }));
+          }, 2000);
           break;
 
         case 'auth_invalid':
@@ -89,6 +108,32 @@ function connect(url: string, token: string) {
           break;
 
         case 'result':
+          if (msg.id === getMapsId && msg.success) {
+            // Parse roborock.get_maps response
+            console.log('[HA] roborock.get_maps response:', msg.result);
+            try {
+              const response = msg.result?.response ?? msg.result;
+              const maps = response?.maps ?? response;
+              const firstMap = Array.isArray(maps) ? maps[0] : maps;
+              const rooms = firstMap?.rooms;
+              if (rooms && typeof rooms === 'object') {
+                const segmentMap: Record<string, number> = {};
+                // rooms can be { segmentId: { name: "Köket" } } or { segmentId: "Köket" }
+                for (const [segId, val] of Object.entries(rooms)) {
+                  const name = typeof val === 'string' ? val : (val as any)?.name;
+                  if (name) {
+                    segmentMap[name] = parseInt(segId);
+                  }
+                }
+                console.log('[HA] Vacuum segment map:', segmentMap);
+                s.setVacuumSegmentMap(segmentMap);
+              }
+            } catch (err) {
+              console.warn('[HA] Failed to parse get_maps response:', err);
+            }
+            getMapsId = null;
+            break;
+          }
           if (msg.success && Array.isArray(msg.result)) {
             const entities: HAEntity[] = msg.result.map((e: any) => ({
               entityId: e.entity_id,

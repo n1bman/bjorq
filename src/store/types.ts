@@ -457,6 +457,7 @@ export interface HomeAssistantState {
   token: string;
   entities: HAEntity[];
   liveStates: Record<string, { state: string; attributes: Record<string, unknown> }>;
+  vacuumSegmentMap: Record<string, number>;
 }
 
 // ─── Room Templates ───
@@ -668,4 +669,5 @@ export interface AppState {
   updateHALiveState: (entityId: string, state: string, attributes: Record<string, unknown>) => void;
   setHAStatus: (status: HAConnectionStatus) => void;
   setHAConnection: (wsUrl: string, token: string) => void;
+  setVacuumSegmentMap: (map: Record<string, number>) => void;
 }

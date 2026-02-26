@@ -371,8 +371,10 @@ function VacuumCard({ marker, data, update }: { marker: DeviceMarker; data: Vacu
           <div>
             <h3 className="text-sm font-semibold text-foreground">{marker.name || 'Robotdammsugare'}</h3>
             <p className={cn('text-xs font-medium', statusColor)}>
-              {statusLabel}
-              {data.currentRoom && data.status === 'cleaning' && (
+              {data.targetRoom && data.status === 'cleaning'
+                ? `${statusLabel} · ${data.targetRoom}`
+                : statusLabel}
+              {data.currentRoom && data.status === 'cleaning' && !data.targetRoom && (
                 <span className="text-muted-foreground ml-1">· {data.currentRoom}</span>
               )}
             </p>

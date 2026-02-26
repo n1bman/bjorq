@@ -110,18 +110,28 @@ function sendHACommand(entityId: string, state: DeviceState) {
       }
       // Handle room-specific cleaning via send_command
       if (data.targetRoom && data.status === 'cleaning') {
-        const storeState = useAppStore.getState();
-        const vacMarker = storeState.devices.markers.find((m) => m.ha?.entityId === entityId);
-        const vacFloor = storeState.layout.floors.find((f) => f.id === vacMarker?.floorId);
-        const zone = vacFloor?.vacuumMapping?.zones?.find((z) => z.roomId === data.targetRoom);
-        if (zone?.segmentId) {
+        // 1. Try auto-discovered segment map
+        const segmentMap = useAppStore.getState().homeAssistant.vacuumSegmentMap;
+        let segId: number | undefined = segmentMap[data.targetRoom];
+
+        // 2. Fallback: manual segmentId from zone config
+        if (segId === undefined) {
+          const storeState = useAppStore.getState();
+          const vacMarker = storeState.devices.markers.find((m) => m.ha?.entityId === entityId);
+          const vacFloor = storeState.layout.floors.find((f) => f.id === vacMarker?.floorId);
+          const zone = vacFloor?.vacuumMapping?.zones?.find((z) => z.roomId === data.targetRoom);
+          if (zone?.segmentId) segId = zone.segmentId;
+        }
+
+        if (segId !== undefined) {
+          console.log('[HABridge] Sending app_segment_clean with segmentId:', segId, 'for room:', data.targetRoom);
           callService('vacuum', 'send_command', {
             entity_id: entityId,
             command: 'app_segment_clean',
-            params: [zone.segmentId],
+            params: [segId],
           });
         } else {
-          // Fallback: start general cleaning if no segment ID configured
+          console.warn('[HABridge] No segment ID found for room:', data.targetRoom, '— falling back to vacuum.start');
           callService('vacuum', 'start', { entity_id: entityId });
         }
         break;
