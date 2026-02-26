@@ -27,9 +27,13 @@ export default function VacuumMappingTools() {
   if (!hasVacuum) return null;
 
   // Get HA room names from vacuum sensors (e.g. Roborock current_room)
+  // Check both 'room_list' and 'options' attributes (Roborock uses 'options')
   const haRoomNames = haEntities
-    .filter((e) => e.domain === 'sensor' && e.attributes?.['room_list'])
-    .flatMap((e) => (e.attributes['room_list'] as string[]) ?? []);
+    .filter((e) => e.domain === 'sensor' && (e.attributes?.['room_list'] || e.attributes?.['options']))
+    .flatMap((e) => {
+      const list = (e.attributes['room_list'] as string[]) ?? (e.attributes['options'] as string[]) ?? [];
+      return list;
+    });
 
   // Unique room name options: floor rooms + HA rooms
   const roomOptions = Array.from(new Set([
