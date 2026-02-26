@@ -109,6 +109,13 @@ export type BuildTool =
   | 'place-fan'
   | 'place-cover'
   | 'place-scene'
+  | 'place-alarm'
+  | 'place-water-heater'
+  | 'place-humidifier'
+  | 'place-siren'
+  | 'place-valve'
+  | 'place-remote'
+  | 'place-lawn-mower'
   | 'place-vacuum-dock'
   | 'vacuum-zone';
 
@@ -183,7 +190,7 @@ export interface HomeGeometryState {
 }
 
 // ─── Devices Layer ───
-export type DeviceKind = 'light' | 'switch' | 'sensor' | 'climate' | 'vacuum' | 'camera' | 'fridge' | 'oven' | 'washer' | 'garage-door' | 'door-lock' | 'power-outlet' | 'media_screen' | 'fan' | 'cover' | 'scene';
+export type DeviceKind = 'light' | 'switch' | 'sensor' | 'climate' | 'vacuum' | 'camera' | 'fridge' | 'oven' | 'washer' | 'garage-door' | 'door-lock' | 'power-outlet' | 'media_screen' | 'fan' | 'cover' | 'scene' | 'alarm' | 'water-heater' | 'humidifier' | 'siren' | 'valve' | 'remote' | 'lawn-mower';
 export type DeviceSurface = 'floor' | 'wall' | 'ceiling' | 'free';
 
 export interface ScreenConfig {
@@ -305,6 +312,43 @@ export interface CameraState {
   lastSnapshot?: string;
 }
 
+export interface AlarmState {
+  state: 'disarmed' | 'armed_home' | 'armed_away' | 'armed_night' | 'pending' | 'triggered';
+  code?: string;
+}
+
+export interface WaterHeaterState {
+  on: boolean;
+  temperature: number;
+  mode: 'eco' | 'electric' | 'performance' | 'off';
+}
+
+export interface HumidifierState {
+  on: boolean;
+  humidity: number;
+  mode?: string;
+  availableModes?: string[];
+}
+
+export interface SirenState {
+  on: boolean;
+  tone?: string;
+  volume?: number;
+  availableTones?: string[];
+}
+
+export interface ValveState {
+  position: number; // 0=closed, 100=open
+  state: 'open' | 'closed' | 'opening' | 'closing';
+}
+
+export interface LawnMowerState {
+  on: boolean;
+  status: 'mowing' | 'docked' | 'returning' | 'paused' | 'idle' | 'error';
+  battery: number;
+  errorMessage?: string;
+}
+
 export type DeviceState =
   | { kind: 'light'; data: LightState }
   | { kind: 'climate'; data: ClimateState }
@@ -316,6 +360,12 @@ export type DeviceState =
   | { kind: 'fan'; data: FanState }
   | { kind: 'cover'; data: CoverState }
   | { kind: 'scene'; data: SceneState }
+  | { kind: 'alarm'; data: AlarmState }
+  | { kind: 'water-heater'; data: WaterHeaterState }
+  | { kind: 'humidifier'; data: HumidifierState }
+  | { kind: 'siren'; data: SirenState }
+  | { kind: 'valve'; data: ValveState }
+  | { kind: 'lawn-mower'; data: LawnMowerState }
   | { kind: 'generic'; data: GenericDeviceState };
 
 export interface DevicesState {

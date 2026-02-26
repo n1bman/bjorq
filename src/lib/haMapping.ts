@@ -123,6 +123,75 @@ export function mapHAEntityToDeviceState(
         },
       };
     }
+    case 'alarm_control_panel': {
+      const stateMap: Record<string, 'disarmed' | 'armed_home' | 'armed_away' | 'armed_night' | 'pending' | 'triggered'> = {
+        disarmed: 'disarmed', armed_home: 'armed_home', armed_away: 'armed_away',
+        armed_night: 'armed_night', pending: 'pending', triggered: 'triggered',
+      };
+      return { kind: 'alarm', data: { state: stateMap[state] || 'disarmed' } };
+    }
+
+    case 'water_heater': {
+      const on = state !== 'off';
+      const temp = typeof attributes.temperature === 'number' ? attributes.temperature : 50;
+      const modeMap: Record<string, 'eco' | 'electric' | 'performance' | 'off'> = {
+        eco: 'eco', electric: 'electric', performance: 'performance', off: 'off',
+      };
+      const mode = typeof attributes.operation_mode === 'string' ? (modeMap[attributes.operation_mode] ?? 'electric') : (on ? 'electric' : 'off');
+      return { kind: 'water-heater', data: { on, temperature: temp, mode } };
+    }
+
+    case 'humidifier': {
+      const on = state === 'on';
+      const humidity = typeof attributes.humidity === 'number' ? attributes.humidity : 50;
+      const mode = typeof attributes.mode === 'string' ? attributes.mode : undefined;
+      const availableModes = Array.isArray(attributes.available_modes) ? attributes.available_modes as string[] : undefined;
+      return { kind: 'humidifier', data: { on, humidity, mode, availableModes } };
+    }
+
+    case 'siren': {
+      const on = state === 'on';
+      const tone = typeof attributes.tone === 'string' ? attributes.tone : undefined;
+      const volume = typeof attributes.volume_level === 'number' ? attributes.volume_level : undefined;
+      const availableTones = Array.isArray(attributes.available_tones) ? attributes.available_tones as string[] : undefined;
+      return { kind: 'siren', data: { on, tone, volume, availableTones } };
+    }
+
+    case 'button':
+      return { kind: 'generic', data: { on: false } };
+
+    case 'number':
+    case 'input_number': {
+      const value = parseFloat(state) || 0;
+      const unit = typeof attributes.unit_of_measurement === 'string' ? attributes.unit_of_measurement : '';
+      return { kind: 'sensor', data: { value, unit, sensorType: 'generic' } };
+    }
+
+    case 'select':
+    case 'input_select':
+      return { kind: 'generic', data: { on: true } };
+
+    case 'valve': {
+      const pos = typeof attributes.current_position === 'number' ? attributes.current_position : (state === 'open' ? 100 : 0);
+      const valveStateMap: Record<string, 'open' | 'closed' | 'opening' | 'closing'> = {
+        open: 'open', closed: 'closed', opening: 'opening', closing: 'closing',
+      };
+      return { kind: 'valve', data: { position: pos, state: valveStateMap[state] || 'closed' } };
+    }
+
+    case 'remote':
+      return { kind: 'generic', data: { on: state === 'on' } };
+
+    case 'lawn_mower': {
+      const statusMap: Record<string, 'mowing' | 'docked' | 'returning' | 'paused' | 'idle' | 'error'> = {
+        mowing: 'mowing', docked: 'docked', returning: 'returning',
+        paused: 'paused', idle: 'idle', error: 'error',
+      };
+      const battery = typeof attributes.battery_level === 'number' ? attributes.battery_level : 100;
+      const errorMessage = typeof attributes.error === 'string' && attributes.error ? attributes.error : undefined;
+      return { kind: 'lawn-mower', data: { on: state === 'mowing', status: statusMap[state] || 'docked', battery, ...(errorMessage && { errorMessage }) } };
+    }
+
     default:
       return null;
   }

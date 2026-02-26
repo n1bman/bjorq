@@ -13,6 +13,8 @@ const kindEmoji: Record<DeviceKind, string> = {
   washer: '🫧', 'garage-door': '🚗', 'door-lock': '🔒',
   'power-outlet': '🔌', media_screen: '📺',
   fan: '🌀', cover: '🪟', scene: '🎬',
+  alarm: '🚨', 'water-heater': '🔥', humidifier: '💧',
+  siren: '🔔', valve: '🔧', remote: '📡', 'lawn-mower': '🌿',
 };
 
 function isOn(state?: DeviceState): boolean {

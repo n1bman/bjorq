@@ -18,6 +18,13 @@ export const kindToDomains: Record<DeviceKind, string[] | null> = {
   oven: null,
   washer: null,
   'garage-door': ['cover'],
+  alarm: ['alarm_control_panel'],
+  'water-heater': ['water_heater'],
+  humidifier: ['humidifier'],
+  siren: ['siren'],
+  valve: ['valve'],
+  remote: ['remote'],
+  'lawn-mower': ['lawn_mower'],
 };
 
 /** Infer DeviceKind from an HA domain */
@@ -38,6 +45,18 @@ export function domainToKind(domain: string): DeviceKind | null {
     case 'scene':
     case 'script':
     case 'automation': return 'scene';
+    case 'alarm_control_panel': return 'alarm';
+    case 'water_heater': return 'water-heater';
+    case 'humidifier': return 'humidifier';
+    case 'siren': return 'siren';
+    case 'valve': return 'valve';
+    case 'remote': return 'remote';
+    case 'lawn_mower': return 'lawn-mower';
+    case 'button': return 'switch';
+    case 'number':
+    case 'input_number': return 'sensor';
+    case 'select':
+    case 'input_select': return 'switch';
     default: return null;
   }
 }

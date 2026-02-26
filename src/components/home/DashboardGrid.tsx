@@ -51,6 +51,8 @@ const kindCategory: Record<DeviceKind, string> = {
   washer: 'Vitvaror', 'garage-door': 'Säkerhet', 'door-lock': 'Säkerhet',
   'power-outlet': 'Ljus', media_screen: 'Media',
   fan: 'Klimat', cover: 'Hem', scene: 'Automation',
+  alarm: 'Säkerhet', 'water-heater': 'Klimat', humidifier: 'Klimat',
+  siren: 'Säkerhet', valve: 'Hem', remote: 'Media', 'lawn-mower': 'Hem',
 };
 
 function HomeCategory() {

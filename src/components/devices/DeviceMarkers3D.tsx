@@ -1,4 +1,4 @@
-import { useRef, useCallback, useMemo, useEffect, useState } from 'react';
+import { useRef, useCallback, useMemo, useEffect } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { useAppStore } from '@/store/useAppStore';
 import type { DeviceKind, DeviceMarker, VacuumZone } from '@/store/types';
@@ -641,6 +641,13 @@ const markerComponents: Record<DeviceKind, React.FC<MarkerProps>> = {
   fan: (props) => <GenericMarker {...props} color="#06b6d4" />,
   cover: (props) => <GenericMarker {...props} color="#a3a3a3" />,
   scene: (props) => <GenericMarker {...props} color="#8b5cf6" />,
+  alarm: (props) => <GenericMarker {...props} color="#ef4444" emissive="#dc2626" />,
+  'water-heater': (props) => <GenericMarker {...props} color="#f97316" emissive="#ea580c" />,
+  humidifier: (props) => <GenericMarker {...props} color="#2dd4bf" emissive="#14b8a6" />,
+  siren: (props) => <GenericMarker {...props} color="#f87171" emissive="#ef4444" />,
+  valve: (props) => <GenericMarker {...props} color="#3b82f6" emissive="#2563eb" />,
+  remote: (props) => <GenericMarker {...props} color="#9ca3af" emissive="#6b7280" />,
+  'lawn-mower': (props) => <GenericMarker {...props} color="#22c55e" emissive="#16a34a" />,
 };
 
 interface DeviceMarkers3DProps {

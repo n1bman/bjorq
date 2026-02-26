@@ -1,6 +1,6 @@
 import { useAppStore } from '@/store/useAppStore';
 import type { DeviceKind, BuildTool, DeviceMarker } from '@/store/types';
-import { Lightbulb, ToggleLeft, Activity, Thermometer, Trash2, Camera, Bot, CookingPot, WashingMachine, DoorOpen, Lock, Plug, Refrigerator, Monitor, ChevronDown, ChevronRight, Link2, Fan, PanelTop, Clapperboard } from 'lucide-react';
+import { Lightbulb, ToggleLeft, Activity, Thermometer, Trash2, Camera, Bot, CookingPot, WashingMachine, DoorOpen, Lock, Plug, Refrigerator, Monitor, ChevronDown, ChevronRight, Link2, Fan, PanelTop, Clapperboard, ShieldAlert, Droplets, Flame, Bell, Grip, Wifi, Trees } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useMemo, useState } from 'react';
 import { domainToKind } from '@/lib/haDomainMapping';
@@ -23,6 +23,13 @@ const deviceTools: { key: BuildTool; kind: DeviceKind; label: string; icon: type
   { key: 'place-fan', kind: 'fan', label: 'Fläkt', icon: Fan, color: 'text-cyan-400' },
   { key: 'place-cover', kind: 'cover', label: 'Persienn/Port', icon: PanelTop, color: 'text-stone-400' },
   { key: 'place-scene', kind: 'scene', label: 'Scen', icon: Clapperboard, color: 'text-violet-400' },
+  { key: 'place-alarm', kind: 'alarm', label: 'Larm', icon: ShieldAlert, color: 'text-red-500' },
+  { key: 'place-water-heater', kind: 'water-heater', label: 'Varmvatten', icon: Flame, color: 'text-orange-500' },
+  { key: 'place-humidifier', kind: 'humidifier', label: 'Luftfuktare', icon: Droplets, color: 'text-teal-400' },
+  { key: 'place-siren', kind: 'siren', label: 'Siren', icon: Bell, color: 'text-red-400' },
+  { key: 'place-valve', kind: 'valve', label: 'Ventil', icon: Grip, color: 'text-blue-500' },
+  { key: 'place-remote', kind: 'remote', label: 'Fjärr', icon: Wifi, color: 'text-gray-400' },
+  { key: 'place-lawn-mower', kind: 'lawn-mower', label: 'Gräsklippare', icon: Trees, color: 'text-green-500' },
 ];
 
 const kindLabels: Record<DeviceKind, string> = {
@@ -42,6 +49,13 @@ const kindLabels: Record<DeviceKind, string> = {
   fan: '🌀 Fläkt',
   cover: '🪟 Persienn',
   scene: '🎬 Scen',
+  alarm: '🚨 Larm',
+  'water-heater': '🔥 Varmvatten',
+  humidifier: '💧 Luftfuktare',
+  siren: '🔔 Siren',
+  valve: '🔧 Ventil',
+  remote: '📡 Fjärr',
+  'lawn-mower': '🌿 Gräsklippare',
 };
 
 export default function DevicePlacementTools() {
@@ -174,6 +188,13 @@ function UnlinkedHAEntities() {
       fan: 'place-fan',
       cover: 'place-cover',
       scene: 'place-scene',
+      alarm: 'place-alarm',
+      'water-heater': 'place-water-heater',
+      humidifier: 'place-humidifier',
+      siren: 'place-siren',
+      valve: 'place-valve',
+      remote: 'place-remote',
+      'lawn-mower': 'place-lawn-mower',
     };
     if (toolMap[kind]) setBuildTool('select');
   };
