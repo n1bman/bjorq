@@ -1,68 +1,46 @@
 
 
-# Fix Vacuum HA Commands, Zone Labels & 3D Movement
+# Fix Vacuum Room Cleaning via HA + Zone Label Positioning
 
-## 1. HA Room Cleaning — Wrong Command Format
+## What you're seeing
 
-**Problem**: `app_segment_clean` for Roborock expects **segment IDs** (integers), not room names. Current code sends `params: { name: "Sovrum" }` which Roborock ignores.
+The screenshot shows `sensor.s5_max_nuvarande_rum` with an `options` attribute listing Roborock's room names (Tvrummet, Köket, G3, etc.). These are **room names**, not segment IDs. Roborock's `app_segment_clean` command requires **integer segment IDs** (e.g. 16, 17, 18), which aren't directly visible in HA Developer Tools.
 
-**Fix in `src/store/types.ts`**: Add optional `segmentId?: number` to `VacuumZone`.
+However, there's a better approach: we can auto-discover segment IDs by sending `get_room_mapping` to the vacuum, OR we can match zone names to the sensor's room names and send cleaning commands using the room name approach that some Roborock integrations support.
 
-**Fix in `src/components/build/devices/VacuumMappingTools.tsx`**: Add a numeric input field for segment ID on each zone. Show helper text: "Segment-ID från Roborock (hitta via HA Developer Tools)".
+## Plan
 
-**Fix in `src/hooks/useHABridge.ts`** (lines 111-118): Look up the zone's `segmentId` from the floor's `vacuumMapping.zones`. Change params format from `{ name: targetRoom }` to `[segmentId]` (array). If no segmentId is configured, fall back to `vacuum.start` (clean all).
+### 1. Auto-populate room names from HA sensor (`VacuumMappingTools.tsx`)
+- Read `sensor.s5_max_nuvarande_rum` entity's `options` attribute from HA entities
+- Show these as selectable room names when naming zones (instead of only floor rooms)
+- This ensures zone names match Roborock's internal room names exactly
 
-```typescript
-// New logic in vacuum case:
-if (data.targetRoom && data.status === 'cleaning') {
-  // Find segment ID from zone mapping
-  const marker = markers.find(m => m.id === id);
-  const floor = floors.find(f => f.id === marker?.floorId);
-  const zone = floor?.vacuumMapping?.zones?.find(z => z.roomId === data.targetRoom);
-  if (zone?.segmentId) {
-    callService('vacuum', 'send_command', {
-      entity_id: entityId,
-      command: 'app_segment_clean',
-      params: [zone.segmentId],
-    });
-  } else {
-    callService('vacuum', 'start', { entity_id: entityId });
-  }
-  break;
-}
-```
+### 2. Add "Discover Segments" button (`VacuumMappingTools.tsx` + `useHABridge.ts`)
+- Add a button that calls `vacuum.send_command` with `command: 'get_room_mapping'` to retrieve room-to-segment mappings
+- Parse the response and auto-fill segment IDs for matching zones
+- Keep the manual segment ID input as fallback, with clearer help text: "Hitta i Roborock-appen eller via get_room_mapping"
 
-**Problem**: `useHABridge` doesn't have access to floor/zone data. Fix by reading it from the store inside `sendHACommand`:
-```typescript
-const storeState = useAppStore.getState();
-const marker = storeState.devices.markers.find(m => m.ha?.entityId === entityId);
-const floor = storeState.layout.floors.find(f => f.id === marker?.floorId);
-```
+### 3. Fix room cleaning command (`useHABridge.ts`)
+- Current code correctly sends `app_segment_clean` with `params: [segmentId]` when segmentId exists
+- Add alternative: if no segmentId but zone name matches an HA room name, try `vacuum.send_command` with `command: 'app_segment_clean'` and `params: {"segments": [segmentId]}`
+- Hardcode the sensor entity pattern (`sensor.*_nuvarande_rum` or use vacuum marker's linked entity) to dynamically find the room sensor
 
-## 2. Zone Label Text Outside Polygon
+### 4. Fix zone label text positioning (`BuildCanvas2D.tsx`, `RobotPanel.tsx`)
+- When rendering zone labels, compute the visual center using `pointInPolygon` check
+- If centroid falls outside polygon, use the closest edge midpoint that IS inside
+- Ensure text is properly centered within the polygon area
 
-**Problem**: Centroid of concave polygons can fall outside the shape.
+### 5. Make `useVacuumRoomSync` dynamic (`useHABridge.ts`)
+- Currently hardcoded to `sensor.s5_max_nuvarande_rum`
+- Instead, auto-discover the room sensor by looking for entities matching `sensor.*nuvarande_rum` or `sensor.*current_room` in the HA entities list
+- This makes it work with any Roborock model
 
-**Fix in `src/components/build/BuildCanvas2D.tsx`** (lines 573-583) and `src/components/home/cards/RobotPanel.tsx` (mini-map labels): Use the `pointInPolygon` function to check if centroid is inside. If not, use rejection sampling to find a point inside (reuse `randomPointInPolygon` from `vacuumGeometry.ts`, but pick the centroid-closest valid point).
-
-Simpler approach: import `pointInPolygon` and if centroid is outside, clip the label position to the polygon's visual center by averaging only boundary midpoints. Or just use a guaranteed-inside point via the existing `randomPointInPolygon` with a fixed seed.
-
-Actually simplest: compute centroid, if `!pointInPolygon(cx, cz, polygon)` then find the closest polygon vertex midpoint that IS inside.
-
-## 3. Robot 3D Movement — More Natural Wandering
-
-**Problem**: Robot moves in straight lines between random targets, looks like back-and-forth.
-
-**Fix in `src/components/devices/DeviceMarkers3D.tsx`** (lines 526-552): Add slight curve to movement by introducing a small perpendicular offset (sine wave along path). Also add slight random rotation wobble to simulate real vacuum behavior. Pick new random targets more frequently (reduce threshold from 0.1 to 0.05) and add a small delay/direction change.
-
-## Files to Change
+## Files to change
 
 | File | Change |
 |------|--------|
-| `src/store/types.ts` | Add `segmentId?: number` to `VacuumZone` |
-| `src/hooks/useHABridge.ts` | Read zone segmentId from store, send `[segmentId]` format |
-| `src/components/build/devices/VacuumMappingTools.tsx` | Add segment ID input per zone |
-| `src/components/build/BuildCanvas2D.tsx` | Fix zone label to stay inside polygon |
-| `src/components/devices/DeviceMarkers3D.tsx` | Add curved/natural wandering pattern |
+| `src/components/build/devices/VacuumMappingTools.tsx` | Auto-populate room names from HA sensor options, improve segment ID UX |
+| `src/hooks/useHABridge.ts` | Dynamic room sensor discovery, segment discovery helper |
+| `src/components/build/BuildCanvas2D.tsx` | Fix zone label centering inside polygon |
 | `src/components/home/cards/RobotPanel.tsx` | Fix mini-map label centering |
 
