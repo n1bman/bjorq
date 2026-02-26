@@ -110,11 +110,20 @@ function sendHACommand(entityId: string, state: DeviceState) {
       }
       // Handle room-specific cleaning via send_command
       if (data.targetRoom && data.status === 'cleaning') {
-        callService('vacuum', 'send_command', {
-          entity_id: entityId,
-          command: 'app_segment_clean',
-          params: { name: data.targetRoom },
-        });
+        const storeState = useAppStore.getState();
+        const vacMarker = storeState.devices.markers.find((m) => m.ha?.entityId === entityId);
+        const vacFloor = storeState.layout.floors.find((f) => f.id === vacMarker?.floorId);
+        const zone = vacFloor?.vacuumMapping?.zones?.find((z) => z.roomId === data.targetRoom);
+        if (zone?.segmentId) {
+          callService('vacuum', 'send_command', {
+            entity_id: entityId,
+            command: 'app_segment_clean',
+            params: [zone.segmentId],
+          });
+        } else {
+          // Fallback: start general cleaning if no segment ID configured
+          callService('vacuum', 'start', { entity_id: entityId });
+        }
         break;
       }
       if (data.status === 'cleaning') {

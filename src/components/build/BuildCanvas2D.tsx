@@ -570,9 +570,20 @@ export default function BuildCanvas2D({ overlayMode = false }: { overlayMode?: b
         ctx.stroke();
         ctx.setLineDash([]);
 
-        // Zone label
-        const cx2 = zone.polygon.reduce((a, p) => a + p[0], 0) / zone.polygon.length;
-        const cz2 = zone.polygon.reduce((a, p) => a + p[1], 0) / zone.polygon.length;
+        // Zone label — ensure it's inside the polygon
+        let cx2 = zone.polygon.reduce((a, p) => a + p[0], 0) / zone.polygon.length;
+        let cz2 = zone.polygon.reduce((a, p) => a + p[1], 0) / zone.polygon.length;
+        // If centroid is outside, find a midpoint of an edge that IS inside
+        if (!pointInPolygon(cx2, cz2, zone.polygon)) {
+          for (let ei = 0; ei < zone.polygon.length; ei++) {
+            const next = (ei + 1) % zone.polygon.length;
+            const mx = (zone.polygon[ei][0] + zone.polygon[next][0]) / 2;
+            const mz = (zone.polygon[ei][1] + zone.polygon[next][1]) / 2;
+            if (pointInPolygon(mx, mz, zone.polygon)) {
+              cx2 = mx; cz2 = mz; break;
+            }
+          }
+        }
         const [tx2, ty2] = worldToScreen(cx2, cz2);
         const zoneRoom = rooms.find((r) => r.id === zone.roomId || r.name === zone.roomId);
         const zoneLabel = zoneRoom?.name ?? zone.roomId;

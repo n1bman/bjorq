@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { Button } from '@/components/ui/button';
-import { MapPin, Trash2, PenTool, Home as HomeIcon, Edit3 } from 'lucide-react';
+import { MapPin, Trash2, PenTool, Home as HomeIcon, Edit3, Hash } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { BuildTool } from '@/store/types';
 
@@ -13,6 +13,7 @@ export default function VacuumMappingTools() {
   const markers = useAppStore((s) => s.devices.markers);
   const removeVacuumZone = useAppStore((s) => s.removeVacuumZone);
   const renameVacuumZone = useAppStore((s) => s.renameVacuumZone);
+  const updateVacuumZoneSegmentId = useAppStore((s) => s.updateVacuumZoneSegmentId);
   const haEntities = useAppStore((s) => s.homeAssistant.entities);
   const rooms = floors.find((f) => f.id === activeFloorId)?.rooms ?? [];
 
@@ -119,62 +120,80 @@ export default function VacuumMappingTools() {
             const isEditing = editingZone === zone.roomId;
 
             return (
-              <div key={zone.roomId} className="flex items-center justify-between px-2 py-1.5 rounded text-[10px] text-muted-foreground hover:bg-secondary/20 group">
-                <div className="flex items-center gap-1.5 truncate flex-1 min-w-0">
-                  <span className="text-primary/60">🤖</span>
-                  {isEditing ? (
-                    <div className="flex-1 min-w-0 flex gap-1">
-                      <input
-                        autoFocus
-                        className="flex-1 min-w-0 bg-secondary/40 border border-border rounded px-1.5 py-0.5 text-[10px] text-foreground outline-none focus:ring-1 focus:ring-primary/50"
-                        value={editValue}
-                        onChange={(e) => setEditValue(e.target.value)}
-                        onBlur={() => commitEdit(zone.roomId)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') commitEdit(zone.roomId);
-                          if (e.key === 'Escape') setEditingZone(null);
-                        }}
-                        list={`room-options-${zone.roomId}`}
-                      />
-                      <datalist id={`room-options-${zone.roomId}`}>
-                        {roomOptions.map((name) => (
-                          <option key={name} value={name} />
-                        ))}
-                      </datalist>
-                    </div>
-                  ) : (
-                    <>
+              <div key={zone.roomId}>
+                <div className="flex items-center justify-between px-2 py-1.5 rounded text-[10px] text-muted-foreground hover:bg-secondary/20 group">
+                  <div className="flex items-center gap-1.5 truncate flex-1 min-w-0">
+                    <span className="text-primary/60">🤖</span>
+                    {isEditing ? (
+                      <div className="flex-1 min-w-0 flex gap-1">
+                        <input
+                          autoFocus
+                          className="flex-1 min-w-0 bg-secondary/40 border border-border rounded px-1.5 py-0.5 text-[10px] text-foreground outline-none focus:ring-1 focus:ring-primary/50"
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value)}
+                          onBlur={() => commitEdit(zone.roomId)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') commitEdit(zone.roomId);
+                            if (e.key === 'Escape') setEditingZone(null);
+                          }}
+                          list={`room-options-${zone.roomId}`}
+                        />
+                        <datalist id={`room-options-${zone.roomId}`}>
+                          {roomOptions.map((name) => (
+                            <option key={name} value={name} />
+                          ))}
+                        </datalist>
+                      </div>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => startEdit(zone.roomId)}
+                          className="truncate font-medium text-foreground/80 hover:text-foreground cursor-text text-left"
+                          title="Klicka för att byta namn"
+                        >
+                          {roomName}
+                        </button>
+                        {synced ? (
+                          <span className="text-green-400 flex-shrink-0" role="img" aria-label="Synkad">✓</span>
+                        ) : (
+                          <span className="text-yellow-500/70 flex-shrink-0" role="img" aria-label="Ej synkad">⚠</span>
+                        )}
+                      </>
+                    )}
+                    <span className="text-muted-foreground/50 flex-shrink-0">({zone.polygon.length} pkt)</span>
+                  </div>
+                  <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                    {!isEditing && (
                       <button
                         onClick={() => startEdit(zone.roomId)}
-                        className="truncate font-medium text-foreground/80 hover:text-foreground cursor-text text-left"
-                        title="Klicka för att byta namn"
+                        className="text-muted-foreground hover:text-foreground p-0.5"
                       >
-                        {roomName}
+                        <Edit3 size={11} />
                       </button>
-                      {synced ? (
-                        <span className="text-green-400 flex-shrink-0" role="img" aria-label="Synkad">✓</span>
-                      ) : (
-                        <span className="text-yellow-500/70 flex-shrink-0" role="img" aria-label="Ej synkad">⚠</span>
-                      )}
-                    </>
-                  )}
-                  <span className="text-muted-foreground/50 flex-shrink-0">({zone.polygon.length} pkt)</span>
-                </div>
-                <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                  {!isEditing && (
+                    )}
                     <button
-                      onClick={() => startEdit(zone.roomId)}
-                      className="text-muted-foreground hover:text-foreground p-0.5"
+                      onClick={() => activeFloorId && removeVacuumZone(activeFloorId, zone.roomId)}
+                      className="text-destructive/60 hover:text-destructive p-0.5"
                     >
-                      <Edit3 size={11} />
+                      <Trash2 size={12} />
                     </button>
-                  )}
-                  <button
-                    onClick={() => activeFloorId && removeVacuumZone(activeFloorId, zone.roomId)}
-                    className="text-destructive/60 hover:text-destructive p-0.5"
-                  >
-                    <Trash2 size={12} />
-                  </button>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5 px-2 pb-1">
+                  <Hash size={10} className="text-muted-foreground/50 flex-shrink-0" />
+                  <input
+                    type="number"
+                    placeholder="Segment-ID"
+                    className="w-16 bg-secondary/40 border border-border rounded px-1.5 py-0.5 text-[9px] text-foreground outline-none focus:ring-1 focus:ring-primary/50"
+                    value={zone.segmentId ?? ''}
+                    onChange={(e) => {
+                      if (activeFloorId) {
+                        const val = e.target.value ? parseInt(e.target.value) : undefined;
+                        updateVacuumZoneSegmentId(activeFloorId, zone.roomId, val);
+                      }
+                    }}
+                  />
+                  <span className="text-[8px] text-muted-foreground/40 hidden lg:inline">HA segment</span>
                 </div>
               </div>
             );
@@ -182,7 +201,7 @@ export default function VacuumMappingTools() {
 
           {/* HA sync hint */}
           <p className="text-[8px] text-muted-foreground/50 px-1 mt-1 hidden lg:block">
-            💡 Namnge zoner enligt HA-rum (t.ex. "Kök") för automatisk synk.
+            💡 Ange Segment-ID (HA Developer Tools → States → vacuum) för rumsstyrning.
           </p>
         </div>
       )}

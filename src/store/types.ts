@@ -52,6 +52,7 @@ export interface StairItem {
 export interface VacuumZone {
   roomId: string;
   polygon: [number, number][]; // x,z coordinates in meters
+  segmentId?: number; // Roborock segment ID for app_segment_clean
 }
 
 export interface VacuumMapping {
@@ -660,6 +661,7 @@ export interface AppState {
   addVacuumZone: (floorId: string, zone: VacuumZone) => void;
   removeVacuumZone: (floorId: string, roomId: string) => void;
   renameVacuumZone: (floorId: string, oldRoomId: string, newRoomId: string) => void;
+  updateVacuumZoneSegmentId: (floorId: string, roomId: string, segmentId: number | undefined) => void;
 
   // Home Assistant actions
   setHAEntities: (entities: HAEntity[]) => void;
