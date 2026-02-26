@@ -527,6 +527,21 @@ function VacuumCard({ marker, data, update }: { marker: DeviceMarker; data: Vacu
         />
       </div>
 
+      {/* 3D Speed slider */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <span>3D-hastighet</span>
+          <span className="font-mono">{(data.vacuumSpeed ?? 0.07).toFixed(2)} m/s</span>
+        </div>
+        <Slider
+          value={[data.vacuumSpeed ?? 0.07]}
+          min={0.02}
+          max={0.15}
+          step={0.01}
+          onValueChange={([v]) => update(id, { vacuumSpeed: v })}
+        />
+      </div>
+
       {/* Cleaning Log */}
       <CleaningLog data={data} />
 

@@ -582,7 +582,7 @@ function VacuumMarker3D({ position, id, onSelect, onDragStart, selected }: Marke
 
   useFrame((_, delta) => {
     if (!meshRef.current) return;
-    const speed = 0.07; // realistic vacuum speed m/s
+    const speed = vacData?.vacuumSpeed ?? 0.07;
 
     // If Valetudo XY is available, use it directly
     if (vacData?.position) {
@@ -709,6 +709,7 @@ function VacuumMarker3D({ position, id, onSelect, onDragStart, selected }: Marke
       for (let i = 0; i < 30; i++) {
         const p = dustParticles.current[i];
         if (p) {
+          // Positions are world-space; dustMesh is now outside the group
           dummy.position.set(p.x, p.y, p.z);
           const s = p.life * 0.03;
           dummy.scale.set(s, s, s);
@@ -742,39 +743,43 @@ function VacuumMarker3D({ position, id, onSelect, onDragStart, selected }: Marke
   }, [selected, onDragStart, id]);
 
   return (
-    <group ref={meshRef} position={position} onClick={handleClick} onPointerDown={handlePointerDown}>
-      {/* Body — flat disc lying on the floor */}
-      <mesh position={[0, 0.025, 0]}>
-        <cylinderGeometry args={[0.17, 0.17, 0.05, 32]} />
-        <meshStandardMaterial color="#e5e5e5" roughness={0.3} metalness={0.1} />
-      </mesh>
-
-      {/* LED ring on top — flat horizontal */}
-      <mesh ref={ledRef} position={[0, 0.055, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <torusGeometry args={[0.12, 0.012, 8, 32]} />
-        <meshStandardMaterial color={statusColor} emissive={statusColor} emissiveIntensity={0.5} transparent opacity={0.9} />
-      </mesh>
-
-      {/* Battery ring at base */}
-      <mesh ref={batteryRingRef} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.002, 0]}>
-        <ringGeometry args={[0.17, 0.19, 32, 1, 0, Math.PI * 2 * (battery / 100)]} />
-        <meshBasicMaterial color={batteryColor} transparent opacity={0.8} side={THREE.DoubleSide} />
-      </mesh>
-
-      {/* Selection ring */}
-      {selected && (
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.003, 0]}>
-          <ringGeometry args={[0.22, 0.27, 32]} />
-          <meshBasicMaterial color="#fff" transparent opacity={0.6} side={THREE.DoubleSide} />
+    <>
+      <group ref={meshRef} position={position} onClick={handleClick} onPointerDown={handlePointerDown}>
+        {/* Body — flat disc lying on the floor */}
+        <mesh position={[0, 0.025, 0]}>
+          <cylinderGeometry args={[0.17, 0.17, 0.05, 32]} />
+          <meshStandardMaterial color="#e5e5e5" roughness={0.3} metalness={0.1} />
         </mesh>
-      )}
 
-      {/* Dust particles — rendered in world space */}
-      <instancedMesh ref={dustMeshRef} args={[undefined, undefined, 30]} frustumCulled={false}>
-        <sphereGeometry args={[1, 6, 6]} />
-        <meshBasicMaterial color="#c4a882" transparent opacity={0.35} />
-      </instancedMesh>
-    </group>
+        {/* LED ring on top — flat horizontal */}
+        <mesh ref={ledRef} position={[0, 0.055, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <torusGeometry args={[0.12, 0.012, 8, 32]} />
+          <meshStandardMaterial color={statusColor} emissive={statusColor} emissiveIntensity={0.5} transparent opacity={0.9} />
+        </mesh>
+
+        {/* Battery ring at base */}
+        <mesh ref={batteryRingRef} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.002, 0]}>
+          <ringGeometry args={[0.17, 0.19, 32, 1, 0, Math.PI * 2 * (battery / 100)]} />
+          <meshBasicMaterial color={batteryColor} transparent opacity={0.8} side={THREE.DoubleSide} />
+        </mesh>
+
+        {/* Selection ring */}
+        {selected && (
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.003, 0]}>
+            <ringGeometry args={[0.22, 0.27, 32]} />
+            <meshBasicMaterial color="#fff" transparent opacity={0.6} side={THREE.DoubleSide} />
+          </mesh>
+        )}
+      </group>
+
+      {/* Dust particles at world origin so positions aren't double-offset */}
+      {showDust && (
+        <instancedMesh ref={dustMeshRef} args={[undefined, undefined, 30]} frustumCulled={false}>
+          <sphereGeometry args={[1, 6, 6]} />
+          <meshBasicMaterial color="#c4a882" transparent opacity={0.35} />
+        </instancedMesh>
+      )}
+    </>
   );
 }
 
