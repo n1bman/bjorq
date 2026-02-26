@@ -1,48 +1,43 @@
 
 
-# Fix Vacuum Room Switching, 3D Movement, Widgets, and Fan Speed Sync
+# Fix Vacuum Segment Auto-Sync, Home Widget Rooms, Speed & Dust Effect
 
-## Issues to fix
+## Issues
 
-1. **Room switching hangs** — When switching from one room to another during cleaning, the state update doesn't properly reset/transition
-2. **3D movement too fast** — Speed is 0.2 m/s but moves unrealistically; needs systematic pattern
-3. **3D model escapes zones** — Robot flies through walls between rooms instead of staying in zone
-4. **Room buttons in home widget** — DeviceControlCard vacuum widget needs room cleaning buttons (already exists but may not show in home widget)
-5. **RobotPanel UI improvements** — Add "Städa alla rum", cleaning log/history per room
-6. **Fan speed not synced** — `fan_speed` in HA is a string preset name (e.g. "gentle", "balanced"), not a number 0-100
-7. **Roborock-only notice** — Show disclaimer that room mapping only works with Roborock
+1. **Speed**: Change from 0.04 to 0.07 m/s — one-line fix
+2. **Segment IDs not auto-applied**: The `vacuumSegmentMap` from `roborock.get_maps` stores `{ "Tvrummet": 16 }` but the lookup in `useHABridge.ts` line 131 uses `data.targetRoom` which is the zone's `roomId` (often a generated ID, not the display name). The zone's `roomId` might not match the key in `vacuumSegmentMap`. Need to also try looking up by display name (resolved via `getZoneName`). Additionally, the auto-discovered segment IDs should be written back into the zone config so they persist and work everywhere.
+3. **Home widget missing room buttons**: The compact vacuum view in `DeviceControlCard.tsx` (lines 144-181) only shows basic Start/Pause/Stop/Home — no room-specific cleaning buttons. Need to add a room picker popup icon.
+4. **Dust particle effect**: Add a particle cloud behind the vacuum in 3D when cleaning, with a toggle in RobotPanel settings.
 
-## Changes by file
+## Changes
 
-### `src/hooks/useHABridge.ts` (lines 96-148)
-- **Fix #1**: When `targetRoom` changes, first send `vacuum.stop` or `vacuum.pause` before sending new `app_segment_clean` — Roborock requires stopping current task before starting a new segment clean
-- **Fix #6**: Change `set_fan_speed` to send the preset **name** string (e.g. "gentle") not a percentage number. Map percentage ranges to preset names from `fanSpeedList`
+### `src/components/devices/DeviceMarkers3D.tsx`
+- Line 580: Change `0.04` to `0.07`
+- Add dust particle system (small translucent spheres trailing behind vacuum when `status === 'cleaning'`), controlled by a new `showDustEffect` flag in VacuumState (default true)
 
-### `src/lib/haMapping.ts` (lines 83-108)
-- **Fix #6**: Parse `fan_speed` as string preset name from HA, map it to the percentage using `fanSpeedList` index. Store both the numeric percentage and the active preset name in state
+### `src/store/types.ts`
+- Add `showDustEffect?: boolean` to `VacuumState` (default true)
 
-### `src/store/types.ts` (VacuumState ~274-288)
-- Add `fanSpeedPreset?: string` to store the active HA preset name (e.g. "gentle", "balanced", "turbo")
-- Add `cleaningLog?: Array<{ room: string; startedAt: string; duration?: number; fanPreset?: string }>` for per-room history
+### `src/hooks/useHABridge.ts` (lines 130-131)
+- When looking up `segmentMap[data.targetRoom]`, also try resolving the room display name from floors/rooms if the direct lookup fails. This ensures "Tvrummet" matches even if the zone's `roomId` is different.
 
-### `src/components/devices/DeviceMarkers3D.tsx` (lines 517-579)
-- **Fix #2**: Reduce speed from 0.2 to ~0.04 m/s for realistic vacuum movement
-- **Fix #3**: Add systematic back-and-forth pattern within zone polygon instead of random wandering. Use a stripe/lawnmower pattern: pick parallel lines across the polygon, move along each, only go outside zone boundary when transitioning rooms (straight line to new zone centroid)
-- **Fix #3**: When room changes, move in a straight line toward new zone centroid (not teleport), clamped to floor Y. During transition, ignore zone boundary constraint
-- **Fix #2**: Remove the sine-wave wobble, use cleaner movement
+### `src/hooks/useHomeAssistant.ts` (after segment map is stored)
+- After calling `setVacuumSegmentMap`, also iterate vacuum zones and auto-fill `segmentId` on each zone where the zone name matches a key in the segment map. This writes the auto-discovered IDs into the zone config.
+
+### `src/components/home/cards/DeviceControlCard.tsx` (lines 144-181)
+- Add a room picker popup button (small MapPin icon) to the compact vacuum widget. When clicked, show a popover/dropdown with available rooms from vacuum zones. Clicking a room triggers room-specific cleaning.
 
 ### `src/components/home/cards/RobotPanel.tsx`
-- **Fix #5**: Add "Städa alla rum" button that queues all zones sequentially
-- **Fix #5**: Add cleaning log section showing last cleaned rooms with timestamps, duration, and fan preset
-- **Fix #6**: Show active fan preset name instead of just percentage
-- **Fix #7**: Add notice below robot header: "⚠ Rumsstyrning fungerar just nu bara för Roborock-modeller"
+- Add a toggle in VacuumCard for "Visa dammeffekt i 3D" that sets `showDustEffect` on/off
 
-### `src/components/home/cards/DeviceControlCard.tsx` (lines 417-500)
-- **Fix #4**: Ensure room cleaning buttons are visible in the home widget (they exist but verify they render in compact mode)
-- **Fix #6**: Send fan speed preset name, show preset label
-- **Fix #7**: Add Roborock-only notice
+## Files
 
-### `src/store/useAppStore.ts`
-- Add `addCleaningLogEntry` action to push entries to the vacuum's cleaning log
-- Trigger log entry when room cleaning starts and update duration when it ends
+| File | Change |
+|------|--------|
+| `src/store/types.ts` | Add `showDustEffect?: boolean` to VacuumState |
+| `src/hooks/useHomeAssistant.ts` | Auto-fill zone segment IDs from discovered map |
+| `src/hooks/useHABridge.ts` | Fix room name lookup to resolve display names |
+| `src/components/devices/DeviceMarkers3D.tsx` | Speed 0.07, add dust particles |
+| `src/components/home/cards/DeviceControlCard.tsx` | Add room picker to compact vacuum widget |
+| `src/components/home/cards/RobotPanel.tsx` | Add dust effect toggle |
 
