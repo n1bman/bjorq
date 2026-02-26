@@ -1,61 +1,79 @@
 
 
-# Analys: Saknade HA-domäner och enhetstyper
+# Fixar & Nya Funktioner: Vacuum, Smarta Högtalare, Backup
 
-## Nuvarande stöd (12 domäner)
-light, switch, input_boolean, sensor, binary_sensor, climate, camera, vacuum, lock, media_player, fan, cover, scene, script, automation
+## Problem att lösa
 
-## Saknade domäner (rangordnade efter relevans för smart home)
-
-### Prioritet 1 -- Mycket vanliga i svenska hem
-| Domän | Beskrivning | Förslag DeviceKind | UI-kontroll |
-|-------|-------------|-------------------|-------------|
-| **alarm_control_panel** | Larmsystem (Verisure, Sector etc.) | `alarm` | Arm/Disarm/Home-knappar, PIN-inmatning, statusindikator |
-| **water_heater** | Varmvattenberedare | `water-heater` | Temperatur-slider, on/off, driftläge |
-| **humidifier** | Luftfuktare/avfuktare | `humidifier` | Målnivå-slider, on/off, fläktläge |
-| **device_tracker** | Personspårning (telefon, GPS) | *(ej enhet i 3D)* | Hemma/borta-status i dashboard |
-| **button** | Engångstryckare (t.ex. restart, trigger) | *(mappas till `switch`)* | Enkel tryckknapp |
-| **siren** | Siren/larm | `siren` | On/off, volym, ton-val |
-
-### Prioritet 2 -- Bra att ha
-| Domän | Beskrivning | Förslag DeviceKind | UI-kontroll |
-|-------|-------------|-------------------|-------------|
-| **valve** | Vattenavstängningsventil | `valve` | Öppna/stäng, position |
-| **remote** | IR/RF-fjärrkontroll | `remote` | Kommandoknappar |
-| **lawn_mower** | Robotgräsklippare | `lawn-mower` | Start/dock/pause (som vacuum) |
-| **number** / **input_number** | Numeriskt hjälpvärde | *(mappas till `sensor`)* | Slider |
-| **select** / **input_select** | Dropdown-val | *(mappas till `switch`)* | Dropdown |
-| **weather** | Väderstation-entitet | *(redan i environment)* | Koppling till väder-widget |
-| **update** | Firmware-uppdateringar | *(ej 3D-enhet)* | Uppdateringsstatus i profil/aktivitet |
-
-### Prioritet 3 -- Nischade
-calendar, todo, notify, text, date, datetime, time, event, image, image_processing, conversation, stt, tts, wake_word, ai_task, assist_satellite, geo_location, air_quality, tag
+1. **Gröna LED-ringen på vacuum** -- den tjocka torusGeometry-ringen ligger fel. Ska ligga platt (horisontellt) strax ovanför disken, inte vertikalt.
+2. **Zoner visar ID istället för rumsnamn** i VacuumMappingTools -- roomId sparas som rumsnamn redan men visningen verkar inte uppdateras.
+3. **Compact vacuum-widget saknar kontrollknappar** -- den kompakta vyn i hemskärmen visar bara status, inga städa/pausa/stopp/hem-knappar.
+4. **Roborock-karta** -- Roborock/Valetudo har en uppmappad karta med rum. Vi kan förbereda import av denna via Valetudo API:t (framtida) men just nu flagga att `currentRoom` redan stöds och att kartan kan importeras som bild.
+5. **Ny enhet: Smart Speaker (Google Home)** -- med 3D-modell och visuella effekter (musiknoter) när den spelar.
+6. **Ny enhet: Soundbar/Högtalare** -- med 3D-modell och flygande musiknoter-effekt.
+7. **Profilsparning & Backup** -- export/import av hela konfigurationen som JSON-fil.
 
 ---
 
-## Implementationsplan (Prioritet 1)
+## Filändringar
 
-### Filändringar
+### 1. Fix: Vacuum LED-ring rotation
+**`src/components/devices/DeviceMarkers3D.tsx`** rad 604
+- Lägg till `rotation={[-Math.PI / 2, 0, 0]}` på LED-ringens mesh så torusen ligger platt.
+- Justera y-position till `0.052` (strax ovanför disc-toppen).
+
+### 2. Fix: Zone-visning i VacuumMappingTools
+**`src/components/build/devices/VacuumMappingTools.tsx`**
+- Logiken finns redan och ser korrekt ut (rad 30 `getZoneRoomName`). Kontrollera att `zone.roomId` faktiskt matchar rum. Problemet kan vara att roomId sparas som `Zon <timestamp>` om centroid inte hittas i ett rum. Lägg till tydligare fallback och möjlighet att klicka för att redigera zonnamn.
+
+### 3. Fix: Compact vacuum-widget med kontroller
+**`src/components/home/cards/DeviceControlCard.tsx`**
+- I `CompactDeviceView`, lägg till special-case för `vacuum` (som redan finns för `media_screen`) med inline-knappar: Städa, Pausa, Stopp, Hem + rumsindikator.
+
+### 4. Nya enhetstyper: `speaker` och `soundbar`
+**`src/store/types.ts`**
+- Lägg till `'speaker' | 'soundbar'` i `DeviceKind`.
+- Lägg till `SpeakerState` interface: `{ on: boolean; state: 'playing' | 'paused' | 'idle'; volume: number; source?: string; mediaTitle?: string; isSpeaking?: boolean }`.
+- Lägg till i `DeviceState`-union och `BuildTool`.
+
+**`src/lib/haDomainMapping.ts`**
+- Mappa `media_player` med attribut `device_class: 'speaker'` → `speaker`, och `device_class: 'tv'` → `media_screen`.
+
+**`src/lib/haMapping.ts`**
+- Ny case för `speaker`/`soundbar` som mappar media_player-attribut.
+
+### 5. 3D-modeller med effekter
+**`src/components/devices/DeviceMarkers3D.tsx`**
+- **SpeakerMarker3D** (Google Home-stil): Cylinder med rundad topp, ljusring vid basen som pulserar vid uppspelning. När `state === 'playing'` spawnas små not-partiklar (♪) som flyter uppåt med fade-out.
+- **SoundbarMarker3D**: Avlång box, LED-strip framtill. Samma not-partikel-effekt vid uppspelning men bredare spridning.
+- Partikel-systemet: 5-8 `Text`-sprites med musiknot-tecken som rör sig uppåt med sinusrörelse och fadar ut. Använd `useFrame` för animation.
+
+### 6. UI-kontroller
+**`src/components/home/cards/DeviceControlCard.tsx`**
+- `SpeakerControl`: Play/Pause/Stop, volym-slider, källa, "Pratar"-indikator.
+- `CompactSpeakerView`: Kompakt med play/pause + volymindikator.
+
+**`src/components/build/devices/DevicePlacementTools.tsx`**
+- Nya ikoner: `Speaker` för smart speaker, `Music` för soundbar.
+
+### 7. Profil & Backup-system
+**`src/components/home/cards/ProfilePanel.tsx`**
+- Ny sektion "Data & Backup":
+  - **Exportera backup** -- serialisera hela Zustand-state till JSON, trigga filnedladdning.
+  - **Importera backup** -- fil-input som läser JSON och laddar in state via `useAppStore.setState()`.
+  - **Rensa all data** -- nollställ localStorage med bekräftelsedialog.
+
+---
+
+## Sammanfattning av filer
 
 | Fil | Ändring |
 |-----|---------|
-| `src/store/types.ts` | Nya `DeviceKind`: `alarm`, `water-heater`, `humidifier`, `siren`. Nya state-interfaces: `AlarmState`, `WaterHeaterState`, `HumidifierState`, `SirenState`. Utöka `DeviceState`-union. Nya `BuildTool`-varianter. |
-| `src/lib/haDomainMapping.ts` | Mappa `alarm_control_panel` → `alarm`, `water_heater` → `water-heater`, `humidifier` → `humidifier`, `siren` → `siren`, `button` → `switch`, `number`/`input_number` → `sensor`, `select`/`input_select` → `switch`, `valve` → `valve`, `remote` → `remote`, `lawn_mower` → `lawn-mower` |
-| `src/lib/haMapping.ts` | Nya case-block: `alarm_control_panel` (armed_away/armed_home/disarmed/triggered), `water_heater` (temp+mode), `humidifier` (humidity+mode), `siren` (on/off+tone), `button` (generic), `number`/`input_number` (value+min/max), `select`/`input_select` (options+selected), `valve` (position), `remote` (on/off), `lawn_mower` (status som vacuum-variant) |
-| `src/hooks/useHABridge.ts` | Nya service-calls: `alarm_control_panel.alarm_arm_away/home/disarm`, `humidifier.set_humidity/set_mode`, `water_heater.set_temperature`, `siren.turn_on/off`, `button.press`, `number.set_value`, `input_number.set_value`, `select.select_option`, `valve.open/close`, `lawn_mower.start/dock/pause` |
-| `src/components/build/devices/DevicePlacementTools.tsx` | Nya verktyg i deviceTools-listan med ikoner: `ShieldAlert` (alarm), `Droplets` (humidifier), `Flame` (water-heater), `Bell` (siren), `Grip` (valve), `Wifi` (remote), `Trees` (lawn-mower) |
-| `src/components/home/cards/DeviceControlCard.tsx` | Nya kontrollkomponenter: `AlarmControl` (arm/disarm-knappar med PIN), `HumidifierControl` (fuktighets-slider), `WaterHeaterControl` (temp-slider), `SirenControl` (on/off + ton), `ValveControl` (öppna/stäng), `LawnMowerControl` (start/dock/pause) |
-| `src/components/devices/DeviceMarkers3D.tsx` | Nya 3D-markörer för de nya enhetstyperna (enkla geometrier med statusfärg) |
-
-### Nya state-interfaces (types.ts)
-
-```text
-AlarmState { state: 'disarmed'|'armed_home'|'armed_away'|'armed_night'|'pending'|'triggered', code?: string }
-WaterHeaterState { on: boolean, temperature: number, mode: 'eco'|'electric'|'performance'|'off' }
-HumidifierState { on: boolean, humidity: number, mode?: string, availableModes?: string[] }
-SirenState { on: boolean, tone?: string, volume?: number, availableTones?: string[] }
-```
-
-### device_tracker -- Special hantering
-Inte en 3D-placerad enhet, men synkas till dashboard. Visa "Hemma/Borta"-status per person i en ny sektion i Home-vyn eller som badge.
+| `src/store/types.ts` | `speaker`, `soundbar` DeviceKind + `SpeakerState` + BuildTool-varianter |
+| `src/components/devices/DeviceMarkers3D.tsx` | Fix LED-ring rotation. Nya `SpeakerMarker3D` + `SoundbarMarker3D` med not-partiklar |
+| `src/components/home/cards/DeviceControlCard.tsx` | Fix compact vacuum med kontroller. Ny `SpeakerControl` + compact speaker |
+| `src/components/build/devices/DevicePlacementTools.tsx` | Nya placement-verktyg för speaker/soundbar |
+| `src/components/build/devices/VacuumMappingTools.tsx` | Förbättrad zon-namnvisning |
+| `src/lib/haDomainMapping.ts` | Mappa speaker/soundbar |
+| `src/lib/haMapping.ts` | Ny state-mappning för speaker/soundbar |
+| `src/components/home/cards/ProfilePanel.tsx` | Export/import backup-funktionalitet |
 
