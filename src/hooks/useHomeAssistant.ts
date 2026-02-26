@@ -143,39 +143,38 @@ function connect(url: string, token: string) {
                 console.log('[HA] Vacuum segment map:', segmentMap);
                 s.setVacuumSegmentMap(segmentMap);
                 
-                // Auto-fill segmentId on vacuum zones that match by name
+                // Auto-fill segmentId on vacuum zones from segment map
+                // Strategy: iterate segment map entries and find matching zones
                 const floors = useAppStore.getState().layout.floors;
                 for (const floor of floors) {
                   const zones = floor.vacuumMapping?.zones;
                   if (!zones) continue;
                   const floorRooms = floor.rooms ?? [];
+                  
+                  // First: try to match each segment map entry to a zone
+                  for (const [segName, segId] of Object.entries(segmentMap)) {
+                    const normalizedSeg = segName.toLowerCase().replace(/[-_\s]/g, '');
+                    let matchedZone = zones.find((z) => {
+                      const room = floorRooms.find((r) => r.id === z.roomId);
+                      const displayName = room?.name ?? z.roomId;
+                      const normalizedDisplay = displayName.toLowerCase().replace(/[-_\s]/g, '');
+                      return normalizedDisplay === normalizedSeg 
+                        || normalizedSeg.includes(normalizedDisplay) 
+                        || normalizedDisplay.includes(normalizedSeg);
+                    });
+                    if (matchedZone) {
+                      console.log('[HA] ✅ Auto-filling segmentId', segId, 'for zone', segName, '(roomId:', matchedZone.roomId, ')');
+                      useAppStore.getState().updateVacuumZoneSegmentId(floor.id, matchedZone.roomId, segId);
+                    }
+                  }
+                  
+                  // Log any zones that didn't get a segmentId
                   for (const zone of zones) {
-                    const room = floorRooms.find((r) => r.id === zone.roomId);
-                    const displayName = room?.name ?? zone.roomId;
-                    console.log('[HA] Matching zone roomId:', zone.roomId, '→ displayName:', displayName);
-                    // Try exact match
-                    let matchedSegId = segmentMap[displayName];
-                    // Try case-insensitive
-                    if (matchedSegId === undefined) {
-                      const key = Object.keys(segmentMap).find(
-                        (k) => k.toLowerCase() === displayName.toLowerCase()
-                      );
-                      if (key) matchedSegId = segmentMap[key];
-                    }
-                    // Try substring match (e.g. "Tvrummet" vs "TV-rummet")
-                    if (matchedSegId === undefined) {
-                      const normalized = displayName.toLowerCase().replace(/[-_\s]/g, '');
-                      const key = Object.keys(segmentMap).find((k) => {
-                        const nk = k.toLowerCase().replace(/[-_\s]/g, '');
-                        return nk === normalized || nk.includes(normalized) || normalized.includes(nk);
-                      });
-                      if (key) matchedSegId = segmentMap[key];
-                    }
-                    if (matchedSegId !== undefined) {
-                      console.log('[HA] ✅ Auto-filling segmentId', matchedSegId, 'for zone', displayName);
-                      useAppStore.getState().updateVacuumZoneSegmentId(floor.id, zone.roomId, matchedSegId);
-                    } else {
-                      console.warn('[HA] ❌ No segment match for zone:', displayName, '| Available:', Object.keys(segmentMap));
+                    const updatedZones = useAppStore.getState().layout.floors.find(f => f.id === floor.id)?.vacuumMapping?.zones;
+                    const updatedZone = updatedZones?.find(z => z.roomId === zone.roomId);
+                    if (!updatedZone?.segmentId) {
+                      const room = floorRooms.find((r) => r.id === zone.roomId);
+                      console.warn('[HA] ❌ No segment match for zone:', room?.name ?? zone.roomId, '| Available segments:', Object.keys(segmentMap));
                     }
                   }
                 }
