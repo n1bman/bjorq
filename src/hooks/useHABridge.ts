@@ -104,36 +104,52 @@ function sendHACommand(entityId: string, state: DeviceState) {
         callService('vacuum', 'clean_spot', { entity_id: entityId });
         break;
       }
-      // Handle fan speed change
+      // Handle fan speed change — send preset name string, not percentage
       if (typeof data.fanSpeed === 'number' && data.fanSpeed > 0) {
-        callService('vacuum', 'set_fan_speed', { entity_id: entityId, fan_speed: data.fanSpeed });
+        const presets = data.fanSpeedList as string[] | undefined;
+        if (presets && presets.length > 0) {
+          // Map percentage to closest preset name
+          const idx = Math.round((data.fanSpeed / 100) * (presets.length - 1));
+          const presetName = presets[Math.max(0, Math.min(idx, presets.length - 1))];
+          console.log('[HABridge] Setting fan_speed preset:', presetName, 'from', data.fanSpeed, '%');
+          callService('vacuum', 'set_fan_speed', { entity_id: entityId, fan_speed: presetName });
+        } else {
+          callService('vacuum', 'set_fan_speed', { entity_id: entityId, fan_speed: data.fanSpeed });
+        }
       }
       // Handle room-specific cleaning via send_command
       if (data.targetRoom && data.status === 'cleaning') {
-        // 1. Try auto-discovered segment map
-        const segmentMap = useAppStore.getState().homeAssistant.vacuumSegmentMap;
-        let segId: number | undefined = segmentMap[data.targetRoom];
+        // First stop current task so Roborock accepts new segment clean
+        callService('vacuum', 'stop', { entity_id: entityId });
+        // Small delay then send segment clean
+        setTimeout(() => {
+          const callServiceNow = haServiceCaller.current;
+          if (!callServiceNow) return;
 
-        // 2. Fallback: manual segmentId from zone config
-        if (segId === undefined) {
-          const storeState = useAppStore.getState();
-          const vacMarker = storeState.devices.markers.find((m) => m.ha?.entityId === entityId);
-          const vacFloor = storeState.layout.floors.find((f) => f.id === vacMarker?.floorId);
-          const zone = vacFloor?.vacuumMapping?.zones?.find((z) => z.roomId === data.targetRoom);
-          if (zone?.segmentId) segId = zone.segmentId;
-        }
+          // 1. Try auto-discovered segment map
+          const segmentMap = useAppStore.getState().homeAssistant.vacuumSegmentMap;
+          let segId: number | undefined = segmentMap[data.targetRoom];
 
-        if (segId !== undefined) {
-          console.log('[HABridge] Sending app_segment_clean with segmentId:', segId, 'for room:', data.targetRoom);
-          callService('vacuum', 'send_command', {
-            entity_id: entityId,
-            command: 'app_segment_clean',
-            params: [segId],
-          });
-        } else {
-          console.warn('[HABridge] No segment ID found for room:', data.targetRoom, '— falling back to vacuum.start');
-          callService('vacuum', 'start', { entity_id: entityId });
-        }
+          // 2. Fallback: manual segmentId from zone config
+          if (segId === undefined) {
+            const storeState = useAppStore.getState();
+            const vacMarker = storeState.devices.markers.find((m) => m.ha?.entityId === entityId);
+            const vacFloor = storeState.layout.floors.find((f) => f.id === vacMarker?.floorId);
+            const zone = vacFloor?.vacuumMapping?.zones?.find((z) => z.roomId === data.targetRoom);
+            if (zone?.segmentId) segId = zone.segmentId;
+          }
+
+          if (segId !== undefined) {
+            console.log('[HABridge] Sending app_segment_clean with segmentId:', segId, 'for room:', data.targetRoom);
+            callServiceNow('vacuum', 'send_command', {
+              entity_id: entityId,
+              command: 'app_segment_clean',
+              params: [segId],
+            });
+          } else {
+            console.warn('[HABridge] No segment ID found for room:', data.targetRoom);
+          }
+        }, 500);
         break;
       }
       if (data.status === 'cleaning') {

@@ -86,9 +86,22 @@ export function mapHAEntityToDeviceState(
         paused: 'paused', idle: 'idle', error: 'error',
       };
       const battery = typeof attributes.battery_level === 'number' ? attributes.battery_level : 100;
-      const fanSpeed = typeof attributes.fan_speed === 'number' ? attributes.fan_speed
-        : typeof attributes.fan_speed === 'string' ? parseInt(attributes.fan_speed, 10) || 0 : undefined;
       const fanSpeedList = Array.isArray(attributes.fan_speed_list) ? attributes.fan_speed_list as string[] : undefined;
+      // fan_speed from HA is a string preset name (e.g. "gentle", "balanced", "turbo")
+      let fanSpeed: number | undefined;
+      let fanSpeedPreset: string | undefined;
+      if (typeof attributes.fan_speed === 'string' && attributes.fan_speed) {
+        fanSpeedPreset = attributes.fan_speed;
+        // Map preset name to percentage using its index in the list
+        if (fanSpeedList && fanSpeedList.length > 0) {
+          const idx = fanSpeedList.findIndex((p) => p.toLowerCase() === (attributes.fan_speed as string).toLowerCase());
+          fanSpeed = idx >= 0 ? Math.round(((idx + 1) / fanSpeedList.length) * 100) : 50;
+        } else {
+          fanSpeed = parseInt(attributes.fan_speed as string, 10) || undefined;
+        }
+      } else if (typeof attributes.fan_speed === 'number') {
+        fanSpeed = attributes.fan_speed;
+      }
       const cleaningArea = typeof attributes.cleaned_area === 'number' ? attributes.cleaned_area : undefined;
       const cleaningTime = typeof attributes.cleaning_time === 'number' ? attributes.cleaning_time : undefined;
       const errorMessage = typeof attributes.error === 'string' && attributes.error ? attributes.error : undefined;
@@ -99,6 +112,7 @@ export function mapHAEntityToDeviceState(
           status: statusMap[state] || 'docked',
           battery,
           ...(fanSpeed !== undefined && { fanSpeed }),
+          ...(fanSpeedPreset && { fanSpeedPreset }),
           ...(fanSpeedList && { fanSpeedList }),
           ...(cleaningArea !== undefined && { cleaningArea }),
           ...(cleaningTime !== undefined && { cleaningTime }),

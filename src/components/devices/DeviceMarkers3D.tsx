@@ -475,7 +475,6 @@ function VacuumMarker3D({ position, id, onSelect, onDragStart, selected }: Marke
   const currentTarget = useRef<[number, number] | null>(null);
   const smoothRotation = useRef(0);
   const prevRoom = useRef<string | undefined>(undefined);
-  const transitionProgress = useRef(1); // 1 = done transitioning
 
   const statusColor = useMemo(() => {
     switch (status) {
@@ -505,61 +504,155 @@ function VacuumMarker3D({ position, id, onSelect, onDragStart, selected }: Marke
     return zone ?? null;
   }, [currentRoom, mapping?.zones, rooms]);
 
-  // Detect room change
+  // Detect room change — transition to new zone via straight line
   useEffect(() => {
     if (currentRoom !== prevRoom.current) {
       prevRoom.current = currentRoom;
-      transitionProgress.current = 0;
-      currentTarget.current = null; // Force new target in new zone
+      currentTarget.current = null;
+      // When switching rooms, move straight to the new zone centroid
+      if (activeZone && activeZone.polygon.length >= 3) {
+        const cx = activeZone.polygon.reduce((a, p) => a + p[0], 0) / activeZone.polygon.length;
+        const cz = activeZone.polygon.reduce((a, p) => a + p[1], 0) / activeZone.polygon.length;
+        isTransitioning.current = true;
+        transitionTarget.current = [cx, cz];
+      }
     }
-  }, [currentRoom]);
+  }, [currentRoom, activeZone]);
+
+  // Lawnmower pattern state
+  const stripeLines = useRef<[number, number][][]>([]);
+  const stripeIndex = useRef(0);
+  const pointIndex = useRef(0);
+  const isTransitioning = useRef(false);
+  const transitionTarget = useRef<[number, number] | null>(null);
+
+  // Generate lawnmower stripes when zone changes
+  useEffect(() => {
+    if (!activeZone || activeZone.polygon.length < 3) {
+      stripeLines.current = [];
+      return;
+    }
+    const poly = activeZone.polygon;
+    let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+    for (const [x, z] of poly) {
+      if (x < minX) minX = x;
+      if (x > maxX) maxX = x;
+      if (z < minZ) minZ = z;
+      if (z > maxZ) maxZ = z;
+    }
+    const spacing = 0.35; // stripe width in meters
+    const lines: [number, number][][] = [];
+    let forward = true;
+    for (let z = minZ + spacing / 2; z <= maxZ; z += spacing) {
+      // Find intersections of this Z line with polygon edges
+      const xIntersections: number[] = [];
+      for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+        const [xi, zi] = poly[i];
+        const [xj, zj] = poly[j];
+        if ((zi <= z && zj > z) || (zj <= z && zi > z)) {
+          const t = (z - zi) / (zj - zi);
+          xIntersections.push(xi + t * (xj - xi));
+        }
+      }
+      xIntersections.sort((a, b) => a - b);
+      // Create line segments from pairs
+      for (let p = 0; p + 1 < xIntersections.length; p += 2) {
+        const x0 = xIntersections[p] + 0.05;
+        const x1 = xIntersections[p + 1] - 0.05;
+        if (x1 <= x0) continue;
+        const numPoints = Math.max(2, Math.ceil((x1 - x0) / 0.3));
+        const line: [number, number][] = [];
+        for (let k = 0; k <= numPoints; k++) {
+          const t = k / numPoints;
+          line.push([forward ? x0 + t * (x1 - x0) : x1 - t * (x1 - x0), z]);
+        }
+        lines.push(line);
+        forward = !forward;
+      }
+    }
+    stripeLines.current = lines;
+    stripeIndex.current = 0;
+    pointIndex.current = 0;
+  }, [activeZone]);
 
   useFrame((_, delta) => {
     if (!meshRef.current) return;
-    const speed = 0.2; // m/s
+    const speed = 0.04; // realistic vacuum speed m/s
 
-    // If Valetudo XY is available, use it directly (future upgrade path)
+    // If Valetudo XY is available, use it directly
     if (vacData?.position) {
       const [tx, tz] = vacData.position;
       meshRef.current.position.x = THREE.MathUtils.lerp(meshRef.current.position.x, tx, 0.05);
       meshRef.current.position.z = THREE.MathUtils.lerp(meshRef.current.position.z, tz, 0.05);
+    } else if (isTransitioning.current && transitionTarget.current) {
+      // Moving straight to new zone centroid
+      const cx = meshRef.current.position.x;
+      const cz = meshRef.current.position.z;
+      const [tx, tz] = transitionTarget.current;
+      const dx = tx - cx;
+      const dz = tz - cz;
+      const dist = Math.sqrt(dx * dx + dz * dz);
+      if (dist < 0.1) {
+        isTransitioning.current = false;
+        transitionTarget.current = null;
+      } else {
+        const step = Math.min(speed * 1.5 * delta, dist);
+        meshRef.current.position.x += (dx / dist) * step;
+        meshRef.current.position.z += (dz / dist) * step;
+        const targetAngle = Math.atan2(dx, dz);
+        smoothRotation.current = THREE.MathUtils.lerp(smoothRotation.current, targetAngle, delta * 3);
+        meshRef.current.rotation.y = smoothRotation.current;
+      }
+    } else if (status === 'cleaning' && stripeLines.current.length > 0) {
+      // Lawnmower pattern movement
+      const lines = stripeLines.current;
+      if (stripeIndex.current >= lines.length) {
+        // Restart pattern
+        stripeIndex.current = 0;
+        pointIndex.current = 0;
+      }
+      const line = lines[stripeIndex.current];
+      if (!line || pointIndex.current >= line.length) {
+        stripeIndex.current++;
+        pointIndex.current = 0;
+      } else {
+        const [tx, tz] = line[pointIndex.current];
+        const cx = meshRef.current.position.x;
+        const cz = meshRef.current.position.z;
+        const dx = tx - cx;
+        const dz = tz - cz;
+        const dist = Math.sqrt(dx * dx + dz * dz);
+        if (dist < 0.05) {
+          pointIndex.current++;
+        } else {
+          const step = Math.min(speed * delta, dist);
+          meshRef.current.position.x += (dx / dist) * step;
+          meshRef.current.position.z += (dz / dist) * step;
+          const targetAngle = Math.atan2(dx, dz);
+          smoothRotation.current = THREE.MathUtils.lerp(smoothRotation.current, targetAngle, delta * 3);
+          meshRef.current.rotation.y = smoothRotation.current;
+        }
+      }
     } else if (status === 'cleaning' && activeZone && activeZone.polygon.length >= 3) {
-      // Room-based wandering with curved paths
+      // Fallback: random wandering within zone
       if (!currentTarget.current) {
         currentTarget.current = randomPointInPolygon(activeZone.polygon);
       }
-
       const cx = meshRef.current.position.x;
       const cz = meshRef.current.position.z;
       const [tx, tz] = currentTarget.current;
       const dx = tx - cx;
       const dz = tz - cz;
       const dist = Math.sqrt(dx * dx + dz * dz);
-
       if (dist < 0.05) {
-        // Pick new target
         currentTarget.current = randomPointInPolygon(activeZone.polygon);
       } else {
-        // Add a subtle sine-wave perpendicular offset for curved movement
         const step = Math.min(speed * delta, dist);
-        const progress = 1 - dist / (dist + step);
-        const perpX = -dz / dist;
-        const perpZ = dx / dist;
-        const wobble = Math.sin(Date.now() * 0.003) * 0.03;
-
-        meshRef.current.position.x += (dx / dist) * step + perpX * wobble;
-        meshRef.current.position.z += (dz / dist) * step + perpZ * wobble;
-
-        // Smooth rotation toward movement direction with slight wobble
+        meshRef.current.position.x += (dx / dist) * step;
+        meshRef.current.position.z += (dz / dist) * step;
         const targetAngle = Math.atan2(dx, dz);
-        const rotWobble = Math.sin(Date.now() * 0.005) * 0.08;
-        smoothRotation.current = THREE.MathUtils.lerp(smoothRotation.current, targetAngle + rotWobble, delta * 3);
+        smoothRotation.current = THREE.MathUtils.lerp(smoothRotation.current, targetAngle, delta * 3);
         meshRef.current.rotation.y = smoothRotation.current;
-      }
-
-      // Room transition smoothing
-      if (transitionProgress.current < 1) {
-        transitionProgress.current = Math.min(1, transitionProgress.current + delta * 0.5);
       }
     } else if ((status === 'returning' || status === 'docked') && mapping?.dockPosition) {
       const [dx2, dz2] = mapping.dockPosition;

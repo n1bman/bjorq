@@ -9,7 +9,7 @@ import {
   Snowflake, Flame, RotateCcw, Eye, Camera, Video,
   Fan, PanelTop, Clapperboard, ArrowUp, ArrowDown, StopCircle,
   SkipBack, SkipForward, Tv, MapPin, Wind, Ruler, Clock, AlertTriangle,
-  ShieldAlert, Droplets, Bell, Grip, Trees, Speaker, Music,
+  ShieldAlert, Droplets, Bell, Grip, Trees, Speaker, Music, Info,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -418,7 +418,8 @@ function VacuumControl({ id, data, update }: { id: string; data: VacuumState; up
   const labels: Record<string, string> = { cleaning: 'Städar', docked: 'Dockad', returning: 'Återvänder', paused: 'Pausad', idle: 'Väntar', error: 'Fel' };
   const statusColors: Record<string, string> = { cleaning: 'text-blue-400', docked: 'text-green-400', returning: 'text-orange-400', paused: 'text-yellow-400', error: 'text-destructive' };
   const presets = data.fanSpeedList ?? ['Silent', 'Standard', 'Turbo', 'Max'];
-  const presetSpeeds: Record<string, number> = { silent: 20, standard: 40, medium: 60, turbo: 80, max: 100 };
+  const presetSpeeds: Record<string, number> = {};
+  presets.forEach((p, i) => { presetSpeeds[p.toLowerCase()] = Math.round(((i + 1) / presets.length) * 100); });
 
   // Get zones for room-specific cleaning
   const marker = useAppStore((s) => s.devices.markers.find(m => m.id === id));
@@ -434,13 +435,23 @@ function VacuumControl({ id, data, update }: { id: string; data: VacuumState; up
 
   return (
     <div className="space-y-3 pt-2">
+      {/* Roborock notice */}
+      <div className="flex items-start gap-1.5 bg-orange-500/10 border border-orange-500/20 rounded px-2 py-1">
+        <Info size={10} className="text-orange-400 shrink-0 mt-0.5" />
+        <p className="text-[9px] text-orange-300/80">Rumsstyrning: bara Roborock</p>
+      </div>
+
       {/* Status + battery */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="text-lg">🤖</span>
           <div>
-            <span className={cn('text-sm font-medium', statusColors[data.status] ?? 'text-foreground')}>{labels[data.status] ?? data.status}</span>
-            {data.currentRoom && data.status === 'cleaning' && (
+            <span className={cn('text-sm font-medium', statusColors[data.status] ?? 'text-foreground')}>
+              {data.targetRoom && data.status === 'cleaning'
+                ? `${labels[data.status] ?? data.status} · ${data.targetRoom}`
+                : labels[data.status] ?? data.status}
+            </span>
+            {data.currentRoom && data.status === 'cleaning' && !data.targetRoom && (
               <span className="text-xs text-muted-foreground ml-1">· {data.currentRoom}</span>
             )}
           </div>
@@ -507,14 +518,23 @@ function VacuumControl({ id, data, update }: { id: string; data: VacuumState; up
 
       {/* Fan speed */}
       <div className="space-y-1">
-        <div className="flex items-center gap-1 text-[10px] text-muted-foreground"><Wind size={12} /><span>Sugeffekt {data.fanSpeed ?? 0}%</span></div>
+        <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+          <Wind size={12} />
+          <span>Sugeffekt {data.fanSpeedPreset ? `${data.fanSpeedPreset} (${data.fanSpeed ?? 0}%)` : `${data.fanSpeed ?? 0}%`}</span>
+        </div>
         <Slider value={[data.fanSpeed ?? 50]} max={100} step={5} onValueChange={([v]) => update(id, { fanSpeed: v })} />
         <div className="flex gap-1">
-          {presets.map((p) => (
-            <Button key={p} size="sm" variant={Math.abs((data.fanSpeed ?? 0) - (presetSpeeds[p.toLowerCase()] ?? 50)) < 10 ? 'default' : 'outline'}
-              className="flex-1 h-6 text-[9px]"
-              onClick={() => update(id, { fanSpeed: presetSpeeds[p.toLowerCase()] ?? 50 })}>{p}</Button>
-          ))}
+          {presets.map((p) => {
+            const speed = presetSpeeds[p.toLowerCase()] ?? 50;
+            const active = data.fanSpeedPreset
+              ? data.fanSpeedPreset.toLowerCase() === p.toLowerCase()
+              : Math.abs((data.fanSpeed ?? 0) - speed) < 10;
+            return (
+              <Button key={p} size="sm" variant={active ? 'default' : 'outline'}
+                className="flex-1 h-6 text-[9px]"
+                onClick={() => update(id, { fanSpeed: speed, fanSpeedPreset: p })}>{p}</Button>
+            );
+          })}
         </div>
       </div>
       {/* Stats */}
