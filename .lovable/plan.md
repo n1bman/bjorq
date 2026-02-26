@@ -1,48 +1,48 @@
 
 
-# Auto-discover Roborock Segment IDs via `roborock.get_maps`
+# Fix Vacuum Room Switching, 3D Movement, Widgets, and Fan Speed Sync
 
-## Changes
+## Issues to fix
 
-### 1. Add `vacuumSegmentMap` to store (`types.ts` + `useAppStore.ts`)
-- Add `vacuumSegmentMap: Record<string, number>` to `HomeAssistantState` (e.g. `{ "Tvrummet": 16, "Köket": 17 }`)
-- Add `setVacuumSegmentMap` action
-- Initialize as `{}`
+1. **Room switching hangs** — When switching from one room to another during cleaning, the state update doesn't properly reset/transition
+2. **3D movement too fast** — Speed is 0.2 m/s but moves unrealistically; needs systematic pattern
+3. **3D model escapes zones** — Robot flies through walls between rooms instead of staying in zone
+4. **Room buttons in home widget** — DeviceControlCard vacuum widget needs room cleaning buttons (already exists but may not show in home widget)
+5. **RobotPanel UI improvements** — Add "Städa alla rum", cleaning log/history per room
+6. **Fan speed not synced** — `fan_speed` in HA is a string preset name (e.g. "gentle", "balanced"), not a number 0-100
+7. **Roborock-only notice** — Show disclaimer that room mapping only works with Roborock
 
-### 2. Call `roborock.get_maps` on HA connect (`useHomeAssistant.ts`)
-- After `auth_ok` + states loaded, find the vacuum entity (domain `vacuum`)
-- Send WebSocket call:
-  ```json
-  { "type": "call_service", "domain": "roborock", "service": "get_maps",
-    "target": { "entity_id": "vacuum.s5_max" },
-    "service_data": {}, "id": N, "return_response": true }
-  ```
-- Track this message ID; in the `result` handler, parse `response.maps[0].rooms` to extract `{ roomName: segmentId }` mapping
-- Call `setVacuumSegmentMap(mapping)`
-- Auto-discover vacuum entity ID from HA entities instead of hardcoding
+## Changes by file
 
-### 3. Use segment map in bridge (`useHABridge.ts`, lines 112-127)
-- When `targetRoom` is set, look up `state.homeAssistant.vacuumSegmentMap[data.targetRoom]` first
-- Fall back to zone's manual `segmentId`
-- Never fall back to `vacuum.start` if either source has a segment ID
-- Only use `vacuum.start` as absolute last resort
+### `src/hooks/useHABridge.ts` (lines 96-148)
+- **Fix #1**: When `targetRoom` changes, first send `vacuum.stop` or `vacuum.pause` before sending new `app_segment_clean` — Roborock requires stopping current task before starting a new segment clean
+- **Fix #6**: Change `set_fan_speed` to send the preset **name** string (e.g. "gentle") not a percentage number. Map percentage ranges to preset names from `fanSpeedList`
 
-### 4. Show target room in RobotPanel status (`RobotPanel.tsx`)
-- When cleaning with `targetRoom`, show "Städar · Köket" instead of just "Städar"
+### `src/lib/haMapping.ts` (lines 83-108)
+- **Fix #6**: Parse `fan_speed` as string preset name from HA, map it to the percentage using `fanSpeedList` index. Store both the numeric percentage and the active preset name in state
 
-### 5. Show auto-discovered IDs in VacuumMappingTools (`VacuumMappingTools.tsx`)
-- Read `vacuumSegmentMap` from store
-- Display discovered segment ID next to zone name (e.g. "Segment: 16 (auto)")
-- Manual input remains as override
+### `src/store/types.ts` (VacuumState ~274-288)
+- Add `fanSpeedPreset?: string` to store the active HA preset name (e.g. "gentle", "balanced", "turbo")
+- Add `cleaningLog?: Array<{ room: string; startedAt: string; duration?: number; fanPreset?: string }>` for per-room history
 
-## Files
+### `src/components/devices/DeviceMarkers3D.tsx` (lines 517-579)
+- **Fix #2**: Reduce speed from 0.2 to ~0.04 m/s for realistic vacuum movement
+- **Fix #3**: Add systematic back-and-forth pattern within zone polygon instead of random wandering. Use a stripe/lawnmower pattern: pick parallel lines across the polygon, move along each, only go outside zone boundary when transitioning rooms (straight line to new zone centroid)
+- **Fix #3**: When room changes, move in a straight line toward new zone centroid (not teleport), clamped to floor Y. During transition, ignore zone boundary constraint
+- **Fix #2**: Remove the sine-wave wobble, use cleaner movement
 
-| File | Change |
-|------|--------|
-| `src/store/types.ts` | Add `vacuumSegmentMap` to `HomeAssistantState`, add `setVacuumSegmentMap` action |
-| `src/store/useAppStore.ts` | Implement `setVacuumSegmentMap`, init `vacuumSegmentMap: {}` |
-| `src/hooks/useHomeAssistant.ts` | Call `roborock.get_maps` after auth, parse response, store mapping |
-| `src/hooks/useHABridge.ts` | Look up segmentId from `vacuumSegmentMap`, never fallback to `vacuum.start` |
-| `src/components/home/cards/RobotPanel.tsx` | Show "Städar · {room}" |
-| `src/components/build/devices/VacuumMappingTools.tsx` | Display auto-discovered segment IDs |
+### `src/components/home/cards/RobotPanel.tsx`
+- **Fix #5**: Add "Städa alla rum" button that queues all zones sequentially
+- **Fix #5**: Add cleaning log section showing last cleaned rooms with timestamps, duration, and fan preset
+- **Fix #6**: Show active fan preset name instead of just percentage
+- **Fix #7**: Add notice below robot header: "⚠ Rumsstyrning fungerar just nu bara för Roborock-modeller"
+
+### `src/components/home/cards/DeviceControlCard.tsx` (lines 417-500)
+- **Fix #4**: Ensure room cleaning buttons are visible in the home widget (they exist but verify they render in compact mode)
+- **Fix #6**: Send fan speed preset name, show preset label
+- **Fix #7**: Add Roborock-only notice
+
+### `src/store/useAppStore.ts`
+- Add `addCleaningLogEntry` action to push entries to the vacuum's cleaning log
+- Trigger log entry when room cleaning starts and update duration when it ends
 
