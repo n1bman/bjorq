@@ -12,7 +12,7 @@ function SyncCamera() {
     const sync = useAppStore.getState().build.importOverlaySync;
     if (!sync || !(camera instanceof THREE.OrthographicCamera)) return;
 
-    const baseFactor = 2;
+    const baseFactor = 1;
     camera.zoom = sync.zoom / baseFactor;
     camera.position.x = sync.offsetX;
     camera.position.z = sync.offsetY;
