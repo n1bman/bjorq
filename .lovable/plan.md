@@ -1,152 +1,61 @@
 
 
-# Robotdammsugare: Rumsbaserad rorelssimulering V1
+# Analys: Saknade HA-domäner och enhetstyper
 
-## Oversikt
+## Nuvarande stöd (12 domäner)
+light, switch, input_boolean, sensor, binary_sensor, climate, camera, vacuum, lock, media_player, fan, cover, scene, script, automation
 
-Istallet for att forlita sig pa exakta XY-koordinater fran Valetudo implementeras en rumsbaserad rorelsesimulering. Roboten "vandrar" realistiskt inuti det rum som HA-sensorn (`sensor.s5_max_nuvarande_rum`) rapporterar, med mjuka overganger mellan rum. Systemet designas sa att det enkelt kan uppgraderas till exakt XY-positionering i framtiden.
+## Saknade domäner (rangordnade efter relevans för smart home)
 
----
+### Prioritet 1 -- Mycket vanliga i svenska hem
+| Domän | Beskrivning | Förslag DeviceKind | UI-kontroll |
+|-------|-------------|-------------------|-------------|
+| **alarm_control_panel** | Larmsystem (Verisure, Sector etc.) | `alarm` | Arm/Disarm/Home-knappar, PIN-inmatning, statusindikator |
+| **water_heater** | Varmvattenberedare | `water-heater` | Temperatur-slider, on/off, driftläge |
+| **humidifier** | Luftfuktare/avfuktare | `humidifier` | Målnivå-slider, on/off, fläktläge |
+| **device_tracker** | Personspårning (telefon, GPS) | *(ej enhet i 3D)* | Hemma/borta-status i dashboard |
+| **button** | Engångstryckare (t.ex. restart, trigger) | *(mappas till `switch`)* | Enkel tryckknapp |
+| **siren** | Siren/larm | `siren` | On/off, volym, ton-val |
 
-## 1. Nya typer (types.ts)
+### Prioritet 2 -- Bra att ha
+| Domän | Beskrivning | Förslag DeviceKind | UI-kontroll |
+|-------|-------------|-------------------|-------------|
+| **valve** | Vattenavstängningsventil | `valve` | Öppna/stäng, position |
+| **remote** | IR/RF-fjärrkontroll | `remote` | Kommandoknappar |
+| **lawn_mower** | Robotgräsklippare | `lawn-mower` | Start/dock/pause (som vacuum) |
+| **number** / **input_number** | Numeriskt hjälpvärde | *(mappas till `sensor`)* | Slider |
+| **select** / **input_select** | Dropdown-val | *(mappas till `switch`)* | Dropdown |
+| **weather** | Väderstation-entitet | *(redan i environment)* | Koppling till väder-widget |
+| **update** | Firmware-uppdateringar | *(ej 3D-enhet)* | Uppdateringsstatus i profil/aktivitet |
 
-### VacuumState -- nya falt
-
-| Falt | Typ | Beskrivning |
-|------|-----|-------------|
-| `currentRoom` | `string` | Rumsnamn fran HA-sensor (t.ex. "Kok") |
-
-### Ny typ: VacuumZone
-
-```text
-interface VacuumZone {
-  roomId: string;
-  polygon: [number, number][];  // x,z-koordinater i meter
-}
-```
-
-### Ny typ: VacuumMapping (lagras per floor)
-
-```text
-interface VacuumMapping {
-  dockPosition: [number, number] | null;  // x,z i meter
-  zones: VacuumZone[];                     // rorelsezoner per rum
-}
-```
-
-### BuildTool -- nytt verktyg
-
-Lagg till `'place-vacuum-dock'` och `'vacuum-zone'` i `BuildTool`-unionen.
-
-### AppState -- nya actions
-
-- `setVacuumMapping(floorId, mapping)` -- spara dock + zoner
-- `setVacuumDock(floorId, pos)` -- satt dockposition
-- `addVacuumZone(floorId, zone)` -- lagg till zon
-- `removeVacuumZone(floorId, roomId)` -- ta bort zon
-
-### Floor -- utokat
-
-Lagg till `vacuumMapping?: VacuumMapping` pa `Floor`-interfacet.
+### Prioritet 3 -- Nischade
+calendar, todo, notify, text, date, datetime, time, event, image, image_processing, conversation, stt, tts, wake_word, ai_task, assist_satellite, geo_location, air_quality, tag
 
 ---
 
-## 2. HA-mappning (haMapping.ts)
+## Implementationsplan (Prioritet 1)
 
-I vacuum-case:n, lagg till:
+### Filändringar
 
-- `currentRoom`: hamtas INTE fran vacuum-entiteten, utan fran en separat sensor. Hanteras i bridge:en (se nedan).
-
----
-
-## 3. HA-bridge: Rumssynk (useHABridge.ts)
-
-Ny logik for att lyssna pa `sensor.s5_max_nuvarande_rum`:
-
-- Nar sensorn andras -> uppdatera vacuum-enhetens `currentRoom` i deviceState
-- Mappningen sker via enhetsnamn: matcha sensorns state-string mot rum-namn i layouten
-- Hitta matchande `VacuumZone` for det rummet
-- Uppdatera `vacuumState.currentRoom`
-
----
-
-## 4. Rorelsemotor i 3D (DeviceMarkers3D.tsx)
-
-### Ny wandering-algoritm i VacuumMarker3D
-
-Ersatt den enkla `position`-lerp med en komplett rorelsemotor:
-
-```text
-Tillstand:
-  - currentTarget: [x, z] -- aktuellt mal inuti polygon
-  - speed: 0.2 m/s
-  - smoothRotation: robotens riktning interpoleras mjukt
-
-Logik (useFrame):
-  1. Om status === 'cleaning':
-     a. Hamta aktiv zon fran currentRoom -> VacuumZone.polygon
-     b. Om inget currentTarget eller nara nog -> valj ny random punkt inuti polygonen
-     c. Flytta roboten mot target med speed * delta
-     d. Rotera roboten mjukt mot rorelsriktningen
-     e. Vid rumsbyte: interpolera mot ny zon over ~2 sekunder
-
-  2. Om status === 'returning' eller 'docked':
-     a. Flytta mot dockPosition (fran VacuumMapping)
-     b. Nar framme: stanna
-
-  3. Om status === 'paused':
-     a. Stanna pa plats, LED pulserar langsamt
-
-Random-punkt-i-polygon:
-  - Anvand bounding-box + rejection sampling
-  - Fungerar med pointInPolygon-test (finns redan i BuildCanvas2D)
-```
-
-### Framtidssaker (`setRobotPosition`)
-
-Om `vacuumState.position` har ett varde (fran Valetudo) -- anvand det direkt istallet for wandering. Sa uppgradering blir automatisk.
-
----
-
-## 5. Byggverktyg: Robot Mapping (BuildCanvas2D + ny panel)
-
-### Ny panel: VacuumMappingTools
-
-Visas under Enheter-fliken i bygglageet nar en vacuum finns. Innehaller:
-
-- **Placera docka** -- klicka pa kartan for att satta dockPosition
-- **Rita zon** -- polygoneredigerare (liknar vaggritning) for att definiera rorelsezoner per rum
-- **Zonlista** -- visa/ta bort zoner, kopplade till rum
-
-### I BuildCanvas2D
-
-Nytt ritlager for vacuum-zoner:
-
-- Rita ifyllda halvtransparenta polygoner i bla/gront
-- Dockmarkorn ritas som en liten ikon (typ hemikon)
-- Nar `vacuum-zone`-verktyget ar aktivt: klicka for att lagga till polygonnoder (som vaggritning), dubbelklicka for att stanga polygon
-
----
-
-## 6. RobotPanel -- uppdatering
-
-Uppdatera RobotPanel med:
-
-- Visa aktuellt rum: `"Stadar i: Koket"`
-- Kartvyn: istallet for placeholder, visa en enkel 2D-planvy med rummen och robotens position som en animerad prick
-
----
-
-## Filandringar
-
-| Fil | Andring |
+| Fil | Ändring |
 |-----|---------|
-| `src/store/types.ts` | Nya typer: `VacuumZone`, `VacuumMapping`. Nya falt pa `Floor` och `VacuumState`. Nya `BuildTool`-varianter. Nya store-actions. |
-| `src/store/useAppStore.ts` | Implementera `setVacuumMapping`, `setVacuumDock`, `addVacuumZone`, `removeVacuumZone`. |
-| `src/lib/haMapping.ts` | Lagg till `currentRoom`-stod i vacuum-mappningen. |
-| `src/hooks/useHABridge.ts` | Lyssna pa rumssensor och uppdatera vacuum `currentRoom`. |
-| `src/components/devices/DeviceMarkers3D.tsx` | Ny wandering-algoritm i `VacuumMarker3D`: rumsbaserad rorelse med mjuk interpolering, rotationsanimation, zon-medvetenhet. Fallback till `position` om tillgangligt (Valetudo-redo). |
-| `src/components/build/devices/VacuumMappingTools.tsx` | **Ny fil** -- Panel for att placera docka och rita rorelsezoner i bygglageet. |
-| `src/components/build/BuildCanvas2D.tsx` | Nytt ritlager for vacuum-zoner och dockmarkorer. Stod for `vacuum-zone`-verktyget. |
-| `src/components/home/cards/RobotPanel.tsx` | Visa aktuellt rum. Ersatt kart-placeholder med enkel 2D mini-karta. |
+| `src/store/types.ts` | Nya `DeviceKind`: `alarm`, `water-heater`, `humidifier`, `siren`. Nya state-interfaces: `AlarmState`, `WaterHeaterState`, `HumidifierState`, `SirenState`. Utöka `DeviceState`-union. Nya `BuildTool`-varianter. |
+| `src/lib/haDomainMapping.ts` | Mappa `alarm_control_panel` → `alarm`, `water_heater` → `water-heater`, `humidifier` → `humidifier`, `siren` → `siren`, `button` → `switch`, `number`/`input_number` → `sensor`, `select`/`input_select` → `switch`, `valve` → `valve`, `remote` → `remote`, `lawn_mower` → `lawn-mower` |
+| `src/lib/haMapping.ts` | Nya case-block: `alarm_control_panel` (armed_away/armed_home/disarmed/triggered), `water_heater` (temp+mode), `humidifier` (humidity+mode), `siren` (on/off+tone), `button` (generic), `number`/`input_number` (value+min/max), `select`/`input_select` (options+selected), `valve` (position), `remote` (on/off), `lawn_mower` (status som vacuum-variant) |
+| `src/hooks/useHABridge.ts` | Nya service-calls: `alarm_control_panel.alarm_arm_away/home/disarm`, `humidifier.set_humidity/set_mode`, `water_heater.set_temperature`, `siren.turn_on/off`, `button.press`, `number.set_value`, `input_number.set_value`, `select.select_option`, `valve.open/close`, `lawn_mower.start/dock/pause` |
+| `src/components/build/devices/DevicePlacementTools.tsx` | Nya verktyg i deviceTools-listan med ikoner: `ShieldAlert` (alarm), `Droplets` (humidifier), `Flame` (water-heater), `Bell` (siren), `Grip` (valve), `Wifi` (remote), `Trees` (lawn-mower) |
+| `src/components/home/cards/DeviceControlCard.tsx` | Nya kontrollkomponenter: `AlarmControl` (arm/disarm-knappar med PIN), `HumidifierControl` (fuktighets-slider), `WaterHeaterControl` (temp-slider), `SirenControl` (on/off + ton), `ValveControl` (öppna/stäng), `LawnMowerControl` (start/dock/pause) |
+| `src/components/devices/DeviceMarkers3D.tsx` | Nya 3D-markörer för de nya enhetstyperna (enkla geometrier med statusfärg) |
+
+### Nya state-interfaces (types.ts)
+
+```text
+AlarmState { state: 'disarmed'|'armed_home'|'armed_away'|'armed_night'|'pending'|'triggered', code?: string }
+WaterHeaterState { on: boolean, temperature: number, mode: 'eco'|'electric'|'performance'|'off' }
+HumidifierState { on: boolean, humidity: number, mode?: string, availableModes?: string[] }
+SirenState { on: boolean, tone?: string, volume?: number, availableTones?: string[] }
+```
+
+### device_tracker -- Special hantering
+Inte en 3D-placerad enhet, men synkas till dashboard. Visa "Hemma/Borta"-status per person i en ny sektion i Home-vyn eller som badge.
 
