@@ -342,34 +342,58 @@ function MediaControl({ id, data, update }: { id: string; data: MediaState; upda
 
 function VacuumControl({ id, data, update }: { id: string; data: VacuumState; update: UpdateFn }) {
   const labels: Record<string, string> = { cleaning: 'Städar', docked: 'Dockad', returning: 'Återvänder', paused: 'Pausad', idle: 'Väntar', error: 'Fel' };
+  const statusColors: Record<string, string> = { cleaning: 'text-blue-400', docked: 'text-green-400', returning: 'text-orange-400', paused: 'text-yellow-400', error: 'text-destructive' };
   const presets = data.fanSpeedList ?? ['Silent', 'Standard', 'Turbo', 'Max'];
   const presetSpeeds: Record<string, number> = { silent: 20, standard: 40, medium: 60, turbo: 80, max: 100 };
   return (
     <div className="space-y-3 pt-2">
+      {/* Status + battery */}
       <div className="flex items-center justify-between">
-        <span className="text-sm font-medium text-foreground">{labels[data.status] ?? data.status}</span>
+        <div className="flex items-center gap-2">
+          <span className="text-lg">🤖</span>
+          <div>
+            <span className={cn('text-sm font-medium', statusColors[data.status] ?? 'text-foreground')}>{labels[data.status] ?? data.status}</span>
+            {data.currentRoom && data.status === 'cleaning' && (
+              <span className="text-xs text-muted-foreground ml-1">· {data.currentRoom}</span>
+            )}
+          </div>
+        </div>
         <div className="flex items-center gap-1 text-xs text-muted-foreground"><Battery size={14} /><span>{data.battery}%</span></div>
       </div>
+
+      {/* Current room indicator */}
+      {data.currentRoom && (
+        <div className="flex items-center gap-2 bg-primary/5 border border-primary/10 rounded-lg px-3 py-1.5">
+          <MapPin size={14} className="text-primary" />
+          <span className="text-xs text-foreground">Plats: <strong>{data.currentRoom}</strong></span>
+        </div>
+      )}
+
       {data.status === 'error' && data.errorMessage && (
         <div className="flex items-center gap-2 bg-destructive/10 rounded p-1.5">
           <AlertTriangle size={12} className="text-destructive" />
           <span className="text-[10px] text-destructive">{data.errorMessage}</span>
         </div>
       )}
+
+      {/* Control buttons */}
       <div className="flex gap-1">
-        <Button size="sm" variant={data.status === 'cleaning' ? 'default' : 'outline'} className="flex-1 h-7 text-[10px]"
-          onClick={() => update(id, { on: true, status: 'cleaning' })}>Starta</Button>
-        <Button size="sm" variant="outline" className="flex-1 h-7 text-[10px]"
-          onClick={() => update(id, { status: 'paused' })}>Pausa</Button>
-        <Button size="sm" variant="outline" className="flex-1 h-7 text-[10px]"
-          onClick={() => update(id, { on: false, status: 'docked' })}>Stoppa</Button>
-        <Button size="sm" variant="outline" className="h-7 text-[10px]"
-          onClick={() => update(id, { status: 'returning' })}><HomeIcon size={12} /></Button>
+        <Button size="sm" variant={data.status === 'cleaning' ? 'default' : 'outline'} className="flex-1 h-8 text-[10px] gap-1"
+          onClick={() => update(id, { on: true, status: 'cleaning' })}><Play size={12} /> Städa</Button>
+        <Button size="sm" variant={data.status === 'paused' ? 'default' : 'outline'} className="flex-1 h-8 text-[10px] gap-1"
+          onClick={() => update(id, { status: 'paused' })}><Pause size={12} /> Pausa</Button>
+        <Button size="sm" variant="outline" className="flex-1 h-8 text-[10px] gap-1"
+          onClick={() => update(id, { on: false, status: 'docked' })}><Square size={12} /> Stopp</Button>
+        <Button size="sm" variant="outline" className="h-8 text-[10px] gap-1"
+          onClick={() => update(id, { status: 'returning' })}><HomeIcon size={12} /> Hem</Button>
       </div>
-      <Button size="sm" variant="ghost" className="w-full h-6 text-[10px] gap-1"
+
+      {/* Locate */}
+      <Button size="sm" variant="ghost" className="w-full h-7 text-[10px] gap-1"
         onClick={() => update(id, { _action: 'locate' })}>
-        <MapPin size={12} /> Lokalisera
+        <MapPin size={12} /> Lokalisera (pip)
       </Button>
+
       {/* Fan speed */}
       <div className="space-y-1">
         <div className="flex items-center gap-1 text-[10px] text-muted-foreground"><Wind size={12} /><span>Sugeffekt {data.fanSpeed ?? 0}%</span></div>
