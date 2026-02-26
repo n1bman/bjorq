@@ -1,79 +1,65 @@
 
 
-# Fixar & Nya Funktioner: Vacuum, Smarta Högtalare, Backup
+# Plan: Fixar och nya funktioner
 
-## Problem att lösa
+## Problem identifierade
 
-1. **Gröna LED-ringen på vacuum** -- den tjocka torusGeometry-ringen ligger fel. Ska ligga platt (horisontellt) strax ovanför disken, inte vertikalt.
-2. **Zoner visar ID istället för rumsnamn** i VacuumMappingTools -- roomId sparas som rumsnamn redan men visningen verkar inte uppdateras.
-3. **Compact vacuum-widget saknar kontrollknappar** -- den kompakta vyn i hemskärmen visar bara status, inga städa/pausa/stopp/hem-knappar.
-4. **Roborock-karta** -- Roborock/Valetudo har en uppmappad karta med rum. Vi kan förbereda import av denna via Valetudo API:t (framtida) men just nu flagga att `currentRoom` redan stöds och att kartan kan importeras som bild.
-5. **Ny enhet: Smart Speaker (Google Home)** -- med 3D-modell och visuella effekter (musiknoter) när den spelar.
-6. **Ny enhet: Soundbar/Högtalare** -- med 3D-modell och flygande musiknoter-effekt.
-7. **Profilsparning & Backup** -- export/import av hela konfigurationen som JSON-fil.
+### 1. Musiknot-partiklar fungerar inte
+`MusicNoteParticles` och `SpeakerMarker3D`/`SoundbarMarker3D` skapar partikeldata i `useRef` men renderar aldrig synliga 3D-objekt. `notesGroupRef` barn tas bort varje frame men inga nya läggs till visuellt — partiklarna finns bara som data.
+
+**Fix**: Rendera partiklarna som faktiska `<sprite>`-element med `<spriteMaterial>` i JSX via state-driven rendering istället för imperativ children-manipulation.
+
+### 2. Rotation fungerar bara för media_screen
+I `DeviceMarkers3D`, rad 907-918, renderas alla icke-media_screen-markörer via `markerComponents[marker.kind]` men `marker.rotation` skickas aldrig vidare. Bara `MediaScreenMarker` (rad 407) applicerar rotation.
+
+**Fix**: Wrappa alla markörer i en `<group rotation={marker.rotation}>` i renderloopen (rad 907-918).
+
+### 3. Zon-namngivning — sparar UUID istället för rumsnamn
+`BuildCanvas2D.tsx` rad 1187: `roomId = room?.id ?? ...` sparar rummets UUID. `VacuumMappingTools` matchar mot `r.id === roomId` men visar `r.name`. Problemet: om inget rum hittas faller det tillbaka till `Zon <timestamp>`.
+
+**Fix**: Spara `room?.name` som roomId istället, eller ändra visningslogiken att alltid slå upp rum via ID korrekt. Bäst: spara room.id men visa alltid room.name via lookup.
+
+### 4. Speaker reagerar inte på "Hej Google" (isSpeaking)
+`isSpeaking`-flaggan sätts aldrig från HA. `haMapping.ts` mappar inte `media_player`-attribut som indikerar att assistenten lyssnar/pratar.
+
+**Fix**: I `haMapping.ts` speaker-case, kolla `attributes.is_volume_muted`, eller specifikt HA-states som `buffering` → tolka som `isSpeaking`.
+
+### 5. Dashboard-tabs: dubbletter och namnändring
+- "Profil" → "Inställningar", flytta sist
+- Kontrollera att Plats/Väder inte dupliceras
+- Ta bort "Widgets" om det överlappar med Hem
+
+### 6. Väckarklocka-funktion
+Ny tab eller sektion under Inställningar med alarm-funktion. Skjuts till framtida iteration — noteras bara i planen.
 
 ---
 
 ## Filändringar
 
-### 1. Fix: Vacuum LED-ring rotation
-**`src/components/devices/DeviceMarkers3D.tsx`** rad 604
-- Lägg till `rotation={[-Math.PI / 2, 0, 0]}` på LED-ringens mesh så torusen ligger platt.
-- Justera y-position till `0.052` (strax ovanför disc-toppen).
-
-### 2. Fix: Zone-visning i VacuumMappingTools
-**`src/components/build/devices/VacuumMappingTools.tsx`**
-- Logiken finns redan och ser korrekt ut (rad 30 `getZoneRoomName`). Kontrollera att `zone.roomId` faktiskt matchar rum. Problemet kan vara att roomId sparas som `Zon <timestamp>` om centroid inte hittas i ett rum. Lägg till tydligare fallback och möjlighet att klicka för att redigera zonnamn.
-
-### 3. Fix: Compact vacuum-widget med kontroller
-**`src/components/home/cards/DeviceControlCard.tsx`**
-- I `CompactDeviceView`, lägg till special-case för `vacuum` (som redan finns för `media_screen`) med inline-knappar: Städa, Pausa, Stopp, Hem + rumsindikator.
-
-### 4. Nya enhetstyper: `speaker` och `soundbar`
-**`src/store/types.ts`**
-- Lägg till `'speaker' | 'soundbar'` i `DeviceKind`.
-- Lägg till `SpeakerState` interface: `{ on: boolean; state: 'playing' | 'paused' | 'idle'; volume: number; source?: string; mediaTitle?: string; isSpeaking?: boolean }`.
-- Lägg till i `DeviceState`-union och `BuildTool`.
-
-**`src/lib/haDomainMapping.ts`**
-- Mappa `media_player` med attribut `device_class: 'speaker'` → `speaker`, och `device_class: 'tv'` → `media_screen`.
-
-**`src/lib/haMapping.ts`**
-- Ny case för `speaker`/`soundbar` som mappar media_player-attribut.
-
-### 5. 3D-modeller med effekter
-**`src/components/devices/DeviceMarkers3D.tsx`**
-- **SpeakerMarker3D** (Google Home-stil): Cylinder med rundad topp, ljusring vid basen som pulserar vid uppspelning. När `state === 'playing'` spawnas små not-partiklar (♪) som flyter uppåt med fade-out.
-- **SoundbarMarker3D**: Avlång box, LED-strip framtill. Samma not-partikel-effekt vid uppspelning men bredare spridning.
-- Partikel-systemet: 5-8 `Text`-sprites med musiknot-tecken som rör sig uppåt med sinusrörelse och fadar ut. Använd `useFrame` för animation.
-
-### 6. UI-kontroller
-**`src/components/home/cards/DeviceControlCard.tsx`**
-- `SpeakerControl`: Play/Pause/Stop, volym-slider, källa, "Pratar"-indikator.
-- `CompactSpeakerView`: Kompakt med play/pause + volymindikator.
-
-**`src/components/build/devices/DevicePlacementTools.tsx`**
-- Nya ikoner: `Speaker` för smart speaker, `Music` för soundbar.
-
-### 7. Profil & Backup-system
-**`src/components/home/cards/ProfilePanel.tsx`**
-- Ny sektion "Data & Backup":
-  - **Exportera backup** -- serialisera hela Zustand-state till JSON, trigga filnedladdning.
-  - **Importera backup** -- fil-input som läser JSON och laddar in state via `useAppStore.setState()`.
-  - **Rensa all data** -- nollställ localStorage med bekräftelsedialog.
-
----
-
-## Sammanfattning av filer
-
 | Fil | Ändring |
 |-----|---------|
-| `src/store/types.ts` | `speaker`, `soundbar` DeviceKind + `SpeakerState` + BuildTool-varianter |
-| `src/components/devices/DeviceMarkers3D.tsx` | Fix LED-ring rotation. Nya `SpeakerMarker3D` + `SoundbarMarker3D` med not-partiklar |
-| `src/components/home/cards/DeviceControlCard.tsx` | Fix compact vacuum med kontroller. Ny `SpeakerControl` + compact speaker |
-| `src/components/build/devices/DevicePlacementTools.tsx` | Nya placement-verktyg för speaker/soundbar |
-| `src/components/build/devices/VacuumMappingTools.tsx` | Förbättrad zon-namnvisning |
-| `src/lib/haDomainMapping.ts` | Mappa speaker/soundbar |
-| `src/lib/haMapping.ts` | Ny state-mappning för speaker/soundbar |
-| `src/components/home/cards/ProfilePanel.tsx` | Export/import backup-funktionalitet |
+| `src/components/devices/DeviceMarkers3D.tsx` | 1) Fix musik-partiklar: rendera sprites via React state. 2) Applicera `marker.rotation` på alla markörer i renderloopen. |
+| `src/components/build/BuildCanvas2D.tsx` | Fix rad 1187: spara `room?.name` som display men behåll `room?.id` som roomId. Förbättra fallback-namn. |
+| `src/components/build/devices/VacuumMappingTools.tsx` | Förbättra room-name lookup att matcha på room.id korrekt. |
+| `src/lib/haMapping.ts` | I speaker-case: mappa `isSpeaking` baserat på HA media_player state. |
+| `src/components/home/DashboardGrid.tsx` | Döp om "Profil" → "Inställningar" med Settings-ikon. Flytta sist. Ta bort eventuella dubbletter. |
+
+### Detaljerad implementation
+
+**Musiknoter (DeviceMarkers3D.tsx)**:
+Ersätt imperativ children-manipulation med React-state:
+```text
+const [notes, setNotes] = useState<NoteParticle[]>([]);
+useFrame → uppdatera notes via setNotes
+Rendera: notes.map(n => <sprite position={[n.x, n.y, n.z]}><spriteMaterial ... /></sprite>)
+```
+
+**Rotation för alla markörer (DeviceMarkers3D.tsx)**:
+I renderloopen (rad ~907-918), wrappa `<Component>` i `<group rotation={marker.rotation}>`.
+
+**Zon-namn (BuildCanvas2D.tsx)**:
+Rad 1187: Ändra till `roomId: room?.name ?? 'Zon ' + (mapping?.zones?.length ?? 0 + 1)` så att roomId = rumsnamn (som matchar HA-zonnamn).
+
+**Dashboard-tabs (DashboardGrid.tsx)**:
+Ändra categories-array: byt `profile` label till "Inställningar", ikon till `Settings`, flytta sist i listan.
 
