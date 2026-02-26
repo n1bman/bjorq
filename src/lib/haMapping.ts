@@ -115,6 +115,10 @@ export function mapHAEntityToDeviceState(
       
       // Speaker / soundbar → SpeakerState
       if (deviceClass === 'speaker') {
+        // Detect "Hey Google" / assistant listening states
+        const isSpeaking = state === 'buffering' || 
+          (typeof attributes.media_content_type === 'string' && attributes.media_content_type === 'assistant') ||
+          (typeof attributes.app_name === 'string' && attributes.app_name.toLowerCase().includes('assistant'));
         return {
           kind: 'speaker',
           data: {
@@ -123,6 +127,7 @@ export function mapHAEntityToDeviceState(
             volume,
             source: typeof attributes.source === 'string' ? attributes.source : undefined,
             mediaTitle: typeof attributes.media_title === 'string' ? attributes.media_title : undefined,
+            isSpeaking,
           },
         };
       }

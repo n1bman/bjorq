@@ -1184,8 +1184,8 @@ export default function BuildCanvas2D() {
           }
           return inside;
         });
-        const roomId = room?.id ?? room?.name ?? `Zon ${Date.now()}`;
-        const roomLabel = room?.name ?? roomId;
+        const floorData = floors.find((f) => f.id === activeFloorId);
+        const roomId = room?.name ?? `Zon ${(floorData?.vacuumMapping?.zones?.length ?? 0) + 1}`;
         addVacuumZone(activeFloorId, { roomId, polygon: [...vacZoneNodes] });
         setVacZoneNodes([]);
         return;

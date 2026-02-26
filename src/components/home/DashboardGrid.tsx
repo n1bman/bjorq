@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Home, Cloud, Cpu, Zap, Bell, Video, User, Pencil, X, CalendarDays, LayoutGrid, Bot } from 'lucide-react';
+import { Home, Cloud, Cpu, Zap, Bell, Video, Settings, Pencil, X, CalendarDays, Bot } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useAppStore } from '@/store/useAppStore';
@@ -20,7 +20,7 @@ import CalendarWidget from './cards/CalendarWidget';
 import RobotPanel from './cards/RobotPanel';
 import type { DeviceKind, DeviceMarker } from '@/store/types';
 
-type DashCategory = 'home' | 'weather' | 'calendar' | 'devices' | 'energy' | 'surveillance' | 'robot' | 'activity' | 'profile' | 'widgets';
+type DashCategory = 'home' | 'weather' | 'calendar' | 'devices' | 'energy' | 'surveillance' | 'robot' | 'activity' | 'settings';
 
 const categories: { key: DashCategory; label: string; icon: typeof Home }[] = [
   { key: 'home', label: 'Hem', icon: Home },
@@ -31,8 +31,7 @@ const categories: { key: DashCategory; label: string; icon: typeof Home }[] = [
   { key: 'surveillance', label: 'Övervakning', icon: Video },
   { key: 'robot', label: 'Robot', icon: Bot },
   { key: 'activity', label: 'Aktivitet', icon: Bell },
-  { key: 'profile', label: 'Profil', icon: User },
-  { key: 'widgets', label: 'Widgets', icon: LayoutGrid },
+  { key: 'settings', label: 'Inställningar', icon: Settings },
 ];
 
 const deviceFilters: { key: DeviceKind | 'all'; label: string; emoji: string }[] = [
@@ -204,18 +203,15 @@ function EnergyCategory() {
   );
 }
 
-function ProfileSettingsCategory() {
+function SettingsCategory() {
   return (
     <div className="space-y-4">
       <ProfilePanel />
       <LocationSettings />
       <HAConnectionPanel />
+      <HomeWidgetConfig />
     </div>
   );
-}
-
-function WidgetsCategory() {
-  return <HomeWidgetConfig />;
 }
 
 const categoryContent: Record<DashCategory, React.FC> = {
@@ -227,8 +223,7 @@ const categoryContent: Record<DashCategory, React.FC> = {
   surveillance: SurveillancePanel,
   robot: RobotPanel,
   activity: ActivityFeed,
-  profile: ProfileSettingsCategory,
-  widgets: WidgetsCategory,
+  settings: SettingsCategory,
 };
 
 export default function DashboardGrid() {
