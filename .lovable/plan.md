@@ -1,46 +1,48 @@
 
 
-# Fix Vacuum Room Cleaning via HA + Zone Label Positioning
+# Auto-discover Roborock Segment IDs via `roborock.get_maps`
 
-## What you're seeing
+## Changes
 
-The screenshot shows `sensor.s5_max_nuvarande_rum` with an `options` attribute listing Roborock's room names (Tvrummet, Köket, G3, etc.). These are **room names**, not segment IDs. Roborock's `app_segment_clean` command requires **integer segment IDs** (e.g. 16, 17, 18), which aren't directly visible in HA Developer Tools.
+### 1. Add `vacuumSegmentMap` to store (`types.ts` + `useAppStore.ts`)
+- Add `vacuumSegmentMap: Record<string, number>` to `HomeAssistantState` (e.g. `{ "Tvrummet": 16, "Köket": 17 }`)
+- Add `setVacuumSegmentMap` action
+- Initialize as `{}`
 
-However, there's a better approach: we can auto-discover segment IDs by sending `get_room_mapping` to the vacuum, OR we can match zone names to the sensor's room names and send cleaning commands using the room name approach that some Roborock integrations support.
+### 2. Call `roborock.get_maps` on HA connect (`useHomeAssistant.ts`)
+- After `auth_ok` + states loaded, find the vacuum entity (domain `vacuum`)
+- Send WebSocket call:
+  ```json
+  { "type": "call_service", "domain": "roborock", "service": "get_maps",
+    "target": { "entity_id": "vacuum.s5_max" },
+    "service_data": {}, "id": N, "return_response": true }
+  ```
+- Track this message ID; in the `result` handler, parse `response.maps[0].rooms` to extract `{ roomName: segmentId }` mapping
+- Call `setVacuumSegmentMap(mapping)`
+- Auto-discover vacuum entity ID from HA entities instead of hardcoding
 
-## Plan
+### 3. Use segment map in bridge (`useHABridge.ts`, lines 112-127)
+- When `targetRoom` is set, look up `state.homeAssistant.vacuumSegmentMap[data.targetRoom]` first
+- Fall back to zone's manual `segmentId`
+- Never fall back to `vacuum.start` if either source has a segment ID
+- Only use `vacuum.start` as absolute last resort
 
-### 1. Auto-populate room names from HA sensor (`VacuumMappingTools.tsx`)
-- Read `sensor.s5_max_nuvarande_rum` entity's `options` attribute from HA entities
-- Show these as selectable room names when naming zones (instead of only floor rooms)
-- This ensures zone names match Roborock's internal room names exactly
+### 4. Show target room in RobotPanel status (`RobotPanel.tsx`)
+- When cleaning with `targetRoom`, show "Städar · Köket" instead of just "Städar"
 
-### 2. Add "Discover Segments" button (`VacuumMappingTools.tsx` + `useHABridge.ts`)
-- Add a button that calls `vacuum.send_command` with `command: 'get_room_mapping'` to retrieve room-to-segment mappings
-- Parse the response and auto-fill segment IDs for matching zones
-- Keep the manual segment ID input as fallback, with clearer help text: "Hitta i Roborock-appen eller via get_room_mapping"
+### 5. Show auto-discovered IDs in VacuumMappingTools (`VacuumMappingTools.tsx`)
+- Read `vacuumSegmentMap` from store
+- Display discovered segment ID next to zone name (e.g. "Segment: 16 (auto)")
+- Manual input remains as override
 
-### 3. Fix room cleaning command (`useHABridge.ts`)
-- Current code correctly sends `app_segment_clean` with `params: [segmentId]` when segmentId exists
-- Add alternative: if no segmentId but zone name matches an HA room name, try `vacuum.send_command` with `command: 'app_segment_clean'` and `params: {"segments": [segmentId]}`
-- Hardcode the sensor entity pattern (`sensor.*_nuvarande_rum` or use vacuum marker's linked entity) to dynamically find the room sensor
-
-### 4. Fix zone label text positioning (`BuildCanvas2D.tsx`, `RobotPanel.tsx`)
-- When rendering zone labels, compute the visual center using `pointInPolygon` check
-- If centroid falls outside polygon, use the closest edge midpoint that IS inside
-- Ensure text is properly centered within the polygon area
-
-### 5. Make `useVacuumRoomSync` dynamic (`useHABridge.ts`)
-- Currently hardcoded to `sensor.s5_max_nuvarande_rum`
-- Instead, auto-discover the room sensor by looking for entities matching `sensor.*nuvarande_rum` or `sensor.*current_room` in the HA entities list
-- This makes it work with any Roborock model
-
-## Files to change
+## Files
 
 | File | Change |
 |------|--------|
-| `src/components/build/devices/VacuumMappingTools.tsx` | Auto-populate room names from HA sensor options, improve segment ID UX |
-| `src/hooks/useHABridge.ts` | Dynamic room sensor discovery, segment discovery helper |
-| `src/components/build/BuildCanvas2D.tsx` | Fix zone label centering inside polygon |
-| `src/components/home/cards/RobotPanel.tsx` | Fix mini-map label centering |
+| `src/store/types.ts` | Add `vacuumSegmentMap` to `HomeAssistantState`, add `setVacuumSegmentMap` action |
+| `src/store/useAppStore.ts` | Implement `setVacuumSegmentMap`, init `vacuumSegmentMap: {}` |
+| `src/hooks/useHomeAssistant.ts` | Call `roborock.get_maps` after auth, parse response, store mapping |
+| `src/hooks/useHABridge.ts` | Look up segmentId from `vacuumSegmentMap`, never fallback to `vacuum.start` |
+| `src/components/home/cards/RobotPanel.tsx` | Show "Städar · {room}" |
+| `src/components/build/devices/VacuumMappingTools.tsx` | Display auto-discovered segment IDs |
 
