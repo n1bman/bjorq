@@ -295,6 +295,7 @@ export interface VacuumState {
   targetRoom?: string;      // Room to clean (for room-specific cleaning)
   cleaningLog?: CleaningLogEntry[];
   showDustEffect?: boolean;  // Show dust particles in 3D (default true)
+  vacuumSpeed?: number;      // 3D movement speed m/s (default 0.07, range 0.02–0.15)
 }
 
 export interface LockState {
