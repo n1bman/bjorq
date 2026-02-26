@@ -10,12 +10,27 @@ const suppressedEntities = new Set<string>();
 const suppressTimers: Record<string, ReturnType<typeof setTimeout>> = {};
 
 /**
- * When true, deviceState changes originated from HA — bridge should NOT send commands back.
+ * Counter-based flag: >0 means changes originated from HA — bridge should NOT send commands back.
+ * Using a counter instead of boolean survives microtask timing issues.
  */
-let fromHA = false;
+let fromHADepth = 0;
 
 export function setFromHA(val: boolean) {
-  fromHA = val;
+  if (val) fromHADepth++;
+  else fromHADepth = Math.max(0, fromHADepth - 1);
+}
+
+/**
+ * Strip transient fields before comparing state data for deep equality.
+ */
+function stripTransient(data: any): any {
+  if (!data || typeof data !== 'object') return data;
+  const { _action, _3dOnly, progress: _progress, ...rest } = data;
+  return rest;
+}
+
+function isDataEqual(a: any, b: any): boolean {
+  return JSON.stringify(stripTransient(a)) === JSON.stringify(stripTransient(b));
 }
 
 export function isSuppressed(entityId: string): boolean {
@@ -34,7 +49,7 @@ function suppressEntity(entityId: string, ms = 1500) {
 /**
  * Given a device state change, send the corresponding HA service call.
  */
-function sendHACommand(entityId: string, state: DeviceState) {
+function sendHACommand(entityId: string, state: DeviceState, prevState?: DeviceState) {
   const callService = haServiceCaller.current;
   if (!callService) {
     console.warn('[HABridge] No callService available');
@@ -45,6 +60,7 @@ function sendHACommand(entityId: string, state: DeviceState) {
   suppressEntity(entityId);
 
   console.log('[HABridge] Sending command to', entityId, 'domain:', domain, 'state:', state.data);
+  const prevStateData = prevState?.data;
 
   switch (domain) {
     case 'light': {
@@ -184,7 +200,7 @@ function sendHACommand(entityId: string, state: DeviceState) {
 
     case 'media_player': {
       const data = state.data as any;
-      // Handle media actions (next/previous/stop)
+      // Handle explicit actions (next/previous/stop) — never send volume alongside
       if (data._action === 'next') {
         callService('media_player', 'media_next_track', { entity_id: entityId });
         break;
@@ -197,14 +213,27 @@ function sendHACommand(entityId: string, state: DeviceState) {
         callService('media_player', 'media_stop', { entity_id: entityId });
         break;
       }
+      // Don't send commands for idle/off states (HA echo)
+      if (data.state === 'idle' || data.state === 'off' || data.state === 'standby') {
+        if (!data.on) {
+          callService('media_player', 'turn_off', { entity_id: entityId });
+        }
+        break;
+      }
       if (!data.on) {
         callService('media_player', 'turn_off', { entity_id: entityId });
-      } else {
-        if (data.state === 'playing') callService('media_player', 'media_play', { entity_id: entityId });
-        else if (data.state === 'paused') callService('media_player', 'media_pause', { entity_id: entityId });
-        if (typeof data.volume === 'number') {
-          callService('media_player', 'volume_set', { entity_id: entityId, volume_level: data.volume });
-        }
+        break;
+      }
+      // Only send play/pause if state actually changed from previous
+      const prevData = prevStateData as any;
+      if (data.state === 'playing' && prevData?.state !== 'playing') {
+        callService('media_player', 'media_play', { entity_id: entityId });
+      } else if (data.state === 'paused' && prevData?.state !== 'paused') {
+        callService('media_player', 'media_pause', { entity_id: entityId });
+      }
+      // Only send volume if it actually changed
+      if (typeof data.volume === 'number' && data.volume !== prevData?.volume) {
+        callService('media_player', 'volume_set', { entity_id: entityId, volume_level: data.volume });
       }
       break;
     }
@@ -361,7 +390,7 @@ export function useHABridge() {
 
     const unsub = useAppStore.subscribe((state) => {
       // If this change originated from HA, don't send commands back
-      if (fromHA) {
+      if (fromHADepth > 0) {
         prevStatesRef.current = { ...state.devices.deviceStates };
         return;
       }
@@ -379,11 +408,14 @@ export function useHABridge() {
       for (const [id, newState] of Object.entries(currentStates)) {
         const oldState = prevStatesRef.current[id];
         if (oldState && newState !== oldState) {
-          // State changed — check if device is linked to HA
+          // Deep compare — skip if data is identical (ignoring transient fields)
+          if (isDataEqual(oldState.data, newState.data) && !(newState.data as any)?._action) {
+            continue;
+          }
           const marker = markers.find((m) => m.id === id);
           const entityId = marker?.ha?.entityId;
           if (entityId) {
-            sendHACommand(entityId, newState);
+            sendHACommand(entityId, newState, oldState);
           }
         }
       }

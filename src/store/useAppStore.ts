@@ -1017,7 +1017,13 @@ export const useAppStore = create<AppState>()(
           if (marker) {
             const mapped = mapHAEntityToDeviceState(domain, state, attributes);
             if (mapped) {
-              newDeviceStates = { ...newDeviceStates, [marker.id]: mapped };
+              // Skip update if data is identical — prevents unnecessary bridge triggers
+              const existing = newDeviceStates[marker.id];
+              if (existing && JSON.stringify(existing.data) === JSON.stringify(mapped.data)) {
+                // No change — keep existing reference
+              } else {
+                newDeviceStates = { ...newDeviceStates, [marker.id]: mapped };
+              }
             }
           }
 
