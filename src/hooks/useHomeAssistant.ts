@@ -113,16 +113,31 @@ function connect(url: string, token: string) {
             console.log('[HA] roborock.get_maps response:', msg.result);
             try {
               const response = msg.result?.response ?? msg.result;
+              console.log('[HA] Raw roborock.get_maps response:', JSON.stringify(response).slice(0, 2000));
               const maps = response?.maps ?? response;
               const firstMap = Array.isArray(maps) ? maps[0] : maps;
               const rooms = firstMap?.rooms;
+              console.log('[HA] Raw rooms object:', JSON.stringify(rooms));
               if (rooms && typeof rooms === 'object') {
                 const segmentMap: Record<string, number> = {};
-                // rooms can be { segmentId: { name: "Köket" } } or { segmentId: "Köket" }
-                for (const [segId, val] of Object.entries(rooms)) {
-                  const name = typeof val === 'string' ? val : (val as any)?.name;
-                  if (name) {
-                    segmentMap[name] = parseInt(segId);
+                // Handle multiple formats:
+                // Format 1: { segmentId: { name: "Köket" } }
+                // Format 2: { segmentId: "Köket" }
+                // Format 3: [{ id: 17, name: "Köket" }]
+                if (Array.isArray(rooms)) {
+                  for (const entry of rooms) {
+                    const name = entry?.name ?? entry?.label;
+                    const id = entry?.id ?? entry?.segment_id ?? entry?.segmentId;
+                    if (name && id !== undefined) {
+                      segmentMap[name] = typeof id === 'number' ? id : parseInt(id);
+                    }
+                  }
+                } else {
+                  for (const [segId, val] of Object.entries(rooms)) {
+                    const name = typeof val === 'string' ? val : (val as any)?.name ?? (val as any)?.label;
+                    if (name) {
+                      segmentMap[name] = parseInt(segId);
+                    }
                   }
                 }
                 console.log('[HA] Vacuum segment map:', segmentMap);
@@ -135,22 +150,32 @@ function connect(url: string, token: string) {
                   if (!zones) continue;
                   const floorRooms = floor.rooms ?? [];
                   for (const zone of zones) {
-                    // Always overwrite to ensure sync
                     const room = floorRooms.find((r) => r.id === zone.roomId);
                     const displayName = room?.name ?? zone.roomId;
-                    // Try exact match then case-insensitive
+                    console.log('[HA] Matching zone roomId:', zone.roomId, '→ displayName:', displayName);
+                    // Try exact match
                     let matchedSegId = segmentMap[displayName];
+                    // Try case-insensitive
                     if (matchedSegId === undefined) {
                       const key = Object.keys(segmentMap).find(
                         (k) => k.toLowerCase() === displayName.toLowerCase()
                       );
                       if (key) matchedSegId = segmentMap[key];
                     }
+                    // Try substring match (e.g. "Tvrummet" vs "TV-rummet")
+                    if (matchedSegId === undefined) {
+                      const normalized = displayName.toLowerCase().replace(/[-_\s]/g, '');
+                      const key = Object.keys(segmentMap).find((k) => {
+                        const nk = k.toLowerCase().replace(/[-_\s]/g, '');
+                        return nk === normalized || nk.includes(normalized) || normalized.includes(nk);
+                      });
+                      if (key) matchedSegId = segmentMap[key];
+                    }
                     if (matchedSegId !== undefined) {
-                      console.log('[HA] Auto-filling segmentId', matchedSegId, 'for zone', displayName);
+                      console.log('[HA] ✅ Auto-filling segmentId', matchedSegId, 'for zone', displayName);
                       useAppStore.getState().updateVacuumZoneSegmentId(floor.id, zone.roomId, matchedSegId);
                     } else {
-                      console.warn('[HA] No segment match for zone:', displayName, '| Available:', Object.keys(segmentMap));
+                      console.warn('[HA] ❌ No segment match for zone:', displayName, '| Available:', Object.keys(segmentMap));
                     }
                   }
                 }

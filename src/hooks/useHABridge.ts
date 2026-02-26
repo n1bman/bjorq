@@ -104,6 +104,9 @@ function sendHACommand(entityId: string, state: DeviceState) {
         callService('vacuum', 'clean_spot', { entity_id: entityId });
         break;
       }
+      // Skip 3D-only fields — don't send HA commands for vacuumSpeed or showDustEffect
+      const is3DOnly = data._3dOnly === true;
+      if (is3DOnly) break;
       // Handle fan speed change — send preset name string, not percentage
       if (typeof data.fanSpeed === 'number' && data.fanSpeed > 0) {
         const presets = data.fanSpeedList as string[] | undefined;

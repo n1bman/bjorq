@@ -659,6 +659,8 @@ function VacuumMarker3D({ position, id, onSelect, onDragStart, selected }: Marke
         smoothRotation.current = THREE.MathUtils.lerp(smoothRotation.current, targetAngle, delta * 3);
         meshRef.current.rotation.y = smoothRotation.current;
       }
+    } else if (status === 'idle' || status === 'paused') {
+      // Stay in place — do nothing
     } else if ((status === 'returning' || status === 'docked') && mapping?.dockPosition) {
       const [dx2, dz2] = mapping.dockPosition;
       const cx = meshRef.current.position.x;
@@ -727,10 +729,19 @@ function VacuumMarker3D({ position, id, onSelect, onDragStart, selected }: Marke
     if (ledRef.current) {
       const mat = ledRef.current.material as THREE.MeshStandardMaterial;
       const t = performance.now() / 1000;
-      const pulse = status === 'cleaning' ? 0.5 + Math.sin(t * 3) * 0.5
-        : status === 'paused' ? 0.3 + Math.sin(t * 1.5) * 0.2
-        : status === 'docked' ? 0.3 : 0.7;
-      mat.emissiveIntensity = pulse;
+      if (status === 'error') {
+        // Flash red rapidly
+        mat.color.set('#ef4444');
+        mat.emissive.set('#ef4444');
+        mat.emissiveIntensity = 0.5 + Math.sin(t * 8) * 0.5;
+      } else {
+        mat.color.copy(statusColor);
+        mat.emissive.copy(statusColor);
+        const pulse = status === 'cleaning' ? 0.5 + Math.sin(t * 3) * 0.5
+          : status === 'paused' ? 0.3 + Math.sin(t * 1.5) * 0.2
+          : status === 'docked' ? 0.3 : 0.7;
+        mat.emissiveIntensity = pulse;
+      }
     }
   });
 

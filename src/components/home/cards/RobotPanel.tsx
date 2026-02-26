@@ -452,11 +452,14 @@ function VacuumCard({ marker, data, update }: { marker: DeviceMarker; data: Vacu
         </div>
       )}
 
-      {/* Error message */}
-      {data.status === 'error' && data.errorMessage && (
-        <div className="flex items-center gap-2 bg-destructive/10 border border-destructive/20 rounded-lg p-2">
-          <AlertTriangle size={14} className="text-destructive shrink-0" />
-          <p className="text-xs text-destructive">{data.errorMessage}</p>
+      {/* Error message — prominent banner */}
+      {(data.status === 'error' || data.errorMessage) && (
+        <div className="flex items-center gap-2 bg-destructive/20 border-2 border-destructive/40 rounded-lg p-3 animate-pulse">
+          <AlertTriangle size={18} className="text-destructive shrink-0" />
+          <div>
+            <p className="text-sm font-semibold text-destructive">Fel på robot</p>
+            {data.errorMessage && <p className="text-xs text-destructive/80">{data.errorMessage}</p>}
+          </div>
         </div>
       )}
 
@@ -476,7 +479,7 @@ function VacuumCard({ marker, data, update }: { marker: DeviceMarker; data: Vacu
           <Pause size={14} /> Pausa
         </Button>
         <Button size="sm" variant="outline" className="flex-1 h-9 text-xs gap-1"
-          onClick={() => update(id, { on: false, status: 'docked', targetRoom: undefined, currentRoom: undefined })}>
+          onClick={() => update(id, { on: false, status: 'idle', targetRoom: undefined })}>
           <Square size={14} /> Stoppa
         </Button>
         <Button size="sm" variant="outline" className="h-9 text-xs gap-1"
@@ -523,7 +526,7 @@ function VacuumCard({ marker, data, update }: { marker: DeviceMarker; data: Vacu
         </div>
         <Switch
           checked={data.showDustEffect !== false}
-          onCheckedChange={(checked) => update(id, { showDustEffect: checked })}
+          onCheckedChange={(checked) => update(id, { showDustEffect: checked, _3dOnly: true })}
         />
       </div>
 
@@ -538,7 +541,7 @@ function VacuumCard({ marker, data, update }: { marker: DeviceMarker; data: Vacu
           min={0.02}
           max={0.15}
           step={0.01}
-          onValueChange={([v]) => update(id, { vacuumSpeed: v })}
+          onValueChange={([v]) => update(id, { vacuumSpeed: v, _3dOnly: true })}
         />
       </div>
 
