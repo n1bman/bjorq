@@ -160,14 +160,13 @@ function sendHACommand(entityId: string, state: DeviceState) {
 
         if (segId !== undefined) {
           console.log('[HABridge] Sending app_segment_clean with segmentId:', segId, 'for room:', data.targetRoom);
-          // Send directly — Roborock handles interruption internally
           callService('vacuum', 'send_command', {
             entity_id: entityId,
             command: 'app_segment_clean',
             params: [segId],
           });
         } else {
-          console.warn('[HABridge] No segment ID found for room:', data.targetRoom, '| segmentMap:', segmentMap);
+          console.warn('[HABridge] ⚠ No segment ID for room:', data.targetRoom, '— kommandot skickades INTE. Tilldela segment-ID i Bygge → Robot Mapping.');
         }
         break;
       }

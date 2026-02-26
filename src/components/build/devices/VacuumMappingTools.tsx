@@ -186,36 +186,41 @@ export default function VacuumMappingTools() {
                 </div>
                 <div className="flex items-center gap-1.5 px-2 pb-1">
                   <Hash size={10} className="text-muted-foreground/50 flex-shrink-0" />
-                  {(() => {
-                    const roomName = getZoneRoomName(zone.roomId);
-                    const autoSegId = vacuumSegmentMap[roomName];
-                    const hasAuto = autoSegId !== undefined;
-                    return (
-                      <>
-                        {hasAuto ? (
-                          <span className="text-[9px] text-green-400 font-mono">
-                            Segment: {autoSegId} (auto)
-                          </span>
-                        ) : (
-                          <>
-                            <input
-                              type="number"
-                              placeholder="Segment-ID"
-                              className="w-16 bg-secondary/40 border border-border rounded px-1.5 py-0.5 text-[9px] text-foreground outline-none focus:ring-1 focus:ring-primary/50"
-                              value={zone.segmentId ?? ''}
-                              onChange={(e) => {
-                                if (activeFloorId) {
-                                  const val = e.target.value ? parseInt(e.target.value) : undefined;
-                                  updateVacuumZoneSegmentId(activeFloorId, zone.roomId, val);
-                                }
-                              }}
-                            />
-                            <span className="text-[8px] text-muted-foreground/40 hidden lg:inline">manuellt</span>
-                          </>
-                        )}
-                      </>
-                    );
-                  })()}
+                  {Object.keys(vacuumSegmentMap).length > 0 ? (
+                    <select
+                      className="flex-1 min-w-0 bg-secondary/40 border border-border rounded px-1.5 py-0.5 text-[9px] text-foreground outline-none focus:ring-1 focus:ring-primary/50"
+                      value={zone.segmentId ?? ''}
+                      onChange={(e) => {
+                        if (activeFloorId) {
+                          const val = e.target.value ? parseInt(e.target.value) : undefined;
+                          updateVacuumZoneSegmentId(activeFloorId, zone.roomId, val);
+                        }
+                      }}
+                    >
+                      <option value="">Välj segment…</option>
+                      {Object.entries(vacuumSegmentMap).map(([name, segId]) => (
+                        <option key={name} value={segId}>
+                          {name} → #{segId}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <>
+                      <input
+                        type="number"
+                        placeholder="Segment-ID"
+                        className="w-16 bg-secondary/40 border border-border rounded px-1.5 py-0.5 text-[9px] text-foreground outline-none focus:ring-1 focus:ring-primary/50"
+                        value={zone.segmentId ?? ''}
+                        onChange={(e) => {
+                          if (activeFloorId) {
+                            const val = e.target.value ? parseInt(e.target.value) : undefined;
+                            updateVacuumZoneSegmentId(activeFloorId, zone.roomId, val);
+                          }
+                        }}
+                      />
+                      <span className="text-[8px] text-muted-foreground/40 hidden lg:inline">manuellt</span>
+                    </>
+                  )}
                 </div>
               </div>
             );
@@ -238,9 +243,17 @@ export default function VacuumMappingTools() {
             </div>
           )}
           {Object.keys(vacuumSegmentMap).length === 0 && (
-            <p className="text-[8px] text-muted-foreground/50 px-1 mt-1 hidden lg:block">
-              💡 Anslut till HA för automatisk segment-ID-upptäckt via roborock.get_maps
-            </p>
+            <div className="px-1 mt-1 hidden lg:block">
+              <p className="text-[8px] text-muted-foreground/50">
+                💡 Segment-ID krävs för rumsstyrning. Hämta via HA:
+              </p>
+              <p className="text-[8px] text-muted-foreground/40 mt-0.5">
+                Utvecklarverktyg → Tjänster → roborock.get_maps → Anropa
+              </p>
+              <p className="text-[8px] text-muted-foreground/40">
+                Eller ange segment-ID manuellt per rum ovan.
+              </p>
+            </div>
           )}
         </div>
       )}
