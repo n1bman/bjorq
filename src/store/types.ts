@@ -271,11 +271,19 @@ export interface MediaState {
   _action?: 'next' | 'previous' | 'stop';
 }
 
+export interface CleaningLogEntry {
+  room: string;
+  startedAt: string;
+  duration?: number;       // minutes
+  fanPreset?: string;
+}
+
 export interface VacuumState {
   on: boolean;
   status: 'cleaning' | 'docked' | 'returning' | 'paused' | 'idle' | 'error';
   battery: number;          // 0-100
   fanSpeed?: number;        // 0-100%
+  fanSpeedPreset?: string;  // e.g. "gentle", "balanced", "turbo"
   fanSpeedList?: string[];  // e.g. ['Silent','Standard','Medium','Turbo','Max']
   cleaningArea?: number;    // m²
   cleaningTime?: number;    // minutes
@@ -285,6 +293,7 @@ export interface VacuumState {
   _action?: 'locate' | 'spot_clean';
   currentRoom?: string;     // Room name from HA sensor
   targetRoom?: string;      // Room to clean (for room-specific cleaning)
+  cleaningLog?: CleaningLogEntry[];
 }
 
 export interface LockState {

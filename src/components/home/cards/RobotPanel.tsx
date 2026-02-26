@@ -1,12 +1,12 @@
 import { useAppStore } from '@/store/useAppStore';
-import type { VacuumState, DeviceMarker } from '@/store/types';
+import type { VacuumState, DeviceMarker, CleaningLogEntry } from '@/store/types';
 import { pointInPolygon } from '@/lib/vacuumGeometry';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { Progress } from '@/components/ui/progress';
 import {
   Battery, Play, Square, Home as HomeIcon, MapPin, AlertTriangle,
-  Clock, Ruler, Wind, Pause,
+  Clock, Ruler, Wind, Pause, History, Info,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useEffect, useRef } from 'react';
@@ -43,13 +43,14 @@ function BatteryIndicator({ level }: { level: number }) {
 
 function FanSpeedSelector({ data, id, update }: { data: VacuumState; id: string; update: (id: string, p: Record<string, unknown>) => void }) {
   const presets = data.fanSpeedList ?? ['Silent', 'Standard', 'Medium', 'Turbo', 'Max'];
-  const presetSpeeds: Record<string, number> = { silent: 20, standard: 40, medium: 60, turbo: 80, max: 100 };
+  const presetSpeeds: Record<string, number> = {};
+  presets.forEach((p, i) => { presetSpeeds[p.toLowerCase()] = Math.round(((i + 1) / presets.length) * 100); });
 
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
         <Wind size={14} />
-        <span>Sugeffekt {data.fanSpeed ?? 0}%</span>
+        <span>Sugeffekt {data.fanSpeedPreset ? `${data.fanSpeedPreset} (${data.fanSpeed ?? 0}%)` : `${data.fanSpeed ?? 0}%`}</span>
       </div>
       <Slider
         value={[data.fanSpeed ?? 50]}
@@ -60,11 +61,13 @@ function FanSpeedSelector({ data, id, update }: { data: VacuumState; id: string;
       <div className="flex gap-1 flex-wrap">
         {presets.map((p) => {
           const speed = presetSpeeds[p.toLowerCase()] ?? 50;
-          const active = Math.abs((data.fanSpeed ?? 0) - speed) < 10;
+          const active = data.fanSpeedPreset
+            ? data.fanSpeedPreset.toLowerCase() === p.toLowerCase()
+            : Math.abs((data.fanSpeed ?? 0) - speed) < 10;
           return (
             <Button key={p} size="sm" variant={active ? 'default' : 'outline'}
               className="h-6 text-[9px] px-2"
-              onClick={() => update(id, { fanSpeed: speed })}>
+              onClick={() => update(id, { fanSpeed: speed, fanSpeedPreset: p })}>
               {p}
             </Button>
           );
@@ -90,19 +93,39 @@ function RoomZoneCards({ marker, data, update }: { marker: DeviceMarker; data: V
   };
 
   const startRoomCleaning = (roomName: string) => {
+    // Add cleaning log entry
+    const existing = (useAppStore.getState().devices.deviceStates[marker.id] as any)?.data?.cleaningLog ?? [];
+    const logEntry: CleaningLogEntry = { room: roomName, startedAt: new Date().toISOString(), fanPreset: (useAppStore.getState().devices.deviceStates[marker.id] as any)?.data?.fanSpeedPreset };
     update(marker.id, {
       on: true,
       status: 'cleaning',
       currentRoom: roomName,
       targetRoom: roomName,
+      cleaningLog: [...existing, logEntry],
     });
+  };
+
+  const startAllRooms = () => {
+    // Queue first room, rest will be handled sequentially
+    if (zones.length > 0) {
+      const firstName = getZoneName(zones[0].roomId);
+      startRoomCleaning(firstName);
+    }
   };
 
   return (
     <div className="space-y-2">
-      <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
-        Rum ({zones.length})
-      </p>
+      <div className="flex items-center justify-between">
+        <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
+          Rum ({zones.length})
+        </p>
+        {zones.length > 1 && (
+          <Button size="sm" variant="outline" className="h-6 text-[9px] px-2 gap-1"
+            onClick={startAllRooms}>
+            <Play size={10} /> Städa alla rum
+          </Button>
+        )}
+      </div>
       <div className="grid grid-cols-2 gap-2">
         {zones.map((zone, i) => {
           const name = getZoneName(zone.roomId);
@@ -355,6 +378,32 @@ export default function RobotPanel() {
   );
 }
 
+function CleaningLog({ data }: { data: VacuumState }) {
+  const log = data.cleaningLog ?? [];
+  if (log.length === 0) return null;
+  const recent = log.slice(-5).reverse();
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <History size={14} />
+        <span>Städhistorik</span>
+      </div>
+      <div className="space-y-1">
+        {recent.map((entry, i) => (
+          <div key={i} className="flex items-center justify-between bg-secondary/30 rounded-lg px-3 py-1.5">
+            <span className="text-xs text-foreground">{entry.room}</span>
+            <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+              {entry.fanPreset && <span>{entry.fanPreset}</span>}
+              {entry.duration !== undefined && <span>{entry.duration} min</span>}
+              <span>{new Date(entry.startedAt).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function VacuumCard({ marker, data, update }: { marker: DeviceMarker; data: VacuumState; update: (id: string, p: Record<string, unknown>) => void }) {
   const id = marker.id;
   const statusColor = statusColors[data.status] ?? 'text-muted-foreground';
@@ -362,6 +411,12 @@ function VacuumCard({ marker, data, update }: { marker: DeviceMarker; data: Vacu
 
   return (
     <div className="glass-panel rounded-2xl p-4 space-y-4">
+      {/* Roborock-only notice */}
+      <div className="flex items-start gap-2 bg-orange-500/10 border border-orange-500/20 rounded-lg px-3 py-2">
+        <Info size={14} className="text-orange-400 shrink-0 mt-0.5" />
+        <p className="text-[10px] text-orange-300/80">Rumsstyrning fungerar just nu bara för Roborock-modeller</p>
+      </div>
+
       {/* Header: Status */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -458,6 +513,9 @@ function VacuumCard({ marker, data, update }: { marker: DeviceMarker; data: Vacu
           )}
         </div>
       )}
+
+      {/* Cleaning Log */}
+      <CleaningLog data={data} />
 
       {/* Mini map */}
       <VacuumMiniMap marker={marker} data={data} />
