@@ -1,25 +1,45 @@
 
 
-# Auto-Apply Segment IDs from `roborock.get_maps` + Fallback Notice
+# Fix Media Player Sync Loop and Command Spam
 
-## Problem
-The `roborock.get_maps` response contains room names paired with segment IDs (stored in `vacuumSegmentMap`), but the fuzzy name matching between zone `roomId`/display names and HA room names often fails. Users must manually enter segment IDs for rooms like "Tvrummet". The data IS available — it just isn't reliably connected.
+## Root Cause
 
-## Approach
-Two changes:
-1. **Show segment map as a picker** — Instead of only fuzzy-matching, let the user link each zone to an HA room from the discovered segment map via a dropdown. Auto-select if fuzzy match works, but always let user pick manually.
-2. **Fallback notice** — If no `vacuumSegmentMap` entries exist (HA not connected or `get_maps` failed), show a note explaining that segment IDs must be entered manually.
+Three interconnected issues cause the "stuck" feeling and command spam:
+
+### 1. `fromHA` flag race condition
+`updateHALiveState` sets `fromHA = true`, then resets it via `queueMicrotask`. But Zustand's `subscribe` callback may fire AFTER the microtask resolves, so the bridge sees `fromHA === false` and sends commands back to HA, creating a loop.
+
+### 2. No deep comparison in bridge
+The bridge checks `newState !== oldState` (reference equality). Since `updateHALiveState` always creates new objects, every HA echo triggers `sendHACommand` even when values are identical.
+
+### 3. Media player sends volume on every state change
+The `media_player` case in `sendHACommand` always calls `volume_set` alongside play/pause/stop. Console logs show `volume_set` firing 4+ times in a row. This resets volume on the device, which echoes back, which triggers another round.
 
 ## Changes
 
-### `src/components/build/devices/VacuumMappingTools.tsx`
-- Replace the segment ID section per zone (lines 187-220): instead of showing a number input OR "auto" text, show a **dropdown/select** populated from `vacuumSegmentMap` entries (e.g. "Tvrummet → #16", "Köket → #18"). Pre-select if there's a fuzzy match or existing `segmentId`. On change, call `updateVacuumZoneSegmentId`.
-- If `vacuumSegmentMap` is empty, show the manual number input as fallback + a notice: "Anslut till HA och kör roborock.get_maps för att hämta segment-ID automatiskt."
-
-### `src/components/home/cards/RobotPanel.tsx`
-- In `RoomZoneCards`, next to each zone button, show a small warning icon if the zone has no `segmentId` set, with tooltip "Saknar segment-ID — rumsstyrning fungerar ej."
-- When clicking a zone without `segmentId`, show a toast warning instead of silently failing.
-
 ### `src/hooks/useHABridge.ts`
-- At line 170, when `segId` is undefined, fire a toast/console warning with actionable message instead of just `console.warn`.
+
+**Replace `fromHA` flag with a counter-based approach:**
+- Use `let fromHADepth = 0` instead of a boolean. `setFromHA(true)` increments, `setFromHA(false)` decrements. Check `fromHADepth > 0`. This survives microtask timing issues.
+
+**Add deep comparison for media_player and other domains:**
+- Before calling `sendHACommand`, compare `JSON.stringify(oldState.data)` vs `JSON.stringify(newState.data)`. Skip if identical. Strip transient fields (`_action`, `_3dOnly`, `progress`) before comparing.
+
+**Fix media_player command logic:**
+- Only send `volume_set` if volume actually changed (compare with previous state).
+- Only send `media_play`/`media_pause` if state actually changed.
+- Don't send volume alongside action commands (`_action` like stop/next/previous).
+- When state is `idle` or `off` from HA echo, don't send any command back.
+
+### `src/store/useAppStore.ts`
+
+**Skip redundant state updates in `updateHALiveState`:**
+- Before creating new `deviceStates` entry, compare the mapped state's `data` with existing. If identical, don't update `deviceStates` — this prevents unnecessary bridge triggers.
+
+## File Summary
+
+| File | Change |
+|------|--------|
+| `src/hooks/useHABridge.ts` | Counter-based fromHA, deep comparison, fix media_player volume spam |
+| `src/store/useAppStore.ts` | Skip redundant deviceState updates in `updateHALiveState` |
 
