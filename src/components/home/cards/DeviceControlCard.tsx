@@ -1,4 +1,5 @@
 import { useAppStore } from '@/store/useAppStore';
+import { useState } from 'react';
 import type { DeviceMarker, LightState, ClimateState, MediaState, VacuumState, LockState, SensorState, GenericDeviceState, CameraState, FanState, CoverState, SceneState, AlarmState, WaterHeaterState, HumidifierState, ValveState, LawnMowerState, SpeakerState } from '@/store/types';
 import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
@@ -140,45 +141,12 @@ function CompactDeviceView({ marker, state }: { marker: DeviceMarker; state: imp
     );
   }
 
-  // Vacuum compact: show status + inline controls
+  // Vacuum compact: show status + inline controls + room picker
   if (state.kind === 'vacuum') {
     const vd = state.data as VacuumState;
     const updateDeviceState = useAppStore.getState().updateDeviceState;
     const vacLabels: Record<string, string> = { cleaning: 'Städar', docked: 'Dockad', returning: 'Återvänder', paused: 'Pausad', idle: 'Väntar', error: 'Fel' };
-    return (
-      <div className="space-y-1.5">
-        <div className="flex items-center gap-2">
-          <span className="text-primary">🤖</span>
-          <span className="text-xs text-foreground truncate flex-1">{wc?.customLabel || marker.name || 'Dammsugare'}</span>
-          <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-            <Battery size={10} />
-            <span>{vd.battery}%</span>
-          </div>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="text-[10px] text-muted-foreground">{vacLabels[vd.status] ?? vd.status}</span>
-          {vd.currentRoom && <span className="text-[9px] text-primary/70">· {vd.currentRoom}</span>}
-        </div>
-        <div className="flex items-center gap-0.5 flex-wrap">
-          <Button size="sm" variant={vd.status === 'cleaning' ? 'default' : 'ghost'} className="h-6 px-1.5 text-[9px] gap-0.5"
-            onClick={(e) => { e.stopPropagation(); updateDeviceState(marker.id, { on: true, status: 'cleaning' }); }}>
-            <Play size={10} /> Städa
-          </Button>
-          <Button size="sm" variant="ghost" className="h-6 px-1.5 text-[9px] gap-0.5"
-            onClick={(e) => { e.stopPropagation(); updateDeviceState(marker.id, { status: 'paused' }); }}>
-            <Pause size={10} />
-          </Button>
-          <Button size="sm" variant="ghost" className="h-6 px-1.5 text-[9px] gap-0.5"
-            onClick={(e) => { e.stopPropagation(); updateDeviceState(marker.id, { on: false, status: 'docked' }); }}>
-            <Square size={10} />
-          </Button>
-          <Button size="sm" variant="ghost" className="h-6 px-1.5 text-[9px] gap-0.5"
-            onClick={(e) => { e.stopPropagation(); updateDeviceState(marker.id, { status: 'returning' }); }}>
-            <HomeIcon size={10} />
-          </Button>
-        </div>
-      </div>
-    );
+    return <CompactVacuumControl marker={marker} data={vd} update={updateDeviceState} labels={vacLabels} label={wc?.customLabel} />;
   }
 
   // Build status text per type
@@ -845,6 +813,82 @@ function SpeakerControl({ id, data, update }: { id: string; data: SpeakerState; 
         <Slider value={[data.volume]} max={1} step={0.01} onValueChange={([v]) => update(id, { volume: v })} className="flex-1" disabled={!data.on} />
         <span className="text-[10px] text-muted-foreground w-8 text-right">{Math.round(data.volume * 100)}%</span>
       </div>
+    </div>
+  );
+}
+
+function CompactVacuumControl({ marker, data: vd, update, labels: vacLabels, label }: {
+  marker: DeviceMarker; data: VacuumState; update: (id: string, p: Record<string, unknown>) => void;
+  labels: Record<string, string>; label?: string;
+}) {
+  const [showRooms, setShowRooms] = useState(false);
+  const floors = useAppStore((s) => s.layout.floors);
+  const floor = floors.find((f) => f.id === marker.floorId);
+  const rooms = floor?.rooms ?? [];
+  const zones = floor?.vacuumMapping?.zones ?? [];
+
+  const getZoneName = (roomId: string) => {
+    const room = rooms.find((r) => r.id === roomId || r.name === roomId);
+    return room?.name ?? roomId;
+  };
+
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center gap-2">
+        <span className="text-primary">🤖</span>
+        <span className="text-xs text-foreground truncate flex-1">{label || marker.name || 'Dammsugare'}</span>
+        <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+          <Battery size={10} />
+          <span>{vd.battery}%</span>
+        </div>
+      </div>
+      <div className="flex items-center gap-1.5">
+        <span className="text-[10px] text-muted-foreground">{vacLabels[vd.status] ?? vd.status}</span>
+        {vd.currentRoom && <span className="text-[9px] text-primary/70">· {vd.currentRoom}</span>}
+      </div>
+      <div className="flex items-center gap-0.5 flex-wrap">
+        <Button size="sm" variant={vd.status === 'cleaning' ? 'default' : 'ghost'} className="h-6 px-1.5 text-[9px] gap-0.5"
+          onClick={(e) => { e.stopPropagation(); update(marker.id, { on: true, status: 'cleaning' }); }}>
+          <Play size={10} /> Städa
+        </Button>
+        <Button size="sm" variant="ghost" className="h-6 px-1.5 text-[9px] gap-0.5"
+          onClick={(e) => { e.stopPropagation(); update(marker.id, { status: 'paused' }); }}>
+          <Pause size={10} />
+        </Button>
+        <Button size="sm" variant="ghost" className="h-6 px-1.5 text-[9px] gap-0.5"
+          onClick={(e) => { e.stopPropagation(); update(marker.id, { on: false, status: 'docked' }); }}>
+          <Square size={10} />
+        </Button>
+        <Button size="sm" variant="ghost" className="h-6 px-1.5 text-[9px] gap-0.5"
+          onClick={(e) => { e.stopPropagation(); update(marker.id, { status: 'returning' }); }}>
+          <HomeIcon size={10} />
+        </Button>
+        {zones.length > 0 && (
+          <Button size="sm" variant={showRooms ? 'default' : 'ghost'} className="h-6 px-1.5 text-[9px] gap-0.5"
+            onClick={(e) => { e.stopPropagation(); setShowRooms(!showRooms); }}>
+            <MapPin size={10} />
+          </Button>
+        )}
+      </div>
+      {showRooms && zones.length > 0 && (
+        <div className="flex flex-wrap gap-1 pt-1">
+          {zones.map((zone) => {
+            const name = getZoneName(zone.roomId);
+            const isActive = vd.status === 'cleaning' && vd.currentRoom?.toLowerCase() === name.toLowerCase();
+            return (
+              <Button key={zone.roomId} size="sm"
+                variant={isActive ? 'default' : 'outline'}
+                className="h-5 px-2 text-[8px]"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  update(marker.id, { on: true, status: 'cleaning', currentRoom: name, targetRoom: name });
+                }}>
+                {name}
+              </Button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

@@ -463,6 +463,7 @@ function VacuumMarker3D({ position, id, onSelect, onDragStart, selected }: Marke
   const status = vacData?.status ?? 'docked';
   const battery = vacData?.battery ?? 100;
   const currentRoom = vacData?.currentRoom;
+  const showDust = vacData?.showDustEffect !== false;
   const marker = useAppStore((s) => s.devices.markers.find((m) => m.id === id));
   const floorId = marker?.floorId;
   const floor = useAppStore((s) => s.layout.floors.find((f) => f.id === floorId));
@@ -475,6 +476,10 @@ function VacuumMarker3D({ position, id, onSelect, onDragStart, selected }: Marke
   const currentTarget = useRef<[number, number] | null>(null);
   const smoothRotation = useRef(0);
   const prevRoom = useRef<string | undefined>(undefined);
+
+  // Dust particles state
+  const dustParticles = useRef<Array<{ x: number; y: number; z: number; life: number; vx: number; vy: number; vz: number }>>([]); 
+  const dustMeshRef = useRef<THREE.InstancedMesh>(null);
 
   const statusColor = useMemo(() => {
     switch (status) {
@@ -577,7 +582,7 @@ function VacuumMarker3D({ position, id, onSelect, onDragStart, selected }: Marke
 
   useFrame((_, delta) => {
     if (!meshRef.current) return;
-    const speed = 0.04; // realistic vacuum speed m/s
+    const speed = 0.07; // realistic vacuum speed m/s
 
     // If Valetudo XY is available, use it directly
     if (vacData?.position) {
@@ -672,6 +677,51 @@ function VacuumMarker3D({ position, id, onSelect, onDragStart, selected }: Marke
     }
     // paused: stay in place
 
+    // Dust particle update
+    if (showDust && status === 'cleaning' && meshRef.current) {
+      // Spawn new particles behind the vacuum
+      const spawnRate = 3; // particles per frame
+      for (let i = 0; i < spawnRate; i++) {
+        if (dustParticles.current.length < 30) {
+          const angle = smoothRotation.current + Math.PI + (Math.random() - 0.5) * 1.5;
+          dustParticles.current.push({
+            x: meshRef.current.position.x + Math.sin(angle) * 0.15,
+            y: 0.02 + Math.random() * 0.06,
+            z: meshRef.current.position.z + Math.cos(angle) * 0.15,
+            life: 1.0,
+            vx: Math.sin(angle) * 0.02 + (Math.random() - 0.5) * 0.01,
+            vy: 0.015 + Math.random() * 0.01,
+            vz: Math.cos(angle) * 0.02 + (Math.random() - 0.5) * 0.01,
+          });
+        }
+      }
+    }
+    // Update existing particles
+    const dummy = new THREE.Object3D();
+    dustParticles.current = dustParticles.current.filter((p) => {
+      p.x += p.vx * delta;
+      p.y += p.vy * delta;
+      p.z += p.vz * delta;
+      p.life -= delta * 1.5;
+      return p.life > 0;
+    });
+    if (dustMeshRef.current) {
+      for (let i = 0; i < 30; i++) {
+        const p = dustParticles.current[i];
+        if (p) {
+          dummy.position.set(p.x, p.y, p.z);
+          const s = p.life * 0.03;
+          dummy.scale.set(s, s, s);
+        } else {
+          dummy.position.set(0, -10, 0);
+          dummy.scale.set(0, 0, 0);
+        }
+        dummy.updateMatrix();
+        dustMeshRef.current.setMatrixAt(i, dummy.matrix);
+      }
+      dustMeshRef.current.instanceMatrix.needsUpdate = true;
+    }
+
     // LED pulsing
     if (ledRef.current) {
       const mat = ledRef.current.material as THREE.MeshStandardMaterial;
@@ -718,6 +768,12 @@ function VacuumMarker3D({ position, id, onSelect, onDragStart, selected }: Marke
           <meshBasicMaterial color="#fff" transparent opacity={0.6} side={THREE.DoubleSide} />
         </mesh>
       )}
+
+      {/* Dust particles — rendered in world space */}
+      <instancedMesh ref={dustMeshRef} args={[undefined, undefined, 30]} frustumCulled={false}>
+        <sphereGeometry args={[1, 6, 6]} />
+        <meshBasicMaterial color="#c4a882" transparent opacity={0.35} />
+      </instancedMesh>
     </group>
   );
 }

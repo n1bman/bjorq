@@ -127,6 +127,31 @@ function connect(url: string, token: string) {
                 }
                 console.log('[HA] Vacuum segment map:', segmentMap);
                 s.setVacuumSegmentMap(segmentMap);
+                
+                // Auto-fill segmentId on vacuum zones that match by name
+                const floors = useAppStore.getState().layout.floors;
+                for (const floor of floors) {
+                  const zones = floor.vacuumMapping?.zones;
+                  if (!zones) continue;
+                  const rooms = floor.rooms ?? [];
+                  for (const zone of zones) {
+                    if (zone.segmentId) continue; // already has one
+                    const room = rooms.find((r) => r.id === zone.roomId);
+                    const displayName = room?.name ?? zone.roomId;
+                    // Try exact match then case-insensitive
+                    let matchedSegId = segmentMap[displayName];
+                    if (matchedSegId === undefined) {
+                      const key = Object.keys(segmentMap).find(
+                        (k) => k.toLowerCase() === displayName.toLowerCase()
+                      );
+                      if (key) matchedSegId = segmentMap[key];
+                    }
+                    if (matchedSegId !== undefined) {
+                      console.log('[HA] Auto-filling segmentId', matchedSegId, 'for zone', displayName);
+                      useAppStore.getState().updateVacuumZoneSegmentId(floor.id, zone.roomId, matchedSegId);
+                    }
+                  }
+                }
               }
             } catch (err) {
               console.warn('[HA] Failed to parse get_maps response:', err);

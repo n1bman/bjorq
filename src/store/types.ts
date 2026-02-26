@@ -294,6 +294,7 @@ export interface VacuumState {
   currentRoom?: string;     // Room name from HA sensor
   targetRoom?: string;      // Room to clean (for room-specific cleaning)
   cleaningLog?: CleaningLogEntry[];
+  showDustEffect?: boolean;  // Show dust particles in 3D (default true)
 }
 
 export interface LockState {
