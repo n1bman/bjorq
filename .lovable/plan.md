@@ -1,65 +1,33 @@
 
 
-# Fix Vacuum Segment Sync, Stop Behavior, Speed, and Error Display
+# Fix Room Switching, 3D Interrupt, Segment ID Auto-Apply
 
-## 1. Segment ID Display and Sync Fix
+## Problem 1: Room buttons stop working mid-cleaning
+In `useHABridge.ts` line 126, switching rooms sends `vacuum.stop` first, which triggers HA to echo back a status change that overwrites the app state and cancels the pending room change. Remove the stop-then-delay — send `app_segment_clean` directly (Roborock handles interruption internally).
 
-**Problem**: The segment map is built correctly from `roborock.get_maps`, but the zone `roomId` often doesn't match the display name in the segment map. The auto-fill logic works but matching fails for rooms where the zone's `roomId` is a generated ID.
+## Problem 2: Segment IDs not auto-applied from `roborock.get_maps`
+The name-matching approach is unreliable. The `roborock.get_maps` response already contains segment IDs paired with room names. Instead of fuzzy-matching names, iterate the segment map entries and for each zone, write the `segmentId` directly onto the zone config using a reliable lookup. Also: in `useHABridge.ts`, the `data.targetRoom` is the display name (set via `startRoomCleaning`), so look up segment ID from the zone's stored `segmentId` field first, then fall back to the segment map.
 
-**File: `src/hooks/useHomeAssistant.ts`** (lines 131-156)
-- Add verbose logging of the raw `rooms` object to debug the format: `console.log('[HA] Raw rooms object:', JSON.stringify(rooms))`
-- Also try matching by iterating the segment map keys against partial/substring matches
-- Log each zone's `roomId` vs `displayName` to trace the mismatch
+**Key insight**: `startRoomCleaning` passes the room *display name* as `targetRoom`. The bridge then looks up `segmentMap[displayName]` which should work if the map has the exact name. But the zone lookup at line 142 searches by `z.roomId === data.targetRoom` — this fails because `targetRoom` is the display name, not the zone's `roomId`. Fix: also match by display name.
 
-**File: `src/components/build/devices/VacuumMappingTools.tsx`**
-- Show the auto-discovered `segmentId` next to each zone in the mapping UI so the user can see which zones got IDs and which didn't
-- Display the full `vacuumSegmentMap` as a reference list so the user can verify HA room names
+## Problem 3: 3D model must finish transition before responding to stop/dock
+`isTransitioning.current` blocks all other movement. When status changes to `returning`, `idle`, `paused`, or `docked`, clear the transition immediately.
 
-## 2. Stop Button — Stay in Place, Don't Dock
+## Changes
 
-**Problem**: Stop button sets `status: 'docked'` which triggers `return_to_base` in the bridge AND makes the 3D model navigate to the dock station.
+### `src/hooks/useHABridge.ts`
+- **Lines 124-175**: Remove `vacuum.stop` + `setTimeout` wrapper. Send `app_segment_clean` directly.
+- **Line 142**: Fix zone lookup — also match zone by display name (compare `getZoneName(z.roomId)` against `data.targetRoom`), not just `z.roomId === data.targetRoom`.
 
-**File: `src/components/home/cards/RobotPanel.tsx`** (line 479)
-- Change stop action from `{ status: 'docked' }` to `{ status: 'idle' }`
+### `src/components/devices/DeviceMarkers3D.tsx`
+- **After line 525**: Add a `useEffect` watching `status` — when it becomes `returning`, `idle`, `paused`, or `docked`, set `isTransitioning.current = false` and `transitionTarget.current = null`.
 
-**File: `src/components/home/cards/DeviceControlCard.tsx`**
-- Same fix for any stop button in the compact widget
+### `src/hooks/useHomeAssistant.ts`
+- **Lines 146-185**: After building `segmentMap`, iterate all zones and write `segmentId` using both exact and normalized name matching. Remove the skip-if-exists guard. Log successes and failures clearly.
 
-**File: `src/hooks/useHABridge.ts`** (line 180-181)
-- Ensure `idle` status maps to `vacuum.stop` (already does at line 181, just verify)
-
-**File: `src/components/devices/DeviceMarkers3D.tsx`** (lines 662-677)
-- Add handling for `status === 'idle'`: robot stays at current position (no movement), same as `paused`
-- Currently only `returning`/`docked` trigger dock navigation; `idle` falls through to no-op which is correct, but also need to stop any ongoing lawnmower pattern
-
-## 3. 3D Speed Slider Not Affecting Animation
-
-**Problem**: `vacuumSpeed` is stored in device state. Changing it triggers `useHABridge` which sees `fanSpeed` in the data and sends `set_fan_speed` to HA. The `vacuumSpeed` value itself does reach the 3D component (line 585), but the issue is that the bridge also fires HA commands whenever the device state changes.
-
-**File: `src/hooks/useHABridge.ts`** (lines 107-118)
-- Add a guard: skip the `fanSpeed` service call if only `vacuumSpeed` or `showDustEffect` changed (these are 3D-only fields). Track previous state and compare — only send fan speed command when `fanSpeed` actually changed, not when unrelated fields change.
-
-## 4. Error State Display
-
-**Problem**: When the vacuum has an error (e.g., stuck), `errorMessage` from HA is parsed but not prominently shown in the UI.
-
-**File: `src/components/home/cards/RobotPanel.tsx`**
-- Add a prominent error banner at top of VacuumCard when `status === 'error'` or `errorMessage` is set. Red background, show the error text.
-
-**File: `src/components/home/cards/DeviceControlCard.tsx`**
-- Show error indicator in compact vacuum widget (red dot or text)
-
-**File: `src/components/devices/DeviceMarkers3D.tsx`**
-- When `status === 'error'`, flash the vacuum model red or show an exclamation mark sprite above it
-
-## Summary of files to edit
-
-| File | Changes |
-|------|---------|
-| `src/hooks/useHomeAssistant.ts` | Add verbose segment logging |
-| `src/components/build/devices/VacuumMappingTools.tsx` | Show segmentId per zone |
-| `src/components/home/cards/RobotPanel.tsx` | Fix stop→idle, error banner, keep speed slider |
-| `src/components/home/cards/DeviceControlCard.tsx` | Fix stop→idle, error indicator |
-| `src/hooks/useHABridge.ts` | Guard against 3D-only state changes triggering HA calls |
-| `src/components/devices/DeviceMarkers3D.tsx` | Handle idle status, error visual |
+| File | Change |
+|------|--------|
+| `src/hooks/useHABridge.ts` | Remove stop-before-segment; fix zone lookup by display name |
+| `src/components/devices/DeviceMarkers3D.tsx` | Clear transition on status change |
+| `src/hooks/useHomeAssistant.ts` | Ensure segment IDs are written to zones reliably |
 
