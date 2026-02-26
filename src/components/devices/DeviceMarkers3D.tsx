@@ -524,6 +524,14 @@ function VacuumMarker3D({ position, id, onSelect, onDragStart, selected }: Marke
     }
   }, [currentRoom, activeZone]);
 
+  // Clear transition immediately when status changes to non-cleaning states
+  useEffect(() => {
+    if (['returning', 'idle', 'paused', 'docked'].includes(status)) {
+      isTransitioning.current = false;
+      transitionTarget.current = null;
+    }
+  }, [status]);
+
   // Lawnmower pattern state
   const stripeLines = useRef<[number, number][][]>([]);
   const stripeIndex = useRef(0);

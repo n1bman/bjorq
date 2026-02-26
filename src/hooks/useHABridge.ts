@@ -122,56 +122,53 @@ function sendHACommand(entityId: string, state: DeviceState) {
       }
       // Handle room-specific cleaning via send_command
       if (data.targetRoom && data.status === 'cleaning') {
-        // First stop current task so Roborock accepts new segment clean
-        callService('vacuum', 'stop', { entity_id: entityId });
-        // Small delay then send segment clean
-        setTimeout(() => {
-          const callServiceNow = haServiceCaller.current;
-          if (!callServiceNow) return;
+        // 1. Try auto-discovered segment map by display name
+        const segmentMap = useAppStore.getState().homeAssistant.vacuumSegmentMap;
+        let segId: number | undefined = segmentMap[data.targetRoom];
 
-          // 1. Try auto-discovered segment map
-          const segmentMap = useAppStore.getState().homeAssistant.vacuumSegmentMap;
-          let segId: number | undefined = segmentMap[data.targetRoom];
-
-          // 2. Try resolving display name from floors/rooms
-          if (segId === undefined) {
-            const storeState = useAppStore.getState();
-            const vacMarker = storeState.devices.markers.find((m) => m.ha?.entityId === entityId);
-            const vacFloor = storeState.layout.floors.find((f) => f.id === vacMarker?.floorId);
-            const rooms = vacFloor?.rooms ?? [];
-            const zone = vacFloor?.vacuumMapping?.zones?.find((z) => z.roomId === data.targetRoom);
-            
-            // Try zone's segmentId first
-            if (zone?.segmentId) {
-              segId = zone.segmentId;
-            } else {
-              // Resolve display name and look up in segment map
-              const room = rooms.find((r) => r.id === data.targetRoom || r.name === data.targetRoom);
-              const displayName = room?.name ?? data.targetRoom;
-              if (displayName !== data.targetRoom) {
-                segId = segmentMap[displayName];
-              }
-              // Also try case-insensitive match
-              if (segId === undefined) {
-                const key = Object.keys(segmentMap).find(
-                  (k) => k.toLowerCase() === (displayName ?? '').toLowerCase()
-                );
-                if (key) segId = segmentMap[key];
-              }
-            }
-          }
-
-          if (segId !== undefined) {
-            console.log('[HABridge] Sending app_segment_clean with segmentId:', segId, 'for room:', data.targetRoom);
-            callServiceNow('vacuum', 'send_command', {
-              entity_id: entityId,
-              command: 'app_segment_clean',
-              params: [segId],
-            });
+        // 2. Try resolving from zone config and floor rooms
+        if (segId === undefined) {
+          const storeState = useAppStore.getState();
+          const vacMarker = storeState.devices.markers.find((m) => m.ha?.entityId === entityId);
+          const vacFloor = storeState.layout.floors.find((f) => f.id === vacMarker?.floorId);
+          const rooms = vacFloor?.rooms ?? [];
+          const zones = vacFloor?.vacuumMapping?.zones ?? [];
+          
+          // Find zone by roomId OR by display name match
+          const zone = zones.find((z) => {
+            if (z.roomId === data.targetRoom) return true;
+            const room = rooms.find((r) => r.id === z.roomId);
+            return room?.name?.toLowerCase() === data.targetRoom.toLowerCase();
+          });
+          
+          // Try zone's stored segmentId first
+          if (zone?.segmentId) {
+            segId = zone.segmentId;
           } else {
-            console.warn('[HABridge] No segment ID found for room:', data.targetRoom);
+            // Resolve display name and look up in segment map
+            const room = rooms.find((r) => r.id === data.targetRoom || r.name === data.targetRoom);
+            const displayName = room?.name ?? data.targetRoom;
+            // Case-insensitive + normalized match
+            const normalized = displayName.toLowerCase().replace(/[-_\s]/g, '');
+            const key = Object.keys(segmentMap).find((k) => {
+              const nk = k.toLowerCase().replace(/[-_\s]/g, '');
+              return nk === normalized || nk.includes(normalized) || normalized.includes(nk);
+            });
+            if (key) segId = segmentMap[key];
           }
-        }, 500);
+        }
+
+        if (segId !== undefined) {
+          console.log('[HABridge] Sending app_segment_clean with segmentId:', segId, 'for room:', data.targetRoom);
+          // Send directly — Roborock handles interruption internally
+          callService('vacuum', 'send_command', {
+            entity_id: entityId,
+            command: 'app_segment_clean',
+            params: [segId],
+          });
+        } else {
+          console.warn('[HABridge] No segment ID found for room:', data.targetRoom, '| segmentMap:', segmentMap);
+        }
         break;
       }
       if (data.status === 'cleaning') {
