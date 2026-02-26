@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { Button } from '@/components/ui/button';
 import { MapPin, Trash2, PenTool, Home as HomeIcon, Edit3 } from 'lucide-react';
@@ -11,18 +12,55 @@ export default function VacuumMappingTools() {
   const floors = useAppStore((s) => s.layout.floors);
   const markers = useAppStore((s) => s.devices.markers);
   const removeVacuumZone = useAppStore((s) => s.removeVacuumZone);
+  const renameVacuumZone = useAppStore((s) => s.renameVacuumZone);
+  const haEntities = useAppStore((s) => s.homeAssistant.entities);
   const rooms = floors.find((f) => f.id === activeFloorId)?.rooms ?? [];
 
   const floor = floors.find((f) => f.id === activeFloorId);
   const hasVacuum = markers.some((m) => m.kind === 'vacuum' && m.floorId === activeFloorId);
   const mapping = floor?.vacuumMapping;
 
+  const [editingZone, setEditingZone] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState('');
+
   if (!hasVacuum) return null;
 
-  // Resolve room name for a zone
+  // Get HA room names from vacuum sensors (e.g. Roborock current_room)
+  const haRoomNames = haEntities
+    .filter((e) => e.domain === 'sensor' && e.attributes?.['room_list'])
+    .flatMap((e) => (e.attributes['room_list'] as string[]) ?? []);
+
+  // Unique room name options: floor rooms + HA rooms
+  const roomOptions = Array.from(new Set([
+    ...rooms.map((r) => r.name),
+    ...haRoomNames,
+  ])).filter(Boolean);
+
   const getZoneRoomName = (roomId: string) => {
     const room = rooms.find((r) => r.id === roomId || r.name === roomId);
     return room?.name ?? roomId;
+  };
+
+  const isHASynced = (roomId: string) => {
+    const name = getZoneRoomName(roomId).toLowerCase();
+    // Check if any HA entity references this room
+    return haEntities.some((e) =>
+      e.attributes?.['current_room']?.toString().toLowerCase() === name ||
+      haRoomNames.some((r) => r.toLowerCase() === name)
+    );
+  };
+
+  const startEdit = (roomId: string) => {
+    setEditingZone(roomId);
+    setEditValue(getZoneRoomName(roomId));
+  };
+
+  const commitEdit = (oldRoomId: string) => {
+    const newName = editValue.trim();
+    if (newName && newName !== oldRoomId && activeFloorId) {
+      renameVacuumZone(activeFloorId, oldRoomId, newName);
+    }
+    setEditingZone(null);
   };
 
   return (
@@ -77,22 +115,75 @@ export default function VacuumMappingTools() {
           </p>
           {mapping.zones.map((zone) => {
             const roomName = getZoneRoomName(zone.roomId);
+            const synced = isHASynced(zone.roomId);
+            const isEditing = editingZone === zone.roomId;
+
             return (
               <div key={zone.roomId} className="flex items-center justify-between px-2 py-1.5 rounded text-[10px] text-muted-foreground hover:bg-secondary/20 group">
-                <div className="flex items-center gap-1.5 truncate">
+                <div className="flex items-center gap-1.5 truncate flex-1 min-w-0">
                   <span className="text-primary/60">🤖</span>
-                  <span className="truncate font-medium text-foreground/80">{roomName}</span>
-                  <span className="text-muted-foreground/50">({zone.polygon.length} pkt)</span>
+                  {isEditing ? (
+                    <div className="flex-1 min-w-0 flex gap-1">
+                      <input
+                        autoFocus
+                        className="flex-1 min-w-0 bg-secondary/40 border border-border rounded px-1.5 py-0.5 text-[10px] text-foreground outline-none focus:ring-1 focus:ring-primary/50"
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        onBlur={() => commitEdit(zone.roomId)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') commitEdit(zone.roomId);
+                          if (e.key === 'Escape') setEditingZone(null);
+                        }}
+                        list={`room-options-${zone.roomId}`}
+                      />
+                      <datalist id={`room-options-${zone.roomId}`}>
+                        {roomOptions.map((name) => (
+                          <option key={name} value={name} />
+                        ))}
+                      </datalist>
+                    </div>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => startEdit(zone.roomId)}
+                        className="truncate font-medium text-foreground/80 hover:text-foreground cursor-text text-left"
+                        title="Klicka för att byta namn"
+                      >
+                        {roomName}
+                      </button>
+                      {synced ? (
+                        <span className="text-green-400 flex-shrink-0" role="img" aria-label="Synkad">✓</span>
+                      ) : (
+                        <span className="text-yellow-500/70 flex-shrink-0" role="img" aria-label="Ej synkad">⚠</span>
+                      )}
+                    </>
+                  )}
+                  <span className="text-muted-foreground/50 flex-shrink-0">({zone.polygon.length} pkt)</span>
                 </div>
-                <button
-                  onClick={() => activeFloorId && removeVacuumZone(activeFloorId, zone.roomId)}
-                  className="text-destructive/60 hover:text-destructive p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
-                >
-                  <Trash2 size={12} />
-                </button>
+                <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {!isEditing && (
+                    <button
+                      onClick={() => startEdit(zone.roomId)}
+                      className="text-muted-foreground hover:text-foreground p-0.5"
+                    >
+                      <Edit3 size={11} />
+                    </button>
+                  )}
+                  <button
+                    onClick={() => activeFloorId && removeVacuumZone(activeFloorId, zone.roomId)}
+                    className="text-destructive/60 hover:text-destructive p-0.5"
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                </div>
               </div>
             );
           })}
+
+          {/* HA sync hint */}
+          <p className="text-[8px] text-muted-foreground/50 px-1 mt-1 hidden lg:block">
+            💡 Namnge zoner enligt HA-rum (t.ex. "Kök") för automatisk synk.
+          </p>
         </div>
       )}
 

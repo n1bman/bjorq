@@ -954,6 +954,26 @@ export const useAppStore = create<AppState>()(
           },
         })),
 
+      renameVacuumZone: (floorId, oldRoomId, newRoomId) =>
+        set((s) => ({
+          layout: {
+            ...s.layout,
+            floors: s.layout.floors.map((f) =>
+              f.id === floorId
+                ? {
+                    ...f,
+                    vacuumMapping: {
+                      ...(f.vacuumMapping ?? { dockPosition: null, zones: [] }),
+                      zones: (f.vacuumMapping?.zones ?? []).map((z) =>
+                        z.roomId === oldRoomId ? { ...z, roomId: newRoomId } : z
+                      ),
+                    },
+                  }
+                : f
+            ),
+          },
+        })),
+
       // Home Assistant actions
       setHAEntities: (entities) => set((s) => ({
         homeAssistant: { ...s.homeAssistant, entities },
