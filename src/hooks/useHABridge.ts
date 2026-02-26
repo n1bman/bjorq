@@ -130,13 +130,32 @@ function sendHACommand(entityId: string, state: DeviceState) {
           const segmentMap = useAppStore.getState().homeAssistant.vacuumSegmentMap;
           let segId: number | undefined = segmentMap[data.targetRoom];
 
-          // 2. Fallback: manual segmentId from zone config
+          // 2. Try resolving display name from floors/rooms
           if (segId === undefined) {
             const storeState = useAppStore.getState();
             const vacMarker = storeState.devices.markers.find((m) => m.ha?.entityId === entityId);
             const vacFloor = storeState.layout.floors.find((f) => f.id === vacMarker?.floorId);
+            const rooms = vacFloor?.rooms ?? [];
             const zone = vacFloor?.vacuumMapping?.zones?.find((z) => z.roomId === data.targetRoom);
-            if (zone?.segmentId) segId = zone.segmentId;
+            
+            // Try zone's segmentId first
+            if (zone?.segmentId) {
+              segId = zone.segmentId;
+            } else {
+              // Resolve display name and look up in segment map
+              const room = rooms.find((r) => r.id === data.targetRoom || r.name === data.targetRoom);
+              const displayName = room?.name ?? data.targetRoom;
+              if (displayName !== data.targetRoom) {
+                segId = segmentMap[displayName];
+              }
+              // Also try case-insensitive match
+              if (segId === undefined) {
+                const key = Object.keys(segmentMap).find(
+                  (k) => k.toLowerCase() === (displayName ?? '').toLowerCase()
+                );
+                if (key) segId = segmentMap[key];
+              }
+            }
           }
 
           if (segId !== undefined) {

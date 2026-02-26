@@ -3,6 +3,7 @@ import type { VacuumState, DeviceMarker, CleaningLogEntry } from '@/store/types'
 import { pointInPolygon } from '@/lib/vacuumGeometry';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
+import { Switch } from '@/components/ui/switch';
 import { Progress } from '@/components/ui/progress';
 import {
   Battery, Play, Square, Home as HomeIcon, MapPin, AlertTriangle,
@@ -513,6 +514,18 @@ function VacuumCard({ marker, data, update }: { marker: DeviceMarker; data: Vacu
           )}
         </div>
       )}
+
+      {/* Dust effect toggle */}
+      <div className="flex items-center justify-between bg-secondary/30 rounded-lg px-3 py-2">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Wind size={14} />
+          <span>Visa dammeffekt i 3D</span>
+        </div>
+        <Switch
+          checked={data.showDustEffect !== false}
+          onCheckedChange={(checked) => update(id, { showDustEffect: checked })}
+        />
+      </div>
 
       {/* Cleaning Log */}
       <CleaningLog data={data} />
