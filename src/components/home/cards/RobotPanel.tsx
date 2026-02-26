@@ -7,8 +7,9 @@ import { Switch } from '@/components/ui/switch';
 import { Progress } from '@/components/ui/progress';
 import {
   Battery, Play, Square, Home as HomeIcon, MapPin, AlertTriangle,
-  Clock, Ruler, Wind, Pause, History, Info,
+  Clock, Ruler, Wind, Pause, History, Info, AlertCircle,
 } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { useEffect, useRef } from 'react';
 
@@ -88,12 +89,29 @@ function RoomZoneCards({ marker, data, update }: { marker: DeviceMarker; data: V
 
   if (zones.length === 0) return null;
 
+  const vacuumSegmentMap = useAppStore((s) => s.homeAssistant.vacuumSegmentMap);
+
   const getZoneName = (roomId: string) => {
     const room = rooms.find((r) => r.id === roomId || r.name === roomId);
     return room?.name ?? roomId;
   };
 
-  const startRoomCleaning = (roomName: string) => {
+  const getZoneSegmentId = (zone: typeof zones[number]) => {
+    if (zone.segmentId) return zone.segmentId;
+    const name = getZoneName(zone.roomId);
+    return vacuumSegmentMap[name];
+  };
+
+  const startRoomCleaning = (roomName: string, zone: typeof zones[number]) => {
+    const segId = getZoneSegmentId(zone);
+    if (!segId) {
+      toast({
+        title: 'Segment-ID saknas',
+        description: `Rummet "${roomName}" har inget segment-ID. Gå till Bygge → Robot Mapping och välj segment-ID.`,
+        variant: 'destructive',
+      });
+      return;
+    }
     // Add cleaning log entry
     const existing = (useAppStore.getState().devices.deviceStates[marker.id] as any)?.data?.cleaningLog ?? [];
     const logEntry: CleaningLogEntry = { room: roomName, startedAt: new Date().toISOString(), fanPreset: (useAppStore.getState().devices.deviceStates[marker.id] as any)?.data?.fanSpeedPreset };
@@ -107,10 +125,9 @@ function RoomZoneCards({ marker, data, update }: { marker: DeviceMarker; data: V
   };
 
   const startAllRooms = () => {
-    // Queue first room, rest will be handled sequentially
     if (zones.length > 0) {
       const firstName = getZoneName(zones[0].roomId);
-      startRoomCleaning(firstName);
+      startRoomCleaning(firstName, zones[0]);
     }
   };
 
@@ -132,11 +149,12 @@ function RoomZoneCards({ marker, data, update }: { marker: DeviceMarker; data: V
           const name = getZoneName(zone.roomId);
           const zc = ZONE_COLORS[i % ZONE_COLORS.length];
           const isActive = data.status === 'cleaning' && data.currentRoom?.toLowerCase() === name.toLowerCase();
+          const hasSegId = !!getZoneSegmentId(zone);
 
           return (
             <button
               key={zone.roomId}
-              onClick={() => startRoomCleaning(name)}
+              onClick={() => startRoomCleaning(name, zone)}
               className={cn(
                 'relative rounded-xl border p-3 text-left transition-all',
                 isActive
@@ -147,6 +165,9 @@ function RoomZoneCards({ marker, data, update }: { marker: DeviceMarker; data: V
               <div className="flex items-center gap-2 mb-1">
                 <div className={cn('w-2 h-2 rounded-full', zc.dot)} />
                 <span className="text-xs font-medium text-foreground truncate">{name}</span>
+                {!hasSegId && (
+                  <AlertCircle size={12} className="text-yellow-500 flex-shrink-0" />
+                )}
               </div>
               {isActive ? (
                 <div className="flex items-center gap-1">
@@ -155,7 +176,7 @@ function RoomZoneCards({ marker, data, update }: { marker: DeviceMarker; data: V
               ) : (
                 <div className="flex items-center gap-1 text-[9px] text-muted-foreground">
                   <Play size={8} />
-                  <span>Städa rum</span>
+                  <span>{hasSegId ? 'Städa rum' : 'Saknar segment-ID'}</span>
                 </div>
               )}
             </button>
