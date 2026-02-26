@@ -202,6 +202,7 @@ export const useAppStore = create<AppState>()(
         token: '',
         entities: [],
         liveStates: {},
+        vacuumSegmentMap: {},
       },
 
       // Layout actions
@@ -1036,6 +1037,10 @@ export const useAppStore = create<AppState>()(
       setHAConnection: (wsUrl, token) => set((s) => ({
         homeAssistant: { ...s.homeAssistant, wsUrl, token },
       })),
+
+      setVacuumSegmentMap: (map) => set((s) => ({
+        homeAssistant: { ...s.homeAssistant, vacuumSegmentMap: map },
+      })),
     }),
     {
       name: 'hometwin-store',
@@ -1084,6 +1089,7 @@ export const useAppStore = create<AppState>()(
           status: 'disconnected' as const,
           entities: [],
           liveStates: {},
+          vacuumSegmentMap: {},
         },
       }),
     }
