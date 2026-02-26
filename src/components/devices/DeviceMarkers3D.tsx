@@ -1,4 +1,4 @@
-import { useRef, useCallback, useMemo, useEffect } from 'react';
+import { useRef, useCallback, useMemo, useEffect, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { useAppStore } from '@/store/useAppStore';
 import type { DeviceKind, DeviceMarker, VacuumZone } from '@/store/types';
@@ -623,15 +623,32 @@ function VacuumMarker3D({ position, id, onSelect, onDragStart, selected }: Marke
   );
 }
 
-// ─── Music Note Particles ───
+// ─── Music Note Particles (state-driven rendering) ───
+interface NoteParticle {
+  id: number;
+  x: number;
+  y: number;
+  z: number;
+  phase: number;
+  speed: number;
+  char: string;
+  opacity: number;
+}
+
+let noteIdCounter = 0;
+
 function MusicNoteParticles({ active, spread = 0.15 }: { active: boolean; spread?: number }) {
-  const notesRef = useRef<THREE.Group>(null);
-  const particles = useRef<{ x: number; y: number; z: number; phase: number; speed: number; char: string; opacity: number }[]>([]);
+  const [notes, setNotes] = useState<NoteParticle[]>([]);
+  const notesRef = useRef<NoteParticle[]>([]);
 
   useFrame((_, delta) => {
-    if (!notesRef.current) return;
-    if (active && particles.current.length < 6 && Math.random() < 0.08) {
-      particles.current.push({
+    let changed = false;
+    const current = notesRef.current;
+
+    // Spawn
+    if (active && current.length < 6 && Math.random() < 0.08) {
+      current.push({
+        id: noteIdCounter++,
         x: (Math.random() - 0.5) * spread * 2,
         y: 0.15,
         z: (Math.random() - 0.5) * spread * 2,
@@ -640,19 +657,57 @@ function MusicNoteParticles({ active, spread = 0.15 }: { active: boolean; spread
         char: Math.random() > 0.5 ? '♪' : '♫',
         opacity: 1,
       });
+      changed = true;
     }
-    particles.current = particles.current.filter((p) => {
+
+    // Update
+    for (const p of current) {
       p.y += p.speed * delta;
       p.x += Math.sin(p.phase + p.y * 4) * delta * 0.08;
       p.opacity -= delta * 0.6;
-      return p.opacity > 0;
-    });
-    // Update children
-    const children = notesRef.current.children;
-    for (let i = children.length - 1; i >= 0; i--) notesRef.current.remove(children[i]);
+    }
+
+    const before = current.length;
+    notesRef.current = current.filter((p) => p.opacity > 0);
+    if (notesRef.current.length !== before) changed = true;
+
+    if (changed || notesRef.current.length > 0) {
+      setNotes([...notesRef.current]);
+    }
   });
 
-  return <group ref={notesRef} />;
+  const noteTextures = useMemo(() => {
+    const map: Record<string, THREE.CanvasTexture> = {};
+    for (const char of ['♪', '♫']) {
+      const canvas = document.createElement('canvas');
+      canvas.width = 64;
+      canvas.height = 64;
+      const ctx = canvas.getContext('2d')!;
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '48px serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(char, 32, 32);
+      map[char] = new THREE.CanvasTexture(canvas);
+    }
+    return map;
+  }, []);
+
+  return (
+    <group>
+      {notes.map((n) => (
+        <sprite key={n.id} position={[n.x, n.y, n.z]} scale={[0.08, 0.08, 0.08]}>
+          <spriteMaterial
+            map={noteTextures[n.char]}
+            transparent
+            opacity={n.opacity}
+            depthWrite={false}
+            color="#4ade80"
+          />
+        </sprite>
+      ))}
+    </group>
+  );
 }
 
 // ─── Speaker Marker (Google Home style) ───
@@ -662,35 +717,12 @@ function SpeakerMarker3D({ position, id, onSelect, onDragStart, selected }: Mark
   const isPlaying = speakerData?.state === 'playing';
   const isSpeaking = speakerData?.isSpeaking;
   const ringRef = useRef<THREE.Mesh>(null);
-  const notesGroupRef = useRef<THREE.Group>(null);
-  const notesData = useRef<{ x: number; y: number; z: number; phase: number; speed: number; opacity: number; char: string }[]>([]);
 
-  useFrame((_, delta) => {
-    // Pulse base ring
+  useFrame(() => {
     if (ringRef.current) {
       const mat = ringRef.current.material as THREE.MeshStandardMaterial;
       const t = performance.now() / 1000;
       mat.emissiveIntensity = isPlaying ? 0.5 + Math.sin(t * 4) * 0.3 : (isSpeaking ? 0.8 : 0.2);
-    }
-    // Music notes
-    if (notesGroupRef.current) {
-      if (isPlaying && notesData.current.length < 6 && Math.random() < 0.06) {
-        notesData.current.push({
-          x: (Math.random() - 0.5) * 0.15,
-          y: 0.18,
-          z: (Math.random() - 0.5) * 0.15,
-          phase: Math.random() * Math.PI * 2,
-          speed: 0.12 + Math.random() * 0.08,
-          opacity: 1,
-          char: Math.random() > 0.5 ? '♪' : '♫',
-        });
-      }
-      notesData.current = notesData.current.filter((p) => {
-        p.y += p.speed * delta;
-        p.x += Math.sin(p.phase + p.y * 5) * delta * 0.06;
-        p.opacity -= delta * 0.5;
-        return p.opacity > 0;
-      });
     }
   });
 
@@ -702,23 +734,27 @@ function SpeakerMarker3D({ position, id, onSelect, onDragStart, selected }: Mark
 
   return (
     <group position={position} onClick={handleClick} onPointerDown={handlePointerDown}>
-      {/* Body — cylinder with rounded top */}
       <mesh position={[0, 0.06, 0]}>
         <cylinderGeometry args={[0.06, 0.08, 0.12, 32]} />
         <meshStandardMaterial color={bodyColor} roughness={0.4} metalness={0.05} />
       </mesh>
-      {/* Top dome */}
       <mesh position={[0, 0.12, 0]}>
         <sphereGeometry args={[0.06, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2]} />
         <meshStandardMaterial color={bodyColor} roughness={0.4} />
       </mesh>
-      {/* Base LED ring */}
       <mesh ref={ringRef} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.005, 0]}>
         <torusGeometry args={[0.075, 0.008, 8, 32]} />
         <meshStandardMaterial color={ringColor} emissive={ringColor} emissiveIntensity={0.3} transparent opacity={0.9} />
       </mesh>
-      {/* Floating music notes when playing */}
-      <group ref={notesGroupRef} />
+      {/* Music notes when playing */}
+      <MusicNoteParticles active={isPlaying ?? false} spread={0.12} />
+      {/* Speaking indicator - pulsing blue ring */}
+      {isSpeaking && (
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.15, 0]}>
+          <ringGeometry args={[0.04, 0.06, 32]} />
+          <meshBasicMaterial color="#60a5fa" transparent opacity={0.7} side={THREE.DoubleSide} />
+        </mesh>
+      )}
       {selected && (
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.003, 0]}>
           <ringGeometry args={[0.12, 0.16, 32]} />
@@ -749,16 +785,16 @@ function SoundbarMarker3D({ position, id, onSelect, onDragStart, selected }: Mar
 
   return (
     <group position={position} onClick={handleClick} onPointerDown={handlePointerDown}>
-      {/* Soundbar body — elongated box */}
       <mesh position={[0, 0.025, 0]}>
         <boxGeometry args={[0.5, 0.05, 0.08]} />
         <meshStandardMaterial color="#2a2a2a" roughness={0.3} metalness={0.2} />
       </mesh>
-      {/* LED strip on front */}
       <mesh ref={ledRef2} position={[0, 0.025, 0.041]}>
         <boxGeometry args={[0.4, 0.008, 0.001]} />
         <meshStandardMaterial color={isPlaying ? '#4ade80' : '#444'} emissive={isPlaying ? '#4ade80' : '#333'} emissiveIntensity={0.1} />
       </mesh>
+      {/* Music notes when playing */}
+      <MusicNoteParticles active={isPlaying ?? false} spread={0.3} />
       {selected && (
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.003, 0]}>
           <ringGeometry args={[0.3, 0.35, 32]} />
@@ -907,14 +943,15 @@ export default function DeviceMarkers3D({ buildMode }: DeviceMarkers3DProps) {
         const Component = markerComponents[marker.kind];
         if (!Component) return null;
         return (
-          <Component
-            key={marker.id}
-            position={marker.position}
-            id={marker.id}
-            onSelect={buildMode ? handleSelect : undefined}
-            onDragStart={buildMode ? handleDragStart : undefined}
-            selected={!!isSelected}
-          />
+          <group key={marker.id} rotation={marker.rotation ? (marker.rotation.map((r) => r) as [number, number, number]) : [0, 0, 0]}>
+            <Component
+              position={marker.position}
+              id={marker.id}
+              onSelect={buildMode ? handleSelect : undefined}
+              onDragStart={buildMode ? handleDragStart : undefined}
+              selected={!!isSelected}
+            />
+          </group>
         );
       })}
     </group>
