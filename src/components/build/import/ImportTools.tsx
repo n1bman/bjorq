@@ -1,6 +1,6 @@
 import { useAppStore } from '@/store/useAppStore';
 import { useRef } from 'react';
-import { Upload, Compass, Ruler, Layers, Move, RotateCw, MapPin } from 'lucide-react';
+import { Upload, Compass, Ruler, Layers, Move, RotateCw } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
 import { Input } from '@/components/ui/input';
 
@@ -9,8 +9,6 @@ export default function ImportTools() {
   const setHomeGeometrySource = useAppStore((s) => s.setHomeGeometrySource);
   const setImportedModel = useAppStore((s) => s.setImportedModel);
   const setNorthAngle = useAppStore((s) => s.setNorthAngle);
-  const location = useAppStore((s) => s.environment.location);
-  const setLocation = useAppStore((s) => s.setLocation);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -120,13 +118,27 @@ export default function ImportTools() {
             </h4>
             <div className="flex items-center gap-2">
               <Slider
-                min={0.01} max={10} step={0.01}
+                min={0.1} max={5} step={0.05}
                 value={[imported.scale[0]]}
                 onValueChange={([v]) => setImportedModel({ scale: [v, v, v] })}
                 className="flex-1"
               />
-              <span className="text-[10px] text-foreground w-10 text-right">{imported.scale[0].toFixed(2)}x</span>
+              <Input
+                type="number"
+                step="0.05"
+                min={0.05}
+                max={10}
+                value={imported.scale[0]}
+                onChange={(e) => {
+                  const v = parseFloat(e.target.value) || 0.1;
+                  setImportedModel({ scale: [v, v, v] });
+                }}
+                className="h-7 text-[10px] w-16"
+              />
             </div>
+            <p className="text-[9px] text-muted-foreground">
+              1 ruta = {(0.5 / imported.scale[0]).toFixed(2)}m vid nuvarande skala
+            </p>
           </div>
 
           {/* North Angle */}
@@ -145,35 +157,6 @@ export default function ImportTools() {
             </div>
           </div>
 
-          {/* Location (Google coordinates) */}
-          <div className="space-y-2">
-            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-              <MapPin size={12} /> Plats (koordinater)
-            </h4>
-            <div className="space-y-1.5">
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] text-muted-foreground w-6">Lat</span>
-                <Input
-                  type="number"
-                  step="0.0001"
-                  value={location.lat}
-                  onChange={(e) => setLocation(parseFloat(e.target.value) || 0, location.lon)}
-                  className="h-7 text-[10px] flex-1"
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] text-muted-foreground w-6">Lon</span>
-                <Input
-                  type="number"
-                  step="0.0001"
-                  value={location.lon}
-                  onChange={(e) => setLocation(location.lat, parseFloat(e.target.value) || 0)}
-                  className="h-7 text-[10px] flex-1"
-                />
-              </div>
-            </div>
-            <p className="text-[9px] text-muted-foreground">Ange latitud och longitud från t.ex. Google Maps för korrekt solposition.</p>
-          </div>
 
           {/* Back to procedural */}
           <button

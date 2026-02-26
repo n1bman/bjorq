@@ -142,6 +142,12 @@ export interface BuildView {
   floorFilter: string | 'all';
 }
 
+export interface ImportOverlaySync {
+  zoom: number;
+  offsetX: number;
+  offsetY: number;
+}
+
 export interface BuildState {
   tab: BuildTab;
   activeTool: BuildTool;
@@ -163,6 +169,7 @@ export interface BuildState {
     point2: [number, number] | null;
     realMeters: number | null;
   };
+  importOverlaySync: ImportOverlaySync;
   undoStack: LayoutState[];
   redoStack: LayoutState[];
 }
@@ -588,6 +595,7 @@ export interface AppState {
   setWallDrawing: (drawing: Partial<BuildState['wallDrawing']>) => void;
   setRoomDrawing: (drawing: Partial<BuildState['roomDrawing']>) => void;
   setCalibration: (cal: Partial<BuildState['calibration']>) => void;
+  setImportOverlaySync: (sync: Partial<ImportOverlaySync>) => void;
   pushUndo: () => void;
   undo: () => void;
   redo: () => void;

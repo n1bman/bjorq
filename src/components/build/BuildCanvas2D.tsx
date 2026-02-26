@@ -58,7 +58,7 @@ type DragNode = { wallId: string; endpoint: 'from' | 'to'; connectedWalls: { wal
 type DragWall = { wallId: string; startFrom: [number, number]; startTo: [number, number]; mouseStart: [number, number] } | null;
 type DragOpening = { wallId: string; openingId: string } | null;
 
-export default function BuildCanvas2D() {
+export default function BuildCanvas2D({ overlayMode = false }: { overlayMode?: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -105,6 +105,7 @@ export default function BuildCanvas2D() {
   const homeGeometry = useAppStore((s) => s.homeGeometry);
   const setVacuumDock = useAppStore((s) => s.setVacuumDock);
   const addVacuumZone = useAppStore((s) => s.addVacuumZone);
+  const setImportOverlaySync = useAppStore((s) => s.setImportOverlaySync);
 
   const setWallDrawing = useAppStore((s) => s.setWallDrawing);
   const addWall = useAppStore((s) => s.addWall);
@@ -272,8 +273,17 @@ export default function BuildCanvas2D() {
     const h = rect.height;
 
     // Clear
-    ctx.fillStyle = 'hsl(220, 20%, 10%)';
-    ctx.fillRect(0, 0, w, h);
+    if (overlayMode) {
+      ctx.clearRect(0, 0, w, h);
+    } else {
+      ctx.fillStyle = 'hsl(220, 20%, 10%)';
+      ctx.fillRect(0, 0, w, h);
+    }
+
+    // Sync overlay camera
+    if (overlayMode) {
+      setImportOverlaySync({ zoom, offsetX: offset[0], offsetY: offset[1] });
+    }
 
     // Draw grid
     if (grid.enabled) {
@@ -283,7 +293,7 @@ export default function BuildCanvas2D() {
         const startX = ((ox % gridPx) - gridPx) % gridPx;
         const startY = ((oy % gridPx) - gridPx) % gridPx;
 
-        ctx.strokeStyle = COLORS.grid;
+        ctx.strokeStyle = overlayMode ? 'rgba(42, 45, 53, 0.4)' : COLORS.grid;
         ctx.lineWidth = 0.5;
         ctx.beginPath();
         for (let x = startX; x < w; x += gridPx) { ctx.moveTo(x, 0); ctx.lineTo(x, h); }
@@ -294,7 +304,7 @@ export default function BuildCanvas2D() {
         if (majorPx > 20) {
           const majorStartX = ((ox % majorPx) - majorPx) % majorPx;
           const majorStartY = ((oy % majorPx) - majorPx) % majorPx;
-          ctx.strokeStyle = COLORS.gridMajor;
+          ctx.strokeStyle = overlayMode ? 'rgba(58, 61, 69, 0.4)' : COLORS.gridMajor;
           ctx.lineWidth = 1;
           ctx.beginPath();
           for (let x = majorStartX; x < w; x += majorPx) { ctx.moveTo(x, 0); ctx.lineTo(x, h); }
@@ -1252,7 +1262,7 @@ export default function BuildCanvas2D() {
 
   return (
     <div ref={containerRef} className="w-full h-full relative overflow-hidden"
-      style={{ touchAction: 'none' }}>
+      style={{ touchAction: 'none', zIndex: overlayMode ? 1 : undefined, position: 'relative' }}>
       <canvas
         ref={canvasRef}
         className="absolute inset-0"
