@@ -31,6 +31,8 @@ const kindInfo: Record<DeviceKind, { emoji: string; label: string; category: str
   valve: { emoji: '🔧', label: 'Ventil', category: 'Hem' },
   remote: { emoji: '📡', label: 'Fjärr', category: 'Media' },
   'lawn-mower': { emoji: '🌿', label: 'Gräsklippare', category: 'Hem' },
+  speaker: { emoji: '🔊', label: 'Högtalare', category: 'Media' },
+  soundbar: { emoji: '🎵', label: 'Soundbar', category: 'Media' },
 };
 
 function isDeviceOn(state?: DeviceState): boolean {

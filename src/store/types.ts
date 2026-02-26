@@ -116,6 +116,8 @@ export type BuildTool =
   | 'place-valve'
   | 'place-remote'
   | 'place-lawn-mower'
+  | 'place-speaker'
+  | 'place-soundbar'
   | 'place-vacuum-dock'
   | 'vacuum-zone';
 
@@ -190,7 +192,7 @@ export interface HomeGeometryState {
 }
 
 // ─── Devices Layer ───
-export type DeviceKind = 'light' | 'switch' | 'sensor' | 'climate' | 'vacuum' | 'camera' | 'fridge' | 'oven' | 'washer' | 'garage-door' | 'door-lock' | 'power-outlet' | 'media_screen' | 'fan' | 'cover' | 'scene' | 'alarm' | 'water-heater' | 'humidifier' | 'siren' | 'valve' | 'remote' | 'lawn-mower';
+export type DeviceKind = 'light' | 'switch' | 'sensor' | 'climate' | 'vacuum' | 'camera' | 'fridge' | 'oven' | 'washer' | 'garage-door' | 'door-lock' | 'power-outlet' | 'media_screen' | 'fan' | 'cover' | 'scene' | 'alarm' | 'water-heater' | 'humidifier' | 'siren' | 'valve' | 'remote' | 'lawn-mower' | 'speaker' | 'soundbar';
 export type DeviceSurface = 'floor' | 'wall' | 'ceiling' | 'free';
 
 export interface ScreenConfig {
@@ -349,6 +351,15 @@ export interface LawnMowerState {
   errorMessage?: string;
 }
 
+export interface SpeakerState {
+  on: boolean;
+  state: 'playing' | 'paused' | 'idle';
+  volume: number;
+  source?: string;
+  mediaTitle?: string;
+  isSpeaking?: boolean;
+}
+
 export type DeviceState =
   | { kind: 'light'; data: LightState }
   | { kind: 'climate'; data: ClimateState }
@@ -366,6 +377,8 @@ export type DeviceState =
   | { kind: 'siren'; data: SirenState }
   | { kind: 'valve'; data: ValveState }
   | { kind: 'lawn-mower'; data: LawnMowerState }
+  | { kind: 'speaker'; data: SpeakerState }
+  | { kind: 'soundbar'; data: SpeakerState }
   | { kind: 'generic'; data: GenericDeviceState };
 
 export interface DevicesState {

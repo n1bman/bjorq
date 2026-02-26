@@ -1,5 +1,5 @@
 import { useAppStore } from '@/store/useAppStore';
-import { Lightbulb, ToggleLeft, Thermometer, Wind, Bot, Camera, Refrigerator, CookingPot, WashingMachine, DoorOpen, Lock, Plug, Monitor, Fan, PanelTop, Clapperboard, ShieldAlert, Flame, Droplets, Bell, Grip, Wifi, Trees } from 'lucide-react';
+import { Lightbulb, ToggleLeft, Thermometer, Wind, Bot, Camera, Refrigerator, CookingPot, WashingMachine, DoorOpen, Lock, Plug, Monitor, Fan, PanelTop, Clapperboard, ShieldAlert, Flame, Droplets, Bell, Grip, Wifi, Trees, Speaker, Music } from 'lucide-react';
 import type { DeviceKind } from '@/store/types';
 
 const deviceIcons: Record<DeviceKind, typeof Lightbulb> = {
@@ -26,6 +26,8 @@ const deviceIcons: Record<DeviceKind, typeof Lightbulb> = {
   valve: Grip,
   remote: Wifi,
   'lawn-mower': Trees,
+  speaker: Speaker,
+  soundbar: Music,
 };
 
 interface RoomCardProps {

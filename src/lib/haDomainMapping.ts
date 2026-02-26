@@ -25,6 +25,8 @@ export const kindToDomains: Record<DeviceKind, string[] | null> = {
   valve: ['valve'],
   remote: ['remote'],
   'lawn-mower': ['lawn_mower'],
+  speaker: ['media_player'],
+  soundbar: ['media_player'],
 };
 
 /** Infer DeviceKind from an HA domain */

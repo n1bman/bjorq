@@ -53,6 +53,7 @@ const kindCategory: Record<DeviceKind, string> = {
   fan: 'Klimat', cover: 'Hem', scene: 'Automation',
   alarm: 'Säkerhet', 'water-heater': 'Klimat', humidifier: 'Klimat',
   siren: 'Säkerhet', valve: 'Hem', remote: 'Media', 'lawn-mower': 'Hem',
+  speaker: 'Media', soundbar: 'Media',
 };
 
 function HomeCategory() {
