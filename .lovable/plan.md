@@ -1,43 +1,30 @@
 
 
-# Fix Vacuum Segment Auto-Sync, Home Widget Rooms, Speed & Dust Effect
+# Fix Segment ID Auto-Sync, Add Speed Slider, Fix Dust Sync
 
 ## Issues
 
-1. **Speed**: Change from 0.04 to 0.07 m/s — one-line fix
-2. **Segment IDs not auto-applied**: The `vacuumSegmentMap` from `roborock.get_maps` stores `{ "Tvrummet": 16 }` but the lookup in `useHABridge.ts` line 131 uses `data.targetRoom` which is the zone's `roomId` (often a generated ID, not the display name). The zone's `roomId` might not match the key in `vacuumSegmentMap`. Need to also try looking up by display name (resolved via `getZoneName`). Additionally, the auto-discovered segment IDs should be written back into the zone config so they persist and work everywhere.
-3. **Home widget missing room buttons**: The compact vacuum view in `DeviceControlCard.tsx` (lines 144-181) only shows basic Start/Pause/Stop/Home — no room-specific cleaning buttons. Need to add a room picker popup icon.
-4. **Dust particle effect**: Add a particle cloud behind the vacuum in 3D when cleaning, with a toggle in RobotPanel settings.
+1. **Speed slider missing** — User wants to control 3D vacuum speed from RobotPanel
+2. **Dust effect not synced** — Particles spawn at vacuum position but the `instancedMesh` is inside the `<group ref={meshRef}>` which moves, so particle world positions are double-offset. Need to render dust particles outside the moving group or compensate for group transform
+3. **Segment ID auto-fill not working** — The auto-fill in `useHomeAssistant.ts` (line 138) skips zones that already have a `segmentId` set (`if (zone.segmentId) continue`), but even for zones without one, the `roborock.get_maps` response format may not be parsed correctly. The room name matching also seems to fail for some rooms like "Tvrummet"
 
 ## Changes
 
-### `src/components/devices/DeviceMarkers3D.tsx`
-- Line 580: Change `0.04` to `0.07`
-- Add dust particle system (small translucent spheres trailing behind vacuum when `status === 'cleaning'`), controlled by a new `showDustEffect` flag in VacuumState (default true)
-
 ### `src/store/types.ts`
-- Add `showDustEffect?: boolean` to `VacuumState` (default true)
-
-### `src/hooks/useHABridge.ts` (lines 130-131)
-- When looking up `segmentMap[data.targetRoom]`, also try resolving the room display name from floors/rooms if the direct lookup fails. This ensures "Tvrummet" matches even if the zone's `roomId` is different.
-
-### `src/hooks/useHomeAssistant.ts` (after segment map is stored)
-- After calling `setVacuumSegmentMap`, also iterate vacuum zones and auto-fill `segmentId` on each zone where the zone name matches a key in the segment map. This writes the auto-discovered IDs into the zone config.
-
-### `src/components/home/cards/DeviceControlCard.tsx` (lines 144-181)
-- Add a room picker popup button (small MapPin icon) to the compact vacuum widget. When clicked, show a popover/dropdown with available rooms from vacuum zones. Clicking a room triggers room-specific cleaning.
+- Add `vacuumSpeed?: number` to `VacuumState` (default 0.07, range 0.02–0.15)
 
 ### `src/components/home/cards/RobotPanel.tsx`
-- Add a toggle in VacuumCard for "Visa dammeffekt i 3D" that sets `showDustEffect` on/off
+- Add a speed slider (Slider component) in VacuumCard between dust toggle and cleaning log, labeled "3D-hastighet" with value range 0.02–0.15, step 0.01
 
-## Files
+### `src/components/devices/DeviceMarkers3D.tsx`
+- Read `vacuumSpeed` from state instead of hardcoded `0.07` (line 585)
+- **Fix dust sync**: The dust particles are rendered inside `<group ref={meshRef}>` which moves with the vacuum. Particle positions are set in world space but rendered in local group space. Fix by either:
+  - Converting particle positions to local space (subtract group position), OR
+  - Moving `<instancedMesh>` outside the group to a sibling element at world origin
 
-| File | Change |
-|------|--------|
-| `src/store/types.ts` | Add `showDustEffect?: boolean` to VacuumState |
-| `src/hooks/useHomeAssistant.ts` | Auto-fill zone segment IDs from discovered map |
-| `src/hooks/useHABridge.ts` | Fix room name lookup to resolve display names |
-| `src/components/devices/DeviceMarkers3D.tsx` | Speed 0.07, add dust particles |
-| `src/components/home/cards/DeviceControlCard.tsx` | Add room picker to compact vacuum widget |
-| `src/components/home/cards/RobotPanel.tsx` | Add dust effect toggle |
+### `src/hooks/useHomeAssistant.ts` (lines 111-158)
+- **Fix segment parsing**: Log the raw `rooms` object structure more verbosely to debug format
+- Add additional parsing paths: the `roborock.get_maps` response may have rooms as an array of `{ id: number, name: string }` objects rather than a key-value map
+- Remove the `if (zone.segmentId) continue` guard so auto-discovered IDs always overwrite (or at least verify the existing one matches)
+- After auto-fill, log which zones got IDs and which didn't for debugging
 
