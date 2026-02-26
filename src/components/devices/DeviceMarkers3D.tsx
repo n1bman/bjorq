@@ -594,27 +594,27 @@ function VacuumMarker3D({ position, id, onSelect, onDragStart, selected }: Marke
 
   return (
     <group ref={meshRef} position={position} onClick={handleClick} onPointerDown={handlePointerDown}>
-      {/* Body — flat cylinder */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]}>
+      {/* Body — flat disc lying on the floor */}
+      <mesh position={[0, 0.025, 0]}>
         <cylinderGeometry args={[0.17, 0.17, 0.05, 32]} />
         <meshStandardMaterial color="#e5e5e5" roughness={0.3} metalness={0.1} />
       </mesh>
 
       {/* LED ring on top */}
-      <mesh ref={ledRef} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]}>
+      <mesh ref={ledRef} position={[0, 0.055, 0]}>
         <torusGeometry args={[0.12, 0.012, 8, 32]} />
         <meshStandardMaterial color={statusColor} emissive={statusColor} emissiveIntensity={0.5} transparent opacity={0.9} />
       </mesh>
 
       {/* Battery ring at base */}
-      <mesh ref={batteryRingRef} rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]}>
+      <mesh ref={batteryRingRef} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.002, 0]}>
         <ringGeometry args={[0.17, 0.19, 32, 1, 0, Math.PI * 2 * (battery / 100)]} />
         <meshBasicMaterial color={batteryColor} transparent opacity={0.8} side={THREE.DoubleSide} />
       </mesh>
 
       {/* Selection ring */}
       {selected && (
-        <mesh rotation={[-Math.PI / 2, 0, 0]}>
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.003, 0]}>
           <ringGeometry args={[0.22, 0.27, 32]} />
           <meshBasicMaterial color="#fff" transparent opacity={0.6} side={THREE.DoubleSide} />
         </mesh>

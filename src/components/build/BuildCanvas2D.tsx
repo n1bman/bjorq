@@ -550,15 +550,17 @@ export default function BuildCanvas2D() {
         ctx.stroke();
         ctx.setLineDash([]);
 
-        // Zone label
+        // Zone label - resolve room name
         const cx2 = zone.polygon.reduce((a, p) => a + p[0], 0) / zone.polygon.length;
         const cz2 = zone.polygon.reduce((a, p) => a + p[1], 0) / zone.polygon.length;
         const [tx2, ty2] = worldToScreen(cx2, cz2);
+        const zoneRoom = rooms.find((r) => r.id === zone.roomId || r.name === zone.roomId);
+        const zoneLabel = zoneRoom?.name ?? zone.roomId;
         ctx.fillStyle = 'rgba(74, 158, 255, 0.6)';
         ctx.font = '9px DM Sans, sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(`🤖 ${zone.roomId}`, tx2, ty2);
+        ctx.fillText(`🤖 ${zoneLabel}`, tx2, ty2);
       }
 
       // Draw dock
