@@ -542,7 +542,17 @@ export default function BuildCanvas2D({ overlayMode = false }: { overlayMode?: b
     if (floor?.vacuumMapping) {
       const vm = floor.vacuumMapping;
       // Draw zones
-      for (const zone of vm.zones) {
+      const zoneColors = [
+        { fill: 'rgba(74, 158, 255, 0.15)', stroke: 'rgba(74, 158, 255, 0.6)', text: 'rgba(74, 158, 255, 0.8)' },
+        { fill: 'rgba(168, 85, 247, 0.15)', stroke: 'rgba(168, 85, 247, 0.6)', text: 'rgba(168, 85, 247, 0.8)' },
+        { fill: 'rgba(34, 197, 94, 0.15)', stroke: 'rgba(34, 197, 94, 0.6)', text: 'rgba(34, 197, 94, 0.8)' },
+        { fill: 'rgba(251, 146, 60, 0.15)', stroke: 'rgba(251, 146, 60, 0.6)', text: 'rgba(251, 146, 60, 0.8)' },
+        { fill: 'rgba(236, 72, 153, 0.15)', stroke: 'rgba(236, 72, 153, 0.6)', text: 'rgba(236, 72, 153, 0.8)' },
+        { fill: 'rgba(34, 211, 238, 0.15)', stroke: 'rgba(34, 211, 238, 0.6)', text: 'rgba(34, 211, 238, 0.8)' },
+      ];
+      for (let zi = 0; zi < vm.zones.length; zi++) {
+        const zone = vm.zones[zi];
+        const zc = zoneColors[zi % zoneColors.length];
         if (zone.polygon.length < 3) continue;
         ctx.beginPath();
         const [zx0, zy0] = worldToScreen(zone.polygon[0][0], zone.polygon[0][1]);
@@ -552,22 +562,22 @@ export default function BuildCanvas2D({ overlayMode = false }: { overlayMode?: b
           ctx.lineTo(zpx, zpy);
         }
         ctx.closePath();
-        ctx.fillStyle = 'rgba(74, 158, 255, 0.12)';
+        ctx.fillStyle = zc.fill;
         ctx.fill();
-        ctx.strokeStyle = 'rgba(74, 158, 255, 0.5)';
-        ctx.lineWidth = 1.5;
-        ctx.setLineDash([4, 3]);
+        ctx.strokeStyle = zc.stroke;
+        ctx.lineWidth = 2;
+        ctx.setLineDash([6, 3]);
         ctx.stroke();
         ctx.setLineDash([]);
 
-        // Zone label - resolve room name
+        // Zone label
         const cx2 = zone.polygon.reduce((a, p) => a + p[0], 0) / zone.polygon.length;
         const cz2 = zone.polygon.reduce((a, p) => a + p[1], 0) / zone.polygon.length;
         const [tx2, ty2] = worldToScreen(cx2, cz2);
         const zoneRoom = rooms.find((r) => r.id === zone.roomId || r.name === zone.roomId);
         const zoneLabel = zoneRoom?.name ?? zone.roomId;
-        ctx.fillStyle = 'rgba(74, 158, 255, 0.6)';
-        ctx.font = '9px DM Sans, sans-serif';
+        ctx.fillStyle = zc.text;
+        ctx.font = 'bold 10px DM Sans, sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(`🤖 ${zoneLabel}`, tx2, ty2);

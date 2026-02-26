@@ -108,6 +108,15 @@ function sendHACommand(entityId: string, state: DeviceState) {
       if (typeof data.fanSpeed === 'number' && data.fanSpeed > 0) {
         callService('vacuum', 'set_fan_speed', { entity_id: entityId, fan_speed: data.fanSpeed });
       }
+      // Handle room-specific cleaning via send_command
+      if (data.targetRoom && data.status === 'cleaning') {
+        callService('vacuum', 'send_command', {
+          entity_id: entityId,
+          command: 'app_segment_clean',
+          params: { name: data.targetRoom },
+        });
+        break;
+      }
       if (data.status === 'cleaning') {
         callService('vacuum', 'start', { entity_id: entityId });
       } else if (data.status === 'docked' || data.status === 'returning') {

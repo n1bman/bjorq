@@ -283,6 +283,7 @@ export interface VacuumState {
   errorMessage?: string;
   _action?: 'locate' | 'spot_clean';
   currentRoom?: string;     // Room name from HA sensor
+  targetRoom?: string;      // Room to clean (for room-specific cleaning)
 }
 
 export interface LockState {

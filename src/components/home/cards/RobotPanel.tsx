@@ -19,6 +19,15 @@ const statusColors: Record<string, string> = {
   paused: 'text-yellow-400', idle: 'text-muted-foreground', error: 'text-destructive',
 };
 
+const ZONE_COLORS = [
+  { bg: 'bg-blue-500/10', border: 'border-blue-500/30', text: 'text-blue-400', dot: 'bg-blue-400' },
+  { bg: 'bg-purple-500/10', border: 'border-purple-500/30', text: 'text-purple-400', dot: 'bg-purple-400' },
+  { bg: 'bg-green-500/10', border: 'border-green-500/30', text: 'text-green-400', dot: 'bg-green-400' },
+  { bg: 'bg-orange-500/10', border: 'border-orange-500/30', text: 'text-orange-400', dot: 'bg-orange-400' },
+  { bg: 'bg-pink-500/10', border: 'border-pink-500/30', text: 'text-pink-400', dot: 'bg-pink-400' },
+  { bg: 'bg-cyan-500/10', border: 'border-cyan-500/30', text: 'text-cyan-400', dot: 'bg-cyan-400' },
+];
+
 function BatteryIndicator({ level }: { level: number }) {
   return (
     <div className="flex items-center gap-2">
@@ -64,6 +73,74 @@ function FanSpeedSelector({ data, id, update }: { data: VacuumState; id: string;
   );
 }
 
+/** Room zone cards for targeted cleaning */
+function RoomZoneCards({ marker, data, update }: { marker: DeviceMarker; data: VacuumState; update: (id: string, p: Record<string, unknown>) => void }) {
+  const floors = useAppStore((s) => s.layout.floors);
+  const floor = floors.find((f) => f.id === marker.floorId);
+  const rooms = floor?.rooms ?? [];
+  const mapping = floor?.vacuumMapping;
+  const zones = mapping?.zones ?? [];
+
+  if (zones.length === 0) return null;
+
+  const getZoneName = (roomId: string) => {
+    const room = rooms.find((r) => r.id === roomId || r.name === roomId);
+    return room?.name ?? roomId;
+  };
+
+  const startRoomCleaning = (roomName: string) => {
+    update(marker.id, {
+      on: true,
+      status: 'cleaning',
+      currentRoom: roomName,
+      targetRoom: roomName,
+    });
+  };
+
+  return (
+    <div className="space-y-2">
+      <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
+        Rum ({zones.length})
+      </p>
+      <div className="grid grid-cols-2 gap-2">
+        {zones.map((zone, i) => {
+          const name = getZoneName(zone.roomId);
+          const zc = ZONE_COLORS[i % ZONE_COLORS.length];
+          const isActive = data.status === 'cleaning' && data.currentRoom?.toLowerCase() === name.toLowerCase();
+
+          return (
+            <button
+              key={zone.roomId}
+              onClick={() => startRoomCleaning(name)}
+              className={cn(
+                'relative rounded-xl border p-3 text-left transition-all',
+                isActive
+                  ? `${zc.bg} ${zc.border} ring-1 ring-primary/30`
+                  : `bg-secondary/30 border-border/50 hover:${zc.bg} hover:${zc.border}`
+              )}
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <div className={cn('w-2 h-2 rounded-full', zc.dot)} />
+                <span className="text-xs font-medium text-foreground truncate">{name}</span>
+              </div>
+              {isActive ? (
+                <div className="flex items-center gap-1">
+                  <span className="text-[9px] text-primary animate-pulse">Städar...</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1 text-[9px] text-muted-foreground">
+                  <Play size={8} />
+                  <span>Städa rum</span>
+                </div>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 /** Mini 2D map showing rooms and robot position */
 function VacuumMiniMap({ marker, data }: { marker: DeviceMarker; data: VacuumState }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -90,7 +167,8 @@ function VacuumMiniMap({ marker, data }: { marker: DeviceMarker; data: VacuumSta
       ctx.fillStyle = 'hsl(220, 20%, 12%)';
       ctx.fillRect(0, 0, w, h);
 
-      if (rooms.length === 0) {
+      const zones = mapping?.zones ?? [];
+      if (zones.length === 0 && rooms.length === 0) {
         ctx.fillStyle = 'rgba(255,255,255,0.3)';
         ctx.font = '10px sans-serif';
         ctx.textAlign = 'center';
@@ -99,11 +177,12 @@ function VacuumMiniMap({ marker, data }: { marker: DeviceMarker; data: VacuumSta
         return;
       }
 
-      // Compute bounds
+      // Use zones for bounds if available, otherwise rooms
+      const polys = zones.length > 0 ? zones.map(z => z.polygon) : rooms.filter(r => r.polygon).map(r => r.polygon!);
+      
       let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
-      for (const room of rooms) {
-        if (!room.polygon) continue;
-        for (const [x, z] of room.polygon) {
+      for (const poly of polys) {
+        for (const [x, z] of poly) {
           if (x < minX) minX = x;
           if (x > maxX) maxX = x;
           if (z < minZ) minZ = z;
@@ -124,33 +203,66 @@ function VacuumMiniMap({ marker, data }: { marker: DeviceMarker; data: VacuumSta
         offZ + (z - minZ) * scale,
       ];
 
-      // Draw rooms
-      for (const room of rooms) {
-        if (!room.polygon || room.polygon.length < 3) continue;
-        const isActive = data.currentRoom && room.name.toLowerCase() === data.currentRoom.toLowerCase();
-        ctx.beginPath();
-        const [sx, sy] = toScreen(room.polygon[0][0], room.polygon[0][1]);
-        ctx.moveTo(sx, sy);
-        for (let i = 1; i < room.polygon.length; i++) {
-          const [px, py] = toScreen(room.polygon[i][0], room.polygon[i][1]);
-          ctx.lineTo(px, py);
-        }
-        ctx.closePath();
-        ctx.fillStyle = isActive ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255,255,255,0.05)';
-        ctx.fill();
-        ctx.strokeStyle = isActive ? 'rgba(59, 130, 246, 0.6)' : 'rgba(255,255,255,0.15)';
-        ctx.lineWidth = 1;
-        ctx.stroke();
+      const mapZoneColors = [
+        { fill: 'rgba(74, 158, 255, 0.15)', stroke: 'rgba(74, 158, 255, 0.5)', label: 'rgba(74, 158, 255, 0.8)' },
+        { fill: 'rgba(168, 85, 247, 0.15)', stroke: 'rgba(168, 85, 247, 0.5)', label: 'rgba(168, 85, 247, 0.8)' },
+        { fill: 'rgba(34, 197, 94, 0.15)', stroke: 'rgba(34, 197, 94, 0.5)', label: 'rgba(34, 197, 94, 0.8)' },
+        { fill: 'rgba(251, 146, 60, 0.15)', stroke: 'rgba(251, 146, 60, 0.5)', label: 'rgba(251, 146, 60, 0.8)' },
+        { fill: 'rgba(236, 72, 153, 0.15)', stroke: 'rgba(236, 72, 153, 0.5)', label: 'rgba(236, 72, 153, 0.8)' },
+        { fill: 'rgba(34, 211, 238, 0.15)', stroke: 'rgba(34, 211, 238, 0.5)', label: 'rgba(34, 211, 238, 0.8)' },
+      ];
 
-        // Room label
-        const cx = room.polygon.reduce((a, p) => a + p[0], 0) / room.polygon.length;
-        const cz = room.polygon.reduce((a, p) => a + p[1], 0) / room.polygon.length;
-        const [tx, ty] = toScreen(cx, cz);
-        ctx.fillStyle = isActive ? 'rgba(59, 130, 246, 0.8)' : 'rgba(255,255,255,0.3)';
-        ctx.font = '9px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(room.name, tx, ty);
+      // Draw zones with distinct colors
+      if (zones.length > 0) {
+        zones.forEach((zone, zi) => {
+          if (zone.polygon.length < 3) return;
+          const zc = mapZoneColors[zi % mapZoneColors.length];
+          const isActive = data.currentRoom && rooms.find(r => r.id === zone.roomId || r.name === zone.roomId)?.name?.toLowerCase() === data.currentRoom.toLowerCase();
+
+          ctx.beginPath();
+          const [sx, sy] = toScreen(zone.polygon[0][0], zone.polygon[0][1]);
+          ctx.moveTo(sx, sy);
+          for (let i = 1; i < zone.polygon.length; i++) {
+            const [px, py] = toScreen(zone.polygon[i][0], zone.polygon[i][1]);
+            ctx.lineTo(px, py);
+          }
+          ctx.closePath();
+          ctx.fillStyle = isActive ? zc.stroke.replace('0.5', '0.3') : zc.fill;
+          ctx.fill();
+          ctx.strokeStyle = zc.stroke;
+          ctx.lineWidth = isActive ? 2 : 1;
+          ctx.stroke();
+
+          // Label
+          const roomObj = rooms.find(r => r.id === zone.roomId || r.name === zone.roomId);
+          const label = roomObj?.name ?? zone.roomId;
+          const cx = zone.polygon.reduce((a, p) => a + p[0], 0) / zone.polygon.length;
+          const cz = zone.polygon.reduce((a, p) => a + p[1], 0) / zone.polygon.length;
+          const [tx, ty] = toScreen(cx, cz);
+          ctx.fillStyle = isActive ? '#fff' : zc.label;
+          ctx.font = `${isActive ? 'bold ' : ''}9px sans-serif`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(label, tx, ty);
+        });
+      } else {
+        // Fallback: draw rooms
+        for (const room of rooms) {
+          if (!room.polygon || room.polygon.length < 3) continue;
+          ctx.beginPath();
+          const [sx, sy] = toScreen(room.polygon[0][0], room.polygon[0][1]);
+          ctx.moveTo(sx, sy);
+          for (let i = 1; i < room.polygon.length; i++) {
+            const [px, py] = toScreen(room.polygon[i][0], room.polygon[i][1]);
+            ctx.lineTo(px, py);
+          }
+          ctx.closePath();
+          ctx.fillStyle = 'rgba(255,255,255,0.05)';
+          ctx.fill();
+          ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        }
       }
 
       // Draw dock
@@ -166,7 +278,8 @@ function VacuumMiniMap({ marker, data }: { marker: DeviceMarker; data: VacuumSta
       if (data.currentRoom) {
         const zone = mapping?.zones?.find((z) => {
           const room = rooms.find((r) => r.id === z.roomId);
-          return room?.name.toLowerCase() === data.currentRoom!.toLowerCase();
+          return room?.name.toLowerCase() === data.currentRoom!.toLowerCase()
+            || z.roomId.toLowerCase() === data.currentRoom!.toLowerCase();
         });
         if (zone && zone.polygon.length > 0) {
           const cx = zone.polygon.reduce((a, p) => a + p[0], 0) / zone.polygon.length;
@@ -263,7 +376,10 @@ function VacuumCard({ marker, data, update }: { marker: DeviceMarker; data: Vacu
       {data.currentRoom && (
         <div className="flex items-center gap-2 bg-primary/5 border border-primary/10 rounded-lg px-3 py-1.5">
           <MapPin size={14} className="text-primary" />
-          <span className="text-xs text-foreground">Städar i: <strong>{data.currentRoom}</strong></span>
+          <span className="text-xs text-foreground">
+            {data.status === 'cleaning' ? 'Städar i' : 'Plats'}:{' '}
+            <strong>{data.currentRoom}</strong>
+          </span>
         </div>
       )}
 
@@ -282,8 +398,8 @@ function VacuumCard({ marker, data, update }: { marker: DeviceMarker; data: Vacu
       <div className="flex gap-2">
         <Button size="sm" variant={data.status === 'cleaning' ? 'default' : 'outline'}
           className="flex-1 h-9 text-xs gap-1"
-          onClick={() => update(id, { on: true, status: 'cleaning' })}>
-          <Play size={14} /> Starta
+          onClick={() => update(id, { on: true, status: 'cleaning', targetRoom: undefined })}>
+          <Play size={14} /> Städa allt
         </Button>
         <Button size="sm" variant={data.status === 'paused' ? 'default' : 'outline'}
           className="flex-1 h-9 text-xs gap-1"
@@ -291,14 +407,17 @@ function VacuumCard({ marker, data, update }: { marker: DeviceMarker; data: Vacu
           <Pause size={14} /> Pausa
         </Button>
         <Button size="sm" variant="outline" className="flex-1 h-9 text-xs gap-1"
-          onClick={() => update(id, { on: false, status: 'docked' })}>
+          onClick={() => update(id, { on: false, status: 'docked', targetRoom: undefined, currentRoom: undefined })}>
           <Square size={14} /> Stoppa
         </Button>
         <Button size="sm" variant="outline" className="h-9 text-xs gap-1"
-          onClick={() => update(id, { status: 'returning' })}>
+          onClick={() => update(id, { status: 'returning', targetRoom: undefined })}>
           <HomeIcon size={14} />
         </Button>
       </div>
+
+      {/* Room zone cards */}
+      <RoomZoneCards marker={marker} data={data} update={update} />
 
       {/* Locate */}
       <Button size="sm" variant="outline" className="w-full h-8 text-xs gap-1"
