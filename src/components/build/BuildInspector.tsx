@@ -457,6 +457,8 @@ const kindLabels: Record<DeviceKind, string> = {
   valve: 'Ventil',
   remote: 'Fjärr',
   'lawn-mower': 'Gräsklippare',
+  speaker: 'Högtalare',
+  soundbar: 'Soundbar',
 };
 
 function DeviceInspector({ deviceId, close }: { deviceId: string; close: React.ReactNode }) {

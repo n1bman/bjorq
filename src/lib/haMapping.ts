@@ -111,6 +111,22 @@ export function mapHAEntityToDeviceState(
         playing: 'playing', paused: 'paused', idle: 'idle', off: 'off', standby: 'off',
       };
       const volume = typeof attributes.volume_level === 'number' ? attributes.volume_level : 0.5;
+      const deviceClass = typeof attributes.device_class === 'string' ? attributes.device_class : '';
+      
+      // Speaker / soundbar → SpeakerState
+      if (deviceClass === 'speaker') {
+        return {
+          kind: 'speaker',
+          data: {
+            on: state !== 'off' && state !== 'standby',
+            state: (stateMap[state] === 'off' ? 'idle' : stateMap[state] || 'idle') as 'playing' | 'paused' | 'idle',
+            volume,
+            source: typeof attributes.source === 'string' ? attributes.source : undefined,
+            mediaTitle: typeof attributes.media_title === 'string' ? attributes.media_title : undefined,
+          },
+        };
+      }
+      
       return {
         kind: 'media_screen',
         data: {

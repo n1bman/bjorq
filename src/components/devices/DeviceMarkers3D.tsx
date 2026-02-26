@@ -600,8 +600,8 @@ function VacuumMarker3D({ position, id, onSelect, onDragStart, selected }: Marke
         <meshStandardMaterial color="#e5e5e5" roughness={0.3} metalness={0.1} />
       </mesh>
 
-      {/* LED ring on top */}
-      <mesh ref={ledRef} position={[0, 0.055, 0]}>
+      {/* LED ring on top — flat horizontal */}
+      <mesh ref={ledRef} position={[0, 0.055, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <torusGeometry args={[0.12, 0.012, 8, 32]} />
         <meshStandardMaterial color={statusColor} emissive={statusColor} emissiveIntensity={0.5} transparent opacity={0.9} />
       </mesh>
@@ -623,6 +623,151 @@ function VacuumMarker3D({ position, id, onSelect, onDragStart, selected }: Marke
   );
 }
 
+// ─── Music Note Particles ───
+function MusicNoteParticles({ active, spread = 0.15 }: { active: boolean; spread?: number }) {
+  const notesRef = useRef<THREE.Group>(null);
+  const particles = useRef<{ x: number; y: number; z: number; phase: number; speed: number; char: string; opacity: number }[]>([]);
+
+  useFrame((_, delta) => {
+    if (!notesRef.current) return;
+    if (active && particles.current.length < 6 && Math.random() < 0.08) {
+      particles.current.push({
+        x: (Math.random() - 0.5) * spread * 2,
+        y: 0.15,
+        z: (Math.random() - 0.5) * spread * 2,
+        phase: Math.random() * Math.PI * 2,
+        speed: 0.15 + Math.random() * 0.1,
+        char: Math.random() > 0.5 ? '♪' : '♫',
+        opacity: 1,
+      });
+    }
+    particles.current = particles.current.filter((p) => {
+      p.y += p.speed * delta;
+      p.x += Math.sin(p.phase + p.y * 4) * delta * 0.08;
+      p.opacity -= delta * 0.6;
+      return p.opacity > 0;
+    });
+    // Update children
+    const children = notesRef.current.children;
+    for (let i = children.length - 1; i >= 0; i--) notesRef.current.remove(children[i]);
+  });
+
+  return <group ref={notesRef} />;
+}
+
+// ─── Speaker Marker (Google Home style) ───
+function SpeakerMarker3D({ position, id, onSelect, onDragStart, selected }: MarkerProps) {
+  const state = useAppStore((s) => s.devices.deviceStates[id]);
+  const speakerData = state?.kind === 'speaker' ? state.data : null;
+  const isPlaying = speakerData?.state === 'playing';
+  const isSpeaking = speakerData?.isSpeaking;
+  const ringRef = useRef<THREE.Mesh>(null);
+  const notesGroupRef = useRef<THREE.Group>(null);
+  const notesData = useRef<{ x: number; y: number; z: number; phase: number; speed: number; opacity: number; char: string }[]>([]);
+
+  useFrame((_, delta) => {
+    // Pulse base ring
+    if (ringRef.current) {
+      const mat = ringRef.current.material as THREE.MeshStandardMaterial;
+      const t = performance.now() / 1000;
+      mat.emissiveIntensity = isPlaying ? 0.5 + Math.sin(t * 4) * 0.3 : (isSpeaking ? 0.8 : 0.2);
+    }
+    // Music notes
+    if (notesGroupRef.current) {
+      if (isPlaying && notesData.current.length < 6 && Math.random() < 0.06) {
+        notesData.current.push({
+          x: (Math.random() - 0.5) * 0.15,
+          y: 0.18,
+          z: (Math.random() - 0.5) * 0.15,
+          phase: Math.random() * Math.PI * 2,
+          speed: 0.12 + Math.random() * 0.08,
+          opacity: 1,
+          char: Math.random() > 0.5 ? '♪' : '♫',
+        });
+      }
+      notesData.current = notesData.current.filter((p) => {
+        p.y += p.speed * delta;
+        p.x += Math.sin(p.phase + p.y * 5) * delta * 0.06;
+        p.opacity -= delta * 0.5;
+        return p.opacity > 0;
+      });
+    }
+  });
+
+  const handleClick = useCallback((e: ThreeEvent<PointerEvent>) => { e.stopPropagation(); onSelect?.(id); }, [onSelect, id]);
+  const handlePointerDown = useCallback((e: ThreeEvent<PointerEvent>) => { if (selected && onDragStart) onDragStart(id, e); }, [selected, onDragStart, id]);
+
+  const bodyColor = isPlaying ? '#e8e8e8' : '#d4d4d4';
+  const ringColor = isPlaying ? '#4ade80' : isSpeaking ? '#60a5fa' : '#6b7280';
+
+  return (
+    <group position={position} onClick={handleClick} onPointerDown={handlePointerDown}>
+      {/* Body — cylinder with rounded top */}
+      <mesh position={[0, 0.06, 0]}>
+        <cylinderGeometry args={[0.06, 0.08, 0.12, 32]} />
+        <meshStandardMaterial color={bodyColor} roughness={0.4} metalness={0.05} />
+      </mesh>
+      {/* Top dome */}
+      <mesh position={[0, 0.12, 0]}>
+        <sphereGeometry args={[0.06, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2]} />
+        <meshStandardMaterial color={bodyColor} roughness={0.4} />
+      </mesh>
+      {/* Base LED ring */}
+      <mesh ref={ringRef} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.005, 0]}>
+        <torusGeometry args={[0.075, 0.008, 8, 32]} />
+        <meshStandardMaterial color={ringColor} emissive={ringColor} emissiveIntensity={0.3} transparent opacity={0.9} />
+      </mesh>
+      {/* Floating music notes when playing */}
+      <group ref={notesGroupRef} />
+      {selected && (
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.003, 0]}>
+          <ringGeometry args={[0.12, 0.16, 32]} />
+          <meshBasicMaterial color="#fff" transparent opacity={0.6} side={THREE.DoubleSide} />
+        </mesh>
+      )}
+    </group>
+  );
+}
+
+// ─── Soundbar Marker ───
+function SoundbarMarker3D({ position, id, onSelect, onDragStart, selected }: MarkerProps) {
+  const state = useAppStore((s) => s.devices.deviceStates[id]);
+  const speakerData = state?.kind === 'soundbar' ? state.data : null;
+  const isPlaying = speakerData?.state === 'playing';
+  const ledRef2 = useRef<THREE.Mesh>(null);
+
+  useFrame(() => {
+    if (ledRef2.current) {
+      const mat = ledRef2.current.material as THREE.MeshStandardMaterial;
+      const t = performance.now() / 1000;
+      mat.emissiveIntensity = isPlaying ? 0.5 + Math.sin(t * 3) * 0.3 : 0.1;
+    }
+  });
+
+  const handleClick = useCallback((e: ThreeEvent<PointerEvent>) => { e.stopPropagation(); onSelect?.(id); }, [onSelect, id]);
+  const handlePointerDown = useCallback((e: ThreeEvent<PointerEvent>) => { if (selected && onDragStart) onDragStart(id, e); }, [selected, onDragStart, id]);
+
+  return (
+    <group position={position} onClick={handleClick} onPointerDown={handlePointerDown}>
+      {/* Soundbar body — elongated box */}
+      <mesh position={[0, 0.025, 0]}>
+        <boxGeometry args={[0.5, 0.05, 0.08]} />
+        <meshStandardMaterial color="#2a2a2a" roughness={0.3} metalness={0.2} />
+      </mesh>
+      {/* LED strip on front */}
+      <mesh ref={ledRef2} position={[0, 0.025, 0.041]}>
+        <boxGeometry args={[0.4, 0.008, 0.001]} />
+        <meshStandardMaterial color={isPlaying ? '#4ade80' : '#444'} emissive={isPlaying ? '#4ade80' : '#333'} emissiveIntensity={0.1} />
+      </mesh>
+      {selected && (
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.003, 0]}>
+          <ringGeometry args={[0.3, 0.35, 32]} />
+          <meshBasicMaterial color="#fff" transparent opacity={0.6} side={THREE.DoubleSide} />
+        </mesh>
+      )}
+    </group>
+  );
+}
 
 const markerComponents: Record<DeviceKind, React.FC<MarkerProps>> = {
   light: LightMarker,
@@ -648,6 +793,8 @@ const markerComponents: Record<DeviceKind, React.FC<MarkerProps>> = {
   valve: (props) => <GenericMarker {...props} color="#3b82f6" emissive="#2563eb" />,
   remote: (props) => <GenericMarker {...props} color="#9ca3af" emissive="#6b7280" />,
   'lawn-mower': (props) => <GenericMarker {...props} color="#22c55e" emissive="#16a34a" />,
+  speaker: SpeakerMarker3D,
+  soundbar: SoundbarMarker3D,
 };
 
 interface DeviceMarkers3DProps {

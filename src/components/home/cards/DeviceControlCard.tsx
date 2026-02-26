@@ -1,5 +1,5 @@
 import { useAppStore } from '@/store/useAppStore';
-import type { DeviceMarker, LightState, ClimateState, MediaState, VacuumState, LockState, SensorState, GenericDeviceState, CameraState, FanState, CoverState, SceneState, AlarmState, WaterHeaterState, HumidifierState, ValveState, LawnMowerState } from '@/store/types';
+import type { DeviceMarker, LightState, ClimateState, MediaState, VacuumState, LockState, SensorState, GenericDeviceState, CameraState, FanState, CoverState, SceneState, AlarmState, WaterHeaterState, HumidifierState, ValveState, LawnMowerState, SpeakerState } from '@/store/types';
 import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
 import { Button } from '@/components/ui/button';
@@ -9,7 +9,7 @@ import {
   Snowflake, Flame, RotateCcw, Eye, Camera, Video,
   Fan, PanelTop, Clapperboard, ArrowUp, ArrowDown, StopCircle,
   SkipBack, SkipForward, Tv, MapPin, Wind, Ruler, Clock, AlertTriangle,
-  ShieldAlert, Droplets, Bell, Grip, Trees,
+  ShieldAlert, Droplets, Bell, Grip, Trees, Speaker, Music,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -42,6 +42,8 @@ export default function DeviceControlCard({ marker, compact }: Props) {
     case 'siren': return <SirenControl id={marker.id} data={state.data} update={updateDeviceState} />;
     case 'valve': return <ValveControl id={marker.id} data={state.data} update={updateDeviceState} />;
     case 'lawn-mower': return <LawnMowerControl id={marker.id} data={state.data} update={updateDeviceState} />;
+    case 'speaker': return <SpeakerControl id={marker.id} data={state.data} update={updateDeviceState} />;
+    case 'soundbar': return <SpeakerControl id={marker.id} data={state.data} update={updateDeviceState} />;
     case 'generic': return <GenericControl id={marker.id} data={state.data} update={updateDeviceState} />;
     default: return null;
   }
@@ -63,6 +65,8 @@ function CompactDeviceView({ marker, state }: { marker: DeviceMarker; state: imp
     siren: <Bell size={14} />,
     valve: <Grip size={14} />,
     'lawn-mower': <Trees size={14} />,
+    speaker: <Speaker size={14} />,
+    soundbar: <Music size={14} />,
   };
 
   const isOn = 'on' in state.data ? (state.data as any).on : state.kind === 'door-lock' ? !(state.data as LockState).locked : state.kind === 'cover' ? (state.data as CoverState).position > 0 : state.kind !== 'scene';
@@ -103,6 +107,80 @@ function CompactDeviceView({ marker, state }: { marker: DeviceMarker; state: imp
     return <CompactMediaControl id={marker.id} data={md} update={updateDeviceState} label={wc?.customLabel || marker.name || 'TV'} />;
   }
 
+  // Speaker/soundbar compact: show play/pause + volume
+  if (state.kind === 'speaker' || state.kind === 'soundbar') {
+    const sd = state.data as import('@/store/types').SpeakerState;
+    const updateDeviceState = useAppStore.getState().updateDeviceState;
+    return (
+      <div className="space-y-1.5">
+        <div className="flex items-center gap-2">
+          <Speaker size={14} className="text-primary shrink-0" />
+          <span className="text-xs text-foreground truncate flex-1">{wc?.customLabel || marker.name || (state.kind === 'speaker' ? 'Högtalare' : 'Soundbar')}</span>
+          <span className={cn('w-2 h-2 rounded-full shrink-0', sd.on ? 'bg-green-400' : 'bg-muted-foreground/30')} />
+        </div>
+        {sd.mediaTitle && <p className="text-[10px] text-muted-foreground truncate">{sd.mediaTitle}</p>}
+        {sd.isSpeaking && <p className="text-[10px] text-blue-400">🗣️ Pratar...</p>}
+        {sd.on && (
+          <div className="flex items-center justify-center gap-1">
+            <Button size="sm" variant="ghost" className="h-7 w-7 p-0"
+              onClick={(e) => { e.stopPropagation(); updateDeviceState(marker.id, { state: sd.state === 'playing' ? 'paused' : 'playing' }); }}>
+              {sd.state === 'playing' ? <Pause size={14} /> : <Play size={14} />}
+            </Button>
+            <Button size="sm" variant="ghost" className="h-7 w-7 p-0"
+              onClick={(e) => { e.stopPropagation(); updateDeviceState(marker.id, { state: 'idle' }); }}>
+              <Square size={10} />
+            </Button>
+            <div className="flex items-center gap-1 ml-1">
+              <Volume2 size={10} className="text-muted-foreground" />
+              <span className="text-[9px] text-muted-foreground">{Math.round(sd.volume * 100)}%</span>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Vacuum compact: show status + inline controls
+  if (state.kind === 'vacuum') {
+    const vd = state.data as VacuumState;
+    const updateDeviceState = useAppStore.getState().updateDeviceState;
+    const vacLabels: Record<string, string> = { cleaning: 'Städar', docked: 'Dockad', returning: 'Återvänder', paused: 'Pausad', idle: 'Väntar', error: 'Fel' };
+    return (
+      <div className="space-y-1.5">
+        <div className="flex items-center gap-2">
+          <span className="text-primary">🤖</span>
+          <span className="text-xs text-foreground truncate flex-1">{wc?.customLabel || marker.name || 'Dammsugare'}</span>
+          <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+            <Battery size={10} />
+            <span>{vd.battery}%</span>
+          </div>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="text-[10px] text-muted-foreground">{vacLabels[vd.status] ?? vd.status}</span>
+          {vd.currentRoom && <span className="text-[9px] text-primary/70">· {vd.currentRoom}</span>}
+        </div>
+        <div className="flex items-center gap-0.5">
+          <Button size="sm" variant={vd.status === 'cleaning' ? 'default' : 'ghost'} className="h-6 px-1.5 text-[9px] gap-0.5"
+            onClick={(e) => { e.stopPropagation(); updateDeviceState(marker.id, { on: true, status: 'cleaning' }); }}>
+            <Play size={10} /> Städa
+          </Button>
+          <Button size="sm" variant="ghost" className="h-6 px-1.5 text-[9px] gap-0.5"
+            onClick={(e) => { e.stopPropagation(); updateDeviceState(marker.id, { status: 'paused' }); }}>
+            <Pause size={10} />
+          </Button>
+          <Button size="sm" variant="ghost" className="h-6 px-1.5 text-[9px] gap-0.5"
+            onClick={(e) => { e.stopPropagation(); updateDeviceState(marker.id, { on: false, status: 'docked' }); }}>
+            <Square size={10} />
+          </Button>
+          <Button size="sm" variant="ghost" className="h-6 px-1.5 text-[9px] gap-0.5"
+            onClick={(e) => { e.stopPropagation(); updateDeviceState(marker.id, { status: 'returning' }); }}>
+            <HomeIcon size={10} />
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   // Build status text per type
   let statusText = '';
   if (wc?.showValue !== false) {
@@ -114,10 +192,6 @@ function CompactDeviceView({ marker, state }: { marker: DeviceMarker; state: imp
     } else if (state.kind === 'sensor') {
       const sd = state.data as SensorState;
       statusText = `${sd.value} ${sd.unit}`;
-    } else if (state.kind === 'vacuum') {
-      const vd = state.data as VacuumState;
-      const labels: Record<string, string> = { cleaning: 'Städar', docked: 'Dockad', returning: 'Återvänder' };
-      statusText = labels[vd.status] ?? vd.status;
     } else if (state.kind === 'fan') {
       const fd = state.data as FanState;
       statusText = fd.on ? `${fd.speed}%` : 'Av';
@@ -679,6 +753,40 @@ function LawnMowerControl({ id, data, update }: { id: string; data: LawnMowerSta
           onClick={() => update(id, { status: 'paused' })}>Pausa</Button>
         <Button size="sm" variant="outline" className="flex-1 h-7 text-[10px]"
           onClick={() => update(id, { on: false, status: 'docked' })}>Docka</Button>
+      </div>
+    </div>
+  );
+}
+
+function SpeakerControl({ id, data, update }: { id: string; data: SpeakerState; update: UpdateFn }) {
+  return (
+    <div className="space-y-3 pt-2">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Speaker size={14} />
+          <span className="capitalize">{data.state === 'playing' ? 'Spelar' : data.state === 'paused' ? 'Pausad' : 'Väntar'}</span>
+          {data.isSpeaking && <span className="text-blue-400 text-[10px]">🗣️ Pratar</span>}
+        </div>
+        <Switch checked={data.on} onCheckedChange={(v) => update(id, { on: v, state: v ? 'idle' : 'idle' })} />
+      </div>
+      {data.mediaTitle && (
+        <div>
+          <p className="text-sm font-medium text-foreground truncate">{data.mediaTitle}</p>
+          {data.source && <p className="text-[10px] text-primary/70">{data.source}</p>}
+        </div>
+      )}
+      <div className="flex items-center justify-center gap-2">
+        <Button size="sm" variant="outline" className="h-8 w-8 p-0" disabled={!data.on}
+          onClick={() => update(id, { state: data.state === 'playing' ? 'paused' : 'playing' })}>
+          {data.state === 'playing' ? <Pause size={14} /> : <Play size={14} />}
+        </Button>
+        <Button size="sm" variant="outline" className="h-8 w-8 p-0" disabled={!data.on}
+          onClick={() => update(id, { state: 'idle' })}><Square size={14} /></Button>
+      </div>
+      <div className="flex items-center gap-2">
+        <Volume2 size={14} className="text-muted-foreground" />
+        <Slider value={[data.volume]} max={1} step={0.01} onValueChange={([v]) => update(id, { volume: v })} className="flex-1" disabled={!data.on} />
+        <span className="text-[10px] text-muted-foreground w-8 text-right">{Math.round(data.volume * 100)}%</span>
       </div>
     </div>
   );

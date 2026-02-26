@@ -1,6 +1,6 @@
 import { useAppStore } from '@/store/useAppStore';
 import type { DeviceKind, BuildTool, DeviceMarker } from '@/store/types';
-import { Lightbulb, ToggleLeft, Activity, Thermometer, Trash2, Camera, Bot, CookingPot, WashingMachine, DoorOpen, Lock, Plug, Refrigerator, Monitor, ChevronDown, ChevronRight, Link2, Fan, PanelTop, Clapperboard, ShieldAlert, Droplets, Flame, Bell, Grip, Wifi, Trees } from 'lucide-react';
+import { Lightbulb, ToggleLeft, Activity, Thermometer, Trash2, Camera, Bot, CookingPot, WashingMachine, DoorOpen, Lock, Plug, Refrigerator, Monitor, ChevronDown, ChevronRight, Link2, Fan, PanelTop, Clapperboard, ShieldAlert, Droplets, Flame, Bell, Grip, Wifi, Trees, Speaker, Music } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useMemo, useState } from 'react';
 import { domainToKind } from '@/lib/haDomainMapping';
@@ -30,6 +30,8 @@ const deviceTools: { key: BuildTool; kind: DeviceKind; label: string; icon: type
   { key: 'place-valve', kind: 'valve', label: 'Ventil', icon: Grip, color: 'text-blue-500' },
   { key: 'place-remote', kind: 'remote', label: 'Fjärr', icon: Wifi, color: 'text-gray-400' },
   { key: 'place-lawn-mower', kind: 'lawn-mower', label: 'Gräsklippare', icon: Trees, color: 'text-green-500' },
+  { key: 'place-speaker', kind: 'speaker', label: 'Högtalare', icon: Speaker, color: 'text-emerald-400' },
+  { key: 'place-soundbar', kind: 'soundbar', label: 'Soundbar', icon: Music, color: 'text-pink-400' },
 ];
 
 const kindLabels: Record<DeviceKind, string> = {
@@ -56,6 +58,8 @@ const kindLabels: Record<DeviceKind, string> = {
   valve: '🔧 Ventil',
   remote: '📡 Fjärr',
   'lawn-mower': '🌿 Gräsklippare',
+  speaker: '🔊 Högtalare',
+  soundbar: '🎵 Soundbar',
 };
 
 export default function DevicePlacementTools() {
@@ -195,6 +199,8 @@ function UnlinkedHAEntities() {
       valve: 'place-valve',
       remote: 'place-remote',
       'lawn-mower': 'place-lawn-mower',
+      speaker: 'place-speaker',
+      soundbar: 'place-soundbar',
     };
     if (toolMap[kind]) setBuildTool('select');
   };
