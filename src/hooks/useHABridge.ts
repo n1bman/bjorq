@@ -190,6 +190,99 @@ function sendHACommand(entityId: string, state: DeviceState) {
       callService('automation', 'trigger', { entity_id: entityId });
       break;
     }
+
+    case 'alarm_control_panel': {
+      const data = state.data as any;
+      const code = data.code ? { code: data.code } : {};
+      if (data.state === 'armed_away') callService('alarm_control_panel', 'alarm_arm_away', { entity_id: entityId, ...code });
+      else if (data.state === 'armed_home') callService('alarm_control_panel', 'alarm_arm_home', { entity_id: entityId, ...code });
+      else if (data.state === 'armed_night') callService('alarm_control_panel', 'alarm_arm_night', { entity_id: entityId, ...code });
+      else callService('alarm_control_panel', 'alarm_disarm', { entity_id: entityId, ...code });
+      break;
+    }
+
+    case 'water_heater': {
+      const data = state.data as any;
+      if (typeof data.temperature === 'number') {
+        callService('water_heater', 'set_temperature', { entity_id: entityId, temperature: data.temperature });
+      }
+      if (data.mode) {
+        callService('water_heater', 'set_operation_mode', { entity_id: entityId, operation_mode: data.mode });
+      }
+      break;
+    }
+
+    case 'humidifier': {
+      const data = state.data as any;
+      if (!data.on) {
+        callService('humidifier', 'turn_off', { entity_id: entityId });
+      } else {
+        callService('humidifier', 'turn_on', { entity_id: entityId });
+        if (typeof data.humidity === 'number') {
+          callService('humidifier', 'set_humidity', { entity_id: entityId, humidity: data.humidity });
+        }
+        if (data.mode) {
+          callService('humidifier', 'set_mode', { entity_id: entityId, mode: data.mode });
+        }
+      }
+      break;
+    }
+
+    case 'siren': {
+      const data = state.data as any;
+      if (data.on) {
+        const sd: Record<string, unknown> = { entity_id: entityId };
+        if (data.tone) sd.tone = data.tone;
+        if (typeof data.volume === 'number') sd.volume_level = data.volume;
+        callService('siren', 'turn_on', sd);
+      } else {
+        callService('siren', 'turn_off', { entity_id: entityId });
+      }
+      break;
+    }
+
+    case 'button': {
+      callService('button', 'press', { entity_id: entityId });
+      break;
+    }
+
+    case 'number':
+    case 'input_number': {
+      const data = state.data as any;
+      if (typeof data.value === 'number') {
+        callService(domain, 'set_value', { entity_id: entityId, value: data.value });
+      }
+      break;
+    }
+
+    case 'select':
+    case 'input_select': {
+      const data = state.data as any;
+      if (data.option) {
+        callService(domain, 'select_option', { entity_id: entityId, option: data.option });
+      }
+      break;
+    }
+
+    case 'valve': {
+      const data = state.data as any;
+      if (typeof data.position === 'number') {
+        callService('valve', 'set_valve_position', { entity_id: entityId, position: data.position });
+      } else if (data.state === 'open') {
+        callService('valve', 'open_valve', { entity_id: entityId });
+      } else {
+        callService('valve', 'close_valve', { entity_id: entityId });
+      }
+      break;
+    }
+
+    case 'lawn_mower': {
+      const data = state.data as any;
+      if (data.status === 'mowing') callService('lawn_mower', 'start_mowing', { entity_id: entityId });
+      else if (data.status === 'docked' || data.status === 'returning') callService('lawn_mower', 'dock', { entity_id: entityId });
+      else if (data.status === 'paused') callService('lawn_mower', 'pause', { entity_id: entityId });
+      break;
+    }
   }
 }
 

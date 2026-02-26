@@ -450,6 +450,13 @@ const kindLabels: Record<DeviceKind, string> = {
   fan: 'Fläkt',
   cover: 'Persienn/Port',
   scene: 'Scen',
+  alarm: 'Larm',
+  'water-heater': 'Varmvatten',
+  humidifier: 'Luftfuktare',
+  siren: 'Siren',
+  valve: 'Ventil',
+  remote: 'Fjärr',
+  'lawn-mower': 'Gräsklippare',
 };
 
 function DeviceInspector({ deviceId, close }: { deviceId: string; close: React.ReactNode }) {

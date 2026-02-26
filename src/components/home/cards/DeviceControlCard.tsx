@@ -1,5 +1,5 @@
 import { useAppStore } from '@/store/useAppStore';
-import type { DeviceMarker, LightState, ClimateState, MediaState, VacuumState, LockState, SensorState, GenericDeviceState, CameraState, FanState, CoverState, SceneState } from '@/store/types';
+import type { DeviceMarker, LightState, ClimateState, MediaState, VacuumState, LockState, SensorState, GenericDeviceState, CameraState, FanState, CoverState, SceneState, AlarmState, WaterHeaterState, HumidifierState, ValveState, LawnMowerState } from '@/store/types';
 import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,7 @@ import {
   Snowflake, Flame, RotateCcw, Eye, Camera, Video,
   Fan, PanelTop, Clapperboard, ArrowUp, ArrowDown, StopCircle,
   SkipBack, SkipForward, Tv, MapPin, Wind, Ruler, Clock, AlertTriangle,
+  ShieldAlert, Droplets, Bell, Grip, Trees,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -35,6 +36,12 @@ export default function DeviceControlCard({ marker, compact }: Props) {
     case 'fan': return <FanControl id={marker.id} data={state.data} update={updateDeviceState} />;
     case 'cover': return <CoverControl id={marker.id} data={state.data} update={updateDeviceState} />;
     case 'scene': return <SceneControl id={marker.id} data={state.data} update={updateDeviceState} />;
+    case 'alarm': return <AlarmControl id={marker.id} data={state.data} update={updateDeviceState} />;
+    case 'water-heater': return <WaterHeaterControl id={marker.id} data={state.data} update={updateDeviceState} />;
+    case 'humidifier': return <HumidifierControl id={marker.id} data={state.data} update={updateDeviceState} />;
+    case 'siren': return <SirenControl id={marker.id} data={state.data} update={updateDeviceState} />;
+    case 'valve': return <ValveControl id={marker.id} data={state.data} update={updateDeviceState} />;
+    case 'lawn-mower': return <LawnMowerControl id={marker.id} data={state.data} update={updateDeviceState} />;
     case 'generic': return <GenericControl id={marker.id} data={state.data} update={updateDeviceState} />;
     default: return null;
   }
@@ -50,6 +57,12 @@ function CompactDeviceView({ marker, state }: { marker: DeviceMarker; state: imp
     fan: <Fan size={14} />,
     cover: <PanelTop size={14} />,
     scene: <Clapperboard size={14} />,
+    alarm: <ShieldAlert size={14} />,
+    'water-heater': <Flame size={14} />,
+    humidifier: <Droplets size={14} />,
+    siren: <Bell size={14} />,
+    valve: <Grip size={14} />,
+    'lawn-mower': <Trees size={14} />,
   };
 
   const isOn = 'on' in state.data ? (state.data as any).on : state.kind === 'door-lock' ? !(state.data as LockState).locked : state.kind === 'cover' ? (state.data as CoverState).position > 0 : state.kind !== 'scene';
@@ -113,6 +126,19 @@ function CompactDeviceView({ marker, state }: { marker: DeviceMarker; state: imp
       statusText = `${cd.position}%`;
     } else if (state.kind === 'scene') {
       statusText = 'Scen';
+    } else if (state.kind === 'alarm') {
+      const labels: Record<string, string> = { disarmed: 'Avlarmat', armed_home: 'Hemma', armed_away: 'Borta', triggered: 'Utlöst' };
+      statusText = labels[(state.data as AlarmState).state] ?? (state.data as AlarmState).state;
+    } else if (state.kind === 'humidifier') {
+      const hd = state.data as HumidifierState;
+      statusText = hd.on ? `${hd.humidity}%` : 'Av';
+    } else if (state.kind === 'water-heater') {
+      statusText = `${(state.data as WaterHeaterState).temperature}°`;
+    } else if (state.kind === 'valve') {
+      statusText = (state.data as ValveState).state === 'open' ? 'Öppen' : 'Stängd';
+    } else if (state.kind === 'lawn-mower') {
+      const labels: Record<string, string> = { mowing: 'Klipper', docked: 'Dockad', returning: 'Återvänder' };
+      statusText = labels[(state.data as LawnMowerState).status] ?? (state.data as LawnMowerState).status;
     }
   }
 
@@ -484,6 +510,152 @@ function SceneControl({ id, data, update }: { id: string; data: SceneState; upda
           Senast: {new Date(data.lastTriggered).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })}
         </p>
       )}
+    </div>
+  );
+}
+
+function AlarmControl({ id, data, update }: { id: string; data: AlarmState; update: UpdateFn }) {
+  const labels: Record<string, string> = { disarmed: 'Avlarmat', armed_home: 'Hemma', armed_away: 'Borta', armed_night: 'Natt', pending: 'Väntar', triggered: 'Utlöst!' };
+  const modes = [
+    { key: 'disarmed', label: 'Avlarma' },
+    { key: 'armed_home', label: 'Hemma' },
+    { key: 'armed_away', label: 'Borta' },
+    { key: 'armed_night', label: 'Natt' },
+  ] as const;
+  return (
+    <div className="space-y-3 pt-2">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <ShieldAlert size={16} className={data.state === 'triggered' ? 'text-destructive animate-pulse' : 'text-primary'} />
+          <span className="text-sm font-medium text-foreground">{labels[data.state] ?? data.state}</span>
+        </div>
+      </div>
+      <div className="flex gap-1">
+        {modes.map(({ key, label }) => (
+          <Button key={key} size="sm" variant={data.state === key ? 'default' : 'outline'} className="flex-1 h-7 text-[10px]"
+            onClick={() => update(id, { state: key })}>{label}</Button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function WaterHeaterControl({ id, data, update }: { id: string; data: WaterHeaterState; update: UpdateFn }) {
+  const modes = ['eco', 'electric', 'performance', 'off'] as const;
+  const modeLabels: Record<string, string> = { eco: 'Eko', electric: 'El', performance: 'Max', off: 'Av' };
+  return (
+    <div className="space-y-3 pt-2">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground"><Flame size={14} /><span>{data.temperature}°C</span></div>
+        <Switch checked={data.on} onCheckedChange={(v) => update(id, { on: v, mode: v ? 'electric' : 'off' })} />
+      </div>
+      <div className="flex items-center justify-center gap-3">
+        <Button size="sm" variant="outline" className="h-8 w-8 p-0" disabled={!data.on}
+          onClick={() => update(id, { temperature: data.temperature - 5 })}>−</Button>
+        <span className="text-2xl font-bold text-foreground">{data.temperature}°</span>
+        <Button size="sm" variant="outline" className="h-8 w-8 p-0" disabled={!data.on}
+          onClick={() => update(id, { temperature: data.temperature + 5 })}>+</Button>
+      </div>
+      <div className="flex gap-1">
+        {modes.map((m) => (
+          <Button key={m} size="sm" variant={data.mode === m ? 'default' : 'outline'} className="flex-1 h-7 text-[10px]"
+            onClick={() => update(id, { mode: m, on: m !== 'off' })} disabled={!data.on && m !== 'off'}>{modeLabels[m]}</Button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function HumidifierControl({ id, data, update }: { id: string; data: HumidifierState; update: UpdateFn }) {
+  return (
+    <div className="space-y-3 pt-2">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground"><Droplets size={14} /><span>Målnivå {data.humidity}%</span></div>
+        <Switch checked={data.on} onCheckedChange={(v) => update(id, { on: v })} />
+      </div>
+      <Slider value={[data.humidity]} min={20} max={90} step={5} onValueChange={([v]) => update(id, { humidity: v })} disabled={!data.on} />
+      {data.availableModes && data.availableModes.length > 0 && (
+        <div className="flex gap-1">
+          {data.availableModes.map((m) => (
+            <Button key={m} size="sm" variant={data.mode === m ? 'default' : 'outline'} className="flex-1 h-7 text-[10px]"
+              onClick={() => update(id, { mode: m })} disabled={!data.on}>{m}</Button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SirenControl({ id, data, update }: { id: string; data: import('@/store/types').SirenState; update: UpdateFn }) {
+  return (
+    <div className="space-y-3 pt-2">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground"><Bell size={14} /><span>{data.on ? 'Aktiv' : 'Av'}</span></div>
+        <Switch checked={data.on} onCheckedChange={(v) => update(id, { on: v })} />
+      </div>
+      {data.availableTones && data.availableTones.length > 0 && (
+        <div className="flex gap-1 flex-wrap">
+          {data.availableTones.map((t) => (
+            <Button key={t} size="sm" variant={data.tone === t ? 'default' : 'outline'} className="h-7 text-[10px]"
+              onClick={() => update(id, { tone: t })} disabled={!data.on}>{t}</Button>
+          ))}
+        </div>
+      )}
+      {typeof data.volume === 'number' && (
+        <div className="flex items-center gap-2">
+          <Volume2 size={14} className="text-muted-foreground" />
+          <Slider value={[data.volume]} max={1} step={0.1} onValueChange={([v]) => update(id, { volume: v })} disabled={!data.on} className="flex-1" />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ValveControl({ id, data, update }: { id: string; data: ValveState; update: UpdateFn }) {
+  const stateLabels: Record<string, string> = { open: 'Öppen', closed: 'Stängd', opening: 'Öppnar', closing: 'Stänger' };
+  return (
+    <div className="space-y-3 pt-2">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground"><Grip size={14} /><span>{stateLabels[data.state] ?? data.state}</span></div>
+        <span className="text-xs font-medium text-foreground">{data.position}%</span>
+      </div>
+      <Slider value={[data.position]} max={100} step={1} onValueChange={([v]) => update(id, { position: v, state: v === 0 ? 'closed' : 'open' })} />
+      <div className="flex gap-1">
+        <Button size="sm" variant="outline" className="flex-1 h-7 text-[10px] gap-1"
+          onClick={() => update(id, { position: 100, state: 'open' })}>
+          <ArrowUp size={12} /> Öppna
+        </Button>
+        <Button size="sm" variant="outline" className="flex-1 h-7 text-[10px] gap-1"
+          onClick={() => update(id, { position: 0, state: 'closed' })}>
+          <ArrowDown size={12} /> Stäng
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function LawnMowerControl({ id, data, update }: { id: string; data: LawnMowerState; update: UpdateFn }) {
+  const labels: Record<string, string> = { mowing: 'Klipper', docked: 'Dockad', returning: 'Återvänder', paused: 'Pausad', idle: 'Väntar', error: 'Fel' };
+  return (
+    <div className="space-y-3 pt-2">
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-medium text-foreground">{labels[data.status] ?? data.status}</span>
+        <div className="flex items-center gap-1 text-xs text-muted-foreground"><Battery size={14} /><span>{data.battery}%</span></div>
+      </div>
+      {data.status === 'error' && data.errorMessage && (
+        <div className="flex items-center gap-2 bg-destructive/10 rounded p-1.5">
+          <AlertTriangle size={12} className="text-destructive" />
+          <span className="text-[10px] text-destructive">{data.errorMessage}</span>
+        </div>
+      )}
+      <div className="flex gap-1">
+        <Button size="sm" variant={data.status === 'mowing' ? 'default' : 'outline'} className="flex-1 h-7 text-[10px]"
+          onClick={() => update(id, { on: true, status: 'mowing' })}>Starta</Button>
+        <Button size="sm" variant="outline" className="flex-1 h-7 text-[10px]"
+          onClick={() => update(id, { status: 'paused' })}>Pausa</Button>
+        <Button size="sm" variant="outline" className="flex-1 h-7 text-[10px]"
+          onClick={() => update(id, { on: false, status: 'docked' })}>Docka</Button>
+      </div>
     </div>
   );
 }

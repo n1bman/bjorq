@@ -24,6 +24,13 @@ const kindInfo: Record<DeviceKind, { emoji: string; label: string; category: str
   fan: { emoji: '🌀', label: 'Fläkt', category: 'Klimat' },
   cover: { emoji: '🪟', label: 'Persienn', category: 'Hem' },
   scene: { emoji: '🎬', label: 'Scen', category: 'Automation' },
+  alarm: { emoji: '🚨', label: 'Larm', category: 'Säkerhet' },
+  'water-heater': { emoji: '🔥', label: 'Varmvatten', category: 'Klimat' },
+  humidifier: { emoji: '💧', label: 'Luftfuktare', category: 'Klimat' },
+  siren: { emoji: '🔔', label: 'Siren', category: 'Säkerhet' },
+  valve: { emoji: '🔧', label: 'Ventil', category: 'Hem' },
+  remote: { emoji: '📡', label: 'Fjärr', category: 'Media' },
+  'lawn-mower': { emoji: '🌿', label: 'Gräsklippare', category: 'Hem' },
 };
 
 function isDeviceOn(state?: DeviceState): boolean {
