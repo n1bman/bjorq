@@ -943,9 +943,9 @@ export default function DeviceMarkers3D({ buildMode }: DeviceMarkers3DProps) {
         const Component = markerComponents[marker.kind];
         if (!Component) return null;
         return (
-          <group key={marker.id} rotation={marker.rotation ? (marker.rotation.map((r) => r) as [number, number, number]) : [0, 0, 0]}>
+          <group key={marker.id} position={marker.position} rotation={marker.rotation ? (marker.rotation.map((r) => r) as [number, number, number]) : [0, 0, 0]}>
             <Component
-              position={marker.position}
+              position={[0, 0, 0] as [number, number, number]}
               id={marker.id}
               onSelect={buildMode ? handleSelect : undefined}
               onDragStart={buildMode ? handleDragStart : undefined}
