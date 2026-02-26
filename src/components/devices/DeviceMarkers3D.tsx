@@ -623,7 +623,72 @@ function VacuumMarker3D({ position, id, onSelect, onDragStart, selected }: Marke
   );
 }
 
-// ─── Music Note Particles (state-driven rendering) ───
+// ─── Vacuum Dock 3D ───
+function VacuumDock3D({ position, floorId, isDocked, buildMode, onDragStart }: {
+  position: [number, number];
+  floorId: string;
+  isDocked: boolean;
+  buildMode: boolean;
+  onDragStart?: (id: string, e: ThreeEvent<PointerEvent>) => void;
+}) {
+  const setVacuumDock = useAppStore((s) => s.setVacuumDock);
+  const selectedType = useAppStore((s) => s.build.selection.type);
+  const selectedId = useAppStore((s) => s.build.selection.id);
+  const setSelection = useAppStore((s) => s.setSelection);
+  const dockId = `dock-${floorId}`;
+  const isSelected = buildMode && selectedType === 'device' && selectedId === dockId;
+
+  const handleClick = useCallback((e: ThreeEvent<PointerEvent>) => {
+    e.stopPropagation();
+    if (buildMode) setSelection({ type: 'device', id: dockId });
+  }, [buildMode, setSelection, dockId]);
+
+  return (
+    <group position={[position[0], 0, position[1]]} onClick={handleClick}>
+      {/* Base plate */}
+      <mesh position={[0, 0.005, 0]}>
+        <boxGeometry args={[0.15, 0.01, 0.10]} />
+        <meshStandardMaterial color="#374151" roughness={0.6} metalness={0.2} />
+      </mesh>
+
+      {/* Back plate */}
+      <mesh position={[0, 0.03, -0.045]}>
+        <boxGeometry args={[0.12, 0.04, 0.01]} />
+        <meshStandardMaterial color="#4b5563" roughness={0.5} metalness={0.3} />
+      </mesh>
+
+      {/* LED indicator */}
+      <mesh position={[0, 0.035, -0.04]}>
+        <sphereGeometry args={[0.008, 16, 16]} />
+        <meshStandardMaterial
+          color={isDocked ? '#22c55e' : '#6b7280'}
+          emissive={isDocked ? '#22c55e' : '#6b7280'}
+          emissiveIntensity={isDocked ? 1.2 : 0.2}
+        />
+      </mesh>
+
+      {/* Charging contacts */}
+      <mesh position={[-0.02, 0.012, 0.03]}>
+        <boxGeometry args={[0.008, 0.006, 0.02]} />
+        <meshStandardMaterial color="#d4af37" roughness={0.3} metalness={0.8} />
+      </mesh>
+      <mesh position={[0.02, 0.012, 0.03]}>
+        <boxGeometry args={[0.008, 0.006, 0.02]} />
+        <meshStandardMaterial color="#d4af37" roughness={0.3} metalness={0.8} />
+      </mesh>
+
+      {/* Selection ring */}
+      {isSelected && (
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.002, 0]}>
+          <ringGeometry args={[0.10, 0.13, 32]} />
+          <meshBasicMaterial color="#fff" transparent opacity={0.6} side={THREE.DoubleSide} />
+        </mesh>
+      )}
+    </group>
+  );
+}
+
+
 interface NoteParticle {
   id: number;
   x: number;
@@ -839,6 +904,7 @@ interface DeviceMarkers3DProps {
 
 export default function DeviceMarkers3D({ buildMode }: DeviceMarkers3DProps) {
   const markers = useAppStore((s) => s.devices.markers);
+  const floors = useAppStore((s) => s.layout.floors);
   const showDeviceMarkers = useAppStore((s) => s.homeView.showDeviceMarkers ?? true);
   const setSelection = useAppStore((s) => s.setSelection);
   const updateDevice = useAppStore((s) => s.updateDevice);
@@ -942,16 +1008,41 @@ export default function DeviceMarkers3D({ buildMode }: DeviceMarkers3DProps) {
 
         const Component = markerComponents[marker.kind];
         if (!Component) return null;
+        const isVacuum = marker.kind === 'vacuum';
+        const rot = marker.rotation ? (marker.rotation.map((r) => r) as [number, number, number]) : [0, 0, 0] as [number, number, number];
+        // Vacuum manages its own world-space position internally via useFrame,
+        // so we must NOT set position on the outer group (causes double-offset).
         return (
-          <group key={marker.id} position={marker.position} rotation={marker.rotation ? (marker.rotation.map((r) => r) as [number, number, number]) : [0, 0, 0]}>
+          <group key={marker.id} position={isVacuum ? [0, 0, 0] : marker.position} rotation={isVacuum ? [0, 0, 0] : rot}>
             <Component
-              position={[0, 0, 0] as [number, number, number]}
+              position={isVacuum ? marker.position : ([0, 0, 0] as [number, number, number])}
               id={marker.id}
               onSelect={buildMode ? handleSelect : undefined}
               onDragStart={buildMode ? handleDragStart : undefined}
               selected={!!isSelected}
             />
           </group>
+        );
+      })}
+
+      {/* Render vacuum docks */}
+      {!hideVisuals && floors.map((floor) => {
+        const dock = floor.vacuumMapping?.dockPosition;
+        if (!dock) return null;
+        const hasVacuum = markers.some((m) => m.kind === 'vacuum' && m.floorId === floor.id);
+        if (!hasVacuum) return null;
+        // Check if vacuum is docked
+        const vacuumMarker = markers.find((m) => m.kind === 'vacuum' && m.floorId === floor.id);
+        const vacState = vacuumMarker ? useAppStore.getState().devices.deviceStates[vacuumMarker.id] : null;
+        const isDocked = vacState?.kind === 'vacuum' ? vacState.data.status === 'docked' : false;
+        return (
+          <VacuumDock3D
+            key={`dock-${floor.id}`}
+            position={dock}
+            floorId={floor.id}
+            isDocked={isDocked}
+            buildMode={!!buildMode}
+          />
         );
       })}
     </group>

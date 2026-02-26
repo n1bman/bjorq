@@ -650,6 +650,7 @@ export interface AppState {
   setVacuumDock: (floorId: string, pos: [number, number]) => void;
   addVacuumZone: (floorId: string, zone: VacuumZone) => void;
   removeVacuumZone: (floorId: string, roomId: string) => void;
+  renameVacuumZone: (floorId: string, oldRoomId: string, newRoomId: string) => void;
 
   // Home Assistant actions
   setHAEntities: (entities: HAEntity[]) => void;
