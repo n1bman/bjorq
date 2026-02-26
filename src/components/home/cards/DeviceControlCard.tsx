@@ -159,7 +159,7 @@ function CompactDeviceView({ marker, state }: { marker: DeviceMarker; state: imp
           <span className="text-[10px] text-muted-foreground">{vacLabels[vd.status] ?? vd.status}</span>
           {vd.currentRoom && <span className="text-[9px] text-primary/70">· {vd.currentRoom}</span>}
         </div>
-        <div className="flex items-center gap-0.5">
+        <div className="flex items-center gap-0.5 flex-wrap">
           <Button size="sm" variant={vd.status === 'cleaning' ? 'default' : 'ghost'} className="h-6 px-1.5 text-[9px] gap-0.5"
             onClick={(e) => { e.stopPropagation(); updateDeviceState(marker.id, { on: true, status: 'cleaning' }); }}>
             <Play size={10} /> Städa
@@ -419,6 +419,19 @@ function VacuumControl({ id, data, update }: { id: string; data: VacuumState; up
   const statusColors: Record<string, string> = { cleaning: 'text-blue-400', docked: 'text-green-400', returning: 'text-orange-400', paused: 'text-yellow-400', error: 'text-destructive' };
   const presets = data.fanSpeedList ?? ['Silent', 'Standard', 'Turbo', 'Max'];
   const presetSpeeds: Record<string, number> = { silent: 20, standard: 40, medium: 60, turbo: 80, max: 100 };
+
+  // Get zones for room-specific cleaning
+  const marker = useAppStore((s) => s.devices.markers.find(m => m.id === id));
+  const floors = useAppStore((s) => s.layout.floors);
+  const floor = marker ? floors.find(f => f.id === marker.floorId) : null;
+  const zones = floor?.vacuumMapping?.zones ?? [];
+  const rooms = floor?.rooms ?? [];
+
+  const getZoneName = (roomId: string) => {
+    const room = rooms.find(r => r.id === roomId || r.name === roomId);
+    return room?.name ?? roomId;
+  };
+
   return (
     <div className="space-y-3 pt-2">
       {/* Status + battery */}
@@ -439,7 +452,10 @@ function VacuumControl({ id, data, update }: { id: string; data: VacuumState; up
       {data.currentRoom && (
         <div className="flex items-center gap-2 bg-primary/5 border border-primary/10 rounded-lg px-3 py-1.5">
           <MapPin size={14} className="text-primary" />
-          <span className="text-xs text-foreground">Plats: <strong>{data.currentRoom}</strong></span>
+          <span className="text-xs text-foreground">
+            {data.status === 'cleaning' ? 'Städar i' : 'Plats'}:{' '}
+            <strong>{data.currentRoom}</strong>
+          </span>
         </div>
       )}
 
@@ -453,14 +469,35 @@ function VacuumControl({ id, data, update }: { id: string; data: VacuumState; up
       {/* Control buttons */}
       <div className="flex gap-1">
         <Button size="sm" variant={data.status === 'cleaning' ? 'default' : 'outline'} className="flex-1 h-8 text-[10px] gap-1"
-          onClick={() => update(id, { on: true, status: 'cleaning' })}><Play size={12} /> Städa</Button>
+          onClick={() => update(id, { on: true, status: 'cleaning', targetRoom: undefined })}><Play size={12} /> Städa allt</Button>
         <Button size="sm" variant={data.status === 'paused' ? 'default' : 'outline'} className="flex-1 h-8 text-[10px] gap-1"
           onClick={() => update(id, { status: 'paused' })}><Pause size={12} /> Pausa</Button>
         <Button size="sm" variant="outline" className="flex-1 h-8 text-[10px] gap-1"
-          onClick={() => update(id, { on: false, status: 'docked' })}><Square size={12} /> Stopp</Button>
+          onClick={() => update(id, { on: false, status: 'docked', targetRoom: undefined })}><Square size={12} /> Stopp</Button>
         <Button size="sm" variant="outline" className="h-8 text-[10px] gap-1"
-          onClick={() => update(id, { status: 'returning' })}><HomeIcon size={12} /> Hem</Button>
+          onClick={() => update(id, { status: 'returning', targetRoom: undefined })}><HomeIcon size={12} /> Hem</Button>
       </div>
+
+      {/* Room-specific cleaning */}
+      {zones.length > 0 && (
+        <div className="space-y-1.5">
+          <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Städa rum</p>
+          <div className="flex gap-1 flex-wrap">
+            {zones.map((zone) => {
+              const name = getZoneName(zone.roomId);
+              const isActive = data.status === 'cleaning' && data.currentRoom?.toLowerCase() === name.toLowerCase();
+              return (
+                <Button key={zone.roomId} size="sm"
+                  variant={isActive ? 'default' : 'outline'}
+                  className="h-7 text-[10px] gap-1"
+                  onClick={() => update(id, { on: true, status: 'cleaning', currentRoom: name, targetRoom: name })}>
+                  <MapPin size={10} /> {name}
+                </Button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Locate */}
       <Button size="sm" variant="ghost" className="w-full h-7 text-[10px] gap-1"
