@@ -42,6 +42,7 @@ const initialBuild: BuildState = {
   wallDrawing: { isDrawing: false, nodes: [] },
   roomDrawing: { isDrawing: false, startPoint: null, endPoint: null },
   calibration: { isCalibrating: false, point1: null, point2: null, realMeters: null },
+  importOverlaySync: { zoom: 40, offsetX: 0, offsetY: 0 },
   undoStack: [],
   redoStack: [],
 };
@@ -578,6 +579,11 @@ export const useAppStore = create<AppState>()(
       setCalibration: (cal) =>
         set((s) => ({
           build: { ...s.build, calibration: { ...s.build.calibration, ...cal } },
+        })),
+
+      setImportOverlaySync: (sync) =>
+        set((s) => ({
+          build: { ...s.build, importOverlaySync: { ...s.build.importOverlaySync, ...sync } },
         })),
 
       pushUndo: () =>
