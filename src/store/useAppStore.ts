@@ -86,16 +86,20 @@ export const useAppStore = create<AppState>()(
       toggleShowDeviceMarkers: () => set((s) => ({
         homeView: { ...s.homeView, showDeviceMarkers: !s.homeView.showDeviceMarkers },
       })),
-      saveHomeStartCamera: () => {
-        const { cameraRef } = require('@/lib/cameraRef');
-        set((s) => ({
-          homeView: {
-            ...s.homeView,
-            customStartPos: [cameraRef.position.x, cameraRef.position.y, cameraRef.position.z] as [number, number, number],
-            customStartTarget: [cameraRef.target.x, cameraRef.target.y, cameraRef.target.z] as [number, number, number],
-          },
-        }));
-      },
+      saveHomeStartCamera: (pos, target) => set((s) => ({
+        homeView: {
+          ...s.homeView,
+          customStartPos: pos,
+          customStartTarget: target,
+        },
+      })),
+      clearHomeStartCamera: () => set((s) => ({
+        homeView: {
+          ...s.homeView,
+          customStartPos: undefined,
+          customStartTarget: undefined,
+        },
+      })),
 
       // Device actions
       addDevice: (marker) => set((s) => ({
