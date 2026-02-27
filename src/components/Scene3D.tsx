@@ -64,25 +64,33 @@ function StandbyStaticCamera() {
 function CameraController() {
   const cameraPreset = useAppStore((s) => s.homeView.cameraPreset);
   const appMode = useAppStore((s) => s.appMode);
+  const customStartPos = useAppStore((s) => s.homeView.customStartPos);
+  const customStartTarget = useAppStore((s) => s.homeView.customStartTarget);
   const controlsRef = useRef<any>(null);
   const prevMode = useRef(appMode);
-  const lerpingTo = useRef<CameraPreset | null>(null);
-  const lerpProgress = useRef(0);
+  const lerpingTo = useRef<{ pos: THREE.Vector3; target: THREE.Vector3 } | null>(null);
 
-  // When switching to dashboard, animate once to topdown then stop
+  // When switching to home/dashboard, animate to custom start or topdown
   useEffect(() => {
     if ((appMode === 'dashboard' || appMode === 'home') && prevMode.current !== appMode) {
-      lerpingTo.current = 'topdown';
-      lerpProgress.current = 0;
+      const pos = customStartPos
+        ? new THREE.Vector3(...customStartPos)
+        : presetPositions.topdown.clone();
+      const target = customStartTarget
+        ? new THREE.Vector3(...customStartTarget)
+        : presetTargets.topdown.clone();
+      lerpingTo.current = { pos, target };
     }
     prevMode.current = appMode;
-  }, [appMode]);
+  }, [appMode, customStartPos, customStartTarget]);
 
   // When user picks a preset (not free), animate to it
   useEffect(() => {
     if (cameraPreset !== 'free') {
-      lerpingTo.current = cameraPreset;
-      lerpProgress.current = 0;
+      lerpingTo.current = {
+        pos: presetPositions[cameraPreset].clone(),
+        target: presetTargets[cameraPreset].clone(),
+      };
     }
   }, [cameraPreset]);
 
@@ -93,17 +101,14 @@ function CameraController() {
       cameraRef.target.copy(controlsRef.current.target);
     }
 
-    // Animate to target preset then release
+    // Animate to target then release
     if (lerpingTo.current) {
-      const targetPos = presetPositions[lerpingTo.current];
-      const targetTarget = presetTargets[lerpingTo.current];
+      const { pos: targetPos, target: targetTarget } = lerpingTo.current;
       camera.position.lerp(targetPos, delta * 3);
       if (controlsRef.current) {
         controlsRef.current.target.lerp(targetTarget, delta * 3);
         controlsRef.current.update();
       }
-      lerpProgress.current += delta;
-      // Stop lerping once close enough
       if (camera.position.distanceTo(targetPos) < 0.05) {
         lerpingTo.current = null;
       }
