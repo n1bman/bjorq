@@ -28,7 +28,7 @@ export default function WeatherWidget() {
   return (
     <div
       className={cn(
-        'glass-panel rounded-2xl p-4 cursor-pointer transition-all duration-300',
+        'glass-panel rounded-2xl p-5 cursor-pointer transition-all duration-300',
         expanded ? 'min-w-[280px]' : 'min-w-[160px] max-w-[180px]'
       )}
       onClick={() => setExpanded(!expanded)}
@@ -37,10 +37,10 @@ export default function WeatherWidget() {
         <span className="text-2xl">{weatherIcons[condition] ?? '☀️'}</span>
         <div>
           <div className="flex items-center gap-1">
-            <Thermometer size={14} className="text-primary" />
-            <span className="text-lg font-semibold font-display text-foreground">{temperature}°C</span>
+            <Thermometer size={16} className="text-primary" />
+            <span className="text-2xl font-bold font-display text-foreground">{temperature}°C</span>
           </div>
-          <p className="text-[10px] text-muted-foreground">{conditionLabels[condition] ?? condition} · Utomhus</p>
+          <p className="text-xs text-muted-foreground">{conditionLabels[condition] ?? condition} · Utomhus</p>
         </div>
       </div>
 
@@ -49,11 +49,11 @@ export default function WeatherWidget() {
           <div className="flex items-center gap-3 mt-2 pt-2 border-t border-border/30">
             <div className="flex items-center gap-1">
               <Wind size={12} className="text-muted-foreground" />
-              <span className="text-[10px] text-muted-foreground">{windSpeed ?? 3.2} m/s</span>
+              <span className="text-[11px] text-muted-foreground">{windSpeed ?? 3.2} m/s</span>
             </div>
             <div className="flex items-center gap-1">
-              <Droplets size={12} className="text-muted-foreground" />
-              <span className="text-[10px] text-muted-foreground">{humidity ?? 62}%</span>
+              <Droplets size={14} className="text-muted-foreground" />
+              <span className="text-[11px] text-muted-foreground">{humidity ?? 62}%</span>
             </div>
           </div>
 

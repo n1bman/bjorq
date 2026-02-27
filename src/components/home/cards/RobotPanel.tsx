@@ -68,7 +68,7 @@ function FanSpeedSelector({ data, id, update }: { data: VacuumState; id: string;
             : Math.abs((data.fanSpeed ?? 0) - speed) < 10;
           return (
             <Button key={p} size="sm" variant={active ? 'default' : 'outline'}
-              className="h-6 text-[9px] px-2"
+              className="h-8 text-[10px] px-2.5"
               onClick={() => update(id, { fanSpeed: speed, fanSpeedPreset: p })}>
               {p}
             </Button>
@@ -432,7 +432,7 @@ function VacuumCard({ marker, data, update }: { marker: DeviceMarker; data: Vacu
   const statusLabel = statusLabels[data.status] ?? data.status;
 
   return (
-    <div className="glass-panel rounded-2xl p-4 space-y-4">
+    <div className="glass-panel rounded-2xl p-5 space-y-5">
       {/* Roborock-only notice */}
       <div className="flex items-start gap-2 bg-orange-500/10 border border-orange-500/20 rounded-lg px-3 py-2">
         <Info size={14} className="text-orange-400 shrink-0 mt-0.5" />
@@ -490,20 +490,20 @@ function VacuumCard({ marker, data, update }: { marker: DeviceMarker; data: Vacu
       {/* Control buttons */}
       <div className="flex gap-2">
         <Button size="sm" variant={data.status === 'cleaning' ? 'default' : 'outline'}
-          className="flex-1 h-9 text-xs gap-1"
+          className="flex-1 h-11 text-xs gap-1"
           onClick={() => update(id, { on: true, status: 'cleaning', targetRoom: undefined })}>
           <Play size={14} /> Städa allt
         </Button>
         <Button size="sm" variant={data.status === 'paused' ? 'default' : 'outline'}
-          className="flex-1 h-9 text-xs gap-1"
+          className="flex-1 h-11 text-xs gap-1"
           onClick={() => update(id, { status: 'paused' })}>
           <Pause size={14} /> Pausa
         </Button>
-        <Button size="sm" variant="outline" className="flex-1 h-9 text-xs gap-1"
+        <Button size="sm" variant="outline" className="flex-1 h-11 text-xs gap-1"
           onClick={() => update(id, { on: false, status: 'idle', targetRoom: undefined })}>
           <Square size={14} /> Stoppa
         </Button>
-        <Button size="sm" variant="outline" className="h-9 text-xs gap-1"
+        <Button size="sm" variant="outline" className="h-11 text-xs gap-1"
           onClick={() => update(id, { status: 'returning', targetRoom: undefined })}>
           <HomeIcon size={14} />
         </Button>
@@ -513,7 +513,7 @@ function VacuumCard({ marker, data, update }: { marker: DeviceMarker; data: Vacu
       <RoomZoneCards marker={marker} data={data} update={update} />
 
       {/* Locate */}
-      <Button size="sm" variant="outline" className="w-full h-8 text-xs gap-1"
+      <Button size="sm" variant="outline" className="w-full h-11 text-xs gap-1"
         onClick={() => update(id, { _action: 'locate' })}>
         <MapPin size={14} /> Lokalisera (pip)
       </Button>

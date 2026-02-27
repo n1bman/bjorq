@@ -113,7 +113,7 @@ export default function CategoryCard({
   return (
     <div
       className={cn(
-        'glass-panel rounded-2xl p-3 transition-all',
+        'glass-panel rounded-2xl p-4 transition-all',
         span && 'col-span-2',
         dragOverActive && 'ring-2 ring-primary/50 bg-primary/5',
         editMode && 'ring-1 ring-dashed ring-muted-foreground/30'
@@ -135,11 +135,11 @@ export default function CategoryCard({
             'text-muted-foreground transition-transform shrink-0',
             collapsed && '-rotate-90'
           )} />
-          <span className="text-sm font-semibold text-foreground truncate">{category}</span>
-          <span className="text-[10px] text-muted-foreground shrink-0">{onCount}/{devices.length}</span>
+          <span className="text-base font-semibold text-foreground truncate">{category}</span>
+          <span className="text-xs text-muted-foreground shrink-0">{onCount}/{devices.length}</span>
         </div>
         <div onClick={(e) => e.stopPropagation()}>
-          <Switch checked={allOn} onCheckedChange={toggleAll} className="scale-75" />
+          <Switch checked={allOn} onCheckedChange={toggleAll} className="scale-90" />
         </div>
       </div>
 
@@ -169,15 +169,15 @@ export default function CategoryCard({
                 )}
               >
                 <div
-                  className="flex items-center gap-2 py-1.5 px-2 cursor-pointer"
+                  className="flex items-center gap-2 py-2.5 px-3 cursor-pointer"
                   onClick={() => !editMode && setExpandedId(expanded ? null : d.id)}
                 >
                   {editMode && <GripVertical size={10} className="text-muted-foreground/50 shrink-0" />}
                   <span className="text-sm">{emoji}</span>
-                  <span className="text-xs text-foreground truncate flex-1">{d.name || d.kind}</span>
+                  <span className="text-sm text-foreground truncate flex-1">{d.name || d.kind}</span>
 
                   {!editMode && state?.kind === 'light' && state.data.on && !expanded && (
-                    <div className="w-12" onClick={(e) => e.stopPropagation()}>
+                    <div className="w-16" onClick={(e) => e.stopPropagation()}>
                       <Slider
                         value={[state.data.brightness]}
                         max={255} step={1}
@@ -188,7 +188,7 @@ export default function CategoryCard({
 
                   {!editMode && state && 'on' in state.data && state.kind !== 'sensor' && (
                     <div onClick={(e) => e.stopPropagation()}>
-                      <Switch checked={on} onCheckedChange={(v) => updateDeviceState(d.id, { on: v })} className="scale-75" />
+                      <Switch checked={on} onCheckedChange={(v) => updateDeviceState(d.id, { on: v })} className="scale-90" />
                     </div>
                   )}
 

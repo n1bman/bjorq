@@ -234,19 +234,19 @@ export default function DashboardGrid() {
   return (
     <div className="absolute inset-0 z-10 pointer-events-none">
       <div className="relative w-full h-full flex flex-col pointer-events-auto">
-        <div className="flex items-center gap-1 px-3 py-2 bg-card/80 backdrop-blur-sm border-b border-border overflow-x-auto flex-nowrap shrink-0">
+        <div className="flex items-center gap-1 px-3 py-2.5 bg-card/80 backdrop-blur-sm border-b border-border overflow-x-auto flex-nowrap shrink-0">
           {categories.map(({ key, label, icon: Icon }) => (
             <button
               key={key}
               onClick={() => setActive(key)}
               className={cn(
-                'relative flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-lg text-[10px] font-medium transition-all min-w-[52px]',
+                'relative flex flex-col items-center gap-0.5 px-3 py-2.5 rounded-lg text-[11px] font-medium transition-all min-w-[64px]',
                 active === key
-                  ? 'bg-primary/15 text-primary'
+                  ? 'bg-primary/15 text-primary border-b-2 border-primary'
                   : 'text-muted-foreground hover:text-foreground hover:bg-secondary/30'
               )}
             >
-              <Icon size={18} />
+              <Icon size={20} />
               <span>{label}</span>
               {key === 'activity' && unreadCount > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 bg-destructive text-destructive-foreground text-[8px] font-bold rounded-full min-w-[14px] h-[14px] flex items-center justify-center px-0.5">
@@ -257,7 +257,7 @@ export default function DashboardGrid() {
           ))}
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4 pb-28">
+        <div className="flex-1 overflow-y-auto p-5 pb-28">
           <Content />
         </div>
       </div>
