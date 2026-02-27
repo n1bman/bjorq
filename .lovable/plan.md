@@ -1,36 +1,56 @@
 
 
-# Fix: SketchUp-import producerar tom GLB (0 trianglar, 160 B)
+# Fix: Importerad modell syns inte i 3D-scenen
 
-## Rotorsak
-Konverteringen "lyckas" men producerar en tom GLB. Troliga orsaker:
+## Analys av koden
 
-1. **GLTFExporter kan inte exportera MeshPhongMaterial** — OBJLoader och ColladaLoader skapar `MeshPhongMaterial`, men GLTFExporter i Three.js v0.170 kan ha problem med att konvertera dessa. Meshes hoppas över tyst.
-2. **Texturer laddas aldrig** — `TextureLoader.load()` är asynkron men resultatet inväntas aldrig. Texturerna finns inte när GLTFExporter körs.
-3. **Ingen validering** efter laddning — om scenen är tom märks det aldrig.
+Jag har gått igenom hela pipeline:n och hittat flera problem:
+
+### Problem 1: Ingen auto-skalning — modellen kan vara osynligt liten eller enorm
+SketchUp exporterar OBJ i inches (1 inch = 0.0254 m). En modell som är 10 meter i verkligheten blir ~394 units i OBJ-filen. Med `scale: [1,1,1]` kan modellen vara hundratals gånger för stor eller liten. **Ingen bounding-box-normalisering görs.**
+
+**Fix**: Efter laddning, beräkna bounding box och auto-skala till rimlig storlek (t.ex. max 20 meter). Spara den beräknade skalan i store.
+
+### Problem 2: Base64-lagring spränger localStorage
+`partialize` inkluderar `homeGeometry.imported.fileData` (base64). En 10 MB GLB → ~13 MB base64 → localStorage har ~5-10 MB gräns. `persist` kraschar tyst och INGET sparas — inklusive `source: 'imported'`. Vid nästa render läses `source: 'procedural'` och modellen försvinner.
+
+**Fix**: Exkludera `fileData` från `partialize`, eller begränsa till max 4 MB. Större filer lagras bara som blob URL (försvinner vid reload men fungerar under session).
+
+### Problem 3: GLB-export valideras inte
+Om `exportToGLB` producerar en tom ArrayBuffer (160 bytes = tom GLB header), fångas det aldrig. Wizard visar "Klar!" med 0 trianglar.
+
+**Fix**: Kontrollera GLB-storlek efter export. Om < 1 KB, kasta fel.
+
+### Problem 4: Scenen centreras inte kring modellen
+Kameran i 3D-scenen pekar på origo. Om modellen har offset (t.ex. center vid [100, 0, 200]) syns den inte i viewport.
+
+**Fix**: Auto-centrera modellen till origo efter laddning.
 
 ## Ändringar
 
-### `src/lib/sketchupImport.ts`
+| Fil | Ändring |
+|-----|---------|
+| `src/lib/sketchupImport.ts` | Auto-centrera + auto-skala scen efter laddning, validera GLB-storlek |
+| `src/store/useAppStore.ts` | Exkludera stora `fileData` från localStorage i `partialize` |
+| `src/components/build/ImportedHome3D.tsx` | Logga vid rendering för debugging |
+| `src/components/build/import/SketchUpWizard.tsx` | Visa bounding box info, hantera stora filer utan base64 |
 
-**Fix 1: Konvertera material till MeshStandardMaterial före export**
-Lägg till en `convertMaterials(scene)` funktion som traverserar scenen och byter ut alla `MeshPhongMaterial`/`MeshLambertMaterial` mot `MeshStandardMaterial` med samma färg/map. Detta garanterar att GLTFExporter kan exportera allt.
+### Detaljer
 
-**Fix 2: Validera scenen efter laddning**
-Efter `loadOBJ`/`loadDAE`, räkna meshes. Om 0 meshes: kasta ett tydligt fel istället för att producera en tom GLB.
+**sketchupImport.ts** — ny funktion `normalizeScene(scene)`:
+- Beräkna `new THREE.Box3().setFromObject(scene)`
+- Centrera scenen: `scene.position.sub(center)`
+- Beräkna max dimension, skala ner om > 30 meter
+- Logga bounding box, center, scale
+- Returnera `{ appliedScale, boundingBox }` för att spara i store
 
-**Fix 3: Gör texturladdning asynkron**
-Byt `TextureLoader.load(url)` i `loadOBJ` mot en `await`-baserad laddning med promises, så texturerna faktiskt finns när vi exporterar.
+**sketchupImport.ts** — validera GLB:
+- Efter `exportToGLB`, om `glbBuffer.byteLength < 1024` → kasta fel "GLB-filen är tom"
 
-**Fix 4: Logga scen-innehåll för debugging**
-Lägg till `console.log` med mesh-count och material-typer efter laddning, så framtida problem syns i konsolen.
+**useAppStore.ts** — partialize fix:
+- I `partialize`, exkludera `fileData` om den är större än 4 MB (behåll resten av homeGeometry)
 
-### Sammanfattning
-
-| Ändring | Fil |
-|---------|-----|
-| Konvertera material till MeshStandardMaterial | `src/lib/sketchupImport.ts` |
-| Validera mesh-count efter laddning | `src/lib/sketchupImport.ts` |
-| Asynkron texturladdning | `src/lib/sketchupImport.ts` |
-| Debug-logging | `src/lib/sketchupImport.ts` |
+**SketchUpWizard.tsx** — smart persistence:
+- Om GLB > 4 MB, hoppa över `readAsDataURL` och sätt bara blob URL (fungerar under session)
+- Visa varning: "Modellen är för stor för permanent lagring"
 
