@@ -9,15 +9,15 @@ export default function EnergyWidget() {
     <div
       className={cn(
         'glass-panel rounded-2xl p-5 cursor-pointer transition-all duration-300',
-        expanded ? 'min-w-[220px]' : 'min-w-[140px] max-w-[160px]'
+        expanded ? 'min-w-[200px]' : 'min-w-[120px] max-w-[150px]'
       )}
       onClick={() => setExpanded(!expanded)}
     >
       <div className="flex items-center gap-2">
         <Zap size={18} className="text-primary shrink-0" />
         <div>
-          <p className="text-2xl font-bold font-display text-foreground">1 541 W</p>
-          <p className="text-xs text-muted-foreground">1.5 kr/kWh</p>
+          <p className="text-lg font-bold font-display text-foreground whitespace-nowrap">1 541 W</p>
+          <p className="text-[10px] text-muted-foreground whitespace-nowrap">1.5 kr/kWh</p>
         </div>
       </div>
       <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border/30">
