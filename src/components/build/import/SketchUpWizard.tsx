@@ -1,17 +1,26 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
 import { Switch } from '@/components/ui/switch';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
-import { Upload, FolderOpen, FileArchive, AlertTriangle, CheckCircle2, XCircle, ChevronRight, ChevronDown, Bug } from 'lucide-react';
+import { Upload, FolderOpen, FileArchive, AlertTriangle, CheckCircle2, XCircle, ChevronRight, ChevronDown, Bug, Server, Monitor, Info } from 'lucide-react';
 import { useAppStore } from '@/store/useAppStore';
 import {
   extractZip, extractFolder, validateFileMap, convertSketchUp,
-  testLoadOnly, testGLBExportSanity,
+  testLoadOnly, testGLBExportSanity, buildZipFromFileMap,
   type FileMap, type ValidationResult, type ConversionProgress, type ConversionResult, type TargetDevice, type DebugInfo, type LoaderTestResult,
 } from '@/lib/sketchupImport';
+import {
+  getHABaseUrl, checkAddonAvailable, uploadForConversion,
+  pollConversionStatus, downloadResult,
+} from '@/lib/haConverterApi';
+import { analyzeModel } from '@/lib/modelAnalysis';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import * as THREE from 'three';
 
-type Step = 'pick' | 'validate' | 'settings' | 'converting' | 'done' | 'error';
+type Step = 'pick' | 'validate' | 'mode' | 'settings' | 'converting' | 'done' | 'error';
+type ConvMode = 'ha' | 'browser';
 
 function formatBytes(bytes: number) {
   if (bytes < 1024) return `${bytes} B`;
@@ -21,6 +30,8 @@ function formatBytes(bytes: number) {
 
 const IMAGE_EXTS = new Set(['jpg', 'jpeg', 'png', 'tif', 'tiff', 'webp', 'bmp']);
 const getExt = (name: string) => name.split('.').pop()?.toLowerCase() ?? '';
+
+// ── Sub-panels (unchanged) ──
 
 function FileDebugPanel({ fileMap, validation }: { fileMap: FileMap; validation: ValidationResult }) {
   const objCount = [...fileMap.files.keys()].filter(p => getExt(p) === 'obj').length;
@@ -128,6 +139,8 @@ function ConversionDebugPanel({ debugInfo }: { debugInfo: DebugInfo }) {
   );
 }
 
+// ── Main wizard ──
+
 export default function SketchUpWizard({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
   const [step, setStep] = useState<Step>('pick');
   const [fileMap, setFileMap] = useState<FileMap | null>(null);
@@ -143,11 +156,36 @@ export default function SketchUpWizard({ open, onOpenChange }: { open: boolean; 
   const [glbSanityTesting, setGlbSanityTesting] = useState(false);
   const [fastMode, setFastMode] = useState(false);
 
+  // HA conversion state
+  const [convMode, setConvMode] = useState<ConvMode>('browser');
+  const [haAvailable, setHaAvailable] = useState<boolean | null>(null);
+  const [haChecking, setHaChecking] = useState(false);
+
   const zipRef = useRef<HTMLInputElement>(null);
   const folderRef = useRef<HTMLInputElement>(null);
 
   const setImportedModel = useAppStore((s) => s.setImportedModel);
   const setHomeGeometrySource = useAppStore((s) => s.setHomeGeometrySource);
+  const haStatus = useAppStore((s) => s.homeAssistant.status);
+
+  // Check HA add-on availability when entering mode step
+  const checkHA = useCallback(async () => {
+    setHaChecking(true);
+    const baseUrl = getHABaseUrl();
+    const token = useAppStore.getState().homeAssistant.token;
+    if (!baseUrl || !token || haStatus !== 'connected') {
+      setHaAvailable(false);
+      setHaChecking(false);
+      return;
+    }
+    const available = await checkAddonAvailable(baseUrl, token);
+    setHaAvailable(available);
+    // Auto-select HA if available and file is large
+    if (available && fileMap && fileMap.totalSize > 150 * 1024 * 1024) {
+      setConvMode('ha');
+    }
+    setHaChecking(false);
+  }, [haStatus, fileMap]);
 
   const reset = () => {
     setStep('pick');
@@ -159,6 +197,8 @@ export default function SketchUpWizard({ open, onOpenChange }: { open: boolean; 
     setLoaderTestResult(null);
     setGlbSanityResult(null);
     setFastMode(false);
+    setConvMode('browser');
+    setHaAvailable(null);
     setProgress({ stage: 'extracting', percent: 0, message: '' });
   };
 
@@ -241,7 +281,8 @@ export default function SketchUpWizard({ open, onOpenChange }: { open: boolean; 
     e.target.value = '';
   };
 
-  const startConversion = async () => {
+  // Browser conversion (existing)
+  const startBrowserConversion = async () => {
     if (!fileMap || !validation) return;
     setStep('converting');
     try {
@@ -251,6 +292,98 @@ export default function SketchUpWizard({ open, onOpenChange }: { open: boolean; 
     } catch (err) {
       setErrorMsg(`Konvertering misslyckades: ${(err as Error).message}`);
       setStep('error');
+    }
+  };
+
+  // HA add-on conversion
+  const startHAConversion = async () => {
+    if (!fileMap) return;
+    setStep('converting');
+    const baseUrl = getHABaseUrl();
+    const token = useAppStore.getState().homeAssistant.token;
+    if (!baseUrl || !token) {
+      setErrorMsg('Ingen Home Assistant-anslutning hittades.');
+      setStep('error');
+      return;
+    }
+
+    try {
+      // 1. Build ZIP
+      setProgress({ stage: 'uploading', percent: 5, message: 'Bygger ZIP för uppladdning...' });
+      const zipBlob = await buildZipFromFileMap(fileMap);
+
+      // 2. Upload
+      setProgress({ stage: 'uploading', percent: 10, message: 'Laddar upp till HomeTwin Converter...' });
+      const { jobId } = await uploadForConversion(baseUrl, token, zipBlob, (pct) => {
+        setProgress({ stage: 'uploading', percent: 10 + Math.round(pct * 0.3), message: `Laddar upp... ${pct}%` });
+      });
+
+      // 3. Poll status
+      setProgress({ stage: 'remote-converting', percent: 40, message: 'Konverterar på HA...' });
+      let status = await pollConversionStatus(baseUrl, token, jobId);
+      while (status.state === 'queued' || status.state === 'converting') {
+        await new Promise((r) => setTimeout(r, 2000));
+        status = await pollConversionStatus(baseUrl, token, jobId);
+        const pct = 40 + Math.round((status.percent / 100) * 40);
+        setProgress({ stage: 'remote-converting', percent: pct, message: status.message || 'Konverterar...' });
+      }
+
+      if (status.state === 'error') {
+        throw new Error(status.error || status.message || 'Konvertering misslyckades på HA');
+      }
+
+      // 4. Download GLB
+      setProgress({ stage: 'downloading', percent: 85, message: 'Laddar ner GLB...' });
+      const glbBlob = await downloadResult(baseUrl, token, jobId);
+      console.log(`[SketchUp HA] Downloaded GLB: ${(glbBlob.size / 1024 / 1024).toFixed(1)} MB`);
+
+      // 5. Load GLB to get stats
+      setProgress({ stage: 'downloading', percent: 95, message: 'Analyserar resultat...' });
+      const glbUrl = URL.createObjectURL(glbBlob);
+      const gltf = await new Promise<any>((resolve, reject) => {
+        const loader = new GLTFLoader();
+        loader.load(glbUrl, resolve, undefined, reject);
+      });
+      const stats = analyzeModel(gltf.scene);
+      const { meshCount, triCount } = collectSceneStatsFromScene(gltf.scene);
+
+      const box = new THREE.Box3().setFromObject(gltf.scene);
+      const bboxSize = box.getSize(new THREE.Vector3());
+
+      URL.revokeObjectURL(glbUrl);
+
+      setResult({
+        glbBlob,
+        stats,
+        originalSize: fileMap.totalSize,
+        optimizedSize: glbBlob.size,
+        warnings: [],
+        debugInfo: {
+          rootType: 'HA Converter',
+          childrenCount: gltf.scene.children.length,
+          meshCount,
+          triangleCount: triCount,
+          boundingBox: {
+            x: Math.round(bboxSize.x * 100) / 100,
+            y: Math.round(bboxSize.y * 100) / 100,
+            z: Math.round(bboxSize.z * 100) / 100,
+          },
+          missingResources: [],
+        },
+      });
+      setProgress({ stage: 'done', percent: 100, message: 'Klar!' });
+      setStep('done');
+    } catch (err) {
+      setErrorMsg(`HA-konvertering misslyckades: ${(err as Error).message}`);
+      setStep('error');
+    }
+  };
+
+  const startConversion = () => {
+    if (convMode === 'ha') {
+      startHAConversion();
+    } else {
+      startBrowserConversion();
     }
   };
 
@@ -385,7 +518,6 @@ export default function SketchUpWizard({ open, onOpenChange }: { open: boolean; 
               </div>
             )}
 
-            {/* Debug panel for validation step */}
             {fileMap && <FileDebugPanel fileMap={fileMap} validation={validation} />}
 
             {/* Fast Import toggle */}
@@ -415,9 +547,102 @@ export default function SketchUpWizard({ open, onOpenChange }: { open: boolean; 
               </button>
             </div>
 
-            {/* Test results */}
             {loaderTestResult && <LoaderTestPanel result={loaderTestResult} />}
             {glbSanityResult && <GLBSanityResult result={glbSanityResult} />}
+
+            <button
+              onClick={() => { setStep('mode'); checkHA(); }}
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-all min-h-[44px]"
+            >
+              Nästa <ChevronRight size={14} />
+            </button>
+          </div>
+        )}
+
+        {/* Step: Mode selection (NEW) */}
+        {step === 'mode' && (
+          <div className="space-y-4">
+            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Konverteringsmetod</h4>
+
+            <RadioGroup value={convMode} onValueChange={(v) => setConvMode(v as ConvMode)} className="space-y-2">
+              {/* HA option */}
+              <label
+                className={`flex items-start gap-3 p-3 rounded-lg border transition-all cursor-pointer ${
+                  convMode === 'ha' ? 'border-primary bg-primary/5' : 'border-border'
+                } ${!haAvailable ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                <RadioGroupItem value="ha" disabled={!haAvailable} className="mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 text-xs font-medium text-foreground">
+                    <Server size={14} />
+                    Konvertera via Home Assistant
+                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-primary/20 text-primary font-semibold">Rekommenderas</span>
+                  </div>
+                  <div className="text-[10px] text-muted-foreground mt-0.5">
+                    Hanterar stora modeller (600MB+). Kräver HomeTwin Converter add-on.
+                  </div>
+                </div>
+              </label>
+
+              {/* Browser option */}
+              <label
+                className={`flex items-start gap-3 p-3 rounded-lg border transition-all cursor-pointer ${
+                  convMode === 'browser' ? 'border-primary bg-primary/5' : 'border-border'
+                }`}
+              >
+                <RadioGroupItem value="browser" className="mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 text-xs font-medium text-foreground">
+                    <Monitor size={14} />
+                    Konvertera i webbläsaren
+                  </div>
+                  <div className="text-[10px] text-muted-foreground mt-0.5">
+                    Fungerar för små modeller (&lt;150 MB). Ingen extra setup krävs.
+                  </div>
+                </div>
+              </label>
+            </RadioGroup>
+
+            {/* HA status info */}
+            {haChecking && (
+              <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                <div className="h-3 w-3 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+                Kontrollerar HomeTwin Converter...
+              </div>
+            )}
+
+            {!haChecking && haAvailable === false && (
+              <div className="rounded-lg border border-border bg-secondary/30 p-3 space-y-1.5">
+                <div className="flex items-start gap-2 text-[10px] text-muted-foreground">
+                  <Info size={14} className="shrink-0 mt-0.5 text-primary" />
+                  <div>
+                    {haStatus !== 'connected' ? (
+                      <span>Anslut till Home Assistant först (Hem → Inställningar → HA).</span>
+                    ) : (
+                      <span>
+                        HomeTwin Converter add-on hittades inte.<br />
+                        Installera via HA: <strong>Inställningar → Add-ons → HomeTwin Converter</strong>
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {!haChecking && haAvailable && (
+              <div className="flex items-center gap-2 text-[10px] text-green-400">
+                <CheckCircle2 size={12} />
+                HomeTwin Converter add-on är tillgänglig
+              </div>
+            )}
+
+            {/* Large file warning when browser mode selected */}
+            {convMode === 'browser' && fileMap && fileMap.totalSize > 150 * 1024 * 1024 && (
+              <div className="flex items-start gap-2 text-[10px] text-yellow-400 p-2 rounded-lg bg-yellow-500/10">
+                <AlertTriangle size={12} className="shrink-0 mt-0.5" />
+                <span>Modellen är {formatBytes(fileMap.totalSize)} — webbläsarkonvertering kan misslyckas. HA-konvertering rekommenderas.</span>
+              </div>
+            )}
 
             <button
               onClick={() => setStep('settings')}
@@ -449,6 +674,12 @@ export default function SketchUpWizard({ open, onOpenChange }: { open: boolean; 
               </div>
             </div>
 
+            {/* Show selected mode */}
+            <div className="text-[10px] text-muted-foreground flex items-center gap-1.5">
+              {convMode === 'ha' ? <Server size={12} /> : <Monitor size={12} />}
+              Konvertering: {convMode === 'ha' ? 'Home Assistant' : 'Webbläsare'}
+            </div>
+
             <button
               onClick={startConversion}
               className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-all min-h-[44px]"
@@ -464,7 +695,12 @@ export default function SketchUpWizard({ open, onOpenChange }: { open: boolean; 
             <Progress value={progress.percent} className="h-2" />
             <div className="text-center space-y-1">
               <div className="text-xs text-foreground font-medium">{progress.message}</div>
-              <div className="text-[10px] text-muted-foreground">{progress.percent}%</div>
+              <div className="text-[10px] text-muted-foreground">
+                {progress.percent}%
+                {(progress.stage === 'uploading' || progress.stage === 'remote-converting' || progress.stage === 'downloading') && (
+                  <span className="ml-2">🏠 via Home Assistant</span>
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -512,7 +748,6 @@ export default function SketchUpWizard({ open, onOpenChange }: { open: boolean; 
               </div>
             )}
 
-            {/* Debug panel for done step */}
             {result.debugInfo && <ConversionDebugPanel debugInfo={result.debugInfo} />}
 
             <button
@@ -542,4 +777,21 @@ export default function SketchUpWizard({ open, onOpenChange }: { open: boolean; 
       </DialogContent>
     </Dialog>
   );
+}
+
+/** Helper to count meshes/tris from a loaded scene (used after GLB download) */
+function collectSceneStatsFromScene(scene: THREE.Object3D): { meshCount: number; triCount: number } {
+  let meshCount = 0;
+  let triCount = 0;
+  scene.traverse((child) => {
+    if ((child as any).isMesh) {
+      meshCount++;
+      const geo = (child as THREE.Mesh).geometry;
+      if (geo) {
+        if (geo.index) triCount += geo.index.count / 3;
+        else if (geo.attributes?.position) triCount += geo.attributes.position.count / 3;
+      }
+    }
+  });
+  return { meshCount, triCount: Math.round(triCount) };
 }
