@@ -55,6 +55,31 @@ export default function ImportTools() {
             <span className="truncate">{imported.url.split('/').pop()}</span>
           </div>
         )}
+
+        {imported.modelStats && (
+          <div className="rounded-lg border border-border p-2.5 space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] text-muted-foreground">Prestanda</span>
+              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                imported.modelStats.rating === 'ok' ? 'bg-green-500/20 text-green-400' :
+                imported.modelStats.rating === 'heavy' ? 'bg-yellow-500/20 text-yellow-400' :
+                'bg-red-500/20 text-red-400'
+              }`}>
+                {imported.modelStats.rating === 'ok' ? '✓ OK' : imported.modelStats.rating === 'heavy' ? '⚠ Tung' : '✗ För tung'}
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 text-[9px]">
+              <span className="text-muted-foreground">Trianglar</span>
+              <span className="text-foreground text-right">{imported.modelStats.triangles.toLocaleString()}</span>
+              <span className="text-muted-foreground">Material</span>
+              <span className="text-foreground text-right">{imported.modelStats.materials}</span>
+              <span className="text-muted-foreground">Texturer</span>
+              <span className="text-foreground text-right">{imported.modelStats.textures}</span>
+              <span className="text-muted-foreground">Max upplösning</span>
+              <span className="text-foreground text-right">{imported.modelStats.maxTextureRes || '–'}px</span>
+            </div>
+          </div>
+        )}
       </div>
 
       {isImported && (

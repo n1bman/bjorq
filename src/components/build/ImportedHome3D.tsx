@@ -3,9 +3,20 @@ import { useLoader } from '@react-three/fiber';
 import { useAppStore } from '@/store/useAppStore';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { ErrorBoundary } from './ErrorBoundary3D';
+import { analyzeModel } from '@/lib/modelAnalysis';
 
 function ImportedModel({ url }: { url: string }) {
   const gltf = useLoader(GLTFLoader, url);
+  const setImportedModel = useAppStore((s) => s.setImportedModel);
+  const hasStats = useAppStore((s) => !!s.homeGeometry.imported.modelStats);
+
+  useEffect(() => {
+    if (!hasStats && gltf.scene) {
+      const stats = analyzeModel(gltf.scene);
+      setImportedModel({ modelStats: stats });
+    }
+  }, [gltf, hasStats, setImportedModel]);
+
   return <primitive object={gltf.scene.clone()} />;
 }
 
