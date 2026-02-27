@@ -1,41 +1,34 @@
 
 
-# Fix: Radera allt, SketchUp-import, och ta bort uppladdad modell
+# Fix: ZIP-import "invalid zip data"
 
-## Problem 1: "Radera allt" funkar inte
-`clearAllFloors()` rensar väggar/rum/trappor och props men rensar INTE den importerade modellen. Om `homeGeometry.source === 'imported'` så syns modellen fortfarande. Knappen ska också rensa importerad modell och återställa till procedurellt.
+## Problem
+The user's file is a **RAR archive** (WinRAR), not a ZIP file. `fflate` only supports ZIP format, so it throws "invalid zip data". The file picker also has `accept=".zip"` which hides the file in Windows Explorer (user has to switch to "Alla filer" to even see it).
 
-### Fix: `src/store/useAppStore.ts`
-- I `clearAllFloors` action: lägg till att återställa `homeGeometry.source` till `'procedural'` och rensa `homeGeometry.imported` (url, fileData, modelStats etc.)
+From the screenshots:
+- The file "Nyexporthus" is 159 MB, listed as "Komprimerad arkivmapp" — this is a RAR file created by WinRAR
+- RAR is a proprietary format that cannot be parsed client-side with `fflate`
 
-## Problem 2: ZIP-import visar inte filer
-ZIP-filväljaren i `SketchUpWizard.tsx` har `accept=".zip"` — detta borde fungera. Men problemet kan vara att `unzipSync` från fflate kraschar tyst, eller att `extractZip` returnerar tomt. Behöver lägga till bättre error handling och loggar. Dessutom: wizardens dialog kanske blockeras av andra UI-element.
+## Solution
 
-### Fix: `src/components/build/import/SketchUpWizard.tsx`
-- Lägg till `console.log` i `handleZip` för att debugga
-- Se till att ZIP-dialogen har tillräckligt hög `z-index` (DialogContent)
-- Kontrollera att `extractZip` hanterar edge cases (tom ZIP, nested mappar)
+### 1. Accept more archive formats in the file picker
+Change `accept=".zip"` to `accept=".zip,.rar,.7z"` so the file is visible, but add **format detection** to give a clear error message for unsupported formats.
 
-### Fix: `src/lib/sketchupImport.ts`  
-- I `extractZip`: strip leading directory prefix (SketchUp ZIP-filer har ofta en rot-mapp som `model/file.obj`) — filerna hittas inte om man söker efter `file.obj` men de ligger under `model/file.obj`
+### 2. Detect RAR/7z and show helpful error
+Before calling `unzipSync`, check the file's magic bytes:
+- ZIP starts with `PK` (0x50, 0x4B)
+- RAR starts with `Rar!` (0x52, 0x61, 0x72, 0x21)
+- 7z starts with `7z` (0x37, 0x7A)
 
-## Problem 3: Saknar "Ta bort uppladdad modell"-knapp
-Det finns ingen knapp för att ta bort en importerad modell. Användaren måste byta till "procedurellt byggande" men det är inte tydligt.
+If RAR or 7z is detected, show a friendly message: "RAR-filer stöds inte. Packa om filerna som ZIP först (högerklicka → Skicka till → Komprimerad mapp)."
 
-### Fix: `src/components/build/import/ImportTools.tsx`
-- Lägg till en tydlig röd "Ta bort modell"-knapp bredvid/under modellinfo när en modell är importerad
-- Knappen ska rensa `imported` (url, fileData, modelStats) och sätta source till `'procedural'`
+### 3. Also accept `.zip` files that WinRAR creates
+WinRAR can create actual ZIP files (not RAR). The user needs to re-export as ZIP. The error message should guide them.
 
-### Fix: `src/store/types.ts` + `src/store/useAppStore.ts`
-- Lägg till `clearImportedModel` action som rensar alla imported-fält och sätter source till `'procedural'`
+## Files to change
 
-## Sammanfattning av ändringar
-
-| Fil | Ändring |
-|-----|---------|
-| `src/store/types.ts` | Lägg till `clearImportedModel` action-typ |
-| `src/store/useAppStore.ts` | Implementera `clearImportedModel`, uppdatera `clearAllFloors` att även rensa importerad modell |
-| `src/components/build/import/ImportTools.tsx` | Lägg till "Ta bort modell"-knapp med bekräftelse |
-| `src/components/build/import/SketchUpWizard.tsx` | Förbättra error handling i ZIP-hantering |
-| `src/lib/sketchupImport.ts` | Hantera nested mappar i ZIP (strip common prefix) |
+| File | Change |
+|------|--------|
+| `src/components/build/import/SketchUpWizard.tsx` | Change `accept` to include `.rar,.7z`, update error message |
+| `src/lib/sketchupImport.ts` | Add magic-byte detection before `unzipSync`, throw descriptive error for RAR/7z |
 
