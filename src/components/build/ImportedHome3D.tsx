@@ -11,9 +11,15 @@ function ImportedModel({ url }: { url: string }) {
   const hasStats = useAppStore((s) => !!s.homeGeometry.imported.modelStats);
 
   useEffect(() => {
-    if (!hasStats && gltf.scene) {
-      const stats = analyzeModel(gltf.scene);
-      setImportedModel({ modelStats: stats });
+    if (gltf.scene) {
+      let meshCount = 0;
+      gltf.scene.traverse((c) => { if ((c as any).isMesh) meshCount++; });
+      console.log(`[ImportedHome3D] Loaded model: ${meshCount} meshes, children: ${gltf.scene.children.length}`);
+      
+      if (!hasStats) {
+        const stats = analyzeModel(gltf.scene);
+        setImportedModel({ modelStats: stats });
+      }
     }
   }, [gltf, hasStats, setImportedModel]);
 

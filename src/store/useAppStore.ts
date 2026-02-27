@@ -1134,27 +1134,37 @@ export const useAppStore = create<AppState>()(
         }
         return persisted as any;
       },
-      partialize: (state) => ({
-        appMode: state.appMode === 'standby' ? state._preStandbyMode : state.appMode,
-        layout: state.layout,
-        homeGeometry: state.homeGeometry,
-        homeView: state.homeView,
-        devices: state.devices,
-        props: state.props,
-        environment: state.environment,
-        activityLog: state.activityLog,
-        profile: state.profile,
-        customCategories: state.customCategories,
-        standby: state.standby,
-        homeAssistant: {
-          wsUrl: state.homeAssistant.wsUrl,
-          token: state.homeAssistant.token,
-          status: 'disconnected' as const,
-          entities: [],
-          liveStates: {},
-          vacuumSegmentMap: {},
-        },
-      }),
+      partialize: (state) => {
+        // Exclude large fileData from localStorage to prevent quota errors
+        const homeGeometry = { ...state.homeGeometry };
+        if (homeGeometry.imported?.fileData) {
+          const sizeBytes = homeGeometry.imported.fileData.length * 0.75; // base64 → bytes approx
+          if (sizeBytes > 4 * 1024 * 1024) {
+            homeGeometry.imported = { ...homeGeometry.imported, fileData: undefined };
+          }
+        }
+        return {
+          appMode: state.appMode === 'standby' ? state._preStandbyMode : state.appMode,
+          layout: state.layout,
+          homeGeometry,
+          homeView: state.homeView,
+          devices: state.devices,
+          props: state.props,
+          environment: state.environment,
+          activityLog: state.activityLog,
+          profile: state.profile,
+          customCategories: state.customCategories,
+          standby: state.standby,
+          homeAssistant: {
+            wsUrl: state.homeAssistant.wsUrl,
+            token: state.homeAssistant.token,
+            status: 'disconnected' as const,
+            entities: [],
+            liveStates: {},
+            vacuumSegmentMap: {},
+          },
+        };
+      },
     }
   )
 );
