@@ -17,12 +17,22 @@ export interface ConversionProgress {
   message: string;
 }
 
+export interface DebugInfo {
+  rootType: string;
+  childrenCount: number;
+  meshCount: number;
+  triangleCount: number;
+  boundingBox: { x: number; y: number; z: number };
+  missingResources: string[];
+}
+
 export interface ConversionResult {
   glbBlob: Blob;
   stats: ModelStats;
   originalSize: number;
   optimizedSize: number;
   warnings: string[];
+  debugInfo: DebugInfo;
 }
 
 export interface FileMap {
@@ -40,6 +50,7 @@ export interface ValidationResult {
   multipleObjFiles: string[];
   errors: string[];
   warnings: string[];
+  fileSizes: Map<string, number>;
 }
 
 // ── Helpers ──
@@ -48,18 +59,108 @@ const IMAGE_EXTS = new Set(['jpg', 'jpeg', 'png', 'tif', 'tiff', 'webp', 'bmp'])
 const getExt = (name: string) => name.split('.').pop()?.toLowerCase() ?? '';
 const getBasename = (path: string) => path.split('/').pop()?.split('\\').pop() ?? path;
 
-function buildTextureMap(files: Map<string, Blob>): Map<string, Blob> {
-  const map = new Map<string, Blob>();
+/** Normalize a path for blob URL map lookups */
+function normalizePath(p: string): string {
+  let n = p;
+  // Strip blob: URLs — extract the original reference
+  if (n.startsWith('blob:')) return n; // already a blob URL, return as-is
+  // Decode URL encoding
+  try { n = decodeURIComponent(n); } catch { /* ignore */ }
+  // Backslash → slash
+  n = n.replace(/\\/g, '/');
+  // Strip leading ./
+  n = n.replace(/^\.\//, '');
+  // Strip leading /
+  n = n.replace(/^\//, '');
+  // Lowercase
+  n = n.toLowerCase();
+  // Trim whitespace
+  n = n.trim();
+  return n;
+}
+
+/**
+ * Build blob URLs for ALL extracted files, mapped under multiple normalized keys.
+ * Returns the map and a list of all created blob URLs for cleanup.
+ */
+function buildBlobUrlMap(files: Map<string, Blob>): { blobUrlMap: Map<string, string>; blobUrls: string[] } {
+  const map = new Map<string, string>();
+  const urls: string[] = [];
+
   for (const [path, blob] of files) {
-    if (IMAGE_EXTS.has(getExt(path))) {
-      const base = getBasename(path).toLowerCase();
-      map.set(base, blob);
-      // Also store without extension for flexible matching
-      const noExt = base.replace(/\.\w+$/, '');
-      if (!map.has(noExt)) map.set(noExt, blob);
+    const url = URL.createObjectURL(blob);
+    urls.push(url);
+
+    // Store under multiple keys for flexible matching
+    const keys = new Set<string>();
+
+    // Full path normalized
+    keys.add(normalizePath(path));
+
+    // Basename only
+    const base = getBasename(path);
+    keys.add(normalizePath(base));
+
+    // Without extension
+    const noExt = base.replace(/\.\w+$/, '').toLowerCase();
+    keys.add(noExt);
+
+    // With ./ prefix
+    keys.add(normalizePath('./' + path));
+
+    // URL-encoded variant
+    try {
+      keys.add(normalizePath(encodeURIComponent(base)));
+    } catch { /* ignore */ }
+
+    // Spaces replaced with %20
+    if (base.includes(' ')) {
+      keys.add(normalizePath(base.replace(/ /g, '%20')));
+    }
+
+    for (const key of keys) {
+      if (key && !map.has(key)) {
+        map.set(key, url);
+      }
     }
   }
-  return map;
+
+  console.log(`[SketchUp Import] Built blobUrlMap with ${map.size} keys for ${files.size} files`);
+  return { blobUrlMap: map, blobUrls: urls };
+}
+
+/** Resolve a URL reference against the blobUrlMap */
+function resolveFromBlobMap(
+  url: string,
+  blobUrlMap: Map<string, string>,
+  missingResources: string[],
+): string {
+  // If it's already a blob URL that we created, pass through
+  if (url.startsWith('blob:') && [...blobUrlMap.values()].includes(url)) {
+    return url;
+  }
+
+  const normalized = normalizePath(url);
+  const resolved = blobUrlMap.get(normalized);
+  if (resolved) return resolved;
+
+  // Try basename only
+  const base = normalizePath(getBasename(url));
+  const resolvedBase = blobUrlMap.get(base);
+  if (resolvedBase) return resolvedBase;
+
+  // Try without extension
+  const noExt = base.replace(/\.\w+$/, '');
+  const resolvedNoExt = blobUrlMap.get(noExt);
+  if (resolvedNoExt) return resolvedNoExt;
+
+  // Not found
+  const cleanName = getBasename(url);
+  if (!missingResources.includes(cleanName)) {
+    missingResources.push(cleanName);
+  }
+  console.warn(`[SketchUp Import] Unresolved resource: "${url}" (normalized: "${normalized}")`);
+  return url;
 }
 
 // ── ZIP / Folder extraction ──
@@ -69,7 +170,6 @@ export async function extractZip(arrayBuffer: ArrayBuffer): Promise<FileMap> {
 
   // Detect archive format via magic bytes
   if (bytes.length >= 4) {
-    // RAR: starts with "Rar!" (0x52 0x61 0x72 0x21)
     if (bytes[0] === 0x52 && bytes[1] === 0x61 && bytes[2] === 0x72 && bytes[3] === 0x21) {
       throw new Error(
         'Det här är en RAR-fil, inte en ZIP-fil. RAR-format stöds inte.\n\n' +
@@ -79,7 +179,6 @@ export async function extractZip(arrayBuffer: ArrayBuffer): Promise<FileMap> {
         '3. Ladda upp den nya ZIP-filen här'
       );
     }
-    // 7z: starts with "7z" (0x37 0x7A)
     if (bytes[0] === 0x37 && bytes[1] === 0x7A) {
       throw new Error(
         'Det här är en 7z-fil, inte en ZIP-fil. 7z-format stöds inte.\n\n' +
@@ -89,7 +188,6 @@ export async function extractZip(arrayBuffer: ArrayBuffer): Promise<FileMap> {
         '3. Ladda upp den nya ZIP-filen här'
       );
     }
-    // ZIP: should start with "PK" (0x50 0x4B)
     if (bytes[0] !== 0x50 || bytes[1] !== 0x4B) {
       throw new Error(
         'Filen verkar inte vara en giltig ZIP-fil.\n\n' +
@@ -102,14 +200,13 @@ export async function extractZip(arrayBuffer: ArrayBuffer): Promise<FileMap> {
   const files = new Map<string, Blob>();
   let totalSize = 0;
 
-  // Collect all valid paths first
   const validPaths: Array<{ path: string; data: Uint8Array }> = [];
   for (const [path, data] of Object.entries(raw)) {
     if (path.endsWith('/') || path.includes('__MACOSX') || path.startsWith('.')) continue;
     validPaths.push({ path, data });
   }
 
-  // Strip common leading directory prefix (SketchUp ZIPs often have a root folder)
+  // Strip common leading directory prefix
   let commonPrefix = '';
   if (validPaths.length > 0) {
     const parts = validPaths[0].path.split('/');
@@ -155,32 +252,40 @@ export function validateFileMap(fileMap: FileMap): ValidationResult {
     valid: false, format: null, mainFile: null, mtlFile: null,
     textureFiles: [], missingTextures: [], multipleObjFiles: [],
     errors: [], warnings: [],
+    fileSizes: new Map<string, number>(),
   };
 
   const objFiles: string[] = [];
   const daeFiles: string[] = [];
   let mtlFile: string | null = null;
 
-  for (const path of fileMap.files.keys()) {
+  for (const [path, blob] of fileMap.files) {
     const ext = getExt(path);
+    // Track file sizes for all model files
+    result.fileSizes.set(path, blob.size);
+
     if (ext === 'obj') objFiles.push(path);
     else if (ext === 'dae') daeFiles.push(path);
     else if (ext === 'mtl') mtlFile = path;
     else if (IMAGE_EXTS.has(ext)) result.textureFiles.push(path);
   }
 
-  // Prefer DAE
+  // Prefer DAE, default to largest file
   if (daeFiles.length > 0) {
     result.format = 'dae';
+    // Pick largest DAE
+    daeFiles.sort((a, b) => (result.fileSizes.get(b) ?? 0) - (result.fileSizes.get(a) ?? 0));
     result.mainFile = daeFiles[0];
-    if (daeFiles.length > 1) result.warnings.push(`Flera DAE-filer hittades, använder: ${getBasename(daeFiles[0])}`);
+    if (daeFiles.length > 1) result.warnings.push(`Flera DAE-filer hittades, använder störst: ${getBasename(daeFiles[0])}`);
   } else if (objFiles.length > 0) {
     result.format = 'obj';
+    // Sort by size descending — default to largest
+    objFiles.sort((a, b) => (result.fileSizes.get(b) ?? 0) - (result.fileSizes.get(a) ?? 0));
     if (objFiles.length === 1) {
       result.mainFile = objFiles[0];
     } else {
       result.multipleObjFiles = objFiles;
-      result.mainFile = objFiles[0]; // default to first
+      result.mainFile = objFiles[0]; // largest by default
     }
     result.mtlFile = mtlFile;
     if (!mtlFile) {
@@ -191,7 +296,6 @@ export function validateFileMap(fileMap: FileMap): ValidationResult {
     return result;
   }
 
-  // Check MTL texture references (basic)
   result.valid = true;
   return result;
 }
@@ -209,7 +313,6 @@ function downscaleToCanvas(img: HTMLImageElement, maxSize: number): HTMLCanvasEl
 
 async function optimizeTextures(scene: THREE.Object3D, maxSize: number, warnings: string[]) {
   const processed = new Set<string>();
-  const promises: Promise<void>[] = [];
 
   scene.traverse((child) => {
     if (!(child instanceof THREE.Mesh)) return;
@@ -225,7 +328,6 @@ async function optimizeTextures(scene: THREE.Object3D, maxSize: number, warnings
         const img = tex.image as HTMLImageElement;
         if (img.width <= maxSize && img.height <= maxSize) continue;
 
-        // Downscale
         try {
           const canvas = downscaleToCanvas(img, maxSize);
           tex.image = canvas;
@@ -236,8 +338,6 @@ async function optimizeTextures(scene: THREE.Object3D, maxSize: number, warnings
       }
     }
   });
-
-  await Promise.all(promises);
 }
 
 function deduplicateMaterials(scene: THREE.Object3D) {
@@ -246,7 +346,6 @@ function deduplicateMaterials(scene: THREE.Object3D) {
   scene.traverse((child) => {
     if (!(child instanceof THREE.Mesh) || !child.material) return;
     const mat = child.material as THREE.Material;
-    // Simple key based on type + color
     const meshMat = mat as THREE.MeshStandardMaterial;
     const key = `${mat.type}_${meshMat.color?.getHexString() ?? 'none'}_${meshMat.roughness ?? 0}_${meshMat.metalness ?? 0}`;
     
@@ -259,12 +358,6 @@ function deduplicateMaterials(scene: THREE.Object3D) {
 }
 
 // ── Material conversion ──
-
-function loadTextureAsync(url: string): Promise<THREE.Texture> {
-  return new Promise((resolve, reject) => {
-    new THREE.TextureLoader().load(url, resolve, undefined, reject);
-  });
-}
 
 function convertMaterialsToStandard(scene: THREE.Object3D) {
   scene.traverse((child) => {
@@ -292,28 +385,44 @@ function convertMaterialsToStandard(scene: THREE.Object3D) {
   });
 }
 
-function validateScene(scene: THREE.Object3D) {
+/** Count meshes and triangles, including SkinnedMesh and InstancedMesh */
+function collectSceneStats(scene: THREE.Object3D): { meshCount: number; triCount: number } {
   let meshCount = 0;
   let triCount = 0;
-  const matTypes = new Set<string>();
 
   scene.traverse((child) => {
-    if (child instanceof THREE.Mesh || (child as any).isMesh || (child as any).isSkinnedMesh || (child as any).isInstancedMesh) {
+    if (
+      child instanceof THREE.Mesh ||
+      (child as any).isMesh ||
+      (child as any).isSkinnedMesh ||
+      (child as any).isInstancedMesh
+    ) {
       meshCount++;
       const geo = (child as THREE.Mesh).geometry;
       if (geo) {
         if (geo.index) triCount += geo.index.count / 3;
         else if (geo.attributes?.position) triCount += geo.attributes.position.count / 3;
       }
-      const mats = Array.isArray((child as THREE.Mesh).material) ? (child as THREE.Mesh).material : [(child as THREE.Mesh).material];
+    }
+  });
+
+  return { meshCount, triCount: Math.round(triCount) };
+}
+
+function validateScene(scene: THREE.Object3D) {
+  const { meshCount, triCount } = collectSceneStats(scene);
+  const matTypes = new Set<string>();
+
+  scene.traverse((child) => {
+    if (child instanceof THREE.Mesh) {
+      const mats = Array.isArray(child.material) ? child.material : [child.material];
       (mats as THREE.Material[]).forEach((m) => m && matTypes.add(m.type));
     }
   });
 
   console.log(`[SketchUp Import] Scene children: ${scene.children.length}`);
-  console.log(`[SketchUp Import] Meshes: ${meshCount}, Triangles: ${Math.round(triCount)}, Material types: ${[...matTypes].join(', ')}`);
+  console.log(`[SketchUp Import] Meshes: ${meshCount}, Triangles: ${triCount}, Material types: ${[...matTypes].join(', ')}`);
 
-  // Log bounding box
   const box = new THREE.Box3().setFromObject(scene);
   const size = box.getSize(new THREE.Vector3());
   const center = box.getCenter(new THREE.Vector3());
@@ -332,11 +441,9 @@ function normalizeScene(scene: THREE.Object3D): { appliedScale: number; bounding
   const center = box.getCenter(new THREE.Vector3());
   const size = box.getSize(new THREE.Vector3());
 
-  // Center the scene at origin
   scene.position.sub(center);
   scene.updateMatrixWorld(true);
 
-  // Auto-scale if too large or too small
   const maxDim = Math.max(size.x, size.y, size.z);
   let appliedScale = 1;
 
@@ -351,7 +458,6 @@ function normalizeScene(scene: THREE.Object3D): { appliedScale: number; bounding
   }
 
   scene.updateMatrixWorld(true);
-
   return { appliedScale, boundingBox: size };
 }
 
@@ -361,99 +467,78 @@ async function loadOBJ(
   files: Map<string, Blob>,
   objPath: string,
   mtlPath: string | null,
-  textureMap: Map<string, Blob>,
+  blobUrlMap: Map<string, string>,
+  missingResources: string[],
   warnings: string[],
 ): Promise<THREE.Group> {
   const objBlob = files.get(objPath)!;
   const objText = await objBlob.text();
+
+  // Create a LoadingManager with URL modifier for resource resolution
+  const manager = new THREE.LoadingManager();
+  manager.setURLModifier((url) => resolveFromBlobMap(url, blobUrlMap, missingResources));
 
   let materials: MTLLoader.MaterialCreator | null = null;
 
   if (mtlPath) {
     const mtlBlob = files.get(mtlPath)!;
     const mtlText = await mtlBlob.text();
-    
-    const mtlLoader = new MTLLoader();
+
+    const mtlLoader = new MTLLoader(manager);
+    // Set resource path to empty — URLModifier handles resolution
     mtlLoader.setResourcePath('');
-    
+
     materials = mtlLoader.parse(mtlText, '');
-    
-    // Resolve textures from our file map with async loading
-    const texPromises: Promise<void>[] = [];
-    for (const [name, matInfo] of Object.entries(materials.materialsInfo)) {
-      for (const key of ['map_kd', 'map_ks', 'map_bump', 'bump', 'norm', 'map_d']) {
-        const texRef = (matInfo as any)[key];
-        if (!texRef) continue;
-        
-        const texBasename = getBasename(texRef).toLowerCase();
-        const blob = textureMap.get(texBasename);
-        if (blob) {
-          const url = URL.createObjectURL(blob);
-          const matName = name;
-          const texKey = key;
-          texPromises.push(
-            loadTextureAsync(url).then((tex) => {
-              tex.colorSpace = THREE.SRGBColorSpace;
-              const matObj = materials!.materials[matName];
-              if (matObj) {
-                if (texKey === 'map_kd') (matObj as any).map = tex;
-                else if (texKey === 'map_bump' || texKey === 'bump' || texKey === 'norm') (matObj as any).normalMap = tex;
-              }
-            }).catch(() => {
-              warnings.push(`Kunde inte ladda textur: ${texRef}`);
-            })
-          );
-        } else {
-          warnings.push(`Textur saknas: ${texRef}`);
-        }
-      }
-    }
-    
-    await Promise.all(texPromises);
     materials.preload();
+
+    console.log(`[SketchUp Import] MTL parsed, materials: ${Object.keys(materials.materials).join(', ')}`);
   }
 
-  const objLoader = new OBJLoader();
+  const objLoader = new OBJLoader(manager);
   if (materials) objLoader.setMaterials(materials);
-  
+
   const group = objLoader.parse(objText);
+
+  console.log(`[SketchUp Import] OBJ loaded: ${group.children.length} children, type=${group.type}`);
   return group;
 }
 
 async function loadDAE(
   files: Map<string, Blob>,
   daePath: string,
-  textureMap: Map<string, Blob>,
+  blobUrlMap: Map<string, string>,
+  missingResources: string[],
   warnings: string[],
 ): Promise<THREE.Group> {
   const daeBlob = files.get(daePath)!;
   const daeText = await daeBlob.text();
 
-  const loader = new ColladaLoader();
-  
-  // Create a custom loading manager to resolve textures
+  // Create a LoadingManager with URL modifier
   const manager = new THREE.LoadingManager();
-  manager.setURLModifier((url) => {
-    const basename = getBasename(url).toLowerCase();
-    const blob = textureMap.get(basename);
-    if (blob) {
-      return URL.createObjectURL(blob);
-    }
-    // Try without extension
-    const noExt = basename.replace(/\.\w+$/, '');
-    const blob2 = textureMap.get(noExt);
-    if (blob2) {
-      return URL.createObjectURL(blob2);
-    }
-    warnings.push(`Textur saknas: ${getBasename(url)}`);
-    return url;
-  });
-  
-  (loader as any).manager = manager;
-  
-  const collada = loader.parse(daeText, '');
+  manager.setURLModifier((url) => resolveFromBlobMap(url, blobUrlMap, missingResources));
+
+  const loader = new ColladaLoader(manager);
+
+  // Compute a base path from the DAE file's directory
+  const daeDir = daePath.includes('/') ? daePath.substring(0, daePath.lastIndexOf('/') + 1) : '';
+  const baseBlobUrl = daeDir ? (blobUrlMap.get(normalizePath(daeDir)) || '') : '';
+
+  console.log(`[SketchUp Import] DAE base path: "${daeDir}", baseBlobUrl: "${baseBlobUrl}"`);
+
+  const collada = loader.parse(daeText, baseBlobUrl || './');
+
+  // Export collada.scene directly — this is the actual loaded scene graph
+  const scene = collada.scene;
+
+  console.log(`[SketchUp Import] DAE loaded: ${scene.children.length} children, type=${scene.type}`);
+
+  // Wrap in a group to be consistent with OBJ path
   const group = new THREE.Group();
-  group.add(collada.scene);
+  // Move all children to our group
+  while (scene.children.length > 0) {
+    group.add(scene.children[0]);
+  }
+
   return group;
 }
 
@@ -475,66 +560,93 @@ export async function convertSketchUp(
   selectedObjFile?: string,
 ): Promise<ConversionResult> {
   const warnings: string[] = [...validation.warnings];
+  const missingResources: string[] = [];
   const maxTextureSize = target === 'tablet' ? 1024 : 2048;
 
-  // Stage 1: Build texture map
+  // Stage 1: Build blob URL map for ALL files
   onProgress({ stage: 'extracting', percent: 10, message: 'Förbereder filer...' });
-  const textureMap = buildTextureMap(fileMap.files);
+  const { blobUrlMap, blobUrls } = buildBlobUrlMap(fileMap.files);
 
-  // Stage 2: Load scene
-  onProgress({ stage: 'loading', percent: 30, message: 'Laddar 3D-modell...' });
-  
-  let scene: THREE.Group;
-  const mainFile = selectedObjFile || validation.mainFile!;
+  try {
+    // Stage 2: Load scene
+    onProgress({ stage: 'loading', percent: 30, message: 'Laddar 3D-modell...' });
+    
+    let scene: THREE.Group;
+    const mainFile = selectedObjFile || validation.mainFile!;
 
-  if (validation.format === 'dae') {
-    scene = await loadDAE(fileMap.files, mainFile, textureMap, warnings);
-  } else {
-    scene = await loadOBJ(fileMap.files, mainFile, validation.mtlFile, textureMap, warnings);
+    if (validation.format === 'dae') {
+      scene = await loadDAE(fileMap.files, mainFile, blobUrlMap, missingResources, warnings);
+    } else {
+      scene = await loadOBJ(fileMap.files, mainFile, validation.mtlFile, blobUrlMap, missingResources, warnings);
+    }
+
+    // Validate scene has geometry
+    const sceneInfo = validateScene(scene);
+
+    // Normalize: center at origin and auto-scale
+    onProgress({ stage: 'optimizing', percent: 45, message: 'Centrerar och skalar modell...' });
+    const normInfo = normalizeScene(scene);
+
+    // Stage 3: Convert materials & optimize
+    onProgress({ stage: 'optimizing', percent: 50, message: 'Konverterar material...' });
+    convertMaterialsToStandard(scene);
+
+    onProgress({ stage: 'optimizing', percent: 60, message: 'Optimerar texturer...' });
+    await optimizeTextures(scene, maxTextureSize, warnings);
+    deduplicateMaterials(scene);
+
+    // Stage 4: Export — export the same scene we validated
+    onProgress({ stage: 'exporting', percent: 85, message: 'Exporterar GLB...' });
+    
+    console.log(`[SketchUp Import] Exporting scene with ${scene.children.length} children`);
+    const glbBuffer = await exportToGLB(scene);
+    
+    if (glbBuffer.byteLength < 1024) {
+      throw new Error(`GLB-filen är för liten (${glbBuffer.byteLength} bytes). Exporten misslyckades — ingen geometri exporterades.`);
+    }
+    
+    console.log(`[SketchUp Import] GLB exported: ${(glbBuffer.byteLength / 1024).toFixed(1)} KB`);
+    
+    const glbBlob = new Blob([glbBuffer], { type: 'model/gltf-binary' });
+    const stats = analyzeModel(scene);
+
+    // Build debug info
+    const box = new THREE.Box3().setFromObject(scene);
+    const bboxSize = box.getSize(new THREE.Vector3());
+    const { meshCount, triCount } = collectSceneStats(scene);
+
+    const debugInfo: DebugInfo = {
+      rootType: scene.type,
+      childrenCount: scene.children.length,
+      meshCount,
+      triangleCount: triCount,
+      boundingBox: {
+        x: Math.round(bboxSize.x * 100) / 100,
+        y: Math.round(bboxSize.y * 100) / 100,
+        z: Math.round(bboxSize.z * 100) / 100,
+      },
+      missingResources,
+    };
+
+    if (missingResources.length > 0) {
+      warnings.push(`${missingResources.length} resurser kunde inte hittas (se debug-panel)`);
+    }
+
+    onProgress({ stage: 'done', percent: 100, message: 'Klar!' });
+
+    return {
+      glbBlob,
+      stats,
+      originalSize: fileMap.totalSize,
+      optimizedSize: glbBlob.size,
+      warnings,
+      debugInfo,
+    };
+  } finally {
+    // Cleanup all blob URLs
+    for (const url of blobUrls) {
+      URL.revokeObjectURL(url);
+    }
+    console.log(`[SketchUp Import] Cleaned up ${blobUrls.length} blob URLs`);
   }
-
-  // Validate scene has geometry
-  validateScene(scene);
-
-  // Normalize: center at origin and auto-scale
-  onProgress({ stage: 'optimizing', percent: 45, message: 'Centrerar och skalar modell...' });
-  const normInfo = normalizeScene(scene);
-  console.log(`[SketchUp Import] Normalization: scale=${normInfo.appliedScale.toFixed(4)}, bbox=${normInfo.boundingBox.x.toFixed(2)}x${normInfo.boundingBox.y.toFixed(2)}x${normInfo.boundingBox.z.toFixed(2)}`);
-
-  // Stage 3: Convert materials & optimize
-  onProgress({ stage: 'optimizing', percent: 50, message: 'Konverterar material...' });
-  convertMaterialsToStandard(scene);
-
-  onProgress({ stage: 'optimizing', percent: 60, message: 'Optimerar texturer...' });
-  await optimizeTextures(scene, maxTextureSize, warnings);
-  deduplicateMaterials(scene);
-
-  // Stage 4: Export
-  onProgress({ stage: 'exporting', percent: 85, message: 'Exporterar GLB...' });
-  
-  // Export the scene root directly
-  console.log(`[SketchUp Import] Exporting scene with ${scene.children.length} children`);
-  const glbBuffer = await exportToGLB(scene);
-  
-  // Validate GLB size
-  if (glbBuffer.byteLength < 1024) {
-    throw new Error(`GLB-filen är för liten (${glbBuffer.byteLength} bytes). Exporten misslyckades — ingen geometri exporterades. Kontrollera att modellen har giltiga meshes.`);
-  }
-  
-  console.log(`[SketchUp Import] GLB exported: ${(glbBuffer.byteLength / 1024).toFixed(1)} KB`);
-  
-  const glbBlob = new Blob([glbBuffer], { type: 'model/gltf-binary' });
-
-  // Analyze
-  const stats = analyzeModel(scene);
-
-  onProgress({ stage: 'done', percent: 100, message: 'Klar!' });
-
-  return {
-    glbBlob,
-    stats,
-    originalSize: fileMap.totalSize,
-    optimizedSize: glbBlob.size,
-    warnings,
-  };
 }
