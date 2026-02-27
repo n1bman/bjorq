@@ -153,7 +153,7 @@ export default function SketchUpWizard({ open, onOpenChange }: { open: boolean; 
                 <div className="text-[10px]">ZIP-fil med OBJ/DAE + texturer</div>
               </div>
             </button>
-            <input ref={zipRef} type="file" accept=".zip" className="hidden" onChange={handleZip} />
+            <input ref={zipRef} type="file" accept=".zip,.rar,.7z" className="hidden" onChange={handleZip} />
 
             <button
               onClick={() => folderRef.current?.click()}
