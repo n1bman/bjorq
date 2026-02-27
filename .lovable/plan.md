@@ -1,34 +1,36 @@
 
 
-# Fix: ZIP-import "invalid zip data"
+# Fix: SketchUp-import producerar tom GLB (0 trianglar, 160 B)
 
-## Problem
-The user's file is a **RAR archive** (WinRAR), not a ZIP file. `fflate` only supports ZIP format, so it throws "invalid zip data". The file picker also has `accept=".zip"` which hides the file in Windows Explorer (user has to switch to "Alla filer" to even see it).
+## Rotorsak
+Konverteringen "lyckas" men producerar en tom GLB. Troliga orsaker:
 
-From the screenshots:
-- The file "Nyexporthus" is 159 MB, listed as "Komprimerad arkivmapp" — this is a RAR file created by WinRAR
-- RAR is a proprietary format that cannot be parsed client-side with `fflate`
+1. **GLTFExporter kan inte exportera MeshPhongMaterial** — OBJLoader och ColladaLoader skapar `MeshPhongMaterial`, men GLTFExporter i Three.js v0.170 kan ha problem med att konvertera dessa. Meshes hoppas över tyst.
+2. **Texturer laddas aldrig** — `TextureLoader.load()` är asynkron men resultatet inväntas aldrig. Texturerna finns inte när GLTFExporter körs.
+3. **Ingen validering** efter laddning — om scenen är tom märks det aldrig.
 
-## Solution
+## Ändringar
 
-### 1. Accept more archive formats in the file picker
-Change `accept=".zip"` to `accept=".zip,.rar,.7z"` so the file is visible, but add **format detection** to give a clear error message for unsupported formats.
+### `src/lib/sketchupImport.ts`
 
-### 2. Detect RAR/7z and show helpful error
-Before calling `unzipSync`, check the file's magic bytes:
-- ZIP starts with `PK` (0x50, 0x4B)
-- RAR starts with `Rar!` (0x52, 0x61, 0x72, 0x21)
-- 7z starts with `7z` (0x37, 0x7A)
+**Fix 1: Konvertera material till MeshStandardMaterial före export**
+Lägg till en `convertMaterials(scene)` funktion som traverserar scenen och byter ut alla `MeshPhongMaterial`/`MeshLambertMaterial` mot `MeshStandardMaterial` med samma färg/map. Detta garanterar att GLTFExporter kan exportera allt.
 
-If RAR or 7z is detected, show a friendly message: "RAR-filer stöds inte. Packa om filerna som ZIP först (högerklicka → Skicka till → Komprimerad mapp)."
+**Fix 2: Validera scenen efter laddning**
+Efter `loadOBJ`/`loadDAE`, räkna meshes. Om 0 meshes: kasta ett tydligt fel istället för att producera en tom GLB.
 
-### 3. Also accept `.zip` files that WinRAR creates
-WinRAR can create actual ZIP files (not RAR). The user needs to re-export as ZIP. The error message should guide them.
+**Fix 3: Gör texturladdning asynkron**
+Byt `TextureLoader.load(url)` i `loadOBJ` mot en `await`-baserad laddning med promises, så texturerna faktiskt finns när vi exporterar.
 
-## Files to change
+**Fix 4: Logga scen-innehåll för debugging**
+Lägg till `console.log` med mesh-count och material-typer efter laddning, så framtida problem syns i konsolen.
 
-| File | Change |
-|------|--------|
-| `src/components/build/import/SketchUpWizard.tsx` | Change `accept` to include `.rar,.7z`, update error message |
-| `src/lib/sketchupImport.ts` | Add magic-byte detection before `unzipSync`, throw descriptive error for RAR/7z |
+### Sammanfattning
+
+| Ändring | Fil |
+|---------|-----|
+| Konvertera material till MeshStandardMaterial | `src/lib/sketchupImport.ts` |
+| Validera mesh-count efter laddning | `src/lib/sketchupImport.ts` |
+| Asynkron texturladdning | `src/lib/sketchupImport.ts` |
+| Debug-logging | `src/lib/sketchupImport.ts` |
 
