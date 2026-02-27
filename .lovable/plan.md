@@ -1,63 +1,83 @@
 
 
-# Debug: SketchUp Import — Find Where 0 Meshes Happens
+# Fix: OBJ Loading Fails Silently for Large Files
 
-The current code already uses `objLoader.parse(text)` and `LoadingManager` with `setURLModifier`. Yet we get 0 meshes. We need hard diagnostic proof.
+## Root Cause
+Line 476 in `src/lib/sketchupImport.ts`: `const objText = await objBlob.text()` — for a 600MB OBJ file, `Blob.text()` can silently fail or produce a truncated string, causing `OBJLoader.parse()` to return an empty Group.
 
-## Changes
+## Changes — `src/lib/sketchupImport.ts` only
 
-### `src/components/build/import/SketchUpWizard.tsx`
+### 1. Replace `text()` with `ArrayBuffer` + `TextDecoder` in `loadOBJ` (line 476)
+```typescript
+// Replace:
+const objText = await objBlob.text();
 
-**A) Add "Test GLB Export (Box)" button** in the `validate` step:
-- Creates a `THREE.Mesh(new BoxGeometry(1,1,1), new MeshStandardMaterial({color: 0xff0000}))`
-- Exports with `GLTFExporter` (binary)
-- Loads back via `GLTFLoader` and counts triangles
-- Shows result on-screen (pass/fail + triangle count)
+// With:
+const buffer = await objBlob.arrayBuffer();
+const objText = new TextDecoder().decode(buffer);
+console.log(`[SketchUp Import] OBJ file size: ${buffer.byteLength}, text length: ${objText.length}`);
+```
 
-**B) Add "Verify Loader" step** — after ZIP extraction + validation, before conversion:
-- New button "Testa laddning" in the `validate` step
-- Calls a new exported function `testLoadOnly(fileMap, validation, selectedObj)` from `sketchupImport.ts`
-- Shows on-screen debug summary: chosen file name+size, root children, mesh count, tri count, bbox, material types, missing resources
-- This runs WITHOUT export — just load + count
+### 2. Add mesh validation after parse (after line 501)
+After `objLoader.parse(objText)`, validate immediately:
+```typescript
+const group = objLoader.parse(objText);
+const { meshCount, triCount } = collectSceneStats(group);
+console.log(`[SketchUp Import] OBJ parsed: ${group.children.length} children, ${meshCount} meshes, ${triCount} triangles`);
 
-**C) Show loader test results inline** in a new `LoaderTestPanel` component below the file debug panel
+if (meshCount === 0) {
+  // Log first 200 chars of OBJ for debugging
+  console.error(`[SketchUp Import] OBJ text preview: ${objText.substring(0, 200)}`);
+  throw new Error(`OBJ loaded but 0 meshes found. File size: ${buffer.byteLength}, text length: ${objText.length}. OBJ parsing failed.`);
+}
 
-### `src/lib/sketchupImport.ts`
-
-**Export new `testLoadOnly` function**:
-- Builds blobUrlMap
-- Loads OBJ or DAE (same code path as `convertSketchUp`)
-- Does NOT export to GLB
-- Returns a `LoaderTestResult` with: mainFile, mainFileSize, rootType, childrenCount, meshCount, triCount, boundingBox, materialTypes[], childTree (first 2 levels), missingResources[]
-- Cleans up blob URLs
-
-**Export new `testGLBExportSanity` function**:
-- Creates box mesh → exports GLB → returns { success, byteLength, error? }
-
-**Add child tree dump** to help debug empty scenes:
-- Walk first 2 levels of children, collect `{ name, type, childCount }` for each
-
-### New type: `LoaderTestResult`
-
-```text
-{
-  mainFile: string
-  mainFileSize: number
-  rootType: string
-  childrenCount: number
-  meshCount: number
-  triCount: number
-  boundingBox: { x, y, z }
-  materialTypes: string[]
-  childTree: { name: string, type: string, children: number }[]
-  missingResources: string[]
+const box = new THREE.Box3().setFromObject(group);
+console.log(`[SketchUp Import] OBJ bounding box:`, box);
+if (box.isEmpty()) {
+  throw new Error('OBJ model bounding box is empty');
 }
 ```
 
-## File summary
+### 3. Same fix for MTL loading (line 486)
+Replace MTL `text()` with ArrayBuffer approach:
+```typescript
+const mtlBuffer = await mtlBlob.arrayBuffer();
+const mtlText = new TextDecoder().decode(mtlBuffer);
+```
+
+### 4. Same fix for DAE loading (line 515)
+Replace DAE `text()` with ArrayBuffer approach:
+```typescript
+const daeBuffer = await daeBlob.arrayBuffer();
+const daeText = new TextDecoder().decode(daeBuffer);
+```
+
+### 5. Add "SketchUp Fast Import" mode
+Add optional `fastMode` parameter to `loadOBJ`. When true:
+- Skip MTL loading entirely
+- After parse, assign a simple `MeshStandardMaterial({ color: 0xcccccc })` to all meshes
+- This isolates geometry loading from texture/material issues
+
+Update `loadOBJ` signature:
+```typescript
+async function loadOBJ(
+  files, objPath, mtlPath, blobUrlMap, missingResources, warnings,
+  fastMode = false
+): Promise<THREE.Group>
+```
+
+When `fastMode`:
+- Skip MTL parsing block
+- After parse, traverse and assign default material
+
+### 6. Same fix in `testLoadOnly` (line 685)
+Pass `fastMode` option through so the diagnostic button can test with/without textures.
+
+### 7. Add `fastMode` checkbox to SketchUpWizard.tsx
+In the `validate` step, add a Switch labeled "SketchUp Fast Import (geometri utan texturer)" that sets a `fastMode` state. Pass it through to `convertSketchUp` and `testLoadOnly`.
 
 | File | Change |
 |------|--------|
-| `src/lib/sketchupImport.ts` | Add `testLoadOnly()`, `testGLBExportSanity()`, `LoaderTestResult` type |
-| `src/components/build/import/SketchUpWizard.tsx` | Add "Test GLB Export" button, "Testa laddning" button, `LoaderTestPanel` component |
+| `src/lib/sketchupImport.ts` | ArrayBuffer loading for OBJ/MTL/DAE, mesh validation, fast import mode |
+| `src/components/build/import/SketchUpWizard.tsx` | Add fast import toggle, pass to conversion |
 
