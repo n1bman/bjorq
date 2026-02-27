@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { unzipSync, Unzip, UnzipInflate } from 'fflate';
+import { unzipSync, Unzip, UnzipInflate, zipSync } from 'fflate';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import { MTLLoader } from 'three/examples/jsm/loaders/MTLLoader.js';
 import { ColladaLoader } from 'three/examples/jsm/loaders/ColladaLoader.js';
@@ -13,7 +13,8 @@ import type { ModelStats } from '@/store/types';
 export type TargetDevice = 'tablet' | 'desktop';
 
 export interface ConversionProgress {
-  stage: 'extracting' | 'loading' | 'optimizing' | 'exporting' | 'done' | 'error';
+  stage: 'extracting' | 'loading' | 'optimizing' | 'exporting' | 'done' | 'error'
+    | 'uploading' | 'remote-converting' | 'downloading';
   percent: number;
   message: string;
 }
@@ -318,6 +319,20 @@ export async function extractZip(arrayBuffer: ArrayBuffer): Promise<FileMap> {
 
   console.log(`[SketchUp Import] ZIP extraction complete: ${files.size} files, ${(totalSize / 1024 / 1024).toFixed(1)} MB total`);
   return { files, totalSize };
+}
+
+/** Re-package a FileMap into a ZIP blob for uploading to the HA converter add-on */
+export async function buildZipFromFileMap(fileMap: FileMap): Promise<Blob> {
+  const zipData: Record<string, Uint8Array> = {};
+
+  for (const [path, blob] of fileMap.files) {
+    const buffer = await blob.arrayBuffer();
+    zipData[path] = new Uint8Array(buffer);
+  }
+
+  const zipped = zipSync(zipData);
+  console.log(`[SketchUp Import] Built ZIP for upload: ${(zipped.byteLength / 1024 / 1024).toFixed(1)} MB, ${fileMap.files.size} files`);
+  return new Blob([zipped.buffer as ArrayBuffer], { type: 'application/zip' });
 }
 
 export async function extractFolder(fileList: FileList): Promise<FileMap> {
