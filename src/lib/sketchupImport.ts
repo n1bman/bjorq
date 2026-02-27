@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { unzipSync } from 'fflate';
+import { unzipSync, Unzip, UnzipInflate } from 'fflate';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import { MTLLoader } from 'three/examples/jsm/loaders/MTLLoader.js';
 import { ColladaLoader } from 'three/examples/jsm/loaders/ColladaLoader.js';
@@ -197,39 +197,126 @@ export async function extractZip(arrayBuffer: ArrayBuffer): Promise<FileMap> {
     }
   }
 
-  const raw = unzipSync(bytes);
+  // Use streaming unzip to handle large entries (600MB+) that unzipSync fails on
+  console.log(`[SketchUp Import] ZIP size: ${bytes.length} bytes, attempting streaming extraction...`);
+
+  const extractedFiles = new Map<string, Uint8Array>();
+
+  await new Promise<void>((resolve, reject) => {
+    let pending = 0;
+    let pushDone = false;
+
+    const checkDone = () => {
+      if (pushDone && pending === 0) resolve();
+    };
+
+    const unzipper = new Unzip((stream) => {
+      const path = stream.name;
+      // Skip directories and OS metadata
+      if (path.endsWith('/') || path.includes('__MACOSX') || path.startsWith('.')) {
+        stream.start();
+        return;
+      }
+
+      pending++;
+      const chunks: Uint8Array[] = [];
+      stream.ondata = (err, data, final) => {
+        if (err) {
+          reject(new Error(`Failed to extract "${path}": ${err.message}`));
+          return;
+        }
+        if (data && data.length > 0) {
+          chunks.push(new Uint8Array(data));
+        }
+        if (final) {
+          // Build a single Uint8Array from chunks
+          const totalLen = chunks.reduce((s, c) => s + c.length, 0);
+          const merged = new Uint8Array(totalLen);
+          let offset = 0;
+          for (const chunk of chunks) {
+            merged.set(chunk, offset);
+            offset += chunk.length;
+          }
+          extractedFiles.set(path, merged);
+          console.log(`[SketchUp Import] Extracted: ${path} (${totalLen} bytes)`);
+          pending--;
+          checkDone();
+        }
+      };
+      stream.start();
+    });
+
+    unzipper.register(UnzipInflate);
+    unzipper.push(bytes, true);
+    pushDone = true;
+    checkDone();
+  });
+
+  // Fallback: if streaming produced nothing, try sync (works for small files)
+  if (extractedFiles.size === 0) {
+    console.warn(`[SketchUp Import] Streaming extraction yielded 0 files, falling back to unzipSync...`);
+    const raw = unzipSync(bytes);
+    for (const [path, data] of Object.entries(raw)) {
+      if (path.endsWith('/') || path.includes('__MACOSX') || path.startsWith('.')) continue;
+      if (data.length > 0) {
+        extractedFiles.set(path, data);
+      }
+    }
+  }
+
+  if (extractedFiles.size === 0) {
+    throw new Error('ZIP-filen verkar vara tom eller innehåller inga giltiga filer.');
+  }
+
+  // Convert to FileMap
   const files = new Map<string, Blob>();
   let totalSize = 0;
 
-  const validPaths: Array<{ path: string; data: Uint8Array }> = [];
-  for (const [path, data] of Object.entries(raw)) {
-    if (path.endsWith('/') || path.includes('__MACOSX') || path.startsWith('.')) continue;
-    validPaths.push({ path, data });
-  }
+  const validPaths = [...extractedFiles.entries()].filter(([p]) => {
+    return !p.endsWith('/') && !p.includes('__MACOSX') && !p.startsWith('.');
+  });
 
   // Strip common leading directory prefix
   let commonPrefix = '';
   if (validPaths.length > 0) {
-    const parts = validPaths[0].path.split('/');
+    const parts = validPaths[0][0].split('/');
     if (parts.length > 1) {
       const candidate = parts[0] + '/';
-      const allMatch = validPaths.every((p) => p.path.startsWith(candidate));
+      const allMatch = validPaths.every(([p]) => p.startsWith(candidate));
       if (allMatch) commonPrefix = candidate;
     }
   }
 
-  for (const { path, data } of validPaths) {
+  for (const [path, data] of validPaths) {
     const cleanPath = commonPrefix ? path.slice(commonPrefix.length) : path;
     if (!cleanPath) continue;
-    const blob = new Blob([new Uint8Array(data.buffer as ArrayBuffer, data.byteOffset, data.byteLength)]);
+
+    // Byte-level verification for model files
+    const ext = getExt(cleanPath);
+    if ((ext === 'obj' || ext === 'dae' || ext === 'mtl') && data.byteLength === 0) {
+      throw new Error(
+        `OBJ extraction produced empty data (0 bytes) for "${cleanPath}".\n\n` +
+        'ZIP-filen kan vara skadad eller för stor för webbläsaren.\n' +
+        'Försök istället med "Välj mapp" — det fungerar bättre för stora modeller.'
+      );
+    }
+
+    if (ext === 'obj' || ext === 'dae') {
+      console.log(`[SketchUp Import] Verified ${cleanPath}: ${data.byteLength} bytes`);
+      const preview = new TextDecoder().decode(data.slice(0, 200));
+      console.log(`[SketchUp Import] ${cleanPath} preview: ${preview}`);
+    }
+
+    const blob = new Blob([new Uint8Array(data)]);
     files.set(cleanPath, blob);
-    totalSize += data.length;
+    totalSize += data.byteLength;
   }
 
   if (files.size === 0) {
     throw new Error('ZIP-filen verkar vara tom eller innehåller inga giltiga filer.');
   }
 
+  console.log(`[SketchUp Import] ZIP extraction complete: ${files.size} files, ${(totalSize / 1024 / 1024).toFixed(1)} MB total`);
   return { files, totalSize };
 }
 
@@ -475,10 +562,30 @@ async function loadOBJ(
 ): Promise<THREE.Group> {
   const objBlob = files.get(objPath)!;
 
-  // Use ArrayBuffer + TextDecoder to avoid silent truncation on large files
+  // Byte-level verification before parsing
+  console.log(`[SketchUp Import] OBJ blob size: ${objBlob.size}`);
   const objBuffer = await objBlob.arrayBuffer();
+  console.log(`[SketchUp Import] OBJ buffer.byteLength: ${objBuffer.byteLength}`);
+
+  if (objBuffer.byteLength === 0) {
+    throw new Error(
+      `Failed to read OBJ bytes — buffer is empty (0 bytes).\n` +
+      `Blob size was: ${objBlob.size}.\n\n` +
+      'ZIP-extraheringen misslyckades för denna fil.\n' +
+      'Försök med "Välj mapp" istället.'
+    );
+  }
+
   const objText = new TextDecoder().decode(objBuffer);
-  console.log(`[SketchUp Import] OBJ file size: ${objBuffer.byteLength}, text length: ${objText.length}`);
+  console.log(`[SketchUp Import] OBJ text length: ${objText.length}`);
+  console.log(`[SketchUp Import] OBJ preview (first 200 chars): ${objText.substring(0, 200)}`);
+
+  if (objText.length === 0) {
+    throw new Error(
+      `Failed to decode OBJ text — TextDecoder produced empty string.\n` +
+      `Buffer size: ${objBuffer.byteLength} bytes.`
+    );
+  }
 
   // Create a LoadingManager with URL modifier for resource resolution
   const manager = new THREE.LoadingManager();
