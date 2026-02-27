@@ -1,56 +1,55 @@
 
 
-# Standby Mode V1
+# Standby Mode Refinement V3
 
-## New Files
+## Changes
 
-### `src/components/standby/StandbyMode.tsx`
-Main standby component with split layout (70/30). Left side renders `Scene3D` with a slow auto-orbit camera. Right side shows a vertical stack: large clock (text-7xl), weather, and status widgets. Full-screen dark overlay. Touch/mouse/key listeners call `exitStandby()` to return to previous mode. Uses the existing `.standby-layout` CSS grid class from `index.css`.
+### 1. Add `cameraView` to `StandbySettings` (`src/store/types.ts`)
+Add a new type and field:
+```typescript
+export type StandbyCameraView = 'standard' | 'topdown' | 'angled-left' | 'angled-right' | 'close';
+export interface StandbySettings {
+  enabled: boolean;
+  idleMinutes: number;
+  cameraView: StandbyCameraView; // default: 'standard'
+}
+```
 
-### `src/components/standby/StandbyClock.tsx`
-Large standalone clock for standby. Time in `text-7xl font-bold`, date in `text-xl`, week number in `text-sm`. Updates every second. Minimal styling, no panel border — just text with soft glow.
+### 2. Update store default (`src/store/useAppStore.ts`)
+Add `cameraView: 'standard'` to initial standby state.
 
-### `src/components/standby/StandbyWeather.tsx`
-Large weather display using existing store data (`environment.weather`). Large icon + temperature in `text-5xl`, condition label below. No interactivity.
+### 3. Replace orbit camera with static camera (`src/components/Scene3D.tsx`)
+- Remove `StandbyOrbitCamera` (the rotating one).
+- Replace with `StandbyStaticCamera`: reads `standby.cameraView` from store, sets camera position once (no animation, no orbit). Five preset positions:
+  - `standard`: `[10, 9, 10]` looking at `[0, 1, 0]` — dollhouse angle ~40°
+  - `topdown`: `[0, 22, 0.01]` looking at `[0, 0, 0]`
+  - `angled-left`: `[-10, 9, 10]` looking at `[0, 1, 0]`
+  - `angled-right`: `[10, 9, -10]` looking at `[0, 1, 0]`
+  - `close`: `[6, 6, 6]` looking at `[0, 1, 0]`
+- No OrbitControls rendered in standby mode (already the case).
+- **Hide Grid in standby**: wrap the `<Grid>` component with a check — only render when `appMode !== 'standby'`.
 
-### `src/components/standby/StandbyWidgets.tsx`
-Renders selected visible widgets (from `homeView.visibleWidgets`) in a vertical read-only stack — simplified versions of energy and temperature data. No click handlers.
+### 4. Redesign StandbyMode layout (`src/components/standby/StandbyMode.tsx`)
+- Remove the split 70/30 grid layout with bordered panels.
+- Make 3D scene fullscreen (`fixed inset-0`).
+- Overlay the info panel on the right side using `absolute right-0 top-0 bottom-0 w-[30%]` with a semi-transparent gradient background (`bg-gradient-to-l from-background/60 to-transparent backdrop-blur-sm`).
+- Clock, weather, and widgets float over the scene with no hard panel borders.
 
-### `src/components/standby/useIdleTimer.ts`
-Custom hook. Listens for `mousemove`, `mousedown`, `touchstart`, `keydown`. Resets a timer on each event. When idle time exceeds the configured threshold, calls `enterStandby()`. Disabled when `standby.enabled` is false or when in build mode.
+### 5. Add camera view selector to settings (`src/components/home/DashboardGrid.tsx`)
+Add a camera view dropdown to `StandbySettingsPanel`:
+```
+Kameravy: [Standard ▼]
+```
+Options: Standard, Ovanifrån, Vinkel vänster, Vinkel höger, Närbild.
+Uses `setStandbySettings({ cameraView: value })`.
 
-## Modified Files
+## Files Changed
 
-### `src/store/types.ts`
-- Add `StandbySettings` interface: `{ enabled: boolean; idleMinutes: number }` (idleMinutes options: 0.5, 1, 2, 5)
-- Add `standby: StandbySettings` to `AppState`
-- Add `setStandbySettings: (s: Partial<StandbySettings>) => void` to `AppState`
-- Extend `AppMode` from `'home' | 'dashboard' | 'build'` to include `'standby'`
-
-### `src/store/useAppStore.ts`
-- Add initial `standby: { enabled: false, idleMinutes: 2 }` state
-- Add `setStandbySettings` action
-- Store the previous `appMode` before entering standby (add `_preStandbyMode` field)
-
-### `src/pages/Index.tsx`
-- Add `appMode === 'standby'` branch that renders `<StandbyMode />`
-
-### `src/components/home/HomeNav.tsx`
-- No change to nav items (standby is not a manual nav destination — it's entered via idle timer or settings button)
-
-### `src/components/home/DashboardGrid.tsx` (SettingsCategory)
-- Add "Standby-läge" section inside `SettingsCategory`:
-  - Toggle switch for `standby.enabled`
-  - Select dropdown for idle time (30s, 1m, 2m, 5m)
-  - "Förhandsgranska Standby" button that sets `appMode` to `'standby'`
-
-### `src/components/Scene3D.tsx`
-- Add a `StandbyOrbitCamera` sub-component: when `appMode === 'standby'`, uses `useFrame` to slowly rotate camera around the house (azimuth += delta * 0.1). No user orbit controls. Falls back to existing `CameraController` otherwise.
-
-## Behavior Summary
-
-- **Enter**: Auto after idle timeout OR manually via Settings → "Förhandsgranska Standby"
-- **Exit**: Any touch/mouse/key → returns to previous `appMode`
-- **Performance**: Same Scene3D, slow orbit (no rapid updates), no UI overlays except right panel
-- **No existing features modified**: All existing screens, widgets, integrations untouched
+| File | Change |
+|------|--------|
+| `src/store/types.ts` | Add `StandbyCameraView` type, add `cameraView` to `StandbySettings` |
+| `src/store/useAppStore.ts` | Default `cameraView: 'standard'` |
+| `src/components/Scene3D.tsx` | Replace orbit camera with static presets, hide grid in standby |
+| `src/components/standby/StandbyMode.tsx` | Fullscreen 3D + floating transparent overlay |
+| `src/components/home/DashboardGrid.tsx` | Add camera view selector to standby settings |
 
