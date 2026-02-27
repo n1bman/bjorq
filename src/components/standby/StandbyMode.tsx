@@ -25,14 +25,14 @@ export default function StandbyMode() {
   }, [handleExit]);
 
   return (
-    <div className="fixed inset-0 bg-background overflow-hidden">
+    <div className="fixed inset-0 bg-background overflow-hidden animate-fade-in">
       {/* Fullscreen 3D scene */}
       <div className="absolute inset-0">
         <Scene3D />
       </div>
 
       {/* Floating overlay panel — right side */}
-      <div className="absolute right-0 top-0 bottom-0 w-[30%] min-w-[280px] flex flex-col justify-center items-center gap-10 px-6 bg-gradient-to-l from-background/80 via-background/50 to-transparent backdrop-blur-md">
+      <div className="absolute right-0 top-0 bottom-0 w-[30%] min-w-[280px] flex flex-col justify-center items-center gap-10 px-6 bg-gradient-to-l from-background/80 via-background/50 to-transparent backdrop-blur-md animate-fade-in" style={{ animationDelay: '0.2s', animationFillMode: 'both' }}>
         <StandbyClock />
         <StandbyWeather />
         <StandbyWidgets />
