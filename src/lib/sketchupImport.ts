@@ -4,6 +4,7 @@ import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import { MTLLoader } from 'three/examples/jsm/loaders/MTLLoader.js';
 import { ColladaLoader } from 'three/examples/jsm/loaders/ColladaLoader.js';
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { analyzeModel } from './modelAnalysis';
 import type { ModelStats } from '@/store/types';
 
@@ -648,5 +649,151 @@ export async function convertSketchUp(
       URL.revokeObjectURL(url);
     }
     console.log(`[SketchUp Import] Cleaned up ${blobUrls.length} blob URLs`);
+  }
+}
+
+// ── Diagnostic types & functions ──
+
+export interface LoaderTestResult {
+  mainFile: string;
+  mainFileSize: number;
+  rootType: string;
+  childrenCount: number;
+  meshCount: number;
+  triCount: number;
+  boundingBox: { x: number; y: number; z: number };
+  materialTypes: string[];
+  childTree: { name: string; type: string; children: number }[];
+  missingResources: string[];
+}
+
+/** Walk first 2 levels of children and collect debug info */
+function buildChildTree(root: THREE.Object3D): { name: string; type: string; children: number }[] {
+  const tree: { name: string; type: string; children: number }[] = [];
+  for (const child of root.children) {
+    tree.push({ name: child.name || '(unnamed)', type: child.type, children: child.children.length });
+    for (const grandchild of child.children) {
+      tree.push({ name: `  ${grandchild.name || '(unnamed)'}`, type: grandchild.type, children: grandchild.children.length });
+    }
+  }
+  return tree;
+}
+
+/**
+ * Load OBJ/DAE without exporting to GLB — just return scene stats for debugging.
+ */
+export async function testLoadOnly(
+  fileMap: FileMap,
+  validation: ValidationResult,
+  selectedObjFile?: string | null,
+): Promise<LoaderTestResult> {
+  const missingResources: string[] = [];
+  const warnings: string[] = [];
+  const { blobUrlMap, blobUrls } = buildBlobUrlMap(fileMap.files);
+
+  try {
+    const mainFile = selectedObjFile || validation.mainFile!;
+    const mainBlob = fileMap.files.get(mainFile);
+    const mainFileSize = mainBlob?.size ?? 0;
+
+    console.log(`[testLoadOnly] Loading: ${mainFile} (${mainFileSize} bytes)`);
+
+    let scene: THREE.Group;
+    if (validation.format === 'dae') {
+      scene = await loadDAE(fileMap.files, mainFile, blobUrlMap, missingResources, warnings);
+    } else {
+      scene = await loadOBJ(fileMap.files, mainFile, validation.mtlFile, blobUrlMap, missingResources, warnings);
+    }
+
+    const { meshCount, triCount } = collectSceneStats(scene);
+
+    const box = new THREE.Box3().setFromObject(scene);
+    const size = box.getSize(new THREE.Vector3());
+
+    const matTypes = new Set<string>();
+    scene.traverse((child) => {
+      if (child instanceof THREE.Mesh) {
+        const mats = Array.isArray(child.material) ? child.material : [child.material];
+        (mats as THREE.Material[]).forEach((m) => m && matTypes.add(m.type));
+      }
+    });
+
+    const childTree = buildChildTree(scene);
+
+    console.log(`[testLoadOnly] Result: meshes=${meshCount}, tris=${triCount}, children=${scene.children.length}`);
+    console.log(`[testLoadOnly] Child tree:`, childTree);
+
+    return {
+      mainFile,
+      mainFileSize,
+      rootType: scene.type,
+      childrenCount: scene.children.length,
+      meshCount,
+      triCount,
+      boundingBox: {
+        x: Math.round(size.x * 100) / 100,
+        y: Math.round(size.y * 100) / 100,
+        z: Math.round(size.z * 100) / 100,
+      },
+      materialTypes: [...matTypes],
+      childTree,
+      missingResources,
+    };
+  } finally {
+    for (const url of blobUrls) URL.revokeObjectURL(url);
+  }
+}
+
+/**
+ * Sanity test: create a box, export to GLB, load it back, count triangles.
+ */
+export async function testGLBExportSanity(): Promise<{ success: boolean; byteLength: number; triCount: number; error?: string }> {
+  try {
+    const geo = new THREE.BoxGeometry(1, 1, 1);
+    const mat = new THREE.MeshStandardMaterial({ color: 0xff0000 });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.name = 'sanity-test-box';
+
+    const scene = new THREE.Scene();
+    scene.add(mesh);
+
+    // Export
+    const exporter = new GLTFExporter();
+    const glbBuffer = await exporter.parseAsync(scene, { binary: true }) as ArrayBuffer;
+    console.log(`[testGLBExportSanity] Exported ${glbBuffer.byteLength} bytes`);
+
+    // Load back
+    const blob = new Blob([glbBuffer], { type: 'model/gltf-binary' });
+    const url = URL.createObjectURL(blob);
+
+    const triCount = await new Promise<number>((resolve, reject) => {
+      const loader = new GLTFLoader();
+      loader.load(
+        url,
+        (gltf) => {
+          let tris = 0;
+          gltf.scene.traverse((child) => {
+            if (child instanceof THREE.Mesh && child.geometry) {
+              if (child.geometry.index) tris += child.geometry.index.count / 3;
+              else if (child.geometry.attributes?.position) tris += child.geometry.attributes.position.count / 3;
+            }
+          });
+          URL.revokeObjectURL(url);
+          resolve(Math.round(tris));
+        },
+        undefined,
+        (err) => {
+          URL.revokeObjectURL(url);
+          reject(err);
+        },
+      );
+    });
+
+    console.log(`[testGLBExportSanity] Loaded back: ${triCount} triangles`);
+    return { success: true, byteLength: glbBuffer.byteLength, triCount };
+  } catch (err) {
+    const msg = (err as Error).message;
+    console.error(`[testGLBExportSanity] Failed:`, msg);
+    return { success: false, byteLength: 0, triCount: 0, error: msg };
   }
 }

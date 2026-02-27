@@ -7,7 +7,8 @@ import { Upload, FolderOpen, FileArchive, AlertTriangle, CheckCircle2, XCircle, 
 import { useAppStore } from '@/store/useAppStore';
 import {
   extractZip, extractFolder, validateFileMap, convertSketchUp,
-  type FileMap, type ValidationResult, type ConversionProgress, type ConversionResult, type TargetDevice, type DebugInfo,
+  testLoadOnly, testGLBExportSanity,
+  type FileMap, type ValidationResult, type ConversionProgress, type ConversionResult, type TargetDevice, type DebugInfo, type LoaderTestResult,
 } from '@/lib/sketchupImport';
 
 type Step = 'pick' | 'validate' | 'settings' | 'converting' | 'done' | 'error';
@@ -57,6 +58,46 @@ function FileDebugPanel({ fileMap, validation }: { fileMap: FileMap; validation:
   );
 }
 
+function LoaderTestPanel({ result }: { result: LoaderTestResult }) {
+  return (
+    <div className="rounded border border-border bg-secondary/30 p-2 text-[9px] font-mono text-muted-foreground space-y-0.5">
+      <div className="text-[10px] font-semibold text-foreground mb-1">Loader Test Result</div>
+      <div>Fil: {result.mainFile.split('/').pop()} ({formatBytes(result.mainFileSize)})</div>
+      <div>Root: {result.rootType} | Children: {result.childrenCount}</div>
+      <div className={result.meshCount > 0 ? 'text-green-400' : 'text-red-400'}>
+        Meshes: {result.meshCount} | Trianglar: {result.triCount.toLocaleString()}
+      </div>
+      <div>BBox: {result.boundingBox.x} × {result.boundingBox.y} × {result.boundingBox.z}</div>
+      {result.materialTypes.length > 0 && <div>Material: {result.materialTypes.join(', ')}</div>}
+      {result.childTree.length > 0 && (
+        <details className="mt-1">
+          <summary className="cursor-pointer text-muted-foreground hover:text-foreground">Child tree ({result.childTree.length})</summary>
+          <div className="pl-1 mt-0.5 space-y-0">
+            {result.childTree.map((c, i) => (
+              <div key={i}>{c.name} [{c.type}] ({c.children} children)</div>
+            ))}
+          </div>
+        </details>
+      )}
+      {result.missingResources.length > 0 && (
+        <div className="text-yellow-400 mt-1">
+          Saknade resurser: {result.missingResources.join(', ')}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function GLBSanityResult({ result }: { result: { success: boolean; byteLength: number; triCount: number; error?: string } }) {
+  return (
+    <div className={`rounded border border-border p-2 text-[9px] font-mono ${result.success ? 'text-green-400' : 'text-red-400'}`}>
+      {result.success
+        ? `✓ GLB Export OK — ${result.byteLength} bytes, ${result.triCount} trianglar`
+        : `✗ GLB Export FAILED — ${result.error}`}
+    </div>
+  );
+}
+
 function ConversionDebugPanel({ debugInfo }: { debugInfo: DebugInfo }) {
   return (
     <Collapsible>
@@ -96,6 +137,10 @@ export default function SketchUpWizard({ open, onOpenChange }: { open: boolean; 
   const [result, setResult] = useState<ConversionResult | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
   const [selectedObj, setSelectedObj] = useState<string | null>(null);
+  const [loaderTestResult, setLoaderTestResult] = useState<LoaderTestResult | null>(null);
+  const [loaderTesting, setLoaderTesting] = useState(false);
+  const [glbSanityResult, setGlbSanityResult] = useState<{ success: boolean; byteLength: number; triCount: number; error?: string } | null>(null);
+  const [glbSanityTesting, setGlbSanityTesting] = useState(false);
 
   const zipRef = useRef<HTMLInputElement>(null);
   const folderRef = useRef<HTMLInputElement>(null);
@@ -110,7 +155,41 @@ export default function SketchUpWizard({ open, onOpenChange }: { open: boolean; 
     setResult(null);
     setErrorMsg('');
     setSelectedObj(null);
+    setLoaderTestResult(null);
+    setGlbSanityResult(null);
     setProgress({ stage: 'extracting', percent: 0, message: '' });
+  };
+
+  const runLoaderTest = async () => {
+    if (!fileMap || !validation) return;
+    setLoaderTesting(true);
+    setLoaderTestResult(null);
+    try {
+      const res = await testLoadOnly(fileMap, validation, selectedObj);
+      setLoaderTestResult(res);
+    } catch (err) {
+      setLoaderTestResult({
+        mainFile: validation.mainFile ?? '?',
+        mainFileSize: 0,
+        rootType: 'ERROR',
+        childrenCount: 0,
+        meshCount: 0,
+        triCount: 0,
+        boundingBox: { x: 0, y: 0, z: 0 },
+        materialTypes: [],
+        childTree: [],
+        missingResources: [(err as Error).message],
+      });
+    }
+    setLoaderTesting(false);
+  };
+
+  const runGLBSanity = async () => {
+    setGlbSanityTesting(true);
+    setGlbSanityResult(null);
+    const res = await testGLBExportSanity();
+    setGlbSanityResult(res);
+    setGlbSanityTesting(false);
   };
 
   const handleClose = (v: boolean) => {
@@ -306,6 +385,28 @@ export default function SketchUpWizard({ open, onOpenChange }: { open: boolean; 
 
             {/* Debug panel for validation step */}
             {fileMap && <FileDebugPanel fileMap={fileMap} validation={validation} />}
+
+            {/* Diagnostic buttons */}
+            <div className="flex gap-2">
+              <button
+                onClick={runLoaderTest}
+                disabled={loaderTesting}
+                className="flex-1 py-2 rounded-lg bg-secondary text-foreground text-[10px] font-medium hover:bg-secondary/80 transition-all min-h-[36px] disabled:opacity-50"
+              >
+                {loaderTesting ? 'Testar...' : '🔍 Testa laddning'}
+              </button>
+              <button
+                onClick={runGLBSanity}
+                disabled={glbSanityTesting}
+                className="flex-1 py-2 rounded-lg bg-secondary text-foreground text-[10px] font-medium hover:bg-secondary/80 transition-all min-h-[36px] disabled:opacity-50"
+              >
+                {glbSanityTesting ? 'Testar...' : '📦 Test GLB Export (Box)'}
+              </button>
+            </div>
+
+            {/* Test results */}
+            {loaderTestResult && <LoaderTestPanel result={loaderTestResult} />}
+            {glbSanityResult && <GLBSanityResult result={glbSanityResult} />}
 
             <button
               onClick={() => setStep('settings')}
