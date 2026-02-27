@@ -786,6 +786,34 @@ export const useAppStore = create<AppState>()(
             floors: s.layout.floors.map((f) => ({ ...f, walls: [], rooms: [], stairs: [] })),
           },
           props: { ...s.props, items: [] },
+          homeGeometry: {
+            source: 'procedural' as const,
+            imported: {
+              url: null,
+              position: [0, 0, 0] as [number, number, number],
+              rotation: [0, 0, 0] as [number, number, number],
+              scale: [1, 1, 1] as [number, number, number],
+              groundLevelY: 0,
+              northAngle: 0,
+              floorBands: [],
+            },
+          },
+        })),
+
+      clearImportedModel: () =>
+        set(() => ({
+          homeGeometry: {
+            source: 'procedural' as const,
+            imported: {
+              url: null,
+              position: [0, 0, 0] as [number, number, number],
+              rotation: [0, 0, 0] as [number, number, number],
+              scale: [1, 1, 1] as [number, number, number],
+              groundLevelY: 0,
+              northAngle: 0,
+              floorBands: [],
+            },
+          },
         })),
 
       // Opening offset update

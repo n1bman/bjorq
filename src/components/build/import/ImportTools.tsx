@@ -1,6 +1,6 @@
 import { useAppStore } from '@/store/useAppStore';
 import { useRef, useState } from 'react';
-import { Upload, Compass, Ruler, Layers, Move, RotateCw, FileArchive } from 'lucide-react';
+import { Upload, Compass, Ruler, Layers, Move, RotateCw, FileArchive, Trash2 } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
 import { Input } from '@/components/ui/input';
 import SketchUpWizard from './SketchUpWizard';
@@ -10,6 +10,7 @@ export default function ImportTools() {
   const setHomeGeometrySource = useAppStore((s) => s.setHomeGeometrySource);
   const setImportedModel = useAppStore((s) => s.setImportedModel);
   const setNorthAngle = useAppStore((s) => s.setNorthAngle);
+  const clearImportedModel = useAppStore((s) => s.clearImportedModel);
   const fileRef = useRef<HTMLInputElement>(null);
   const [sketchUpOpen, setSketchUpOpen] = useState(false);
 
@@ -192,6 +193,19 @@ export default function ImportTools() {
             </div>
           </div>
 
+
+          {/* Remove imported model */}
+          <button
+            onClick={() => {
+              if (window.confirm('Är du säker på att du vill ta bort den importerade modellen?')) {
+                clearImportedModel();
+              }
+            }}
+            className="w-full flex items-center justify-center gap-2 py-2 rounded-lg bg-destructive/10 text-destructive text-xs hover:bg-destructive/20 transition-all min-h-[44px]"
+          >
+            <Trash2 size={14} />
+            Ta bort importerad modell
+          </button>
 
           {/* Back to procedural */}
           <button
