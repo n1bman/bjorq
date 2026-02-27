@@ -530,9 +530,11 @@ export interface UserProfile {
 }
 
 // ─── Standby Settings ───
+export type StandbyCameraView = 'standard' | 'topdown' | 'angled-left' | 'angled-right' | 'close';
 export interface StandbySettings {
   enabled: boolean;
   idleMinutes: number; // 0.5, 1, 2, 5
+  cameraView: StandbyCameraView;
 }
 
 // ─── App State ───

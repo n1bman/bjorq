@@ -14,7 +14,6 @@ export default function StandbyMode() {
 
   useEffect(() => {
     const events = ['mousedown', 'touchstart', 'keydown'] as const;
-    // Delay listener attachment to avoid immediate exit from the click that entered standby
     const timeout = setTimeout(() => {
       events.forEach((e) => window.addEventListener(e, handleExit, { once: true, passive: true }));
     }, 500);
@@ -27,18 +26,16 @@ export default function StandbyMode() {
 
   return (
     <div className="fixed inset-0 bg-background overflow-hidden">
-      <div className="standby-layout p-4 h-full" style={{ gridTemplateColumns: '70% 30%' }}>
-        {/* Left: 3D Scene */}
-        <div className="rounded-2xl overflow-hidden h-full">
-          <Scene3D />
-        </div>
+      {/* Fullscreen 3D scene */}
+      <div className="absolute inset-0">
+        <Scene3D />
+      </div>
 
-        {/* Right: Info Panel */}
-        <div className="flex flex-col justify-center items-center gap-10 px-4">
-          <StandbyClock />
-          <StandbyWeather />
-          <StandbyWidgets />
-        </div>
+      {/* Floating overlay panel — right side */}
+      <div className="absolute right-0 top-0 bottom-0 w-[30%] min-w-[280px] flex flex-col justify-center items-center gap-10 px-6 bg-gradient-to-l from-background/60 to-transparent backdrop-blur-sm">
+        <StandbyClock />
+        <StandbyWeather />
+        <StandbyWidgets />
       </div>
     </div>
   );

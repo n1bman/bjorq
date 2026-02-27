@@ -170,7 +170,7 @@ export const useAppStore = create<AppState>()(
       devices: { markers: [], deviceStates: {} },
       activityLog: [],
       customCategories: [],
-      standby: { enabled: false, idleMinutes: 2 },
+      standby: { enabled: false, idleMinutes: 2, cameraView: 'standard' as const },
       _preStandbyMode: 'home' as AppMode,
       profile: { name: '', theme: 'dark', accentColor: '#f59e0b', dashboardBg: 'scene3d' },
 

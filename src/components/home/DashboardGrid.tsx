@@ -215,6 +215,14 @@ function StandbySettingsPanel() {
     { value: 5, label: '5 min' },
   ];
 
+  const cameraOptions = [
+    { value: 'standard', label: 'Standard' },
+    { value: 'topdown', label: 'Ovanifrån' },
+    { value: 'angled-left', label: 'Vinkel vänster' },
+    { value: 'angled-right', label: 'Vinkel höger' },
+    { value: 'close', label: 'Närbild' },
+  ];
+
   return (
     <div className="glass-panel rounded-2xl p-5 space-y-4">
       <div className="flex items-center gap-2">
@@ -243,6 +251,19 @@ function StandbySettingsPanel() {
           className="bg-secondary text-foreground text-sm rounded-lg px-3 py-1.5 border border-border"
         >
           {idleOptions.map((o) => (
+            <option key={o.value} value={o.value}>{o.label}</option>
+          ))}
+        </select>
+      </div>
+
+      <div className="flex items-center justify-between">
+        <span className="text-sm text-foreground">Kameravy</span>
+        <select
+          value={standby.cameraView}
+          onChange={(e) => setStandbySettings({ cameraView: e.target.value as any })}
+          className="bg-secondary text-foreground text-sm rounded-lg px-3 py-1.5 border border-border"
+        >
+          {cameraOptions.map((o) => (
             <option key={o.value} value={o.value}>{o.label}</option>
           ))}
         </select>
