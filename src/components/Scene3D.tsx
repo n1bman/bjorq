@@ -29,8 +29,27 @@ const presetTargets: Record<CameraPreset, THREE.Vector3> = {
   front: new THREE.Vector3(0, 2, 0),
 };
 
+function StandbyOrbitCamera() {
+  const angleRef = useRef(0);
+
+  useFrame(({ camera }, delta) => {
+    angleRef.current += delta * 0.1;
+    const radius = 16;
+    const y = 10;
+    camera.position.set(
+      radius * Math.sin(angleRef.current),
+      y,
+      radius * Math.cos(angleRef.current)
+    );
+    camera.lookAt(0, 1, 0);
+  });
+
+  return null;
+}
+
 function CameraController() {
   const cameraPreset = useAppStore((s) => s.homeView.cameraPreset);
+  const appMode = useAppStore((s) => s.appMode);
   const controlsRef = useRef<any>(null);
   const prevPreset = useRef(cameraPreset);
 
@@ -50,6 +69,10 @@ function CameraController() {
       controlsRef.current.update();
     }
   });
+
+  if (appMode === 'standby') {
+    return <StandbyOrbitCamera />;
+  }
 
   return (
     <OrbitControls

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Home, Cloud, Cpu, Zap, Bell, Video, Settings, Pencil, X, CalendarDays, Bot } from 'lucide-react';
+import { Home, Cloud, Cpu, Zap, Bell, Video, Settings, Pencil, X, CalendarDays, Bot, Moon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useAppStore } from '@/store/useAppStore';
@@ -203,10 +203,67 @@ function EnergyCategory() {
   );
 }
 
+function StandbySettingsPanel() {
+  const standby = useAppStore((s) => s.standby);
+  const setStandbySettings = useAppStore((s) => s.setStandbySettings);
+  const enterStandby = useAppStore((s) => s.enterStandby);
+
+  const idleOptions = [
+    { value: 0.5, label: '30 sek' },
+    { value: 1, label: '1 min' },
+    { value: 2, label: '2 min' },
+    { value: 5, label: '5 min' },
+  ];
+
+  return (
+    <div className="glass-panel rounded-2xl p-5 space-y-4">
+      <div className="flex items-center gap-2">
+        <Moon size={18} className="text-primary" />
+        <h3 className="text-sm font-semibold text-foreground">Standby-läge</h3>
+      </div>
+
+      <div className="flex items-center justify-between">
+        <span className="text-sm text-foreground">Aktivera standby</span>
+        <label className="relative inline-flex items-center cursor-pointer">
+          <input
+            type="checkbox"
+            checked={standby.enabled}
+            onChange={(e) => setStandbySettings({ enabled: e.target.checked })}
+            className="sr-only peer"
+          />
+          <div className="w-11 h-6 bg-muted rounded-full peer peer-checked:bg-primary transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-foreground after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full" />
+        </label>
+      </div>
+
+      <div className="flex items-center justify-between">
+        <span className="text-sm text-foreground">Inaktivitetstid</span>
+        <select
+          value={standby.idleMinutes}
+          onChange={(e) => setStandbySettings({ idleMinutes: Number(e.target.value) })}
+          className="bg-secondary text-foreground text-sm rounded-lg px-3 py-1.5 border border-border"
+        >
+          {idleOptions.map((o) => (
+            <option key={o.value} value={o.value}>{o.label}</option>
+          ))}
+        </select>
+      </div>
+
+      <Button
+        variant="outline"
+        className="w-full h-10"
+        onClick={() => enterStandby()}
+      >
+        Förhandsgranska Standby
+      </Button>
+    </div>
+  );
+}
+
 function SettingsCategory() {
   return (
     <div className="space-y-4">
       <ProfilePanel />
+      <StandbySettingsPanel />
       <LocationSettings />
       <HAConnectionPanel />
       <HomeWidgetConfig />
