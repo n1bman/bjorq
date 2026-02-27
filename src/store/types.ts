@@ -211,6 +211,8 @@ export interface ImportedHomeSettings {
   northAngle: number;
   floorBands: FloorBand[];
   modelStats?: ModelStats;
+  originalSize?: number; // bytes — size of original upload (ZIP/folder)
+  optimizedSize?: number; // bytes — size of optimized GLB
 }
 
 export interface HomeGeometryState {

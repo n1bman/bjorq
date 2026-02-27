@@ -1,8 +1,9 @@
 import { useAppStore } from '@/store/useAppStore';
-import { useRef } from 'react';
-import { Upload, Compass, Ruler, Layers, Move, RotateCw } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { Upload, Compass, Ruler, Layers, Move, RotateCw, FileArchive } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
 import { Input } from '@/components/ui/input';
+import SketchUpWizard from './SketchUpWizard';
 
 export default function ImportTools() {
   const homeGeometry = useAppStore((s) => s.homeGeometry);
@@ -10,6 +11,7 @@ export default function ImportTools() {
   const setImportedModel = useAppStore((s) => s.setImportedModel);
   const setNorthAngle = useAppStore((s) => s.setNorthAngle);
   const fileRef = useRef<HTMLInputElement>(null);
+  const [sketchUpOpen, setSketchUpOpen] = useState(false);
 
   const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -50,6 +52,14 @@ export default function ImportTools() {
         </button>
         <input ref={fileRef} type="file" accept=".glb,.gltf" className="hidden" onChange={handleUpload} />
 
+        <button
+          onClick={() => setSketchUpOpen(true)}
+          className="w-full flex items-center justify-center gap-2 px-3 py-3 rounded-lg border-2 border-dashed border-border hover:border-primary/50 text-muted-foreground hover:text-primary text-xs transition-all min-h-[44px]"
+        >
+          <FileArchive size={16} />
+          <span>Ladda upp SketchUp (ZIP / Mapp)</span>
+        </button>
+        <SketchUpWizard open={sketchUpOpen} onOpenChange={setSketchUpOpen} />
         {imported.url && (
           <div className="flex items-center gap-2 text-[10px] text-primary">
             <span className="truncate">{imported.url.split('/').pop()}</span>
