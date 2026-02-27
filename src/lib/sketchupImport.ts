@@ -471,9 +471,14 @@ async function loadOBJ(
   blobUrlMap: Map<string, string>,
   missingResources: string[],
   warnings: string[],
+  fastMode = false,
 ): Promise<THREE.Group> {
   const objBlob = files.get(objPath)!;
-  const objText = await objBlob.text();
+
+  // Use ArrayBuffer + TextDecoder to avoid silent truncation on large files
+  const objBuffer = await objBlob.arrayBuffer();
+  const objText = new TextDecoder().decode(objBuffer);
+  console.log(`[SketchUp Import] OBJ file size: ${objBuffer.byteLength}, text length: ${objText.length}`);
 
   // Create a LoadingManager with URL modifier for resource resolution
   const manager = new THREE.LoadingManager();
@@ -481,9 +486,10 @@ async function loadOBJ(
 
   let materials: MTLLoader.MaterialCreator | null = null;
 
-  if (mtlPath) {
+  if (mtlPath && !fastMode) {
     const mtlBlob = files.get(mtlPath)!;
-    const mtlText = await mtlBlob.text();
+    const mtlBuffer = await mtlBlob.arrayBuffer();
+    const mtlText = new TextDecoder().decode(mtlBuffer);
 
     const mtlLoader = new MTLLoader(manager);
     // Set resource path to empty — URLModifier handles resolution
@@ -493,6 +499,8 @@ async function loadOBJ(
     materials.preload();
 
     console.log(`[SketchUp Import] MTL parsed, materials: ${Object.keys(materials.materials).join(', ')}`);
+  } else if (mtlPath && fastMode) {
+    console.log(`[SketchUp Import] Fast mode — skipping MTL loading`);
   }
 
   const objLoader = new OBJLoader(manager);
@@ -500,7 +508,32 @@ async function loadOBJ(
 
   const group = objLoader.parse(objText);
 
-  console.log(`[SketchUp Import] OBJ loaded: ${group.children.length} children, type=${group.type}`);
+  // Post-parse validation
+  const { meshCount, triCount } = collectSceneStats(group);
+  console.log(`[SketchUp Import] OBJ parsed: ${group.children.length} children, ${meshCount} meshes, ${triCount} triangles`);
+
+  if (meshCount === 0) {
+    console.error(`[SketchUp Import] OBJ text preview: ${objText.substring(0, 500)}`);
+    throw new Error(`OBJ loaded but 0 meshes found. File size: ${objBuffer.byteLength}, text length: ${objText.length}. OBJ parsing failed.`);
+  }
+
+  const box = new THREE.Box3().setFromObject(group);
+  console.log(`[SketchUp Import] OBJ bounding box:`, box);
+  if (box.isEmpty()) {
+    throw new Error('OBJ model bounding box is empty');
+  }
+
+  // Fast mode: assign simple default material to all meshes
+  if (fastMode) {
+    const defaultMat = new THREE.MeshStandardMaterial({ color: 0xcccccc });
+    group.traverse((child) => {
+      if (child instanceof THREE.Mesh) {
+        child.material = defaultMat;
+      }
+    });
+    console.log(`[SketchUp Import] Fast mode — assigned default material to ${meshCount} meshes`);
+  }
+
   return group;
 }
 
@@ -512,7 +545,9 @@ async function loadDAE(
   warnings: string[],
 ): Promise<THREE.Group> {
   const daeBlob = files.get(daePath)!;
-  const daeText = await daeBlob.text();
+  const daeBuffer = await daeBlob.arrayBuffer();
+  const daeText = new TextDecoder().decode(daeBuffer);
+  console.log(`[SketchUp Import] DAE file size: ${daeBuffer.byteLength}, text length: ${daeText.length}`);
 
   // Create a LoadingManager with URL modifier
   const manager = new THREE.LoadingManager();
@@ -559,6 +594,7 @@ export async function convertSketchUp(
   target: TargetDevice,
   onProgress: (p: ConversionProgress) => void,
   selectedObjFile?: string,
+  fastMode = false,
 ): Promise<ConversionResult> {
   const warnings: string[] = [...validation.warnings];
   const missingResources: string[] = [];
@@ -578,7 +614,7 @@ export async function convertSketchUp(
     if (validation.format === 'dae') {
       scene = await loadDAE(fileMap.files, mainFile, blobUrlMap, missingResources, warnings);
     } else {
-      scene = await loadOBJ(fileMap.files, mainFile, validation.mtlFile, blobUrlMap, missingResources, warnings);
+      scene = await loadOBJ(fileMap.files, mainFile, validation.mtlFile, blobUrlMap, missingResources, warnings, fastMode);
     }
 
     // Validate scene has geometry
@@ -686,6 +722,7 @@ export async function testLoadOnly(
   fileMap: FileMap,
   validation: ValidationResult,
   selectedObjFile?: string | null,
+  fastMode = false,
 ): Promise<LoaderTestResult> {
   const missingResources: string[] = [];
   const warnings: string[] = [];
@@ -696,13 +733,13 @@ export async function testLoadOnly(
     const mainBlob = fileMap.files.get(mainFile);
     const mainFileSize = mainBlob?.size ?? 0;
 
-    console.log(`[testLoadOnly] Loading: ${mainFile} (${mainFileSize} bytes)`);
+    console.log(`[testLoadOnly] Loading: ${mainFile} (${mainFileSize} bytes), fastMode=${fastMode}`);
 
     let scene: THREE.Group;
     if (validation.format === 'dae') {
       scene = await loadDAE(fileMap.files, mainFile, blobUrlMap, missingResources, warnings);
     } else {
-      scene = await loadOBJ(fileMap.files, mainFile, validation.mtlFile, blobUrlMap, missingResources, warnings);
+      scene = await loadOBJ(fileMap.files, mainFile, validation.mtlFile, blobUrlMap, missingResources, warnings, fastMode);
     }
 
     const { meshCount, triCount } = collectSceneStats(scene);
