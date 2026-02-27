@@ -106,7 +106,24 @@ export default function SketchUpWizard({ open, onOpenChange }: { open: boolean; 
   const importResult = () => {
     if (!result) return;
     const url = URL.createObjectURL(result.glbBlob);
-    // Read as base64 for persistence
+    const sizeBytes = result.optimizedSize;
+    const MAX_PERSIST_SIZE = 4 * 1024 * 1024; // 4 MB
+    
+    if (sizeBytes > MAX_PERSIST_SIZE) {
+      // Too large for localStorage — use blob URL only (session-only)
+      console.log(`[SketchUp Import] GLB ${(sizeBytes / 1024 / 1024).toFixed(1)} MB > 4 MB, skipping base64 persistence`);
+      setImportedModel({
+        url,
+        modelStats: result.stats,
+        originalSize: result.originalSize,
+        optimizedSize: result.optimizedSize,
+      });
+      setHomeGeometrySource('imported');
+      handleClose(false);
+      return;
+    }
+    
+    // Small enough to persist as base64
     const reader = new FileReader();
     reader.onload = () => {
       const base64 = (reader.result as string).split(',')[1];

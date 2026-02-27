@@ -298,21 +298,61 @@ function validateScene(scene: THREE.Object3D) {
   const matTypes = new Set<string>();
 
   scene.traverse((child) => {
-    if (child instanceof THREE.Mesh) {
+    if (child instanceof THREE.Mesh || (child as any).isMesh || (child as any).isSkinnedMesh || (child as any).isInstancedMesh) {
       meshCount++;
-      const geo = child.geometry;
-      if (geo.index) triCount += geo.index.count / 3;
-      else if (geo.attributes.position) triCount += geo.attributes.position.count / 3;
-      const mats = Array.isArray(child.material) ? child.material : [child.material];
-      mats.forEach((m) => m && matTypes.add(m.type));
+      const geo = (child as THREE.Mesh).geometry;
+      if (geo) {
+        if (geo.index) triCount += geo.index.count / 3;
+        else if (geo.attributes?.position) triCount += geo.attributes.position.count / 3;
+      }
+      const mats = Array.isArray((child as THREE.Mesh).material) ? (child as THREE.Mesh).material : [(child as THREE.Mesh).material];
+      (mats as THREE.Material[]).forEach((m) => m && matTypes.add(m.type));
     }
   });
 
+  console.log(`[SketchUp Import] Scene children: ${scene.children.length}`);
   console.log(`[SketchUp Import] Meshes: ${meshCount}, Triangles: ${Math.round(triCount)}, Material types: ${[...matTypes].join(', ')}`);
+
+  // Log bounding box
+  const box = new THREE.Box3().setFromObject(scene);
+  const size = box.getSize(new THREE.Vector3());
+  const center = box.getCenter(new THREE.Vector3());
+  console.log(`[SketchUp Import] Bounding box size: ${size.x.toFixed(2)} x ${size.y.toFixed(2)} x ${size.z.toFixed(2)}`);
+  console.log(`[SketchUp Import] Bounding box center: ${center.x.toFixed(2)}, ${center.y.toFixed(2)}, ${center.z.toFixed(2)}`);
 
   if (meshCount === 0) {
     throw new Error('Ingen 3D-geometri hittades i modellen. Kontrollera att filen exporterades korrekt från SketchUp.');
   }
+
+  return { meshCount, triCount, size, center };
+}
+
+function normalizeScene(scene: THREE.Object3D): { appliedScale: number; boundingBox: THREE.Vector3 } {
+  const box = new THREE.Box3().setFromObject(scene);
+  const center = box.getCenter(new THREE.Vector3());
+  const size = box.getSize(new THREE.Vector3());
+
+  // Center the scene at origin
+  scene.position.sub(center);
+  scene.updateMatrixWorld(true);
+
+  // Auto-scale if too large or too small
+  const maxDim = Math.max(size.x, size.y, size.z);
+  let appliedScale = 1;
+
+  if (maxDim > 30) {
+    appliedScale = 20 / maxDim;
+    scene.scale.multiplyScalar(appliedScale);
+    console.log(`[SketchUp Import] Auto-scaled down by ${appliedScale.toFixed(4)} (was ${maxDim.toFixed(1)}m)`);
+  } else if (maxDim < 0.1 && maxDim > 0) {
+    appliedScale = 5 / maxDim;
+    scene.scale.multiplyScalar(appliedScale);
+    console.log(`[SketchUp Import] Auto-scaled up by ${appliedScale.toFixed(4)} (was ${maxDim.toFixed(4)}m)`);
+  }
+
+  scene.updateMatrixWorld(true);
+
+  return { appliedScale, boundingBox: size };
 }
 
 // ── Loaders ──
@@ -456,6 +496,11 @@ export async function convertSketchUp(
   // Validate scene has geometry
   validateScene(scene);
 
+  // Normalize: center at origin and auto-scale
+  onProgress({ stage: 'optimizing', percent: 45, message: 'Centrerar och skalar modell...' });
+  const normInfo = normalizeScene(scene);
+  console.log(`[SketchUp Import] Normalization: scale=${normInfo.appliedScale.toFixed(4)}, bbox=${normInfo.boundingBox.x.toFixed(2)}x${normInfo.boundingBox.y.toFixed(2)}x${normInfo.boundingBox.z.toFixed(2)}`);
+
   // Stage 3: Convert materials & optimize
   onProgress({ stage: 'optimizing', percent: 50, message: 'Konverterar material...' });
   convertMaterialsToStandard(scene);
@@ -466,7 +511,18 @@ export async function convertSketchUp(
 
   // Stage 4: Export
   onProgress({ stage: 'exporting', percent: 85, message: 'Exporterar GLB...' });
+  
+  // Export the scene root directly
+  console.log(`[SketchUp Import] Exporting scene with ${scene.children.length} children`);
   const glbBuffer = await exportToGLB(scene);
+  
+  // Validate GLB size
+  if (glbBuffer.byteLength < 1024) {
+    throw new Error(`GLB-filen är för liten (${glbBuffer.byteLength} bytes). Exporten misslyckades — ingen geometri exporterades. Kontrollera att modellen har giltiga meshes.`);
+  }
+  
+  console.log(`[SketchUp Import] GLB exported: ${(glbBuffer.byteLength / 1024).toFixed(1)} KB`);
+  
   const glbBlob = new Blob([glbBuffer], { type: 'model/gltf-binary' });
 
   // Analyze
