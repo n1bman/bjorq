@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { AppState, BuildState, LayoutState, WallSegment, Room, DeviceState, DeviceKind, ActivityEvent } from './types';
+import type { AppState, AppMode, BuildState, LayoutState, WallSegment, Room, DeviceState, DeviceKind, ActivityEvent } from './types';
 import { mapHAEntityToDeviceState } from '@/lib/haMapping';
 import { setFromHA } from '@/hooks/useHABridge';
 
@@ -170,7 +170,19 @@ export const useAppStore = create<AppState>()(
       devices: { markers: [], deviceStates: {} },
       activityLog: [],
       customCategories: [],
+      standby: { enabled: false, idleMinutes: 2 },
+      _preStandbyMode: 'home' as AppMode,
       profile: { name: '', theme: 'dark', accentColor: '#f59e0b', dashboardBg: 'scene3d' },
+
+      // Standby actions
+      setStandbySettings: (settings) => set((s) => ({ standby: { ...s.standby, ...settings } })),
+      enterStandby: () => set((s) => ({
+        _preStandbyMode: s.appMode === 'standby' ? s._preStandbyMode : s.appMode,
+        appMode: 'standby' as AppMode,
+      })),
+      exitStandby: () => set((s) => ({
+        appMode: s._preStandbyMode || 'home',
+      })),
       props: { catalog: [], items: [] },
 
       homeGeometry: {
@@ -1079,7 +1091,7 @@ export const useAppStore = create<AppState>()(
         return persisted as any;
       },
       partialize: (state) => ({
-        appMode: state.appMode,
+        appMode: state.appMode === 'standby' ? state._preStandbyMode : state.appMode,
         layout: state.layout,
         homeGeometry: state.homeGeometry,
         homeView: state.homeView,
@@ -1089,6 +1101,7 @@ export const useAppStore = create<AppState>()(
         activityLog: state.activityLog,
         profile: state.profile,
         customCategories: state.customCategories,
+        standby: state.standby,
         homeAssistant: {
           wsUrl: state.homeAssistant.wsUrl,
           token: state.homeAssistant.token,

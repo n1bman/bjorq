@@ -529,8 +529,14 @@ export interface UserProfile {
   dashboardBg: 'scene3d' | 'gradient' | 'solid';
 }
 
+// ─── Standby Settings ───
+export interface StandbySettings {
+  enabled: boolean;
+  idleMinutes: number; // 0.5, 1, 2, 5
+}
+
 // ─── App State ───
-export type AppMode = 'home' | 'dashboard' | 'build';
+export type AppMode = 'home' | 'dashboard' | 'build' | 'standby';
 
 export interface AppState {
   appMode: AppMode;
@@ -547,6 +553,13 @@ export interface AppState {
   activityLog: ActivityEvent[];
   profile: UserProfile;
   customCategories: DeviceCategory[];
+  standby: StandbySettings;
+  _preStandbyMode: AppMode;
+
+  // Standby actions
+  setStandbySettings: (s: Partial<StandbySettings>) => void;
+  enterStandby: () => void;
+  exitStandby: () => void;
 
   // Home View actions
   setCameraPreset: (preset: CameraPreset) => void;
