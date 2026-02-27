@@ -65,31 +65,48 @@ function CameraController() {
   const cameraPreset = useAppStore((s) => s.homeView.cameraPreset);
   const appMode = useAppStore((s) => s.appMode);
   const controlsRef = useRef<any>(null);
-  const prevPreset = useRef(cameraPreset);
+  const prevMode = useRef(appMode);
+  const lerpingTo = useRef<CameraPreset | null>(null);
+  const lerpProgress = useRef(0);
 
+  // When switching to dashboard, animate once to topdown then stop
   useEffect(() => {
-    if (cameraPreset !== prevPreset.current) {
-      prevPreset.current = cameraPreset;
+    if (appMode === 'dashboard' && prevMode.current !== 'dashboard') {
+      lerpingTo.current = 'topdown';
+      lerpProgress.current = 0;
+    }
+    prevMode.current = appMode;
+  }, [appMode]);
+
+  // When user picks a preset (not free), animate to it
+  useEffect(() => {
+    if (cameraPreset !== 'free') {
+      lerpingTo.current = cameraPreset;
+      lerpProgress.current = 0;
     }
   }, [cameraPreset]);
 
   useFrame(({ camera }, delta) => {
-    // Always update global camera ref for "save camera" feature
+    // Always update global camera ref
     cameraRef.position.copy(camera.position);
     if (controlsRef.current) {
       cameraRef.target.copy(controlsRef.current.target);
     }
 
-    // Dashboard always uses angle preset for consistent view
-    const effectivePreset = appMode === 'dashboard' ? 'topdown' : cameraPreset;
-
-    if (effectivePreset === 'free') return;
-    const targetPos = presetPositions[effectivePreset];
-    camera.position.lerp(targetPos, delta * 3);
-    if (controlsRef.current) {
-      const target = presetTargets[effectivePreset];
-      controlsRef.current.target.lerp(target, delta * 3);
-      controlsRef.current.update();
+    // Animate to target preset then release
+    if (lerpingTo.current) {
+      const targetPos = presetPositions[lerpingTo.current];
+      const targetTarget = presetTargets[lerpingTo.current];
+      camera.position.lerp(targetPos, delta * 3);
+      if (controlsRef.current) {
+        controlsRef.current.target.lerp(targetTarget, delta * 3);
+        controlsRef.current.update();
+      }
+      lerpProgress.current += delta;
+      // Stop lerping once close enough
+      if (camera.position.distanceTo(targetPos) < 0.05) {
+        lerpingTo.current = null;
+      }
     }
   });
 
