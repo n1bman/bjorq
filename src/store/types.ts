@@ -571,7 +571,8 @@ export interface AppState {
   setCameraPreset: (preset: CameraPreset) => void;
   toggleHomeWidget: (widget: keyof VisibleWidgets) => void;
   toggleShowDeviceMarkers: () => void;
-  saveHomeStartCamera: () => void;
+  saveHomeStartCamera: (pos: [number, number, number], target: [number, number, number]) => void;
+  clearHomeStartCamera: () => void;
 
   // Device actions
   addDevice: (marker: DeviceMarker) => void;

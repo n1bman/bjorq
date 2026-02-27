@@ -1,8 +1,7 @@
 import { useAppStore } from '@/store/useAppStore';
-import { Camera, ArrowDown, RotateCcw, Square, Maximize, Save } from 'lucide-react';
+import { Camera, ArrowDown, RotateCcw, Square, Maximize } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
-import { toast } from 'sonner';
 import type { CameraPreset } from '@/store/types';
 
 const presets: { key: CameraPreset; label: string; icon: typeof Camera }[] = [
@@ -15,8 +14,6 @@ const presets: { key: CameraPreset; label: string; icon: typeof Camera }[] = [
 export default function CameraFab() {
   const cameraPreset = useAppStore((s) => s.homeView.cameraPreset);
   const setCameraPreset = useAppStore((s) => s.setCameraPreset);
-  const saveHomeStartCamera = useAppStore((s) => s.saveHomeStartCamera);
-  const hasCustomStart = useAppStore((s) => !!s.homeView.customStartPos);
   const [open, setOpen] = useState(false);
 
   return (
@@ -41,26 +38,6 @@ export default function CameraFab() {
               <span>{label}</span>
             </button>
           ))}
-
-          {/* Save current view as default start */}
-          <div className="border-t border-border/30 mt-1 pt-1">
-            <button
-              onClick={() => {
-                saveHomeStartCamera();
-                toast.success('Startvy sparad');
-                setOpen(false);
-              }}
-              className={cn(
-                'flex items-center gap-2 px-4 py-3 rounded-lg text-xs font-medium transition-all min-w-[120px]',
-                hasCustomStart
-                  ? 'text-primary/70 hover:text-primary hover:bg-primary/10'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-secondary/30'
-              )}
-            >
-              <Save size={14} />
-              <span>Spara startvy</span>
-            </button>
-          </div>
         </div>
       )}
 
