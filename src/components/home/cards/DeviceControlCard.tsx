@@ -123,13 +123,13 @@ function CompactDeviceView({ marker, state }: { marker: DeviceMarker; state: imp
         {sd.isSpeaking && <p className="text-[10px] text-blue-400">🗣️ Pratar...</p>}
         {sd.on && (
           <div className="flex items-center justify-center gap-1">
-            <Button size="sm" variant="ghost" className="h-7 w-7 p-0"
-              onClick={(e) => { e.stopPropagation(); updateDeviceState(marker.id, { state: sd.state === 'playing' ? 'paused' : 'playing' }); }}>
-              {sd.state === 'playing' ? <Pause size={14} /> : <Play size={14} />}
+          <Button size="sm" variant="ghost" className="h-10 w-10 p-0"
+            onClick={(e) => { e.stopPropagation(); updateDeviceState(marker.id, { state: sd.state === 'playing' ? 'paused' : 'playing' }); }}>
+              {sd.state === 'playing' ? <Pause size={16} /> : <Play size={16} />}
             </Button>
-            <Button size="sm" variant="ghost" className="h-7 w-7 p-0"
+            <Button size="sm" variant="ghost" className="h-10 w-10 p-0"
               onClick={(e) => { e.stopPropagation(); updateDeviceState(marker.id, { state: 'idle' }); }}>
-              <Square size={10} />
+              <Square size={12} />
             </Button>
             <div className="flex items-center gap-1 ml-1">
               <Volume2 size={10} className="text-muted-foreground" />
@@ -210,21 +210,21 @@ function CompactMediaControl({ id, data, update, label }: { id: string; data: Me
       {data.title && <p className="text-[10px] text-muted-foreground truncate">{data.title}</p>}
       {data.on && (
         <div className="flex items-center justify-center gap-1">
-          <Button size="sm" variant="ghost" className="h-7 w-7 p-0"
+          <Button size="sm" variant="ghost" className="h-10 w-10 p-0"
             onClick={(e) => { e.stopPropagation(); update(id, { _action: 'previous' }); }}>
-            <SkipBack size={12} />
+            <SkipBack size={14} />
           </Button>
-          <Button size="sm" variant="ghost" className="h-7 w-7 p-0"
+          <Button size="sm" variant="ghost" className="h-10 w-10 p-0"
             onClick={(e) => { e.stopPropagation(); update(id, { state: isPlaying ? 'paused' : 'playing' }); }}>
-            {isPlaying ? <Pause size={14} /> : <Play size={14} />}
+            {isPlaying ? <Pause size={16} /> : <Play size={16} />}
           </Button>
-          <Button size="sm" variant="ghost" className="h-7 w-7 p-0"
+          <Button size="sm" variant="ghost" className="h-10 w-10 p-0"
             onClick={(e) => { e.stopPropagation(); update(id, { _action: 'next' }); }}>
-            <SkipForward size={12} />
+            <SkipForward size={14} />
           </Button>
-          <Button size="sm" variant="ghost" className="h-7 w-7 p-0"
+          <Button size="sm" variant="ghost" className="h-10 w-10 p-0"
             onClick={(e) => { e.stopPropagation(); update(id, { _action: 'stop' }); }}>
-            <Square size={10} />
+            <Square size={12} />
           </Button>
         </div>
       )}
@@ -274,15 +274,15 @@ function CameraControl({ id, data, update }: { id: string; data: CameraState; up
 function LightControl({ id, data, update }: { id: string; data: LightState; update: UpdateFn }) {
   const pct = Math.round((data.brightness / 255) * 100);
   return (
-    <div className="space-y-3 pt-2">
+    <div className="space-y-4 pt-2">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-xs text-muted-foreground"><Sun size={14} /><span>Ljusstyrka {pct}%</span></div>
+        <div className="flex items-center gap-2 text-xs text-muted-foreground"><Sun size={16} /><span>Ljusstyrka {pct}%</span></div>
         <Switch checked={data.on} onCheckedChange={(v) => update(id, { on: v })} />
       </div>
       <Slider value={[data.brightness]} max={255} step={1} onValueChange={([v]) => update(id, { brightness: v })} disabled={!data.on} />
       <div className="flex gap-1">
         {(['temp', 'rgb', 'off'] as const).map((mode) => (
-          <Button key={mode} size="sm" variant={data.colorMode === mode ? 'default' : 'outline'} className="flex-1 h-7 text-[10px]"
+          <Button key={mode} size="sm" variant={data.colorMode === mode ? 'default' : 'outline'} className="flex-1 h-10 text-xs"
             onClick={() => update(id, { colorMode: mode })} disabled={!data.on}>
             {mode === 'temp' ? 'Temp' : mode === 'rgb' ? 'RGB' : 'Av'}
           </Button>
@@ -322,21 +322,21 @@ function ClimateControl({ id, data, update }: { id: string; data: ClimateState; 
     { key: 'off', label: 'Av', icon: Square },
   ] as const;
   return (
-    <div className="space-y-3 pt-2">
+    <div className="space-y-4 pt-2">
       <div className="flex items-center justify-between">
         <span className="text-xs text-muted-foreground">Nuvarande: {data.currentTemp}°C</span>
         <Switch checked={data.on} onCheckedChange={(v) => update(id, { on: v })} />
       </div>
       <div className="flex items-center justify-center gap-3">
-        <Button size="sm" variant="outline" className="h-8 w-8 p-0" disabled={!data.on}
+        <Button size="sm" variant="outline" className="h-10 w-10 p-0" disabled={!data.on}
           onClick={() => update(id, { targetTemp: data.targetTemp - 0.5 })}>−</Button>
-        <span className="text-2xl font-bold text-foreground">{data.targetTemp}°</span>
-        <Button size="sm" variant="outline" className="h-8 w-8 p-0" disabled={!data.on}
+        <span className="text-3xl font-bold text-foreground">{data.targetTemp}°</span>
+        <Button size="sm" variant="outline" className="h-10 w-10 p-0" disabled={!data.on}
           onClick={() => update(id, { targetTemp: data.targetTemp + 0.5 })}>+</Button>
       </div>
       <div className="flex gap-1">
         {modes.map(({ key, label, icon: Icon }) => (
-          <Button key={key} size="sm" variant={data.mode === key ? 'default' : 'outline'} className="flex-1 h-7 text-[10px] gap-1"
+          <Button key={key} size="sm" variant={data.mode === key ? 'default' : 'outline'} className="flex-1 h-10 text-xs gap-1"
             onClick={() => update(id, { mode: key, on: key !== 'off' })}>
             <Icon size={12} />{label}
           </Button>
@@ -348,7 +348,7 @@ function ClimateControl({ id, data, update }: { id: string; data: ClimateState; 
 
 function MediaControl({ id, data, update }: { id: string; data: MediaState; update: UpdateFn }) {
   return (
-    <div className="space-y-3 pt-2">
+    <div className="space-y-4 pt-2">
       <div className="flex items-center justify-between">
         <span className="text-xs text-muted-foreground capitalize">{data.state}</span>
         <Switch checked={data.on} onCheckedChange={(v) => update(id, { on: v, state: v ? 'idle' : 'off' })} />
@@ -361,12 +361,12 @@ function MediaControl({ id, data, update }: { id: string; data: MediaState; upda
         </div>
       )}
       <div className="flex items-center justify-center gap-2">
-        <Button size="sm" variant="outline" className="h-8 w-8 p-0" disabled={!data.on}
+        <Button size="sm" variant="outline" className="h-10 w-10 p-0" disabled={!data.on}
           onClick={() => update(id, { state: data.state === 'playing' ? 'paused' : 'playing' })}>
-          {data.state === 'playing' ? <Pause size={14} /> : <Play size={14} />}
+          {data.state === 'playing' ? <Pause size={16} /> : <Play size={16} />}
         </Button>
-        <Button size="sm" variant="outline" className="h-8 w-8 p-0" disabled={!data.on}
-          onClick={() => update(id, { state: 'idle', progress: 0 })}><Square size={14} /></Button>
+        <Button size="sm" variant="outline" className="h-10 w-10 p-0" disabled={!data.on}
+          onClick={() => update(id, { state: 'idle', progress: 0 })}><Square size={16} /></Button>
       </div>
       {data.progress !== undefined && data.progress > 0 && (
         <div className="h-1 rounded-full bg-muted overflow-hidden">

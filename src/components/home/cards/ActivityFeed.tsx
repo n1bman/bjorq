@@ -50,19 +50,19 @@ export default function ActivityFeed() {
             <div
               key={event.id}
               className={cn(
-                'flex items-start gap-2 p-2 rounded-lg transition-colors cursor-pointer',
+                'flex items-start gap-2.5 p-3 rounded-lg transition-colors cursor-pointer',
                 event.read ? 'bg-transparent' : 'bg-primary/5'
               )}
               onClick={() => !event.read && markActivityRead(event.id)}
             >
-              <Icon size={14} className={cn('mt-0.5 shrink-0', sev.className)} />
+              <Icon size={16} className={cn('mt-0.5 shrink-0', sev.className)} />
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-medium text-foreground">{event.title}</p>
                 {event.detail && (
-                  <p className="text-[10px] text-muted-foreground truncate">{event.detail}</p>
+                  <p className="text-[11px] text-muted-foreground truncate">{event.detail}</p>
                 )}
               </div>
-              <span className="text-[10px] text-muted-foreground shrink-0">{timeAgo(event.timestamp)}</span>
+              <span className="text-[11px] text-muted-foreground shrink-0">{timeAgo(event.timestamp)}</span>
             </div>
           );
         })}

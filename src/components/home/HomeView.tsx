@@ -40,7 +40,7 @@ export default function HomeView() {
       </div>
 
       {/* Floating widgets based on config */}
-      <div className="absolute top-4 left-4 right-4 z-10 flex items-start gap-3 flex-wrap pointer-events-auto">
+      <div className="absolute top-5 left-5 right-5 z-10 flex items-start gap-4 flex-wrap pointer-events-auto">
         {visibleWidgets.clock && <ClockWidget />}
         {visibleWidgets.weather && <WeatherWidget />}
         {visibleWidgets.temperature && <TemperatureWidget />}
@@ -50,7 +50,7 @@ export default function HomeView() {
       {/* Selected device widgets at bottom - one-click toggle */}
       {selectedMarkers.length > 0 && (
         <div className="absolute bottom-24 left-4 right-4 z-10 pointer-events-auto">
-          <div className="flex gap-2 overflow-x-auto pb-2">
+          <div className="flex gap-3 overflow-x-auto pb-2">
             {selectedMarkers.map((m) => {
               const isOn = getDeviceIsOn(m.id);
               const canToggle = TOGGLEABLE_KINDS.has(m.kind);
@@ -59,7 +59,7 @@ export default function HomeView() {
                 <div
                   key={m.id}
                   className={cn(
-                    'glass-panel rounded-xl p-3 min-w-[180px] max-w-[220px] shrink-0 transition-all',
+                    'glass-panel rounded-xl p-4 min-w-[200px] max-w-[240px] shrink-0 transition-all',
                     canToggle && !isMediaOn && 'cursor-pointer active:scale-95',
                     !isOn && 'opacity-50 grayscale'
                   )}
@@ -77,7 +77,7 @@ export default function HomeView() {
       {/* Toggle device markers visibility - positioned above camera FAB */}
       <button
         onClick={toggleShowDeviceMarkers}
-        className="fixed bottom-36 right-4 z-50 pointer-events-auto glass-panel rounded-full w-10 h-10 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+        className="fixed bottom-36 right-4 z-50 pointer-events-auto glass-panel rounded-full w-12 h-12 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
         title={showDeviceMarkers ? 'Dölj enheter' : 'Visa enheter'}
       >
         {showDeviceMarkers ? <Eye size={18} /> : <EyeOff size={18} />}

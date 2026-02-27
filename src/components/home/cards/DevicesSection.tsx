@@ -119,7 +119,7 @@ export default function DevicesSection({ filter, groupBy = 'room' }: DevicesSect
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {Object.entries(grouped).map(([groupName, devices]) => {
         const collapsed = collapsedGroups.has(groupName);
         const onCount = devices.filter((d) => isDeviceOn(deviceStates[d.id])).length;
@@ -145,7 +145,7 @@ export default function DevicesSection({ filter, groupBy = 'room' }: DevicesSect
                   <Switch
                     checked={allOn}
                     onCheckedChange={(v) => toggleAllInGroup(devices, v)}
-                    className="scale-75"
+                    className="scale-90"
                   />
                 </div>
               )}
@@ -153,7 +153,7 @@ export default function DevicesSection({ filter, groupBy = 'room' }: DevicesSect
 
             {/* Device cards */}
             {!collapsed && (
-              <div className="space-y-2">
+              <div className="space-y-2.5">
                 {devices.map((d) => {
                   const info = kindInfo[d.kind];
                   if (!info) return null;
@@ -191,7 +191,7 @@ export default function DevicesSection({ filter, groupBy = 'room' }: DevicesSect
 
                         <div className="flex items-center gap-2">
                           {state?.kind === 'light' && state.data.on && !expanded && (
-                            <div className="w-16" onClick={(e) => e.stopPropagation()}>
+                            <div className="w-20" onClick={(e) => e.stopPropagation()}>
                               <Slider
                                 value={[state.data.brightness]}
                                 max={255}

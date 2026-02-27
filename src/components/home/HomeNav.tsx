@@ -15,20 +15,20 @@ export default function HomeNav() {
 
   return (
     <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
-      <nav className="glass-panel rounded-2xl px-2 py-1.5 flex items-center gap-1">
+      <nav className="glass-panel rounded-2xl px-3 py-2 flex items-center gap-1">
         {modes.map(({ key, label, icon: Icon }, i) => (
           <div key={key} className="flex items-center">
             {i > 0 && <div className="w-px h-6 bg-border mx-0.5" />}
             <button
               onClick={() => setAppMode(key)}
               className={cn(
-                'flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-all',
+                'flex items-center gap-2 px-4 py-2.5 rounded-xl text-[13px] font-medium transition-all',
                 appMode === key
-                  ? 'text-primary amber-glow'
+                  ? 'text-primary bg-primary/10 amber-glow'
                   : 'text-muted-foreground hover:text-foreground'
               )}
             >
-              <Icon size={16} />
+              <Icon size={18} />
               <span>{label}</span>
             </button>
           </div>

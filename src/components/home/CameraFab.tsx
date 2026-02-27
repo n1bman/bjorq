@@ -29,7 +29,7 @@ export default function CameraFab() {
                 setOpen(false);
               }}
               className={cn(
-                'flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all min-w-[120px]',
+                'flex items-center gap-2 px-4 py-3 rounded-lg text-xs font-medium transition-all min-w-[120px]',
                 cameraPreset === key
                   ? 'bg-primary/20 text-primary'
                   : 'text-muted-foreground hover:text-foreground hover:bg-secondary/30'
@@ -46,7 +46,7 @@ export default function CameraFab() {
       <button
         onClick={() => setOpen(!open)}
         className={cn(
-          'w-12 h-12 rounded-full glass-panel flex items-center justify-center transition-all',
+          'w-14 h-14 rounded-full glass-panel flex items-center justify-center transition-all',
           open ? 'text-primary amber-glow' : 'text-muted-foreground hover:text-foreground'
         )}
       >

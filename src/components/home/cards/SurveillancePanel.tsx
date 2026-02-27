@@ -42,9 +42,9 @@ export default function SurveillancePanel() {
               </div>
             </div>
             {/* Info */}
-            <div className="p-2">
-              <p className="text-xs font-medium text-foreground truncate">{cam.name || 'Kamera'}</p>
-              <p className="text-[10px] text-muted-foreground">
+            <div className="p-3">
+              <p className="text-sm font-medium text-foreground truncate">{cam.name || 'Kamera'}</p>
+              <p className="text-xs text-muted-foreground">
                 {isOn ? 'Ansluten' : 'Ej ansluten'}
               </p>
             </div>
@@ -54,7 +54,7 @@ export default function SurveillancePanel() {
 
       {/* Motion sensor summary */}
       {motionSensors.length > 0 && (
-        <div className="col-span-2 glass-panel rounded-2xl p-3">
+        <div className="col-span-2 glass-panel rounded-2xl p-4">
           <div className="flex items-center gap-2 mb-2">
             <Eye size={14} className="text-muted-foreground" />
             <span className="text-xs font-medium text-foreground">Rörelsesensorer</span>

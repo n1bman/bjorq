@@ -21,18 +21,18 @@ export default function TemperatureWidget() {
   return (
     <div
       className={cn(
-        'glass-panel rounded-2xl px-4 py-3 cursor-pointer transition-all duration-300',
+        'glass-panel rounded-2xl px-5 py-4 cursor-pointer transition-all duration-300',
         expanded ? 'min-w-[200px]' : 'min-w-[120px] max-w-[160px]'
       )}
       onClick={() => setExpanded(!expanded)}
     >
       <div className="flex items-center gap-2">
-        <Thermometer size={16} className="text-primary shrink-0" />
+        <Thermometer size={18} className="text-primary shrink-0" />
         <div>
-          <p className="text-lg font-bold text-foreground">
+          <p className="text-2xl font-bold text-foreground">
             {avgTemp !== null ? `${avgTemp}°C` : '--°C'}
           </p>
-          <p className="text-[10px] text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             {avgTemp !== null ? 'Inomhus' : 'Lägg till klimatenhet'}
           </p>
         </div>
@@ -41,8 +41,8 @@ export default function TemperatureWidget() {
         <div className="mt-2 pt-2 border-t border-border/30 space-y-1.5">
           {deviceTemps.map((d, i) => (
             <div key={i} className="flex items-center justify-between">
-              <span className="text-[10px] text-foreground truncate">{d.name}</span>
-              <span className="text-[10px] text-muted-foreground">
+              <span className="text-[11px] text-foreground truncate">{d.name}</span>
+              <span className="text-[11px] text-muted-foreground">
                 {d.temp}° → {d.target}° {d.on ? '🔥' : '⏸'}
               </span>
             </div>
