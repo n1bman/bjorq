@@ -137,6 +137,7 @@ function SceneContent() {
   const sunAzimuth = useAppStore((s) => s.environment.sunAzimuth);
   const sunElevation = useAppStore((s) => s.environment.sunElevation);
   const weatherCondition = useAppStore((s) => s.environment.weather.condition);
+  const perf = useAppStore((s) => s.performance);
 
   const sunPos = useMemo(() => {
     const azRad = (sunAzimuth * Math.PI) / 180;
@@ -156,18 +157,23 @@ function SceneContent() {
   const ambientColor = isNight ? '#1a1a3e' : isTwilight ? '#ff9966' : '#b8c4d4';
   const sunIntensity = isNight ? 0 : (weatherCondition === 'cloudy' ? 0.4 : weatherCondition === 'rain' ? 0.2 : weatherCondition === 'snow' ? 0.3 : 1.2);
 
+  // Performance: shadow map size based on quality
+  const shadowMapSize = perf.quality === 'low' ? 512 : perf.quality === 'medium' ? 1024 : 2048;
+  const showGrid = appMode === 'build'; // Hide grid in dashboard/home
+  const enableShadows = perf.shadows && !isNight;
+
   return (
     <>
       <ambientLight intensity={ambientIntensity} color={ambientColor} />
-      <directionalLight position={sunPos} intensity={sunIntensity} color="#ffd699" castShadow
-        shadow-mapSize-width={2048} shadow-mapSize-height={2048}
+      <directionalLight position={sunPos} intensity={sunIntensity} color="#ffd699" castShadow={enableShadows}
+        shadow-mapSize-width={shadowMapSize} shadow-mapSize-height={shadowMapSize}
         shadow-camera-far={50} shadow-camera-left={-20} shadow-camera-right={20}
         shadow-camera-top={20} shadow-camera-bottom={-20} />
-      {!isNight && <pointLight position={[0, 8, 0]} intensity={0.15} color="#4a9eff" />}
+      {!isNight && perf.quality !== 'low' && <pointLight position={[0, 8, 0]} intensity={0.15} color="#4a9eff" />}
 
       <GroundPlane onPointerDown={() => {}} onPointerMove={() => {}} />
 
-      {appMode === 'build' && (
+      {showGrid && (
         <Grid
           args={[100, 100]}
           cellSize={0.5}
@@ -197,12 +203,17 @@ function SceneContent() {
 }
 
 export default function Scene3D() {
+  const shadows = useAppStore((s) => s.performance.shadows);
+  const quality = useAppStore((s) => s.performance.quality);
+  const dpr = quality === 'low' ? 1 : quality === 'medium' ? 1.5 : undefined; // undefined = device default
+
   return (
     <Canvas
-      shadows
+      shadows={shadows}
       camera={{ position: [0, 25, 0.01], fov: 45 }}
       style={{ background: 'transparent' }}
-      gl={{ antialias: true, alpha: true }}
+      gl={{ antialias: quality !== 'low', alpha: true }}
+      dpr={dpr}
     >
       <Suspense fallback={null}>
         <SceneContent />

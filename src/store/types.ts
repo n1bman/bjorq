@@ -183,6 +183,24 @@ export interface FloorBand {
   maxY: number;
 }
 
+export type PerformanceRating = 'ok' | 'heavy' | 'too-heavy';
+export type QualityLevel = 'low' | 'medium' | 'high';
+
+export interface ModelStats {
+  triangles: number;
+  materials: number;
+  textures: number;
+  maxTextureRes: number;
+  rating: PerformanceRating;
+}
+
+export interface PerformanceSettings {
+  quality: QualityLevel;
+  shadows: boolean;
+  postprocessing: boolean;
+  tabletMode: boolean;
+}
+
 export interface ImportedHomeSettings {
   url: string | null;
   fileData?: string; // base64-encoded GLB/GLTF for persistence
@@ -192,6 +210,7 @@ export interface ImportedHomeSettings {
   groundLevelY: number;
   northAngle: number;
   floorBands: FloorBand[];
+  modelStats?: ModelStats;
 }
 
 export interface HomeGeometryState {
@@ -561,6 +580,10 @@ export interface AppState {
   customCategories: DeviceCategory[];
   standby: StandbySettings;
   _preStandbyMode: AppMode;
+  performance: PerformanceSettings;
+
+  // Performance actions
+  setPerformance: (changes: Partial<PerformanceSettings>) => void;
 
   // Standby actions
   setStandbySettings: (s: Partial<StandbySettings>) => void;

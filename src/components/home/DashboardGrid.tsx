@@ -19,6 +19,7 @@ import CategoryManager from './cards/CategoryManager';
 import CalendarWidget from './cards/CalendarWidget';
 import RobotPanel from './cards/RobotPanel';
 import CameraStartSettings from './cards/CameraStartSettings';
+import PerformanceSettings from './cards/PerformanceSettings';
 import type { DeviceKind, DeviceMarker, StandbyCameraView } from '@/store/types';
 import { cameraRef } from '@/lib/cameraRef';
 
@@ -301,6 +302,7 @@ function SettingsCategory() {
     <div className="space-y-4">
       <ProfilePanel />
       <CameraStartSettings />
+      <PerformanceSettings />
       <StandbySettingsPanel />
       <LocationSettings />
       <HAConnectionPanel />

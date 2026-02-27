@@ -187,6 +187,8 @@ export const useAppStore = create<AppState>()(
       standby: { enabled: false, idleMinutes: 2, cameraView: 'standard' as const },
       _preStandbyMode: 'home' as AppMode,
       profile: { name: '', theme: 'dark', accentColor: '#f59e0b', dashboardBg: 'scene3d' },
+      performance: { quality: 'high', shadows: true, postprocessing: false, tabletMode: false },
+      setPerformance: (changes) => set((s) => ({ performance: { ...s.performance, ...changes } })),
 
       // Standby actions
       setStandbySettings: (settings) => set((s) => ({ standby: { ...s.standby, ...settings } })),
