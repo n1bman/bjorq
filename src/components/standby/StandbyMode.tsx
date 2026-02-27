@@ -32,7 +32,7 @@ export default function StandbyMode() {
       </div>
 
       {/* Floating overlay panel — right side */}
-      <div className="absolute right-0 top-0 bottom-0 w-[30%] min-w-[280px] flex flex-col justify-center items-center gap-10 px-6 bg-gradient-to-l from-background/60 to-transparent backdrop-blur-sm">
+      <div className="absolute right-0 top-0 bottom-0 w-[30%] min-w-[280px] flex flex-col justify-center items-center gap-10 px-6 bg-gradient-to-l from-background/80 via-background/50 to-transparent backdrop-blur-md">
         <StandbyClock />
         <StandbyWeather />
         <StandbyWidgets />

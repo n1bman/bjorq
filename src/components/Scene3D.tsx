@@ -4,6 +4,7 @@ import { Suspense, useMemo, useRef, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useAppStore } from '@/store/useAppStore';
+import { cameraRef } from '@/lib/cameraRef';
 import Walls3D from './build/Walls3D';
 import Floors3D from './build/Floors3D';
 import Ceilings3D from './build/Ceilings3D';
@@ -29,7 +30,7 @@ const presetTargets: Record<CameraPreset, THREE.Vector3> = {
   front: new THREE.Vector3(0, 2, 0),
 };
 
-const standbyCameraPositions: Record<StandbyCameraView, [number, number, number]> = {
+const standbyCameraPositions: Partial<Record<StandbyCameraView, [number, number, number]>> = {
   standard: [10, 9, 10],
   topdown: [0, 22, 0.01],
   'angled-left': [-10, 9, 10],
@@ -37,7 +38,7 @@ const standbyCameraPositions: Record<StandbyCameraView, [number, number, number]
   close: [6, 6, 6],
 };
 
-const standbyCameraTargets: Record<StandbyCameraView, [number, number, number]> = {
+const standbyCameraTargets: Partial<Record<StandbyCameraView, [number, number, number]>> = {
   standard: [0, 1, 0],
   topdown: [0, 0, 0],
   'angled-left': [0, 1, 0],
@@ -47,10 +48,12 @@ const standbyCameraTargets: Record<StandbyCameraView, [number, number, number]> 
 
 function StandbyStaticCamera() {
   const cameraView = useAppStore((s) => s.standby.cameraView);
+  const customPos = useAppStore((s) => s.standby.customPos);
+  const customTarget = useAppStore((s) => s.standby.customTarget);
 
   useFrame(({ camera }) => {
-    const pos = standbyCameraPositions[cameraView];
-    const target = standbyCameraTargets[cameraView];
+    const pos = cameraView === 'custom' && customPos ? customPos : standbyCameraPositions[cameraView] || standbyCameraPositions.standard;
+    const target = cameraView === 'custom' && customTarget ? customTarget : standbyCameraTargets[cameraView] || standbyCameraTargets.standard;
     camera.position.set(pos[0], pos[1], pos[2]);
     camera.lookAt(target[0], target[1], target[2]);
   });
@@ -71,6 +74,12 @@ function CameraController() {
   }, [cameraPreset]);
 
   useFrame(({ camera }, delta) => {
+    // Always update global camera ref for "save camera" feature
+    cameraRef.position.copy(camera.position);
+    if (controlsRef.current) {
+      cameraRef.target.copy(controlsRef.current.target);
+    }
+
     if (cameraPreset === 'free') return;
     const targetPos = presetPositions[cameraPreset];
     camera.position.lerp(targetPos, delta * 3);
@@ -133,7 +142,7 @@ function SceneContent() {
 
       <GroundPlane onPointerDown={() => {}} onPointerMove={() => {}} />
 
-      {appMode !== 'standby' && (
+      {appMode === 'build' && (
         <Grid
           args={[100, 100]}
           cellSize={0.5}

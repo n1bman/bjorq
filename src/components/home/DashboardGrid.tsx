@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Home, Cloud, Cpu, Zap, Bell, Video, Settings, Pencil, X, CalendarDays, Bot, Moon } from 'lucide-react';
+import { Home, Cloud, Cpu, Zap, Bell, Video, Settings, Pencil, X, CalendarDays, Bot, Moon, Save } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useAppStore } from '@/store/useAppStore';
@@ -18,7 +18,8 @@ import CategoryCard from './cards/CategoryCard';
 import CategoryManager from './cards/CategoryManager';
 import CalendarWidget from './cards/CalendarWidget';
 import RobotPanel from './cards/RobotPanel';
-import type { DeviceKind, DeviceMarker } from '@/store/types';
+import type { DeviceKind, DeviceMarker, StandbyCameraView } from '@/store/types';
+import { cameraRef } from '@/lib/cameraRef';
 
 type DashCategory = 'home' | 'weather' | 'calendar' | 'devices' | 'energy' | 'surveillance' | 'robot' | 'activity' | 'settings';
 
@@ -215,12 +216,13 @@ function StandbySettingsPanel() {
     { value: 5, label: '5 min' },
   ];
 
-  const cameraOptions = [
+  const cameraOptions: { value: StandbyCameraView; label: string }[] = [
     { value: 'standard', label: 'Standard' },
     { value: 'topdown', label: 'Ovanifrån' },
     { value: 'angled-left', label: 'Vinkel vänster' },
     { value: 'angled-right', label: 'Vinkel höger' },
     { value: 'close', label: 'Närbild' },
+    ...(standby.customPos ? [{ value: 'custom' as StandbyCameraView, label: '📌 Sparad vy' }] : []),
   ];
 
   return (
@@ -268,6 +270,19 @@ function StandbySettingsPanel() {
           ))}
         </select>
       </div>
+
+      <Button
+        variant="outline"
+        className="w-full h-9 text-xs gap-2"
+        onClick={() => {
+          const pos: [number, number, number] = [cameraRef.position.x, cameraRef.position.y, cameraRef.position.z];
+          const target: [number, number, number] = [cameraRef.target.x, cameraRef.target.y, cameraRef.target.z];
+          setStandbySettings({ customPos: pos, customTarget: target, cameraView: 'custom' });
+        }}
+      >
+        <Save size={14} />
+        Spara aktuell kameravy
+      </Button>
 
       <Button
         variant="outline"
