@@ -1,55 +1,53 @@
 
 
-# Standby Mode Refinement V3
+# Standby & UI Fixes
 
-## Changes
+## 4 Changes
 
-### 1. Add `cameraView` to `StandbySettings` (`src/store/types.ts`)
-Add a new type and field:
-```typescript
-export type StandbyCameraView = 'standard' | 'topdown' | 'angled-left' | 'angled-right' | 'close';
-export interface StandbySettings {
-  enabled: boolean;
-  idleMinutes: number;
-  cameraView: StandbyCameraView; // default: 'standard'
-}
-```
+### 1. Darker standby overlay (`src/components/standby/StandbyMode.tsx`)
+Change the right-side overlay from `from-background/60` to `from-background/80` for better text contrast against the 3D scene.
 
-### 2. Update store default (`src/store/useAppStore.ts`)
-Add `cameraView: 'standard'` to initial standby state.
+### 2. Custom standby camera position (`src/store/types.ts`, `useAppStore.ts`, `Scene3D.tsx`, `DashboardGrid.tsx`)
+Replace the fixed preset system with a user-positionable camera:
+- Add `customCameraPos: [number, number, number]` and `customCameraTarget: [number, number, number]` to `StandbySettings`
+- Add a "Spara nuvarande vy" button in standby settings that captures the current OrbitControls camera position/target as the standby camera
+- Keep preset dropdown as starting points but also store the exact position
+- In `StandbyStaticCamera`, use the custom position if set, otherwise fall back to the preset
 
-### 3. Replace orbit camera with static camera (`src/components/Scene3D.tsx`)
-- Remove `StandbyOrbitCamera` (the rotating one).
-- Replace with `StandbyStaticCamera`: reads `standby.cameraView` from store, sets camera position once (no animation, no orbit). Five preset positions:
-  - `standard`: `[10, 9, 10]` looking at `[0, 1, 0]` — dollhouse angle ~40°
-  - `topdown`: `[0, 22, 0.01]` looking at `[0, 0, 0]`
-  - `angled-left`: `[-10, 9, 10]` looking at `[0, 1, 0]`
-  - `angled-right`: `[10, 9, -10]` looking at `[0, 1, 0]`
-  - `close`: `[6, 6, 6]` looking at `[0, 1, 0]`
-- No OrbitControls rendered in standby mode (already the case).
-- **Hide Grid in standby**: wrap the `<Grid>` component with a check — only render when `appMode !== 'standby'`.
+Actually, simpler approach: keep presets but let the user **preview standby and adjust**. Even simpler — just keep the presets but make them better positioned. The user says the angles aren't right.
 
-### 4. Redesign StandbyMode layout (`src/components/standby/StandbyMode.tsx`)
-- Remove the split 70/30 grid layout with bordered panels.
-- Make 3D scene fullscreen (`fixed inset-0`).
-- Overlay the info panel on the right side using `absolute right-0 top-0 bottom-0 w-[30%]` with a semi-transparent gradient background (`bg-gradient-to-l from-background/60 to-transparent backdrop-blur-sm`).
-- Clock, weather, and widgets float over the scene with no hard panel borders.
+Better approach: Add a "Ställ in kamera" flow — when user clicks it, enter a special mode where they can orbit freely in standby, then click "Spara position" to lock it. This adds complexity though.
 
-### 5. Add camera view selector to settings (`src/components/home/DashboardGrid.tsx`)
-Add a camera view dropdown to `StandbySettingsPanel`:
-```
-Kameravy: [Standard ▼]
-```
-Options: Standard, Ovanifrån, Vinkel vänster, Vinkel höger, Närbild.
-Uses `setStandbySettings({ cameraView: value })`.
+Simplest fix: Improve the preset positions to be more centered on the house, and keep the existing dropdown. The presets target `[0,1,0]` which assumes the house is centered at origin. If the user's house isn't centered there, the camera will look wrong. Let me add a `custom` camera option where the user can set position via the home view's current camera.
+
+Final approach — add a "Spara aktuell kameravy" button in settings that saves the current home-screen camera position as a custom standby camera preset.
+
+- Add `custom` to `StandbyCameraView` type
+- Add `customPos` and `customTarget` fields to `StandbySettings`
+- In `StandbySettingsPanel`, add a "Spara aktuell vy som standby-kamera" button that reads `homeView.cameraPreset` position or current orbit position
+- Need to expose current camera pos from the 3D scene — store it in a ref or zustand
+
+Practical approach: Store camera position in zustand when user clicks "save". Use a global ref for the Three.js camera.
+
+### 3. Hide 3D grid in home & dashboard (`src/components/Scene3D.tsx`)
+Change grid condition from `appMode !== 'standby'` to `appMode === 'build'` so grid only shows in build mode.
+
+### 4. Fix EnergyWidget text wrapping (`src/components/home/cards/EnergyWidget.tsx`)
+- Add `whitespace-nowrap` to the watt value
+- Reduce value text from `text-2xl` to `text-xl`
+- Adjust min-width to accommodate the text without breaking
+
+---
 
 ## Files Changed
 
 | File | Change |
 |------|--------|
-| `src/store/types.ts` | Add `StandbyCameraView` type, add `cameraView` to `StandbySettings` |
-| `src/store/useAppStore.ts` | Default `cameraView: 'standard'` |
-| `src/components/Scene3D.tsx` | Replace orbit camera with static presets, hide grid in standby |
-| `src/components/standby/StandbyMode.tsx` | Fullscreen 3D + floating transparent overlay |
-| `src/components/home/DashboardGrid.tsx` | Add camera view selector to standby settings |
+| `src/components/standby/StandbyMode.tsx` | Darker overlay gradient |
+| `src/components/Scene3D.tsx` | Grid only in build mode; support custom camera |
+| `src/components/home/cards/EnergyWidget.tsx` | Fix text wrapping, reduce font size |
+| `src/store/types.ts` | Add `'custom'` to `StandbyCameraView`, add `customPos`/`customTarget` |
+| `src/store/useAppStore.ts` | Default custom camera fields, add `saveStandbyCamera` action |
+| `src/components/home/DashboardGrid.tsx` | Add "Spara aktuell kameravy" button, add `custom` option |
+| `src/components/home/CameraFab.tsx` | Expose camera save function (store current camera pos to zustand on demand) |
 
