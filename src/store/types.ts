@@ -684,6 +684,7 @@ export interface AppState {
   // Clear actions
   clearFloor: (floorId: string) => void;
   clearAllFloors: () => void;
+  clearImportedModel: () => void;
 
   // Opening offset update
   updateOpeningOffset: (floorId: string, wallId: string, openingId: string, offset: number) => void;

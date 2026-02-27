@@ -69,13 +69,36 @@ export async function extractZip(arrayBuffer: ArrayBuffer): Promise<FileMap> {
   const files = new Map<string, Blob>();
   let totalSize = 0;
 
+  // Collect all valid paths first
+  const validPaths: Array<{ path: string; data: Uint8Array }> = [];
   for (const [path, data] of Object.entries(raw)) {
-    // Skip directories and macOS metadata
-    if (path.endsWith('/') || path.includes('__MACOSX')) continue;
+    if (path.endsWith('/') || path.includes('__MACOSX') || path.startsWith('.')) continue;
+    validPaths.push({ path, data });
+  }
+
+  // Strip common leading directory prefix (SketchUp ZIPs often have a root folder)
+  let commonPrefix = '';
+  if (validPaths.length > 0) {
+    const parts = validPaths[0].path.split('/');
+    if (parts.length > 1) {
+      const candidate = parts[0] + '/';
+      const allMatch = validPaths.every((p) => p.path.startsWith(candidate));
+      if (allMatch) commonPrefix = candidate;
+    }
+  }
+
+  for (const { path, data } of validPaths) {
+    const cleanPath = commonPrefix ? path.slice(commonPrefix.length) : path;
+    if (!cleanPath) continue;
     const blob = new Blob([new Uint8Array(data.buffer as ArrayBuffer, data.byteOffset, data.byteLength)]);
-    files.set(path, blob);
+    files.set(cleanPath, blob);
     totalSize += data.length;
   }
+
+  if (files.size === 0) {
+    throw new Error('ZIP-filen verkar vara tom eller innehåller inga giltiga filer.');
+  }
+
   return { files, totalSize };
 }
 
