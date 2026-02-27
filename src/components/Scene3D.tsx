@@ -81,7 +81,7 @@ function CameraController() {
     }
 
     // Dashboard always uses angle preset for consistent view
-    const effectivePreset = appMode === 'dashboard' ? 'angle' : cameraPreset;
+    const effectivePreset = appMode === 'dashboard' ? 'topdown' : cameraPreset;
 
     if (effectivePreset === 'free') return;
     const targetPos = presetPositions[effectivePreset];
