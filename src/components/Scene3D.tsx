@@ -71,7 +71,7 @@ function CameraController() {
 
   // When switching to dashboard, animate once to topdown then stop
   useEffect(() => {
-    if (appMode === 'dashboard' && prevMode.current !== 'dashboard') {
+    if ((appMode === 'dashboard' || appMode === 'home') && prevMode.current !== appMode) {
       lerpingTo.current = 'topdown';
       lerpProgress.current = 0;
     }
@@ -195,7 +195,7 @@ export default function Scene3D() {
   return (
     <Canvas
       shadows
-      camera={{ position: [12, 12, 12], fov: 45 }}
+      camera={{ position: [0, 25, 0.01], fov: 45 }}
       style={{ background: 'transparent' }}
       gl={{ antialias: true, alpha: true }}
     >
