@@ -80,11 +80,14 @@ function CameraController() {
       cameraRef.target.copy(controlsRef.current.target);
     }
 
-    if (cameraPreset === 'free') return;
-    const targetPos = presetPositions[cameraPreset];
+    // Dashboard always uses angle preset for consistent view
+    const effectivePreset = appMode === 'dashboard' ? 'angle' : cameraPreset;
+
+    if (effectivePreset === 'free') return;
+    const targetPos = presetPositions[effectivePreset];
     camera.position.lerp(targetPos, delta * 3);
     if (controlsRef.current) {
-      const target = presetTargets[cameraPreset];
+      const target = presetTargets[effectivePreset];
       controlsRef.current.target.lerp(target, delta * 3);
       controlsRef.current.update();
     }
