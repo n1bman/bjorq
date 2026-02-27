@@ -65,7 +65,40 @@ function buildTextureMap(files: Map<string, Blob>): Map<string, Blob> {
 // ── ZIP / Folder extraction ──
 
 export async function extractZip(arrayBuffer: ArrayBuffer): Promise<FileMap> {
-  const raw = unzipSync(new Uint8Array(arrayBuffer));
+  const bytes = new Uint8Array(arrayBuffer);
+
+  // Detect archive format via magic bytes
+  if (bytes.length >= 4) {
+    // RAR: starts with "Rar!" (0x52 0x61 0x72 0x21)
+    if (bytes[0] === 0x52 && bytes[1] === 0x61 && bytes[2] === 0x72 && bytes[3] === 0x21) {
+      throw new Error(
+        'Det här är en RAR-fil, inte en ZIP-fil. RAR-format stöds inte.\n\n' +
+        'Så här gör du:\n' +
+        '1. Högerklicka på mappen med dina exporterade filer\n' +
+        '2. Välj "Skicka till → Komprimerad (zippad) mapp"\n' +
+        '3. Ladda upp den nya ZIP-filen här'
+      );
+    }
+    // 7z: starts with "7z" (0x37 0x7A)
+    if (bytes[0] === 0x37 && bytes[1] === 0x7A) {
+      throw new Error(
+        'Det här är en 7z-fil, inte en ZIP-fil. 7z-format stöds inte.\n\n' +
+        'Så här gör du:\n' +
+        '1. Högerklicka på mappen med dina exporterade filer\n' +
+        '2. Välj "Skicka till → Komprimerad (zippad) mapp"\n' +
+        '3. Ladda upp den nya ZIP-filen här'
+      );
+    }
+    // ZIP: should start with "PK" (0x50 0x4B)
+    if (bytes[0] !== 0x50 || bytes[1] !== 0x4B) {
+      throw new Error(
+        'Filen verkar inte vara en giltig ZIP-fil.\n\n' +
+        'Tips: Högerklicka på mappen → "Skicka till → Komprimerad (zippad) mapp"'
+      );
+    }
+  }
+
+  const raw = unzipSync(bytes);
   const files = new Map<string, Blob>();
   let totalSize = 0;
 
