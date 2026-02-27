@@ -13,7 +13,7 @@ import Props3D from './build/Props3D';
 import DeviceMarkers3D from './devices/DeviceMarkers3D';
 import WeatherEffects3D from './build/WeatherEffects3D';
 import GroundPlane from './build/GroundPlane';
-import type { CameraPreset } from '@/store/types';
+import type { CameraPreset, StandbyCameraView } from '@/store/types';
 
 const presetPositions: Record<CameraPreset, THREE.Vector3> = {
   free: new THREE.Vector3(12, 12, 12),
@@ -29,19 +29,30 @@ const presetTargets: Record<CameraPreset, THREE.Vector3> = {
   front: new THREE.Vector3(0, 2, 0),
 };
 
-function StandbyOrbitCamera() {
-  const angleRef = useRef(0);
+const standbyCameraPositions: Record<StandbyCameraView, [number, number, number]> = {
+  standard: [10, 9, 10],
+  topdown: [0, 22, 0.01],
+  'angled-left': [-10, 9, 10],
+  'angled-right': [10, 9, -10],
+  close: [6, 6, 6],
+};
 
-  useFrame(({ camera }, delta) => {
-    angleRef.current += delta * 0.1;
-    const radius = 16;
-    const y = 10;
-    camera.position.set(
-      radius * Math.sin(angleRef.current),
-      y,
-      radius * Math.cos(angleRef.current)
-    );
-    camera.lookAt(0, 1, 0);
+const standbyCameraTargets: Record<StandbyCameraView, [number, number, number]> = {
+  standard: [0, 1, 0],
+  topdown: [0, 0, 0],
+  'angled-left': [0, 1, 0],
+  'angled-right': [0, 1, 0],
+  close: [0, 1, 0],
+};
+
+function StandbyStaticCamera() {
+  const cameraView = useAppStore((s) => s.standby.cameraView);
+
+  useFrame(({ camera }) => {
+    const pos = standbyCameraPositions[cameraView];
+    const target = standbyCameraTargets[cameraView];
+    camera.position.set(pos[0], pos[1], pos[2]);
+    camera.lookAt(target[0], target[1], target[2]);
   });
 
   return null;
@@ -71,7 +82,7 @@ function CameraController() {
   });
 
   if (appMode === 'standby') {
-    return <StandbyOrbitCamera />;
+    return <StandbyStaticCamera />;
   }
 
   return (
@@ -88,6 +99,7 @@ function CameraController() {
 }
 
 function SceneContent() {
+  const appMode = useAppStore((s) => s.appMode);
   const sunAzimuth = useAppStore((s) => s.environment.sunAzimuth);
   const sunElevation = useAppStore((s) => s.environment.sunElevation);
   const weatherCondition = useAppStore((s) => s.environment.weather.condition);
@@ -121,17 +133,19 @@ function SceneContent() {
 
       <GroundPlane onPointerDown={() => {}} onPointerMove={() => {}} />
 
-      <Grid
-        args={[100, 100]}
-        cellSize={0.5}
-        cellThickness={0.5}
-        cellColor="#2a2d35"
-        sectionSize={5}
-        sectionThickness={1}
-        sectionColor="#3a3d45"
-        fadeDistance={30}
-        position={[0, 0, 0]}
-      />
+      {appMode !== 'standby' && (
+        <Grid
+          args={[100, 100]}
+          cellSize={0.5}
+          cellThickness={0.5}
+          cellColor="#2a2d35"
+          sectionSize={5}
+          sectionThickness={1}
+          sectionColor="#3a3d45"
+          fadeDistance={30}
+          position={[0, 0, 0]}
+        />
+      )}
 
       <Walls3D />
       <Floors3D />
