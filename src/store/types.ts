@@ -507,6 +507,8 @@ export interface HomeViewState {
   visibleWidgets: VisibleWidgets;
   homeScreenDevices: string[];
   showDeviceMarkers: boolean;
+  customStartPos?: [number, number, number];
+  customStartTarget?: [number, number, number];
 }
 
 // ─── Activity Log ───
@@ -569,6 +571,7 @@ export interface AppState {
   setCameraPreset: (preset: CameraPreset) => void;
   toggleHomeWidget: (widget: keyof VisibleWidgets) => void;
   toggleShowDeviceMarkers: () => void;
+  saveHomeStartCamera: () => void;
 
   // Device actions
   addDevice: (marker: DeviceMarker) => void;
