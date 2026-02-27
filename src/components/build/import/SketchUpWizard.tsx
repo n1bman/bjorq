@@ -2,11 +2,12 @@ import { useState, useRef, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
 import { Switch } from '@/components/ui/switch';
-import { Upload, FolderOpen, FileArchive, AlertTriangle, CheckCircle2, XCircle, ChevronRight } from 'lucide-react';
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
+import { Upload, FolderOpen, FileArchive, AlertTriangle, CheckCircle2, XCircle, ChevronRight, ChevronDown, Bug } from 'lucide-react';
 import { useAppStore } from '@/store/useAppStore';
 import {
   extractZip, extractFolder, validateFileMap, convertSketchUp,
-  type FileMap, type ValidationResult, type ConversionProgress, type ConversionResult, type TargetDevice,
+  type FileMap, type ValidationResult, type ConversionProgress, type ConversionResult, type TargetDevice, type DebugInfo,
 } from '@/lib/sketchupImport';
 
 type Step = 'pick' | 'validate' | 'settings' | 'converting' | 'done' | 'error';
@@ -15,6 +16,75 @@ function formatBytes(bytes: number) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / 1048576).toFixed(1)} MB`;
+}
+
+const IMAGE_EXTS = new Set(['jpg', 'jpeg', 'png', 'tif', 'tiff', 'webp', 'bmp']);
+const getExt = (name: string) => name.split('.').pop()?.toLowerCase() ?? '';
+
+function FileDebugPanel({ fileMap, validation }: { fileMap: FileMap; validation: ValidationResult }) {
+  const objCount = [...fileMap.files.keys()].filter(p => getExt(p) === 'obj').length;
+  const daeCount = [...fileMap.files.keys()].filter(p => getExt(p) === 'dae').length;
+  const mtlCount = [...fileMap.files.keys()].filter(p => getExt(p) === 'mtl').length;
+  const texCount = [...fileMap.files.keys()].filter(p => IMAGE_EXTS.has(getExt(p))).length;
+
+  return (
+    <Collapsible>
+      <CollapsibleTrigger className="flex items-center gap-1.5 text-[10px] text-muted-foreground hover:text-foreground transition-colors w-full">
+        <Bug size={10} />
+        <span>Debug info</span>
+        <ChevronDown size={10} className="ml-auto" />
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <div className="mt-1.5 rounded border border-border bg-secondary/30 p-2 text-[9px] font-mono text-muted-foreground space-y-0.5">
+          <div>Filer totalt: {fileMap.files.size}</div>
+          <div>OBJ: {objCount} | DAE: {daeCount} | MTL: {mtlCount} | Texturer: {texCount}</div>
+          <div>Huvudfil: {validation.mainFile ?? '—'}</div>
+          {validation.mainFile && validation.fileSizes.has(validation.mainFile) && (
+            <div>Storlek: {formatBytes(validation.fileSizes.get(validation.mainFile)!)}</div>
+          )}
+          {validation.multipleObjFiles.length > 1 && (
+            <div>OBJ-filer (sorterade efter storlek):
+              {validation.multipleObjFiles.map(f => (
+                <div key={f} className="pl-2">
+                  {f.split('/').pop()} ({formatBytes(validation.fileSizes.get(f) ?? 0)})
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
+
+function ConversionDebugPanel({ debugInfo }: { debugInfo: DebugInfo }) {
+  return (
+    <Collapsible>
+      <CollapsibleTrigger className="flex items-center gap-1.5 text-[10px] text-muted-foreground hover:text-foreground transition-colors w-full">
+        <Bug size={10} />
+        <span>Konverteringsdetaljer</span>
+        <ChevronDown size={10} className="ml-auto" />
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <div className="mt-1.5 rounded border border-border bg-secondary/30 p-2 text-[9px] font-mono text-muted-foreground space-y-0.5">
+          <div>Root: {debugInfo.rootType} | Children: {debugInfo.childrenCount}</div>
+          <div>Meshes: {debugInfo.meshCount} | Trianglar: {debugInfo.triangleCount.toLocaleString()}</div>
+          <div>BBox: {debugInfo.boundingBox.x} × {debugInfo.boundingBox.y} × {debugInfo.boundingBox.z}</div>
+          {debugInfo.missingResources.length > 0 && (
+            <div className="text-yellow-400">
+              <div>Saknade resurser ({debugInfo.missingResources.length}):</div>
+              {debugInfo.missingResources.map((r, i) => (
+                <div key={i} className="pl-2 truncate">{r}</div>
+              ))}
+            </div>
+          )}
+          {debugInfo.missingResources.length === 0 && (
+            <div className="text-green-400">Alla resurser hittades ✓</div>
+          )}
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
+  );
 }
 
 export default function SketchUpWizard({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
@@ -107,10 +177,9 @@ export default function SketchUpWizard({ open, onOpenChange }: { open: boolean; 
     if (!result) return;
     const url = URL.createObjectURL(result.glbBlob);
     const sizeBytes = result.optimizedSize;
-    const MAX_PERSIST_SIZE = 4 * 1024 * 1024; // 4 MB
+    const MAX_PERSIST_SIZE = 4 * 1024 * 1024;
     
     if (sizeBytes > MAX_PERSIST_SIZE) {
-      // Too large for localStorage — use blob URL only (session-only)
       console.log(`[SketchUp Import] GLB ${(sizeBytes / 1024 / 1024).toFixed(1)} MB > 4 MB, skipping base64 persistence`);
       setImportedModel({
         url,
@@ -123,7 +192,6 @@ export default function SketchUpWizard({ open, onOpenChange }: { open: boolean; 
       return;
     }
     
-    // Small enough to persist as base64
     const reader = new FileReader();
     reader.onload = () => {
       const base64 = (reader.result as string).split(',')[1];
@@ -145,7 +213,7 @@ export default function SketchUpWizard({ open, onOpenChange }: { open: boolean; 
     reader.readAsDataURL(result.glbBlob);
   };
 
-  const getBasename = (p: string) => p.split('/').pop()?.split('\\').pop() ?? p;
+  const getBasenameFn = (p: string) => p.split('/').pop()?.split('\\').pop() ?? p;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -198,8 +266,8 @@ export default function SketchUpWizard({ open, onOpenChange }: { open: boolean; 
                 </span>
               </div>
               <div className="text-[10px] text-muted-foreground space-y-0.5">
-                <div>Huvudfil: {getBasename(validation.mainFile!)}</div>
-                {validation.mtlFile && <div>Material: {getBasename(validation.mtlFile)}</div>}
+                <div>Huvudfil: {getBasenameFn(validation.mainFile!)}</div>
+                {validation.mtlFile && <div>Material: {getBasenameFn(validation.mtlFile)}</div>}
                 <div>Texturer: {validation.textureFiles.length} filer</div>
                 <div>Total storlek: {formatBytes(fileMap?.totalSize ?? 0)}</div>
               </div>
@@ -208,7 +276,7 @@ export default function SketchUpWizard({ open, onOpenChange }: { open: boolean; 
             {/* Multiple OBJ picker */}
             {validation.multipleObjFiles.length > 1 && (
               <div className="space-y-1.5">
-                <span className="text-[10px] text-muted-foreground">Flera OBJ-filer — välj huvudfil:</span>
+                <span className="text-[10px] text-muted-foreground">Flera OBJ-filer — välj huvudfil (sorterade efter storlek):</span>
                 {validation.multipleObjFiles.map((f) => (
                   <label key={f} className="flex items-center gap-2 text-[10px] cursor-pointer">
                     <input
@@ -217,7 +285,9 @@ export default function SketchUpWizard({ open, onOpenChange }: { open: boolean; 
                       onChange={() => setSelectedObj(f)}
                       className="accent-primary"
                     />
-                    <span className={selectedObj === f ? 'text-foreground' : 'text-muted-foreground'}>{getBasename(f)}</span>
+                    <span className={selectedObj === f ? 'text-foreground' : 'text-muted-foreground'}>
+                      {getBasenameFn(f)} ({formatBytes(validation.fileSizes.get(f) ?? 0)})
+                    </span>
                   </label>
                 ))}
               </div>
@@ -233,6 +303,9 @@ export default function SketchUpWizard({ open, onOpenChange }: { open: boolean; 
                 ))}
               </div>
             )}
+
+            {/* Debug panel for validation step */}
+            {fileMap && <FileDebugPanel fileMap={fileMap} validation={validation} />}
 
             <button
               onClick={() => setStep('settings')}
@@ -326,6 +399,9 @@ export default function SketchUpWizard({ open, onOpenChange }: { open: boolean; 
                 ))}
               </div>
             )}
+
+            {/* Debug panel for done step */}
+            {result.debugInfo && <ConversionDebugPanel debugInfo={result.debugInfo} />}
 
             <button
               onClick={importResult}
