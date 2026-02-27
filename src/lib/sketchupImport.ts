@@ -258,6 +258,63 @@ function deduplicateMaterials(scene: THREE.Object3D) {
   });
 }
 
+// ── Material conversion ──
+
+function loadTextureAsync(url: string): Promise<THREE.Texture> {
+  return new Promise((resolve, reject) => {
+    new THREE.TextureLoader().load(url, resolve, undefined, reject);
+  });
+}
+
+function convertMaterialsToStandard(scene: THREE.Object3D) {
+  scene.traverse((child) => {
+    if (!(child instanceof THREE.Mesh) || !child.material) return;
+    const mats = Array.isArray(child.material) ? child.material : [child.material];
+    const converted = mats.map((mat) => {
+      if (mat instanceof THREE.MeshStandardMaterial || mat instanceof THREE.MeshPhysicalMaterial) {
+        return mat;
+      }
+      const oldMat = mat as any;
+      const newMat = new THREE.MeshStandardMaterial({
+        color: oldMat.color ?? new THREE.Color(0xcccccc),
+        map: oldMat.map ?? null,
+        normalMap: oldMat.normalMap ?? null,
+        transparent: oldMat.transparent ?? false,
+        opacity: oldMat.opacity ?? 1,
+        side: oldMat.side ?? THREE.FrontSide,
+        roughness: 0.6,
+        metalness: 0.0,
+      });
+      if (oldMat.alphaMap) newMat.alphaMap = oldMat.alphaMap;
+      return newMat;
+    });
+    child.material = converted.length === 1 ? converted[0] : converted;
+  });
+}
+
+function validateScene(scene: THREE.Object3D) {
+  let meshCount = 0;
+  let triCount = 0;
+  const matTypes = new Set<string>();
+
+  scene.traverse((child) => {
+    if (child instanceof THREE.Mesh) {
+      meshCount++;
+      const geo = child.geometry;
+      if (geo.index) triCount += geo.index.count / 3;
+      else if (geo.attributes.position) triCount += geo.attributes.position.count / 3;
+      const mats = Array.isArray(child.material) ? child.material : [child.material];
+      mats.forEach((m) => m && matTypes.add(m.type));
+    }
+  });
+
+  console.log(`[SketchUp Import] Meshes: ${meshCount}, Triangles: ${Math.round(triCount)}, Material types: ${[...matTypes].join(', ')}`);
+
+  if (meshCount === 0) {
+    throw new Error('Ingen 3D-geometri hittades i modellen. Kontrollera att filen exporterades korrekt från SketchUp.');
+  }
+}
+
 // ── Loaders ──
 
 async function loadOBJ(
@@ -277,12 +334,12 @@ async function loadOBJ(
     const mtlText = await mtlBlob.text();
     
     const mtlLoader = new MTLLoader();
-    // Override texture loading
     mtlLoader.setResourcePath('');
     
     materials = mtlLoader.parse(mtlText, '');
     
-    // Resolve textures from our file map
+    // Resolve textures from our file map with async loading
+    const texPromises: Promise<void>[] = [];
     for (const [name, matInfo] of Object.entries(materials.materialsInfo)) {
       for (const key of ['map_kd', 'map_ks', 'map_bump', 'bump', 'norm', 'map_d']) {
         const texRef = (matInfo as any)[key];
@@ -292,20 +349,27 @@ async function loadOBJ(
         const blob = textureMap.get(texBasename);
         if (blob) {
           const url = URL.createObjectURL(blob);
-          const tex = new THREE.TextureLoader().load(url);
-          tex.colorSpace = THREE.SRGBColorSpace;
-          
-          const matObj = materials!.materials[name];
-          if (matObj) {
-            if (key === 'map_kd') (matObj as any).map = tex;
-            else if (key === 'map_bump' || key === 'bump' || key === 'norm') (matObj as any).normalMap = tex;
-          }
+          const matName = name;
+          const texKey = key;
+          texPromises.push(
+            loadTextureAsync(url).then((tex) => {
+              tex.colorSpace = THREE.SRGBColorSpace;
+              const matObj = materials!.materials[matName];
+              if (matObj) {
+                if (texKey === 'map_kd') (matObj as any).map = tex;
+                else if (texKey === 'map_bump' || texKey === 'bump' || texKey === 'norm') (matObj as any).normalMap = tex;
+              }
+            }).catch(() => {
+              warnings.push(`Kunde inte ladda textur: ${texRef}`);
+            })
+          );
         } else {
           warnings.push(`Textur saknas: ${texRef}`);
         }
       }
     }
     
+    await Promise.all(texPromises);
     materials.preload();
   }
 
@@ -389,7 +453,13 @@ export async function convertSketchUp(
     scene = await loadOBJ(fileMap.files, mainFile, validation.mtlFile, textureMap, warnings);
   }
 
-  // Stage 3: Optimize
+  // Validate scene has geometry
+  validateScene(scene);
+
+  // Stage 3: Convert materials & optimize
+  onProgress({ stage: 'optimizing', percent: 50, message: 'Konverterar material...' });
+  convertMaterialsToStandard(scene);
+
   onProgress({ stage: 'optimizing', percent: 60, message: 'Optimerar texturer...' });
   await optimizeTextures(scene, maxTextureSize, warnings);
   deduplicateMaterials(scene);
