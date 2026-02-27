@@ -1,83 +1,84 @@
 
 
-# Fix: OBJ Loading Fails Silently for Large Files
+# Plan: HA Add-on Remote Conversion for SketchUp Import
 
-## Root Cause
-Line 476 in `src/lib/sketchupImport.ts`: `const objText = await objBlob.text()` — for a 600MB OBJ file, `Blob.text()` can silently fail or produce a truncated string, causing `OBJLoader.parse()` to return an empty Group.
+## Overview
+Move large OBJ/DAE conversion from browser to a Home Assistant Add-on. The web app uploads files to the add-on's HTTP API and downloads the resulting GLB. Browser conversion remains as fallback for small models.
 
-## Changes — `src/lib/sketchupImport.ts` only
+## Architecture
 
-### 1. Replace `text()` with `ArrayBuffer` + `TextDecoder` in `loadOBJ` (line 476)
-```typescript
-// Replace:
-const objText = await objBlob.text();
-
-// With:
-const buffer = await objBlob.arrayBuffer();
-const objText = new TextDecoder().decode(buffer);
-console.log(`[SketchUp Import] OBJ file size: ${buffer.byteLength}, text length: ${objText.length}`);
+```text
+┌─────────────────────┐         ┌──────────────────────────┐
+│  HomeTwin Web App   │  HTTP   │  HA Add-on               │
+│                     │────────>│  "hometwin-converter"     │
+│  Upload ZIP/folder  │         │                          │
+│  Poll status        │<────────│  POST /convert → jobId   │
+│  Download GLB       │         │  GET /status/:id         │
+│  Import into scene  │         │  GET /result/:id → GLB   │
+└─────────────────────┘         └──────────────────────────┘
 ```
 
-### 2. Add mesh validation after parse (after line 501)
-After `objLoader.parse(objText)`, validate immediately:
-```typescript
-const group = objLoader.parse(objText);
-const { meshCount, triCount } = collectSceneStats(group);
-console.log(`[SketchUp Import] OBJ parsed: ${group.children.length} children, ${meshCount} meshes, ${triCount} triangles`);
+The add-on runs on the HA host (Python + trimesh/pygltflib), so it can handle 600MB+ OBJ files without browser memory limits.
 
-if (meshCount === 0) {
-  // Log first 200 chars of OBJ for debugging
-  console.error(`[SketchUp Import] OBJ text preview: ${objText.substring(0, 200)}`);
-  throw new Error(`OBJ loaded but 0 meshes found. File size: ${buffer.byteLength}, text length: ${objText.length}. OBJ parsing failed.`);
-}
+## Changes
 
-const box = new THREE.Box3().setFromObject(group);
-console.log(`[SketchUp Import] OBJ bounding box:`, box);
-if (box.isEmpty()) {
-  throw new Error('OBJ model bounding box is empty');
-}
-```
+### 1. New file: `src/lib/haConverterApi.ts`
+HTTP client for the HA add-on converter:
+- `getHABaseUrl()` — derive HTTP base URL from stored `wsUrl` (wss://host → https://host)
+- `checkAddonAvailable(baseUrl, token)` — `GET /api/hassio/ingress/<slug>/health` with bearer token
+- `uploadForConversion(baseUrl, token, zipBlob)` — `POST` multipart to add-on ingress, returns `jobId`
+- `pollConversionStatus(baseUrl, token, jobId)` — `GET /status/:jobId`, returns `{ state, percent, message }`
+- `downloadResult(baseUrl, token, jobId)` — `GET /result/:jobId`, returns `Blob` (GLB)
 
-### 3. Same fix for MTL loading (line 486)
-Replace MTL `text()` with ArrayBuffer approach:
-```typescript
-const mtlBuffer = await mtlBlob.arrayBuffer();
-const mtlText = new TextDecoder().decode(mtlBuffer);
-```
+All requests use the HA long-lived access token as `Authorization: Bearer <token>`.
 
-### 4. Same fix for DAE loading (line 515)
-Replace DAE `text()` with ArrayBuffer approach:
-```typescript
-const daeBuffer = await daeBlob.arrayBuffer();
-const daeText = new TextDecoder().decode(daeBuffer);
-```
+### 2. Update: `src/components/build/import/SketchUpWizard.tsx`
 
-### 5. Add "SketchUp Fast Import" mode
-Add optional `fastMode` parameter to `loadOBJ`. When true:
-- Skip MTL loading entirely
-- After parse, assign a simple `MeshStandardMaterial({ color: 0xcccccc })` to all meshes
-- This isolates geometry loading from texture/material issues
+**New state:**
+- `conversionMode: 'auto' | 'ha' | 'browser'` (default `'auto'`)
+- `haAddonAvailable: boolean | null` (checked on wizard open)
+- `haUploadProgress: number`
 
-Update `loadOBJ` signature:
-```typescript
-async function loadOBJ(
-  files, objPath, mtlPath, blobUrlMap, missingResources, warnings,
-  fastMode = false
-): Promise<THREE.Group>
-```
+**New step: mode selection** (after `validate`, before `settings`):
+- Two radio options:
+  - "Konvertera via Home Assistant (Rekommenderas)" — enabled only when `haAddonAvailable`
+  - "Konvertera i webbläsaren (endast små modeller)"
+- Auto-select HA when `fileMap.totalSize > 150MB` and addon is available
+- If HA not connected or addon not found, show info box: "Installera HomeTwin Converter add-on i Home Assistant" with link/instructions
 
-When `fastMode`:
-- Skip MTL parsing block
-- After parse, traverse and assign default material
+**HA conversion flow** (replaces `startConversion` when HA mode selected):
+1. Build ZIP blob from `fileMap.files` (re-zip all extracted files)
+2. Upload to add-on → show "Laddar upp..." with progress
+3. Poll `/status/:jobId` every 2s → show progress bar
+4. On complete: download GLB blob from `/result/:jobId`
+5. Feed GLB blob into existing `importResult()` path (same as browser conversion done step)
 
-### 6. Same fix in `testLoadOnly` (line 685)
-Pass `fastMode` option through so the diagnostic button can test with/without textures.
+**Progress UI updates:**
+- New stages: `'uploading' | 'remote-converting' | 'downloading'`
+- Show which conversion mode is active
 
-### 7. Add `fastMode` checkbox to SketchUpWizard.tsx
-In the `validate` step, add a Switch labeled "SketchUp Fast Import (geometri utan texturer)" that sets a `fastMode` state. Pass it through to `convertSketchUp` and `testLoadOnly`.
+### 3. Update: `src/lib/sketchupImport.ts`
+
+**Add `buildZipFromFileMap(fileMap)`:**
+- Uses fflate `zipSync` to create a ZIP blob from the current FileMap
+- Used to upload to the HA add-on
+
+**Add to `ConversionProgress` type:**
+- New stages: `'uploading' | 'remote-converting' | 'downloading'`
+
+### 4. New file: `public/hometwin-converter/README.md`
+Reference documentation for the HA add-on (not executable in Lovable, but serves as spec):
+- `config.yaml` for HA add-on manifest
+- Python conversion script using `trimesh` + `pygltflib`
+- Endpoints: `/convert`, `/status/:id`, `/result/:id`
+- Dockerfile outline
+
+## File summary
 
 | File | Change |
 |------|--------|
-| `src/lib/sketchupImport.ts` | ArrayBuffer loading for OBJ/MTL/DAE, mesh validation, fast import mode |
-| `src/components/build/import/SketchUpWizard.tsx` | Add fast import toggle, pass to conversion |
+| `src/lib/haConverterApi.ts` | New — HTTP client for HA add-on API |
+| `src/lib/sketchupImport.ts` | Add `buildZipFromFileMap`, extend `ConversionProgress` stages |
+| `src/components/build/import/SketchUpWizard.tsx` | Add mode selector, HA conversion flow, upload/poll/download UI |
+| `public/hometwin-converter/README.md` | New — Add-on spec and reference code |
 
