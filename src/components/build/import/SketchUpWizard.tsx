@@ -141,6 +141,7 @@ export default function SketchUpWizard({ open, onOpenChange }: { open: boolean; 
   const [loaderTesting, setLoaderTesting] = useState(false);
   const [glbSanityResult, setGlbSanityResult] = useState<{ success: boolean; byteLength: number; triCount: number; error?: string } | null>(null);
   const [glbSanityTesting, setGlbSanityTesting] = useState(false);
+  const [fastMode, setFastMode] = useState(false);
 
   const zipRef = useRef<HTMLInputElement>(null);
   const folderRef = useRef<HTMLInputElement>(null);
@@ -157,6 +158,7 @@ export default function SketchUpWizard({ open, onOpenChange }: { open: boolean; 
     setSelectedObj(null);
     setLoaderTestResult(null);
     setGlbSanityResult(null);
+    setFastMode(false);
     setProgress({ stage: 'extracting', percent: 0, message: '' });
   };
 
@@ -165,7 +167,7 @@ export default function SketchUpWizard({ open, onOpenChange }: { open: boolean; 
     setLoaderTesting(true);
     setLoaderTestResult(null);
     try {
-      const res = await testLoadOnly(fileMap, validation, selectedObj);
+      const res = await testLoadOnly(fileMap, validation, selectedObj, fastMode);
       setLoaderTestResult(res);
     } catch (err) {
       setLoaderTestResult({
@@ -243,7 +245,7 @@ export default function SketchUpWizard({ open, onOpenChange }: { open: boolean; 
     if (!fileMap || !validation) return;
     setStep('converting');
     try {
-      const res = await convertSketchUp(fileMap, validation, target, setProgress, selectedObj || undefined);
+      const res = await convertSketchUp(fileMap, validation, target, setProgress, selectedObj || undefined, fastMode);
       setResult(res);
       setStep('done');
     } catch (err) {
@@ -385,6 +387,15 @@ export default function SketchUpWizard({ open, onOpenChange }: { open: boolean; 
 
             {/* Debug panel for validation step */}
             {fileMap && <FileDebugPanel fileMap={fileMap} validation={validation} />}
+
+            {/* Fast Import toggle */}
+            <div className="flex items-center justify-between p-2.5 rounded-lg border border-border">
+              <div>
+                <div className="text-[11px] text-foreground font-medium">⚡ SketchUp Fast Import</div>
+                <div className="text-[9px] text-muted-foreground">Geometri utan texturer — snabbare &amp; stabilare</div>
+              </div>
+              <Switch checked={fastMode} onCheckedChange={setFastMode} />
+            </div>
 
             {/* Diagnostic buttons */}
             <div className="flex gap-2">
