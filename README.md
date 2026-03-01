@@ -119,6 +119,18 @@ npm run dev
 
 The dev server runs on port 5173 with hot reload. The Node host is only needed for disk persistence and HA proxy features.
 
+### Import Convention
+
+**Always use relative imports** (`./`, `../`) — never `@/` aliases.
+
+This project is developed in Lovable, whose Vite environment does not reliably resolve the `@/` path alias. To prevent "Module failed to load" errors:
+
+- ✅ `import { cn } from "../../lib/utils"`
+- ✅ `import { Button } from "./button"`
+- ❌ `import { cn } from "@/lib/utils"`
+
+The CI pipeline includes a grep check that blocks PRs containing `@/` imports. The alias config remains in `tsconfig.app.json` and `vite.config.ts` for IDE autocompletion but must not be used in committed code.
+
 ## Tech Stack
 
 - React + TypeScript + Vite
