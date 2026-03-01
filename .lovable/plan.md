@@ -1,36 +1,53 @@
 
 
-## Plan: Create Official Documentation & User Handbook
+## Plan: Device Visibility Picker, Camera Save Fix, v0.1.9
 
-Create 8 structured markdown files in `/docs/` plus update the root `README.md`. All content based on the actual codebase architecture, features, and current v0.1.8 state.
+### 1. Device Visibility Picker (replace simple toggle)
 
-### Files to Create/Modify (9 total)
+**Current**: Eye button toggles ALL markers on/off globally. User wants per-device control.
 
-**1. `docs/01-overview.md`** — What BJORQ Dashboard is, target use case (wall tablet / kiosk smart home), architecture diagram (Vite+React frontend, Express server, HA integration), dual-mode system (HOSTED vs DEV), supported platforms.
+**Change `src/components/home/HomeView.tsx`**:
+- Replace the simple Eye toggle button with a button that opens a popup/sheet
+- Move it to **bottom-left** (e.g., `fixed bottom-20 left-4`) to avoid overlapping with the Camera FAB on the right
+- On click: show a glass-panel popup listing all placed device markers with:
+  - Device name + kind icon
+  - Toggle switch per device (visible/hidden)
+  - "Visa alla" / "Dölj alla" quick buttons at top
 
-**2. `docs/02-installation.md`** — Windows (start.bat, PowerShell note), Linux/RPi (start.sh, chmod), Node 18+ requirement, custom PORT, dev mode explanation (Lovable preview = DEV, token in browser). Reference kiosk.bat/app-mode from Display settings.
+**Add to `src/store/types.ts`**:
+- Add `hiddenMarkerIds: string[]` to `HomeViewState` (list of marker IDs to hide)
+- Remove or keep `showDeviceMarkers` as a master toggle
 
-**3. `docs/03-using-the-dashboard.md`** — Walk through all DashboardGrid categories: Home (widgets, categories, device cards), Weather, Calendar, Devices (filter by kind), Energy (manual watt estimates + HA live), Automations, Scenes, Surveillance, Robot, Activity, Settings (Profile, Performance, Standby, Display/Kiosk, HA Connection, Location, WiFi, Widgets). Also cover Build Mode tabs: Structure (walls, rooms, templates), Import (3D model, floor bands, opacity), Furnish (props catalog), Devices (place markers, light types, HA entity binding).
+**Add to `src/store/useAppStore.ts`**:
+- `toggleMarkerVisibility(id: string)` — adds/removes from `hiddenMarkerIds`
+- `setAllMarkersVisible()` / `hideAllMarkers()` — bulk operations
+- All with `syncProfileToServer()`
 
-**4. `docs/04-performance-and-3d.md`** — Quality levels (low/medium/high → DPR, shadow maps, antialias), shadows toggle, postprocessing, tablet mode override, Canvas remount on settings change, performance score (0-100), hardware detection (hardwareConcurrency), WebGL context loss recovery, model stats (triangles/materials/textures rating), tips for optimization.
+**Update `src/components/devices/DeviceMarkers3D.tsx`**:
+- Filter out markers whose IDs are in `hiddenMarkerIds` (or render them invisible for raycasting as current logic does)
 
-**5. `docs/05-data-and-backups.md`** — HOSTED: disk persistence in `data/` (config.json, profiles.json, projects/), atomic writes via tmp+rename. DEV: Zustand persist to localStorage. Backup system: "Spara & Backup" button → browser download + server POST to `data/backups/`. Manual export/import. Clear all data option. Folder structure table.
+### 2. Fix Camera Start Save (not persisting)
 
-**6. `docs/06-kiosk-and-display-modes.md`** — App Mode (Chrome/Edge `--app` flag with examples), Browser Fullscreen (in-app toggle, auto-fullscreen option), OS Kiosk (info-only: Windows kiosk, Linux `--kiosk`), how to exit each mode (ESC, Alt+F4), admin unlock (5s long-press on nav bar), autostart suggestions (systemd unit example from README).
+**Bug**: `saveHomeStartCamera` and `clearHomeStartCamera` in `useAppStore.ts` (lines 132-145) do NOT call `syncProfileToServer()` after `set()`. Changes are lost on reload in hosted mode.
 
-**7. `docs/07-troubleshooting.md`** — Practical table: server not starting, port in use, Node not found, HA not connecting (token/URL issues, proxy vs direct), 3D model not loading (timeout, retry), WebGL context lost (auto-recovery), black screen (hard reload), permissions (chmod), blank page (wait + Ctrl+Shift+R), performance issues (lower quality).
+**Fix `src/store/useAppStore.ts`**:
+- Add `syncProfileToServer()` call after both `saveHomeStartCamera` and `clearHomeStartCamera` set calls
 
-**8. `docs/08-developer-notes.md`** — Folder structure (src/, server/, data/, public/, docs/), API endpoints (GET/PUT /api/config, /api/profiles, /api/projects, POST /api/backup, /api/ha/* proxy), mode resolution flow (apiClient.ts probe logic), state management (Zustand store structure from types.ts), build/release workflow (GitHub Actions, v* tags, ZIP artifacts), import conventions (relative only, no @/), CI checks.
+### 3. Quick Health Check
 
-**9. `README.md`** — Rewrite to be short and professional: one-liner description, Quick Start (Windows + Linux, 3 steps each), link to `/docs/` for full handbook, current version (v0.1.8), tech stack one-liner, license placeholder. No mention of "Lovable".
+Review key areas for obvious issues:
+- Verify `cameraRef` is being updated correctly in `CameraController.useFrame` (line 96-99) — looks correct
+- Verify performance settings reactivity via Canvas key — looks correct
+- Check that `syncProfileToServer` is called on all user-facing state mutations — the camera save is the only one missing it
 
-### Writing Approach
-- Product handbook tone, not developer notes (except 08)
-- Swedish UI labels referenced as-is (e.g., "Inställningar → Prestanda")
-- English documentation text
-- No mention of "Lovable" anywhere
-- Consistent heading structure (H1 = title, H2 = sections, H3 = subsections)
+### 4. Version Bump to 0.1.9
 
-### No Code Changes
-Pure documentation — no functional changes to the application.
+- Update `package.json` version field
+
+### Files Modified (5-6)
+1. `src/store/types.ts` — add `hiddenMarkerIds` to HomeViewState
+2. `src/store/useAppStore.ts` — add per-marker visibility actions + fix camera save persistence
+3. `src/components/home/HomeView.tsx` — replace Eye toggle with popup picker, reposition to left side
+4. `src/components/devices/DeviceMarkers3D.tsx` — respect `hiddenMarkerIds`
+5. `package.json` — version 0.1.9
 
