@@ -25,7 +25,7 @@
 | 4 | Smart Home Intelligence Layer | ✅ Done | Phase 2 |
 | 5 | Build & Asset Improvements | ✅ Done | Phase 1 |
 | 6 | Monitoring & Activity System | ✅ Done | Phase 2 |
-| 7 | 3D & Lighting Engine Refinement | 🔲 Todo | Phase 2 |
+| 7 | 3D & Lighting Engine Refinement | ✅ Done | Phase 2 |
 
 ---
 
@@ -204,24 +204,29 @@ Per-category notification toggle. Future: push notifications.
 
 ---
 
-## 🟤 Phase 7 — 3D & Lighting Engine Refinement
+## 🟤 Phase 7 — 3D & Lighting Engine Refinement ✅
 
-### 7.1 Lighting Behavior
+### 7.1 Light Type-Specific 3D Sources
 
-Rules:
-- Only placed light devices cast dynamic shadows
-- Sunlight only enters through windows
-- Windows must not behave as walls (transparency)
-- Improve GLB material transparency & depthWrite handling
+Each light type now emits differently in the 3D scene:
+- **Ceiling** — `pointLight`, downward, distance 8, decay 2 (sphere mesh)
+- **Strip** — `pointLight` with wider spread (distance 10, decay 1.5) + elongated emissive box mesh
+- **Spot** — `spotLight` with narrow 30° cone, high intensity, castShadow, cone mesh indicator
+- **Wall** — `spotLight` with wider 60° cone, wall-wash direction, castShadow, half-dome mesh
 
-**Investigation needed:**
-- Shadow layers in Three.js
-- Light masking techniques
-- Material transparency with proper depth sorting
+### 7.2 Full XYZ Rotation for All Devices
 
-**Files modified:** `src/components/build/Walls3D.tsx`, `src/components/build/ImportedHome3D.tsx`, lighting components
+All device types now have X/Y/Z rotation sliders in the inspector (previously only screens had full rotation). This allows aiming spotlights, tilting wall lights, etc.
 
-**Engine limitations:** Document in this file after investigation.
+### 7.3 Removed "Anpassad" Light Type
+
+Simplified to 4 clear light types: Tak, Strip, Vägg, Spot.
+
+### 7.4 Shadow Improvements
+
+SpotLights from spot and wall light types now cast shadows with 512×512 shadow maps.
+
+**Files modified:** `src/store/types.ts`, `src/components/devices/DeviceMarkers3D.tsx`, `src/components/build/BuildInspector.tsx`
 
 ---
 

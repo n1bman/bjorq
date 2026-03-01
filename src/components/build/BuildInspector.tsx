@@ -480,7 +480,6 @@ function DeviceInspector({ deviceId, close }: { deviceId: string; close: React.R
     { value: 'strip', label: 'Strip', emoji: '🟢' },
     { value: 'wall', label: 'Vägg', emoji: '🟡' },
     { value: 'spot', label: 'Spot', emoji: '⚪' },
-    { value: 'custom', label: 'Anpassad', emoji: '🟣' },
   ];
 
   const handleDelete = () => {
@@ -692,37 +691,30 @@ function DeviceInspector({ deviceId, close }: { deviceId: string; close: React.R
         ))}
       </div>
 
-      {/* Rotation sliders -- full XYZ for screen, Y-only for others */}
+      {/* Rotation sliders -- full XYZ for all devices */}
       <div className="space-y-1.5">
-        <div className="flex items-center gap-1 text-muted-foreground"><RotateCcw size={12} /> Rotation</div>
-        {isScreen ? (
-          <>
-            {(['X', 'Y', 'Z'] as const).map((axis, i) => (
-              <div key={axis} className="flex items-center gap-2">
-                <span className="text-[10px] text-muted-foreground w-3">{axis}</span>
-                <Slider min={-180} max={180} step={1}
-                  value={[device.rotation[i] * (180 / Math.PI)]}
-                  onValueChange={([v]) => {
-                    const rot = [...device.rotation] as [number, number, number];
-                    rot[i] = v * (Math.PI / 180);
-                    updateDevice(device.id, { rotation: rot });
-                  }}
-                  className="flex-1"
-                />
-                <span className="text-[10px] text-foreground w-8 text-right">{Math.round(device.rotation[i] * (180 / Math.PI))}°</span>
-              </div>
-            ))}
-          </>
-        ) : (
-          <div className="flex items-center gap-2">
-            <Slider min={0} max={360} step={1}
-              value={[device.rotation[1] * (180 / Math.PI)]}
-              onValueChange={([v]) => updateDevice(device.id, { rotation: [0, v * (Math.PI / 180), 0] })}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1 text-muted-foreground"><RotateCcw size={12} /> Rotation</div>
+          <button onClick={handleResetRotation}
+            className="text-[10px] text-muted-foreground hover:text-foreground transition-colors">
+            Nollställ
+          </button>
+        </div>
+        {(['X', 'Y', 'Z'] as const).map((axis, i) => (
+          <div key={axis} className="flex items-center gap-2">
+            <span className="text-[10px] text-muted-foreground w-3">{axis}</span>
+            <Slider min={-180} max={180} step={1}
+              value={[device.rotation[i] * (180 / Math.PI)]}
+              onValueChange={([v]) => {
+                const rot = [...device.rotation] as [number, number, number];
+                rot[i] = v * (Math.PI / 180);
+                updateDevice(device.id, { rotation: rot });
+              }}
               className="flex-1"
             />
-            <span className="text-[10px] text-foreground w-8 text-right">{Math.round(device.rotation[1] * (180 / Math.PI))}°</span>
+            <span className="text-[10px] text-foreground w-8 text-right">{Math.round(device.rotation[i] * (180 / Math.PI))}°</span>
           </div>
-        )}
+        ))}
       </div>
 
       <button onClick={handleDelete}
