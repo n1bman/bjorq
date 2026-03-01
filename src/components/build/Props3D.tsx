@@ -198,7 +198,7 @@ function PropModel({ id, url, position, rotation, scale }: {
   const clonedScene = scene.clone();
   clonedScene.traverse((child: any) => {
     if (child.isMesh) {
-      child.castShadow = true;
+      child.castShadow = false;
       child.receiveShadow = true;
       if (isSelected) {
         child.material = child.material.clone();

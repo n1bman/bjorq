@@ -109,11 +109,11 @@ export default function BuildTopToolbar() {
         value={grid.sizeMeters}
         onChange={(e) => setGrid({ sizeMeters: parseFloat(e.target.value) })}
         className="h-8 px-1.5 rounded-md bg-secondary/50 text-xs text-foreground border-none outline-none cursor-pointer shrink-0"
-        style={{ width: 70, maxWidth: 70 }}
+        style={{ width: 70, maxWidth: 70, colorScheme: 'dark' }}
         title="Rutnätsstorlek"
       >
         {gridSizes.map((s) => (
-          <option key={s} value={s}>{s} m</option>
+          <option key={s} value={s} className="bg-card text-foreground">{s} m</option>
         ))}
       </select>
 
@@ -121,11 +121,11 @@ export default function BuildTopToolbar() {
         value={grid.snapMode}
         onChange={(e) => setGrid({ snapMode: e.target.value as SnapMode })}
         className="h-8 px-1.5 rounded-md bg-secondary/50 text-xs text-foreground border-none outline-none cursor-pointer shrink-0"
-        style={{ width: 70, maxWidth: 70 }}
+        style={{ width: 70, maxWidth: 70, colorScheme: 'dark' }}
         title="Snap-läge"
       >
         {snapModes.map((sm) => (
-          <option key={sm.key} value={sm.key}>{sm.label}</option>
+          <option key={sm.key} value={sm.key} className="bg-card text-foreground">{sm.label}</option>
         ))}
       </select>
 

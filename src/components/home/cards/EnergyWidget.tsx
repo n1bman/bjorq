@@ -3,8 +3,9 @@ import { useState } from 'react';
 import { cn } from '../../../lib/utils';
 import { useAppStore } from '../../../store/useAppStore';
 
-export default function EnergyWidget() {
+export default function EnergyWidget({ alwaysExpanded = false }: { alwaysExpanded?: boolean }) {
   const [expanded, setExpanded] = useState(false);
+  const isExpanded = alwaysExpanded || expanded;
   const energyConfig = useAppStore((s) => s.energyConfig);
   const markers = useAppStore((s) => s.devices.markers);
 
@@ -17,10 +18,11 @@ export default function EnergyWidget() {
   return (
     <div
       className={cn(
-        'glass-panel rounded-2xl p-5 cursor-pointer transition-all duration-300',
-        expanded ? 'min-w-[200px]' : 'min-w-[120px] max-w-[150px]'
+        'glass-panel rounded-2xl p-5 transition-all duration-300',
+        !alwaysExpanded && 'cursor-pointer',
+        isExpanded ? 'min-w-[200px]' : 'min-w-[120px] max-w-[150px]'
       )}
-      onClick={() => setExpanded(!expanded)}
+      onClick={() => !alwaysExpanded && setExpanded(!expanded)}
     >
       <div className="flex items-center gap-2">
         <Zap size={18} className="text-primary shrink-0" />
@@ -33,7 +35,7 @@ export default function EnergyWidget() {
         <TrendingDown size={14} className="text-green-400" />
         <span className="text-[11px] text-muted-foreground">Idag: {totalDailyKwh.toFixed(1)} kWh</span>
       </div>
-      {expanded && (
+      {isExpanded && (
         <div className="mt-3 pt-3 border-t border-border/30 space-y-2">
           <div className="flex items-center gap-2">
             <BarChart3 size={12} className="text-muted-foreground" />

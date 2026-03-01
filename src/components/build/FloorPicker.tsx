@@ -25,7 +25,7 @@ export default function FloorPicker() {
       </button>
 
       {open && (
-        <div className="absolute top-full right-0 mt-1 w-40 bg-card border border-border rounded-xl overflow-hidden z-[100] shadow-lg pointer-events-auto">
+        <div className="absolute top-full right-0 mt-2 w-48 bg-card border border-border rounded-xl overflow-hidden z-[200] shadow-xl pointer-events-auto p-1">
           <button
             onClick={() => { setView({ floorFilter: 'all' }); setOpen(false); }}
             className={cn(
