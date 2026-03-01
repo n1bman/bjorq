@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware';
 import type { AppState, AppMode, BuildState, LayoutState, WallSegment, Room, DeviceState, DeviceKind, ActivityEvent } from './types';
 import { mapHAEntityToDeviceState } from '@/lib/haMapping';
 import { setFromHA } from '@/hooks/useHABridge';
-import { isHostedSync, debouncedSync, saveProfiles, fetchProfiles } from '@/lib/apiClient';
+import { isHostedSync, debouncedSync, debouncedProjectSync, saveProfiles, saveProject, fetchBootstrap } from '@/lib/apiClient';
 
 export function getDefaultState(kind: DeviceKind): DeviceState {
   switch (kind) {
@@ -66,6 +66,8 @@ const initialLayout: LayoutState = {
 };
 
 // ── Hosted mode sync ──
+let _activeProjectId = 'home';
+
 function syncProfileToServer() {
   if (!isHostedSync()) return;
   const s = useAppStore.getState();
@@ -78,6 +80,25 @@ function syncProfileToServer() {
       environment: s.environment,
       customCategories: s.customCategories,
     }).catch((err) => console.warn('[Sync] Failed to save profiles:', err));
+  });
+}
+
+function syncProjectToServer() {
+  if (!isHostedSync()) return;
+  const s = useAppStore.getState();
+  debouncedProjectSync(() => {
+    const homeGeo = { ...s.homeGeometry };
+    // Strip large fileData from sync payload
+    if (homeGeo.imported?.fileData) {
+      homeGeo.imported = { ...homeGeo.imported, fileData: undefined };
+    }
+    saveProject(_activeProjectId, {
+      layout: s.layout,
+      devices: s.devices,
+      homeGeometry: homeGeo,
+      props: s.props,
+      activityLog: s.activityLog,
+    }).catch((err) => console.warn('[Sync] Failed to save project:', err));
   });
 }
 
@@ -1190,23 +1211,69 @@ export async function initHostedMode() {
   if (!hosted) return false;
 
   try {
-    const profiles = await fetchProfiles();
+    const { config, profiles, projects, activeProjectId } = await fetchBootstrap();
+    _activeProjectId = activeProjectId;
 
-    // Apply server state to store
-    useAppStore.setState({
+    // Find the active project
+    const project = projects.find((p: any) => p.id === activeProjectId) || projects[0];
+
+    const stateUpdate: Record<string, unknown> = {
       _hostedMode: true,
-      ...(profiles.profile && { profile: profiles.profile }),
-      ...(profiles.performance && { performance: profiles.performance }),
-      ...(profiles.standby && { standby: profiles.standby }),
-      ...(profiles.homeView && { homeView: { ...useAppStore.getState().homeView, ...profiles.homeView } }),
-      ...(profiles.environment && { environment: { ...useAppStore.getState().environment, ...profiles.environment } }),
-      ...(profiles.customCategories && { customCategories: profiles.customCategories }),
-    } as any);
+    };
 
-    console.log('[Hosted] Loaded profiles from server');
+    // Apply profiles
+    if (profiles) {
+      const p = profiles as any;
+      if (p.profile) stateUpdate.profile = p.profile;
+      if (p.performance) stateUpdate.performance = p.performance;
+      if (p.standby) stateUpdate.standby = p.standby;
+      if (p.homeView) stateUpdate.homeView = { ...useAppStore.getState().homeView, ...p.homeView };
+      if (p.environment) stateUpdate.environment = { ...useAppStore.getState().environment, ...p.environment };
+      if (p.customCategories) stateUpdate.customCategories = p.customCategories;
+    }
+
+    // Apply project data
+    if (project) {
+      if (project.layout) stateUpdate.layout = project.layout;
+      if (project.devices) stateUpdate.devices = project.devices;
+      if (project.homeGeometry) stateUpdate.homeGeometry = project.homeGeometry;
+      if (project.props) stateUpdate.props = project.props;
+      if (project.activityLog) stateUpdate.activityLog = project.activityLog;
+    }
+
+    // Apply config (HA baseUrl for display, token is masked)
+    const cfg = config as any;
+    if (cfg?.ha?.baseUrl) {
+      stateUpdate.homeAssistant = {
+        ...useAppStore.getState().homeAssistant,
+        wsUrl: cfg.ha.baseUrl,
+        // Token stays empty — all HA calls go through /api/ha/* proxy
+      };
+    }
+
+    useAppStore.setState(stateUpdate as any);
+    console.log('[Hosted] Loaded bootstrap data (config + profiles + project:', _activeProjectId, ')');
     return true;
   } catch (err) {
     console.warn('[Hosted] Failed to load from server:', err);
     return false;
   }
 }
+
+// ── Auto-sync project data to server on changes ──
+// Subscribe to layout/devices/homeGeometry/props changes
+let _initDone = false;
+useAppStore.subscribe((state, prev) => {
+  if (!_initDone) return; // Skip initial hydration
+  if (!isHostedSync()) return;
+  if (
+    state.layout !== prev.layout ||
+    state.devices !== prev.devices ||
+    state.homeGeometry !== prev.homeGeometry ||
+    state.props !== prev.props
+  ) {
+    syncProjectToServer();
+  }
+});
+// Mark init done after first bootstrap
+setTimeout(() => { _initDone = true; }, 3000);

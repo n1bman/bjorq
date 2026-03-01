@@ -1,7 +1,8 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import type { HAEntity } from '@/store/types';
 import { isSuppressed } from './useHABridge';
+import { isHostedSync, fetchHAStates, callHAService } from '@/lib/apiClient';
 
 // ── Module-level singleton state ──────────────────────────────────
 let msgId = 10;
@@ -78,7 +79,9 @@ function connect(url: string, token: string) {
           console.log('[HA] Authenticated');
           s.setHAStatus('connected');
           // Set global caller immediately
-          haServiceCaller.current = callService;
+          haServiceCaller.current = isHostedSync()
+            ? (domain, service, data) => callHAService(domain, service, data).catch(console.warn)
+            : callService;
           socket.send(JSON.stringify({ type: 'get_states', id: nextId() }));
           socket.send(JSON.stringify({ type: 'subscribe_events', event_type: 'state_changed', id: nextId() }));
           // Request Roborock room mapping (will be handled in result handler)
@@ -266,17 +269,77 @@ function disconnect() {
 
 // ── React hook (thin wrapper) ─────────────────────────────────────
 
+let hostedPollTimer: ReturnType<typeof setInterval> | undefined;
+
 export function useHomeAssistant() {
-  // Auto-reconnect on first mount if stored credentials exist
+  const pollStarted = useRef(false);
+
+  // In hosted mode: use REST polling via /api/ha/* proxy (no WebSocket, no token in browser)
   useEffect(() => {
-    if (hasAutoConnected) return;
-    const { wsUrl, token, status } = useAppStore.getState().homeAssistant;
-    if (wsUrl && token && status !== 'connected' && status !== 'connecting') {
-      hasAutoConnected = true;
-      console.log('[HA] Auto-reconnecting with stored credentials');
-      connect(wsUrl, token);
+    if (!isHostedSync()) {
+      // Non-hosted: use WebSocket as before
+      if (hasAutoConnected) return;
+      const { wsUrl, token, status } = useAppStore.getState().homeAssistant;
+      if (wsUrl && token && status !== 'connected' && status !== 'connecting') {
+        hasAutoConnected = true;
+        console.log('[HA] Auto-reconnecting with stored credentials');
+        connect(wsUrl, token);
+      }
+      return;
     }
+
+    // Hosted mode: poll HA states via server proxy
+    if (pollStarted.current) return;
+    pollStarted.current = true;
+
+    const pollStates = async () => {
+      try {
+        const states = await fetchHAStates();
+        if (!Array.isArray(states)) return;
+        const s = useAppStore.getState();
+        const entities: HAEntity[] = states.map((e: any) => ({
+          entityId: e.entity_id,
+          domain: e.entity_id.split('.')[0],
+          friendlyName: e.attributes?.friendly_name || e.entity_id,
+          state: e.state,
+          attributes: e.attributes || {},
+        }));
+        s.setHAEntities(entities);
+        s.setHAStatus('connected');
+        for (const e of states) {
+          if (!isSuppressed(e.entity_id)) {
+            s.updateHALiveState(e.entity_id, e.state, e.attributes || {});
+          }
+        }
+      } catch (err) {
+        // HA not configured on server — that's fine, stay disconnected
+        const s = useAppStore.getState();
+        if (s.homeAssistant.status === 'connected') {
+          s.setHAStatus('disconnected');
+        }
+      }
+    };
+
+    // Initial fetch + poll every 5s
+    pollStates();
+    hostedPollTimer = setInterval(pollStates, 5000);
+
+    return () => {
+      if (hostedPollTimer) clearInterval(hostedPollTimer);
+      pollStarted.current = false;
+    };
   }, []);
 
-  return { connect, disconnect, callService };
+  // In hosted mode, callService goes through REST proxy
+  const hostedCallService = (domain: string, service: string, serviceData: Record<string, unknown>) => {
+    callHAService(domain, service, serviceData).catch((err) =>
+      console.warn('[HA] Service call failed:', err)
+    );
+  };
+
+  return {
+    connect: isHostedSync() ? () => {} : connect,
+    disconnect: isHostedSync() ? () => {} : disconnect,
+    callService: isHostedSync() ? hostedCallService : callService,
+  };
 }
