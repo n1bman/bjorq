@@ -1,14 +1,14 @@
-// Diagnostic Step 2g: Just cn import test
+// Diagnostic Step 2h: Test clsx alone
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { cn } from "@/lib/utils";
+import { clsx } from "clsx";
 
 const App = () => (
   <BrowserRouter>
     <Routes>
       <Route path="/" element={
-        <div className={cn("p-8 font-sans")} style={{ color: 'white' }}>
-          <h1>HomeTwin — Step 2g ✅</h1>
-          <p>cn() only, no Radix</p>
+        <div className={clsx("p-8")} style={{ color: 'white', fontFamily: 'system-ui' }}>
+          <h1>HomeTwin — Step 2h ✅</h1>
+          <p>clsx only</p>
         </div>
       } />
     </Routes>
