@@ -440,6 +440,13 @@ export interface PropCatalogItem {
   category?: string;
 }
 
+export interface PropModelStats {
+  triangles: number;
+  meshCount: number;
+  materialCount: number;
+  rating: string; // 'OK' | 'Tung' | 'För tung'
+}
+
 export interface PropItem {
   id: string;
   catalogId: string;
@@ -448,6 +455,9 @@ export interface PropItem {
   position: [number, number, number];
   rotation: [number, number, number];
   scale: [number, number, number];
+  name?: string;
+  modelStats?: PropModelStats;
+  haEntityId?: string;
 }
 
 export interface PropsState {
@@ -746,6 +756,7 @@ export interface AppState {
   // Props actions
   addToCatalog: (item: PropCatalogItem) => void;
   removeFromCatalog: (id: string) => void;
+  updateCatalogItem: (id: string, changes: Partial<PropCatalogItem>) => void;
   addProp: (prop: PropItem) => void;
   removeProp: (id: string) => void;
   updateProp: (id: string, changes: Partial<PropItem>) => void;
