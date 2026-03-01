@@ -20,6 +20,8 @@ import CalendarWidget from './cards/CalendarWidget';
 import RobotPanel from './cards/RobotPanel';
 import CameraStartSettings from './cards/CameraStartSettings';
 import PerformanceSettings from './cards/PerformanceSettings';
+import WifiPanel from './cards/WifiPanel';
+import WifiWidget from './cards/WifiWidget';
 import type { DeviceKind, DeviceMarker, StandbyCameraView } from '../../store/types';
 import { cameraRef } from '../../lib/cameraRef';
 
@@ -111,6 +113,7 @@ function HomeCategory() {
         <ClockWidget />
         <WeatherWidget />
         <EnergyWidget />
+        <WifiWidget />
       </div>
 
       <div className="flex justify-end gap-2">
@@ -324,6 +327,7 @@ function SettingsCategory() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <HAConnectionPanel />
           <LocationSettings />
+          <WifiPanel />
         </div>
       </section>
 

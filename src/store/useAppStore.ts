@@ -79,6 +79,7 @@ function syncProfileToServer() {
       homeView: s.homeView,
       environment: s.environment,
       customCategories: s.customCategories,
+      wifi: s.wifi,
     }).catch((err) => console.warn('[Sync] Failed to save profiles:', err));
   });
 }
@@ -225,6 +226,8 @@ const storeCreator = (set: any, get: any): AppState => ({
   _preStandbyMode: 'home' as AppMode,
   profile: { name: '', theme: 'dark', accentColor: '#f59e0b', dashboardBg: 'scene3d' },
   performance: { quality: 'high', shadows: true, postprocessing: false, tabletMode: false },
+  wifi: { ssid: '', password: '', visible: false },
+  setWifi: (changes) => { set((s: any) => ({ wifi: { ...s.wifi, ...changes } })); syncProfileToServer(); },
   setPerformance: (changes) => { set((s: any) => ({ performance: { ...s.performance, ...changes } })); syncProfileToServer(); },
 
   // Standby actions
@@ -1189,6 +1192,7 @@ export const useAppStore = create<AppState>()(
           profile: state.profile,
           customCategories: state.customCategories,
           standby: state.standby,
+          wifi: state.wifi,
           homeAssistant: {
             wsUrl: state.homeAssistant.wsUrl,
             token: state.homeAssistant.token,
@@ -1230,6 +1234,7 @@ export async function initHostedMode() {
       if (p.homeView) stateUpdate.homeView = { ...useAppStore.getState().homeView, ...p.homeView };
       if (p.environment) stateUpdate.environment = { ...useAppStore.getState().environment, ...p.environment };
       if (p.customCategories) stateUpdate.customCategories = p.customCategories;
+      if (p.wifi) stateUpdate.wifi = p.wifi;
     }
 
     // Apply project data

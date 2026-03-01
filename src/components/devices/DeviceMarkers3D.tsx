@@ -1088,6 +1088,7 @@ export default function DeviceMarkers3D({ buildMode }: DeviceMarkers3DProps) {
   const showDeviceMarkers = useAppStore((s) => s.homeView.showDeviceMarkers ?? true);
   const setSelection = useAppStore((s) => s.setSelection);
   const updateDevice = useAppStore((s) => s.updateDevice);
+  const toggleDeviceState = useAppStore((s) => s.toggleDeviceState);
   const selectedId = useAppStore((s) => s.build.selection.id);
   const selectedType = useAppStore((s) => s.build.selection.type);
   const { camera, raycaster, gl } = useThree();
@@ -1097,11 +1098,22 @@ export default function DeviceMarkers3D({ buildMode }: DeviceMarkers3DProps) {
   const dragDeviceId = useRef<string | null>(null);
   const dragDeviceY = useRef(0);
 
+  // Toggleable device kinds (on/off capable)
+  const toggleableKinds = useMemo(() => new Set<DeviceKind>([
+    'light', 'switch', 'fan', 'power-outlet', 'siren', 'humidifier', 'water-heater',
+  ]), []);
+
   const handleSelect = useCallback((id: string) => {
     if (buildMode) {
       setSelection({ type: 'device', id });
+    } else {
+      // In home/dashboard mode: toggle device state on click
+      const marker = markers.find((m) => m.id === id);
+      if (marker && toggleableKinds.has(marker.kind)) {
+        toggleDeviceState(id);
+      }
     }
-  }, [buildMode, setSelection]);
+  }, [buildMode, setSelection, markers, toggleableKinds, toggleDeviceState]);
 
   const handleDragStart = useCallback((id: string, e: ThreeEvent<PointerEvent>) => {
     if (!buildMode) return;
@@ -1179,7 +1191,7 @@ export default function DeviceMarkers3D({ buildMode }: DeviceMarkers3DProps) {
               id={marker.id}
               marker={marker}
               buildMode={buildMode}
-              onSelect={buildMode ? handleSelect : undefined}
+              onSelect={handleSelect}
               onDragStart={buildMode ? handleDragStart : undefined}
               selected={!!isSelected}
             />
@@ -1197,7 +1209,7 @@ export default function DeviceMarkers3D({ buildMode }: DeviceMarkers3DProps) {
             <Component
               position={isVacuum ? marker.position : ([0, 0, 0] as [number, number, number])}
               id={marker.id}
-              onSelect={buildMode ? handleSelect : undefined}
+              onSelect={handleSelect}
               onDragStart={buildMode ? handleDragStart : undefined}
               selected={!!isSelected}
             />
