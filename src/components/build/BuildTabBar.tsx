@@ -5,7 +5,7 @@ import { cn } from '../../lib/utils';
 
 const tabs: { key: BuildTab; label: string; icon: typeof Hammer }[] = [
   { key: 'structure', label: 'Struktur', icon: Hammer },
-  { key: 'import', label: 'Importera', icon: Upload },
+  { key: 'import', label: 'Importera hem', icon: Upload },
   { key: 'furnish', label: 'Möblera', icon: Sofa },
   { key: 'devices', label: 'Enheter', icon: Lightbulb },
 ];
