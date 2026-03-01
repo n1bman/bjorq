@@ -542,6 +542,7 @@ export interface HomeViewState {
   visibleWidgets: VisibleWidgets;
   homeScreenDevices: string[];
   showDeviceMarkers: boolean;
+  hiddenMarkerIds: string[];
   customStartPos?: [number, number, number];
   customStartTarget?: [number, number, number];
 }
@@ -712,6 +713,9 @@ export interface AppState {
   setCameraPreset: (preset: CameraPreset) => void;
   toggleHomeWidget: (widget: keyof VisibleWidgets) => void;
   toggleShowDeviceMarkers: () => void;
+  toggleMarkerVisibility: (id: string) => void;
+  setAllMarkersVisible: () => void;
+  hideAllMarkers: () => void;
   saveHomeStartCamera: (pos: [number, number, number], target: [number, number, number]) => void;
   clearHomeStartCamera: () => void;
 

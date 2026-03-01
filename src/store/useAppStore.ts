@@ -118,6 +118,7 @@ const storeCreator = (set: any, get: any): AppState => ({
     visibleWidgets: { clock: true, weather: true, temperature: true, energy: true, calendar: true },
     homeScreenDevices: [],
     showDeviceMarkers: true,
+    hiddenMarkerIds: [],
   },
   setCameraPreset: (preset) => { set((s: any) => ({ homeView: { ...s.homeView, cameraPreset: preset } })); syncProfileToServer(); },
   toggleHomeWidget: (widget) => { set((s: any) => ({
@@ -129,20 +130,31 @@ const storeCreator = (set: any, get: any): AppState => ({
   toggleShowDeviceMarkers: () => { set((s: any) => ({
     homeView: { ...s.homeView, showDeviceMarkers: !s.homeView.showDeviceMarkers },
   })); syncProfileToServer(); },
-  saveHomeStartCamera: (pos, target) => set((s: any) => ({
+  toggleMarkerVisibility: (id) => { set((s: any) => {
+    const hidden = s.homeView.hiddenMarkerIds ?? [];
+    const next = hidden.includes(id) ? hidden.filter((h: string) => h !== id) : [...hidden, id];
+    return { homeView: { ...s.homeView, hiddenMarkerIds: next } };
+  }); syncProfileToServer(); },
+  setAllMarkersVisible: () => { set((s: any) => ({
+    homeView: { ...s.homeView, hiddenMarkerIds: [] },
+  })); syncProfileToServer(); },
+  hideAllMarkers: () => { set((s: any) => ({
+    homeView: { ...s.homeView, hiddenMarkerIds: s.devices.markers.map((m: any) => m.id) },
+  })); syncProfileToServer(); },
+  saveHomeStartCamera: (pos, target) => { set((s: any) => ({
     homeView: {
       ...s.homeView,
       customStartPos: pos,
       customStartTarget: target,
     },
-  })),
-  clearHomeStartCamera: () => set((s: any) => ({
+  })); syncProfileToServer(); },
+  clearHomeStartCamera: () => { set((s: any) => ({
     homeView: {
       ...s.homeView,
       customStartPos: undefined,
       customStartTarget: undefined,
     },
-  })),
+  })); syncProfileToServer(); },
 
   // Device actions
   addDevice: (marker) => set((s: any) => ({
