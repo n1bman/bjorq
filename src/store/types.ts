@@ -582,6 +582,40 @@ export interface CalendarState {
   events: CalendarEvent[];
 }
 
+// ─── Automations ───
+export interface AutomationTrigger {
+  type: 'time' | 'device_state' | 'event';
+  config: Record<string, unknown>;
+}
+
+export interface AutomationAction {
+  type: 'device_toggle' | 'scene_activate' | 'notification';
+  config: Record<string, unknown>;
+}
+
+export interface Automation {
+  id: string;
+  name: string;
+  enabled: boolean;
+  trigger: AutomationTrigger;
+  actions: AutomationAction[];
+  lastTriggered?: string;
+}
+
+// ─── Scenes ───
+export interface SceneSnapshot {
+  deviceId: string;
+  state: Record<string, unknown>;
+}
+
+export interface SavedScene {
+  id: string;
+  name: string;
+  icon: string;
+  snapshots: SceneSnapshot[];
+  createdAt: string;
+}
+
 export interface UserProfile {
   name: string;
   theme: 'dark' | 'midnight' | 'light';
@@ -624,6 +658,8 @@ export interface AppState {
   wifi: WifiSettings;
   energyConfig: EnergyConfig;
   calendar: CalendarState;
+  automations: Automation[];
+  savedScenes: SavedScene[];
 
   // Performance actions
   setPerformance: (changes: Partial<PerformanceSettings>) => void;
@@ -640,6 +676,17 @@ export interface AppState {
   updateCalendarEvent: (id: string, changes: Partial<CalendarEvent>) => void;
   addCalendarSource: (source: CalendarSource) => void;
   removeCalendarSource: (id: string) => void;
+
+  // Automation actions
+  addAutomation: (automation: Automation) => void;
+  removeAutomation: (id: string) => void;
+  updateAutomation: (id: string, changes: Partial<Automation>) => void;
+  toggleAutomation: (id: string) => void;
+
+  // Scene actions
+  addScene: (scene: SavedScene) => void;
+  removeScene: (id: string) => void;
+  activateScene: (id: string) => void;
 
   // Standby actions
   setStandbySettings: (s: Partial<StandbySettings>) => void;
