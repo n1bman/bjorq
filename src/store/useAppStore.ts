@@ -621,6 +621,14 @@ const storeCreator = (set: any, get: any): AppState => ({
       },
     })),
 
+  updateCatalogItem: (id, changes) =>
+    set((s: any) => ({
+      props: {
+        ...s.props,
+        catalog: s.props.catalog.map((c: any) => c.id === id ? { ...c, ...changes } : c),
+      },
+    })),
+
   addProp: (prop) =>
     set((s: any) => ({ props: { ...s.props, items: [...s.props.items, prop] } })),
 

@@ -6,6 +6,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import * as THREE from 'three';
 import type { ThreeEvent } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
+import type { PropModelStats } from '../../store/types';
 
 const LOAD_TIMEOUT = 30_000;
 const loader = new GLTFLoader();
@@ -31,10 +32,9 @@ function isBlobOrDataUrl(url: string) {
   return url.startsWith('blob:') || url.startsWith('data:');
 }
 
-function analyzeModel(scene: THREE.Group) {
+function analyzeModel(scene: THREE.Group): PropModelStats {
   let triangles = 0;
   let meshCount = 0;
-  let materialCount = 0;
   const materials = new Set<string>();
 
   scene.traverse((child: any) => {
@@ -48,13 +48,36 @@ function analyzeModel(scene: THREE.Group) {
       mats.forEach((m: any) => materials.add(m.uuid));
     }
   });
-  materialCount = materials.size;
 
-  let rating: 'OK' | 'Tung' | 'För tung' = 'OK';
-  if (triangles > 500_000 || materialCount > 50) rating = 'För tung';
-  else if (triangles > 100_000 || materialCount > 20) rating = 'Tung';
+  let rating: string = 'OK';
+  if (triangles > 500_000 || materials.size > 50) rating = 'För tung';
+  else if (triangles > 100_000 || materials.size > 20) rating = 'Tung';
 
-  return { triangles: Math.round(triangles), meshCount, materialCount, rating };
+  return { triangles: Math.round(triangles), meshCount, materialCount: materials.size, rating };
+}
+
+/** Load a GLB/GLTF via XHR for blob:/data: URLs (bypasses CDN proxy) */
+function loadGltf(url: string): Promise<THREE.Group> {
+  return new Promise((resolve, reject) => {
+    if (isBlobOrDataUrl(url)) {
+      const xhr = new XMLHttpRequest();
+      xhr.open('GET', url, true);
+      xhr.responseType = 'arraybuffer';
+      xhr.onload = () => {
+        if (xhr.status === 0 || xhr.status === 200) {
+          try {
+            loader.parse(xhr.response, '', (gltf) => resolve(gltf.scene), (err) => reject(err));
+          } catch (e) { reject(e); }
+        } else {
+          reject(new Error(`XHR status ${xhr.status}`));
+        }
+      };
+      xhr.onerror = () => reject(new Error('XHR network error'));
+      xhr.send();
+    } else {
+      loader.load(url, (gltf) => resolve(gltf.scene), undefined, (err) => reject(err));
+    }
+  });
 }
 
 function PropModel({ id, url, position, rotation, scale }: {
@@ -78,10 +101,8 @@ function PropModel({ id, url, position, rotation, scale }: {
   const dragOffset = useRef(new THREE.Vector3());
   const { camera, raycaster, gl } = useThree();
 
-  // Robust loader state machine
   const [status, setStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [scene, setScene] = useState<THREE.Group | null>(null);
-  const [modelInfo, setModelInfo] = useState<ReturnType<typeof analyzeModel> | null>(null);
   const retryCount = useRef(0);
   const currentUrl = useRef('');
 
@@ -89,24 +110,19 @@ function PropModel({ id, url, position, rotation, scale }: {
   const items = useAppStore((s) => s.props.items);
   const propItem = items.find((p) => p.id === id);
   const catItem = propItem ? catalog.find((c) => c.id === propItem.catalogId) : null;
-  const modelName = catItem?.name || 'Modell';
+  const modelName = propItem?.name || catItem?.name || 'Modell';
+  const modelStats = propItem?.modelStats ?? null;
 
   useEffect(() => {
     if (!url) { setStatus('idle'); return; }
-
-    // Dispose old scene
     if (scene) { disposeScene(scene); setScene(null); }
-
     currentUrl.current = url;
     retryCount.current = 0;
-    loadModel(url);
-
-    return () => {
-      currentUrl.current = '';
-    };
+    doLoad(url);
+    return () => { currentUrl.current = ''; };
   }, [url]);
 
-  const loadModel = useCallback((loadUrl: string) => {
+  const doLoad = useCallback((loadUrl: string) => {
     setStatus('loading');
     const timeout = setTimeout(() => {
       if (currentUrl.current === url) {
@@ -115,39 +131,34 @@ function PropModel({ id, url, position, rotation, scale }: {
       }
     }, LOAD_TIMEOUT);
 
-    loader.load(
-      loadUrl,
-      (gltf) => {
+    loadGltf(loadUrl)
+      .then((loadedScene) => {
         clearTimeout(timeout);
-        if (currentUrl.current !== url) {
-          disposeScene(gltf.scene);
-          return;
-        }
-        const info = analyzeModel(gltf.scene);
-        setModelInfo(info);
-        console.info(`[Props3D] Loaded "${modelName}": ${info.triangles.toLocaleString()} trianglar, ${info.meshCount} meshes, ${info.materialCount} material — ${info.rating}`);
-        setScene(gltf.scene);
+        if (currentUrl.current !== url) { disposeScene(loadedScene); return; }
+        const info = analyzeModel(loadedScene);
+        console.info(`[Props3D] Loaded "${modelName}": ${info.triangles.toLocaleString()} △ · ${info.meshCount} mesh · ${info.materialCount} mat — ${info.rating}`);
+        // Persist stats to store
+        updateProp(id, { modelStats: info });
+        setScene(loadedScene);
         setStatus('ready');
-      },
-      undefined,
-      (err) => {
+      })
+      .catch((err) => {
         clearTimeout(timeout);
         console.warn(`[Props3D] Error loading "${modelName}":`, err);
         handleLoadError(loadUrl);
-      }
-    );
-  }, [url, modelName]);
+      });
+  }, [url, modelName, id, updateProp]);
 
   const handleLoadError = useCallback((failedUrl: string) => {
     if (retryCount.current < 1 && !isBlobOrDataUrl(url)) {
       retryCount.current++;
       const bustUrl = url + (url.includes('?') ? '&' : '?') + `v=${Date.now()}`;
       console.info(`[Props3D] Retrying "${modelName}" with cache bust`);
-      loadModel(bustUrl);
+      doLoad(bustUrl);
     } else {
       setStatus('error');
     }
-  }, [url, loadModel, modelName]);
+  }, [url, doLoad, modelName]);
 
   const handleClick = useCallback((e: ThreeEvent<PointerEvent>) => {
     if (activeTool !== 'select') return;
@@ -233,7 +244,7 @@ function PropModel({ id, url, position, rotation, scale }: {
               Kunde inte ladda: {modelName}
             </div>
             <button
-              onClick={() => { retryCount.current = 0; loadModel(url); }}
+              onClick={() => { retryCount.current = 0; doLoad(url); }}
               style={{
                 background: '#ef4444', color: '#fff', border: 'none', borderRadius: 6,
                 padding: '4px 10px', fontSize: 11, cursor: 'pointer', whiteSpace: 'nowrap',
@@ -273,38 +284,10 @@ function PropModel({ id, url, position, rotation, scale }: {
         onClick={handleClick}
       />
       {isSelected && (
-        <>
-          <mesh position={[position[0], 0.02, position[2]]} rotation={[-Math.PI / 2, 0, 0]}>
-            <ringGeometry args={[0.4 * scale[0], 0.5 * scale[0], 32]} />
-            <meshBasicMaterial color="#4a9eff" transparent opacity={0.6} side={THREE.DoubleSide} />
-          </mesh>
-          {modelInfo && (
-            <Html position={[position[0], position[1] + 1.2, position[2]]} center style={{ pointerEvents: 'none' }}>
-              <div style={{
-                background: 'hsl(220 18% 13% / 0.92)',
-                border: '1px solid hsl(220 14% 24%)',
-                borderRadius: 8,
-                padding: '5px 10px',
-                fontSize: 10,
-                color: '#e2e8f0',
-                whiteSpace: 'nowrap',
-                textAlign: 'center',
-              }}>
-                <div style={{ fontWeight: 600, marginBottom: 2 }}>{modelName}</div>
-                <div style={{ opacity: 0.7 }}>
-                  {modelInfo.triangles.toLocaleString('sv-SE')} △ · {modelInfo.meshCount} mesh · {modelInfo.materialCount} mat
-                </div>
-                <div style={{
-                  marginTop: 2,
-                  fontWeight: 600,
-                  color: modelInfo.rating === 'OK' ? '#4ade80' : modelInfo.rating === 'Tung' ? '#fbbf24' : '#ef4444',
-                }}>
-                  {modelInfo.rating === 'OK' ? '✓ OK' : modelInfo.rating === 'Tung' ? '⚠ Tung' : '⛔ För tung'}
-                </div>
-              </div>
-            </Html>
-          )}
-        </>
+        <mesh position={[position[0], 0.02, position[2]]} rotation={[-Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[0.4 * scale[0], 0.5 * scale[0], 32]} />
+          <meshBasicMaterial color="#4a9eff" transparent opacity={0.6} side={THREE.DoubleSide} />
+        </mesh>
       )}
     </group>
   );

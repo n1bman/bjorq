@@ -206,16 +206,27 @@ function WallInspector({ floorId, wallId, floor, close }: { floorId: string; wal
 // ─── Prop Inspector Component ───
 function PropInspector({ propId, close }: { propId: string; close: React.ReactNode }) {
   const items = useAppStore((s) => s.props.items);
+  const catalog = useAppStore((s) => s.props.catalog);
   const updateProp = useAppStore((s) => s.updateProp);
+  const updateCatalogItem = useAppStore((s) => s.updateCatalogItem);
   const removeProp = useAppStore((s) => s.removeProp);
   const setSelection = useAppStore((s) => s.setSelection);
 
   const prop = items.find((p) => p.id === propId);
   if (!prop) return null;
 
+  const catItem = catalog.find((c) => c.id === prop.catalogId);
+  const displayName = prop.name || catItem?.name || 'Modell';
+  const stats = prop.modelStats;
+
   const handleDelete = () => {
     removeProp(prop.id);
     setSelection({ type: null, id: null });
+  };
+
+  const handleRename = (newName: string) => {
+    updateProp(prop.id, { name: newName });
+    if (catItem) updateCatalogItem(catItem.id, { name: newName });
   };
 
   return (
@@ -225,7 +236,50 @@ function PropInspector({ propId, close }: { propId: string; close: React.ReactNo
         {close}
       </div>
 
-      <div className="text-muted-foreground truncate">{prop.url.split('/').pop()}</div>
+      {/* Editable name */}
+      <div className="space-y-1">
+        <label className="text-muted-foreground text-[10px]">Namn</label>
+        <Input
+          value={displayName}
+          onChange={(e) => handleRename(e.target.value)}
+          className="h-7 text-xs bg-secondary/50 border-none"
+          placeholder="Modellnamn"
+        />
+      </div>
+
+      {/* Model performance stats */}
+      {stats && (
+        <div className="rounded-lg bg-secondary/30 p-2 space-y-1">
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground text-[10px]">Prestanda</span>
+            <span className={`text-[10px] font-semibold ${
+              stats.rating === 'OK' ? 'text-green-400' : stats.rating === 'Tung' ? 'text-yellow-400' : 'text-red-400'
+            }`}>
+              {stats.rating === 'OK' ? '✓ OK' : stats.rating === 'Tung' ? '⚠ Tung' : '⛔ För tung'}
+            </span>
+          </div>
+          <div className="grid grid-cols-3 gap-1 text-[9px] text-muted-foreground text-center">
+            <div>
+              <div className="text-foreground font-medium">{stats.triangles.toLocaleString('sv-SE')}</div>
+              <div>Trianglar</div>
+            </div>
+            <div>
+              <div className="text-foreground font-medium">{stats.meshCount}</div>
+              <div>Meshes</div>
+            </div>
+            <div>
+              <div className="text-foreground font-medium">{stats.materialCount}</div>
+              <div>Material</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {!stats && (
+        <div className="rounded-lg bg-secondary/30 p-2 text-[10px] text-muted-foreground text-center">
+          Laddar prestandainfo…
+        </div>
+      )}
 
       <div className="space-y-1.5">
         <div className="flex items-center gap-1 text-muted-foreground"><Move size={12} /> Position</div>
@@ -266,6 +320,17 @@ function PropInspector({ propId, close }: { propId: string; close: React.ReactNo
           />
           <span className="text-[10px] text-foreground w-8 text-right">{prop.scale[0].toFixed(2)}x</span>
         </div>
+      </div>
+
+      {/* HA Entity placeholder */}
+      <div className="space-y-1 opacity-50">
+        <label className="text-muted-foreground text-[10px]">HA Entity (kommande)</label>
+        <Input
+          disabled
+          value={prop.haEntityId || ''}
+          className="h-7 text-xs bg-secondary/30 border-none"
+          placeholder="entity_id"
+        />
       </div>
 
       <button onClick={handleDelete}
