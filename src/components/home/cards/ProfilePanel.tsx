@@ -1,9 +1,11 @@
+import { useState } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { User, Palette, Monitor, Download, Upload, Trash2 } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { useRef } from 'react';
+import { isHostedSync } from '@/lib/apiClient';
 
 const themes = [
   { key: 'dark' as const, label: 'Mörkt' },
@@ -33,7 +35,6 @@ export default function ProfilePanel() {
 
   const handleExport = () => {
     const state = useAppStore.getState();
-    // Exclude functions from state
     const data: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(state)) {
       if (typeof v !== 'function') data[k] = v;
@@ -43,7 +44,7 @@ export default function ProfilePanel() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `smart-home-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `bjorq-backup-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -74,88 +75,97 @@ export default function ProfilePanel() {
   };
 
   return (
-    <div className="space-y-5">
-      {/* Name */}
-      <div className="glass-panel rounded-2xl p-4 space-y-2">
-        <div className="flex items-center gap-2 mb-1">
-          <User size={14} className="text-muted-foreground" />
-          <span className="text-xs font-semibold text-foreground">Profil</span>
+    <div className="space-y-4">
+      {/* Card 1: Profile + Theme + Accent + Background */}
+      <div className="glass-panel rounded-2xl p-4 space-y-4">
+        {/* Profile name */}
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <User size={14} className="text-muted-foreground" />
+            <span className="text-xs font-semibold text-foreground">Profil</span>
+          </div>
+          <Input
+            value={profile.name}
+            onChange={(e) => setProfile({ name: e.target.value })}
+            placeholder="Ditt namn"
+            className="h-8 text-sm"
+          />
         </div>
-        <Input
-          value={profile.name}
-          onChange={(e) => setProfile({ name: e.target.value })}
-          placeholder="Ditt namn"
-          className="h-8 text-sm"
-        />
+
+        {/* Theme */}
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <Monitor size={14} className="text-muted-foreground" />
+            <span className="text-xs font-semibold text-foreground">Tema</span>
+          </div>
+          <div className="flex gap-2">
+            {themes.map(({ key, label }) => (
+              <Button
+                key={key}
+                size="sm"
+                variant={profile.theme === key ? 'default' : 'outline'}
+                className="flex-1 h-8 text-xs"
+                onClick={() => setProfile({ theme: key })}
+              >
+                {label}
+              </Button>
+            ))}
+          </div>
+        </div>
+
+        {/* Accent color */}
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <Palette size={14} className="text-muted-foreground" />
+            <span className="text-xs font-semibold text-foreground">Accentfärg</span>
+          </div>
+          <div className="flex gap-2 justify-center">
+            {accents.map(({ color, label }) => (
+              <button
+                key={color}
+                title={label}
+                className={cn(
+                  'w-7 h-7 rounded-full border-2 transition-transform',
+                  profile.accentColor === color ? 'border-foreground scale-110' : 'border-transparent'
+                )}
+                style={{ backgroundColor: color }}
+                onClick={() => setProfile({ accentColor: color })}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Background */}
+        <div className="space-y-2">
+          <span className="text-xs font-semibold text-foreground">Bakgrund</span>
+          <div className="flex gap-2">
+            {backgrounds.map(({ key, label }) => (
+              <Button
+                key={key}
+                size="sm"
+                variant={profile.dashboardBg === key ? 'default' : 'outline'}
+                className="flex-1 h-8 text-xs"
+                onClick={() => setProfile({ dashboardBg: key })}
+              >
+                {label}
+              </Button>
+            ))}
+          </div>
+        </div>
       </div>
 
-      {/* Theme */}
-      <div className="glass-panel rounded-2xl p-4 space-y-3">
-        <div className="flex items-center gap-2">
-          <Monitor size={14} className="text-muted-foreground" />
-          <span className="text-xs font-semibold text-foreground">Tema</span>
-        </div>
-        <div className="flex gap-2">
-          {themes.map(({ key, label }) => (
-            <Button
-              key={key}
-              size="sm"
-              variant={profile.theme === key ? 'default' : 'outline'}
-              className="flex-1 h-8 text-xs"
-              onClick={() => setProfile({ theme: key })}
-            >
-              {label}
-            </Button>
-          ))}
-        </div>
-      </div>
-
-      {/* Accent color */}
-      <div className="glass-panel rounded-2xl p-4 space-y-3">
-        <div className="flex items-center gap-2">
-          <Palette size={14} className="text-muted-foreground" />
-          <span className="text-xs font-semibold text-foreground">Accentfärg</span>
-        </div>
-        <div className="flex gap-3 justify-center">
-          {accents.map(({ color, label }) => (
-            <button
-              key={color}
-              title={label}
-              className={cn(
-                'w-8 h-8 rounded-full border-2 transition-transform',
-                profile.accentColor === color ? 'border-foreground scale-110' : 'border-transparent'
-              )}
-              style={{ backgroundColor: color }}
-              onClick={() => setProfile({ accentColor: color })}
-            />
-          ))}
-        </div>
-      </div>
-
-      {/* Background */}
-      <div className="glass-panel rounded-2xl p-4 space-y-3">
-        <span className="text-xs font-semibold text-foreground">Bakgrund</span>
-        <div className="flex gap-2">
-          {backgrounds.map(({ key, label }) => (
-            <Button
-              key={key}
-              size="sm"
-              variant={profile.dashboardBg === key ? 'default' : 'outline'}
-              className="flex-1 h-8 text-xs"
-              onClick={() => setProfile({ dashboardBg: key })}
-            >
-              {label}
-            </Button>
-          ))}
-        </div>
-      </div>
-
-      {/* Data & Backup */}
+      {/* Card 2: Data & Backup */}
       <div className="glass-panel rounded-2xl p-4 space-y-3">
         <div className="flex items-center gap-2">
           <Download size={14} className="text-muted-foreground" />
           <span className="text-xs font-semibold text-foreground">Data & Backup</span>
         </div>
+
+        {isHostedSync() && (
+          <p className="text-[10px] text-muted-foreground">
+            Data sparas på serverns disk (data/-mapp). Exportera/importera för backup.
+          </p>
+        )}
 
         <Button size="sm" variant="outline" className="w-full h-8 text-xs gap-2" onClick={handleExport}>
           <Download size={14} /> Exportera backup

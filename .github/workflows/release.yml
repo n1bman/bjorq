@@ -1,0 +1,59 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Package Windows artifact
+        run: |
+          mkdir -p release-win
+          cp -r dist release-win/
+          cp -r server release-win/
+          cp start.bat release-win/
+          cp install.bat release-win/
+          cp README.md release-win/
+          mkdir -p release-win/data
+          touch release-win/data/.gitkeep
+          cd release-win && zip -r ../bjorq-dashboard-windows.zip . && cd ..
+
+      - name: Package Linux artifact
+        run: |
+          mkdir -p release-linux
+          cp -r dist release-linux/
+          cp -r server release-linux/
+          cp start.sh release-linux/
+          cp install.sh release-linux/
+          cp README.md release-linux/
+          chmod +x release-linux/start.sh release-linux/install.sh
+          mkdir -p release-linux/data
+          touch release-linux/data/.gitkeep
+          cd release-linux && zip -r ../bjorq-dashboard-linux.zip . && cd ..
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            bjorq-dashboard-windows.zip
+            bjorq-dashboard-linux.zip
+          generate_release_notes: true

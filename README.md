@@ -1,73 +1,128 @@
-# Welcome to your Lovable project
+# bjorQ Dashboard
 
-## Project info
+A 3D smart home dashboard that runs locally alongside Home Assistant. Control lights, climate, vacuums, cameras, and more from a beautiful tablet-friendly interface.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## Quick Start
 
-## How can I edit this code?
+### Requirements
 
-There are several ways of editing your application.
+- **Node.js 18+** (LTS recommended)
+- A modern browser (Chrome, Firefox, Edge)
 
-**Use Lovable**
+### Installation
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+1. Download the latest release for your platform from [Releases](../../releases)
+2. Extract the ZIP file
+3. Open a terminal in the extracted folder
 
-Changes made via Lovable will be committed automatically to this repo.
+**Windows:**
+```bat
+install.bat
+start.bat
+```
 
-**Use your preferred IDE**
+**Linux / Raspberry Pi:**
+```bash
+chmod +x install.sh start.sh
+./install.sh
+./start.sh
+```
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+4. Open `http://localhost:3000` in your browser
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### Custom Port
 
-Follow these steps:
+```bash
+PORT=8080 node server/server.js
+```
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+## Architecture
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+```
+bjorq-dashboard/
+├── dist/           # Frontend build (served by Express)
+├── server/         # Node.js Express host
+│   ├── server.js   # Entry point
+│   ├── api/        # REST API routes
+│   └── storage/    # Disk I/O helpers
+├── data/           # Persistent user data (auto-created)
+│   ├── config.json
+│   ├── profiles.json
+│   └── projects/
+└── start.sh/.bat   # Launch scripts
+```
 
-# Step 3: Install the necessary dependencies.
-npm i
+### Data Persistence
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+All data is stored on disk in the `data/` folder:
+
+- **config.json** — Global config + Home Assistant connection (token stored securely, never exposed to browser)
+- **profiles.json** — UI preferences, theme, performance settings
+- **projects/** — Building models, assets, scenes
+
+**Backup:** Copy the entire `data/` folder, or use the in-app export feature.
+
+### Home Assistant Integration
+
+1. Open Settings → Home Assistant in the dashboard
+2. Enter your HA URL (e.g., `http://homeassistant.local:8123`)
+3. Enter a long-lived access token
+
+The token is stored server-side only. All HA API calls are proxied through the server (`/api/ha/*`), so your token never touches the browser.
+
+### Remote Access
+
+The dashboard binds to `0.0.0.0`, making it accessible from any device on your network. For remote access outside your LAN:
+
+- Use the same reverse proxy / VPN setup you use for Home Assistant
+- Or configure HA Cloud / Nabu Casa
+
+## Autostart
+
+### Linux (systemd)
+
+```ini
+# /etc/systemd/system/bjorq-dashboard.service
+[Unit]
+Description=bjorQ Dashboard
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/path/to/bjorq-dashboard
+ExecStart=/usr/bin/node server/server.js
+Restart=always
+User=pi
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```bash
+sudo systemctl enable bjorq-dashboard
+sudo systemctl start bjorq-dashboard
+```
+
+### Windows (Task Scheduler)
+
+1. Open Task Scheduler → Create Basic Task
+2. Trigger: "When the computer starts"
+3. Action: Start a program → `node.exe` with arguments `server/server.js`
+4. Set "Start in" to your bjorQ folder
+
+## Development
+
+```bash
+npm install
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+The dev server runs on port 5173 with hot reload. The Node host is only needed for disk persistence and HA proxy features.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## Tech Stack
 
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+- React + TypeScript + Vite
+- Three.js / React Three Fiber
+- Tailwind CSS + shadcn/ui
+- Zustand (state management)
+- Express (production host)

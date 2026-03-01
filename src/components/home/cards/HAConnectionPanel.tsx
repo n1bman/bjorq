@@ -3,8 +3,10 @@ import { useAppStore } from '@/store/useAppStore';
 import { useHomeAssistant } from '@/hooks/useHomeAssistant';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Wifi, WifiOff, AlertCircle, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { isHostedSync, saveConfig } from '@/lib/apiClient';
 
 export default function HAConnectionPanel() {
   const status = useAppStore((s) => s.homeAssistant.status);
@@ -27,7 +29,15 @@ export default function HAConnectionPanel() {
   const cfg = statusConfig[status];
   const StatusIcon = cfg.icon;
 
-  const handleConnect = () => {
+  const handleConnect = async () => {
+    // In hosted mode, save HA config to server first
+    if (isHostedSync()) {
+      try {
+        await saveConfig({ ha: { baseUrl: localUrl, token: localToken } });
+      } catch (err) {
+        console.warn('[HA] Failed to save config to server:', err);
+      }
+    }
     connect(localUrl, localToken);
   };
 
@@ -44,6 +54,12 @@ export default function HAConnectionPanel() {
           {cfg.label}
         </div>
       </div>
+
+      {isHostedSync() && (
+        <p className="text-[10px] text-muted-foreground bg-secondary/30 rounded-lg p-2">
+          🔒 Token sparas säkert på servern — aldrig i webbläsaren.
+        </p>
+      )}
 
       {status === 'error' && (
         <div className="text-xs text-destructive bg-destructive/10 rounded-lg p-2 space-y-1">
@@ -102,17 +118,19 @@ export default function HAConnectionPanel() {
           {entities.length === 0 ? (
             <p className="text-xs text-muted-foreground">Hämtar entiteter...</p>
           ) : (
-            <div className="max-h-32 overflow-y-auto space-y-0.5">
-              {entities.slice(0, 30).map((e) => (
-                <div key={e.entityId} className="text-xs text-muted-foreground truncate flex justify-between">
-                  <span>{e.friendlyName || e.entityId}</span>
-                  <span className="text-[10px] opacity-60">{e.state}</span>
-                </div>
-              ))}
-              {entities.length > 30 && (
-                <p className="text-[10px] text-muted-foreground">...och {entities.length - 30} till</p>
-              )}
-            </div>
+            <ScrollArea className="max-h-48">
+              <div className="space-y-0.5 pr-3">
+                {entities.slice(0, 50).map((e) => (
+                  <div key={e.entityId} className="text-xs text-muted-foreground truncate flex justify-between">
+                    <span>{e.friendlyName || e.entityId}</span>
+                    <span className="text-[10px] opacity-60">{e.state}</span>
+                  </div>
+                ))}
+                {entities.length > 50 && (
+                  <p className="text-[10px] text-muted-foreground">...och {entities.length - 50} till</p>
+                )}
+              </div>
+            </ScrollArea>
           )}
         </div>
       )}

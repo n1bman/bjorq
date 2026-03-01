@@ -566,6 +566,7 @@ export interface StandbySettings {
 export type AppMode = 'home' | 'dashboard' | 'build' | 'standby';
 
 export interface AppState {
+  _hostedMode: boolean;
   appMode: AppMode;
   setAppMode: (mode: AppMode) => void;
 
