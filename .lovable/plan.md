@@ -1,49 +1,34 @@
 
 
-# Plan: Fix "Module failed to load" — Isolate Compilation Error
+## Sammanfattning av problemet
 
-## What we know
+Vi har bekräftat att:
+- Relativa importer (`./lib/utils`) fungerar
+- `@/`-alias-importer misslyckas i Lovable-miljön trots korrekt `vite.config.ts` och `tsconfig.app.json`
+- Det finns 254 `@/`-importer i 49 filer
 
-1. Vite returns **HTTP 500** for `/src/App.tsx` — this means a compilation error somewhere in App.tsx's import tree
-2. `main.tsx` loads fine (200), `index.css` loads fine (200) — the build pipeline (PostCSS, Tailwind, Vite) works
-3. All config files are restored (`vite.config.ts`, `tsconfig.json`, `postcss.config.js`, `tailwind.config.ts`)
-4. We cannot see the actual Vite error message in the 500 response body
-5. Code inspection of ~30 source files shows no obvious syntax errors or missing imports
+Att fortsätta felsöka alias-konfigurationen kostar fler credits utan garanti. Problemet verkar vara miljöspecifikt i Lovable's Vite-setup.
 
-## Root cause hypothesis
+## Plan: Konvertera alla `@/`-importer till relativa sökvägar
 
-One of the ~80 source files in App.tsx's deep import tree has a compilation error that Vite's esbuild transform cannot handle. Since we cannot see the actual error, we need to isolate it.
+**Steg 1**: Återställ `App.tsx` till den fullständiga versionen (med alla routes, providers, etc.) men med relativa importer istället för `@/`.
 
-## Strategy: Minimal App → Gradual Rebuild
+**Steg 2**: Gå igenom alla 49 filer som använder `@/`-importer och ersätt dem med korrekta relativa sökvägar (t.ex. `@/lib/utils` → `../../lib/utils` beroende på filens plats).
 
-### Step 1: Replace App.tsx with a minimal version
-Strip all imports temporarily. Render just a `<div>Hello</div>`. This confirms the build pipeline works.
+**Steg 3**: Behåll alias-konfigurationen i `vite.config.ts` och `tsconfig.app.json` (för framtida kompatibilitet), men använd den inte i importerna.
 
-### Step 2: Add back imports one group at a time
-Add imports in this order (each group = one test):
-1. UI components (toaster, sonner, tooltip)
-2. React Router + basic pages (NotFound)
-3. Store + hooks (useAppStore, useThemeEffect)
-4. Index page (which pulls in the entire app)
+## Tekniska detaljer
 
-### Step 3: Fix the failing import
-Once we identify which import group breaks the build, we drill down to the specific file and fix the compilation error.
+Filerna grupperade per katalog:
+- `src/components/ui/` (ca 35 filer) — mestadels `@/lib/utils`
+- `src/components/build/` (ca 10 filer) — `@/store`, `@/lib`, `@/components`
+- `src/components/home/` (ca 10 filer) — `@/store`, `@/hooks`, `@/components`
+- `src/pages/`, `src/hooks/`, `src/lib/` — diverse `@/`-importer
 
-### Safety net
-Keep the `index.html` fallback diagnostic and `main.tsx` try-catch from the previous changes.
+Varje fil får sin import-sökväg beräknad relativt sin egen position. Exempel:
+- `src/components/ui/button.tsx`: `@/lib/utils` → `../../lib/utils`
+- `src/components/build/BuildModeV2.tsx`: `@/store/useAppStore` → `../../store/useAppStore`
+- `src/pages/Index.tsx`: `@/components/home/HomeView` → `../components/home/HomeView`
 
-## Technical details
-
-The minimal App.tsx for Step 1:
-```tsx
-const App = () => (
-  <div style={{ color: 'white', padding: '2rem' }}>
-    <h1>HomeTwin — Build OK</h1>
-    <p>If you see this, the Vite build pipeline works.</p>
-  </div>
-);
-export default App;
-```
-
-If this renders, we know the issue is in the component tree, not in the config. Then we add imports back until we find the failing one. The fix will depend on what we find — likely a TypeScript/ESM issue in one of the 3D components or store files.
+Detta är en mekanisk omskrivning som inte ändrar funktionalitet.
 
