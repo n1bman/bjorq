@@ -31,7 +31,9 @@ jobs:
           cp -r dist release-win/
           cp -r server release-win/
           cp start.bat release-win/
+          cp start.sh release-win/
           cp install.bat release-win/
+          cp install.sh release-win/
           cp README.md release-win/
           mkdir -p release-win/data
           touch release-win/data/.gitkeep
@@ -42,7 +44,9 @@ jobs:
           mkdir -p release-linux
           cp -r dist release-linux/
           cp -r server release-linux/
+          cp start.bat release-linux/
           cp start.sh release-linux/
+          cp install.bat release-linux/
           cp install.sh release-linux/
           cp README.md release-linux/
           chmod +x release-linux/start.sh release-linux/install.sh
