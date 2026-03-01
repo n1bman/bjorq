@@ -1206,9 +1206,9 @@ export const useAppStore = create<AppState>()(
 // ── Hosted mode initializer ──
 // Called once on app boot to load state from server
 export async function initHostedMode() {
-  const { isHosted } = await import('@/lib/apiClient');
-  const hosted = await isHosted();
-  if (!hosted) return false;
+  const { resolveMode } = await import('@/lib/apiClient');
+  const mode = await resolveMode();
+  if (mode !== 'HOSTED') return false;
 
   try {
     const { config, profiles, projects, activeProjectId } = await fetchBootstrap();

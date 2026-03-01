@@ -1,34 +1,81 @@
 // ── API Client for hosted mode ──────────────────────────────────
-// When the app runs behind the Node host (server/server.js),
-// all reads/writes go through /api/* endpoints.
-// When not hosted, the app falls back to localStorage via Zustand persist.
+// Mode detection: HOSTED (server present) or DEV (Lovable preview / local dev)
 
-let _hostedResult: boolean | null = null;
-let _probePromise: Promise<boolean> | null = null;
+type AppMode = 'HOSTED' | 'DEV';
 
-export async function isHosted(): Promise<boolean> {
-  if (_hostedResult !== null) return _hostedResult;
-  if (_probePromise) return _probePromise;
+let _mode: AppMode | null = null;
+let _resolvePromise: Promise<AppMode> | null = null;
 
-  _probePromise = (async () => {
+/**
+ * Resolve the app mode. Runs once, caches result.
+ * - VITE_FORCE_DEV=1 → DEV (skip probe)
+ * - VITE_FORCE_HOSTED=1 → HOSTED (fail loudly if server unreachable)
+ * - Otherwise: probe GET /api/bootstrap with 1000ms timeout
+ */
+export async function resolveMode(): Promise<AppMode> {
+  if (_mode !== null) return _mode;
+  if (_resolvePromise) return _resolvePromise;
+
+  _resolvePromise = (async () => {
+    // Env overrides
+    if (import.meta.env.VITE_FORCE_DEV === '1') {
+      _mode = 'DEV';
+      console.log('[Mode] Forced DEV via env');
+      return _mode;
+    }
+
+    if (import.meta.env.VITE_FORCE_HOSTED === '1') {
+      // Must succeed
+      try {
+        const res = await fetch('/api/config', { signal: AbortSignal.timeout(2000) });
+        if (!res.ok) throw new Error(`Status ${res.status}`);
+        _mode = 'HOSTED';
+      } catch (err) {
+        console.error('[Mode] VITE_FORCE_HOSTED=1 but server unreachable:', err);
+        _mode = 'HOSTED'; // Still set hosted — will fail on API calls
+      }
+      console.log('[Mode] Forced HOSTED via env');
+      return _mode;
+    }
+
+    // Default: in Vite dev mode (Lovable preview), skip probe entirely → DEV
+    if (import.meta.env.DEV) {
+      _mode = 'DEV';
+      console.log('[Mode] DEV (Vite dev mode, no probe)');
+      return _mode;
+    }
+
+    // Production build: probe server
     try {
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 2000);
+      const timer = setTimeout(() => controller.abort(), 1000);
       const res = await fetch('/api/config', { signal: controller.signal });
       clearTimeout(timer);
-      _hostedResult = res.ok;
+      _mode = res.ok ? 'HOSTED' : 'DEV';
     } catch {
-      _hostedResult = false;
+      _mode = 'DEV';
     }
-    return _hostedResult;
+    console.log('[Mode] Resolved:', _mode);
+    return _mode;
   })();
 
-  return _probePromise;
+  return _resolvePromise;
 }
 
-// Sync version — only valid after probe completes
+/** Sync mode check — only valid after resolveMode() completes */
 export function isHostedSync(): boolean {
-  return _hostedResult === true;
+  return _mode === 'HOSTED';
+}
+
+/** Legacy alias */
+export async function isHosted(): Promise<boolean> {
+  const mode = await resolveMode();
+  return mode === 'HOSTED';
+}
+
+/** Get current mode string (sync, returns null before resolution) */
+export function getMode(): AppMode | null {
+  return _mode;
 }
 
 // ── Bootstrap (single fetch for all data) ──
