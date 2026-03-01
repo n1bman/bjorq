@@ -54,8 +54,8 @@ function StandbyStaticCamera() {
   useFrame(({ camera }) => {
     const pos = cameraView === 'custom' && customPos ? customPos : standbyCameraPositions[cameraView] || standbyCameraPositions.standard;
     const target = cameraView === 'custom' && customTarget ? customTarget : standbyCameraTargets[cameraView] || standbyCameraTargets.standard;
-    camera.position.set(pos[0], pos[1], pos[2]);
-    camera.lookAt(target[0], target[1], target[2]);
+    if (pos) camera.position.set(pos[0], pos[1], pos[2]);
+    if (target) camera.lookAt(target[0], target[1], target[2]);
   });
 
   return null;
