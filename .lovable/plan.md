@@ -1,87 +1,51 @@
 
 
-## Plan: App Polish — Performance Feedback, Branding, Kiosk Mode
+## Plan: Performance Dashboard, Transparency Fix, Demo Models, v0.1.8
 
-### FAS 1 — Performance Settings Feedback + Save/Backup
+### 1. Performance Status Dashboard in PerformanceSettings
 
-**Problem**: Performance settings (shadows, quality, DPR) are applied via Zustand state and consumed by `Scene3D.tsx` Canvas props (`shadows`, `dpr`, `gl.antialias`) and `SceneContent` (shadow map size, point light). These ARE reactive — but the Canvas `shadows`, `dpr`, and `gl` props only take effect on mount, not on re-render. The Canvas needs to remount when quality/shadows change.
+Add a visual "Performance Impact" summary to `src/components/home/cards/PerformanceSettings.tsx`:
 
-**Fix `src/components/Scene3D.tsx`**:
-- Add a `key` prop to `<Canvas>` derived from `shadows + quality` so it remounts when these change.
+- Show a computed "performance score" (0-100) based on current settings:
+  - Quality: low=30, medium=60, high=100
+  - Shadows: +25 if on
+  - Postprocessing: +15 if on
+  - TabletMode: override to 20
+- Display as a colored progress bar (green/yellow/red) with label like "Lätt", "Balanserad", "Krävande"
+- Show estimated resource usage: shadow map resolution, DPR value, effects count
+- Add a "Rekommendation" section: if score > 80 and device has low GPU (detect via `navigator.hardwareConcurrency` or `gl.getParameter` for renderer info), suggest switching to Medium or Low
+- Show a device capability hint based on `navigator.hardwareConcurrency` (cores) and screen resolution
 
-**Fix `src/components/home/cards/PerformanceSettings.tsx`**:
-- Add a toast notification ("Ändringar sparade") when any setting changes via `sonner` toast.
-- Add note text: "3D-scenen laddas om automatiskt" under the card title.
+### 2. Fix Transparent Textures (Windows/Glass)
 
-**Fix `src/components/home/cards/ProfilePanel.tsx`**:
-- Add a "Spara & Backup" button in the Data & Backup card.
-- On click: trigger the existing export logic + show toast "Backup sparad".
-- In hosted mode: POST to a new endpoint `POST /api/backup` that writes to `data/backups/bjorq-backup-{timestamp}.json`.
-- Keep existing manual "Exportera backup" button as-is.
+**Bug in `src/components/build/ImportedHome3D.tsx`** lines 126-132:
 
-**New file `server/api/backups.js`**:
-- `POST /api/backup` — reads current state from profiles + projects, writes timestamped JSON to `data/backups/`.
+When `opacity >= 1` (default), the code forcefully sets `transparent = false` on ALL materials, destroying inherent transparency from the GLTF model (glass, windows, etc.).
 
-### FAS 2 — Branding: Title, Favicon, PWA Manifest
+**Fix**: Track each material's original `transparent` state before modifying. When opacity is 1, only reset materials that were NOT originally transparent.
 
-**`index.html`**:
-- Change `<title>` to "BJORQ Dashboard".
-- Update all `og:title`, `og:description`, `twitter:site` meta tags.
-- Add `<link rel="manifest" href="/manifest.json">`.
-- Add `<meta name="theme-color" content="#0a0a0f">`.
-- Change favicon link to `/favicon.png` (the logo).
+- On initial load (line 71-83): store `child.material._originalTransparent = child.material.transparent` before any modifications
+- In the re-apply effect (line 127): check `child.material._originalTransparent` — if it was originally transparent, leave it alone when opacity is 1
 
-**Copy logo files to `public/`**:
-- Copy `borq-logo6.png` → `public/favicon.png` (icon mark).
-- Copy `borq-logo7.png` → `public/logo-text.png` (wordmark, for PWA splash).
+### 3. Bundle Demo Models as Examples
 
-**New `public/manifest.json`**:
-```json
-{
-  "name": "BJORQ Dashboard",
-  "short_name": "BJORQ",
-  "start_url": "/",
-  "display": "standalone",
-  "background_color": "#0a0a0f",
-  "theme_color": "#f59e0b",
-  "icons": [
-    { "src": "/favicon.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
-  ]
-}
-```
+Add two built-in demo assets so new users have something to start with. Since we can't ship GLB files in the Lovable preview, we'll use a different approach:
 
-### FAS 3 — Display / Kiosk Mode Settings
+- Create `src/lib/demoData.ts` with a function `loadDemoProject()` that sets up:
+  - A small procedural house layout (walls + rooms on floor-1)
+  - A couple of demo device markers (light, sensor)
+- Add a "Ladda demo-projekt" button in the home/settings area (e.g. in ProfilePanel under Data & Backup)
+- The button populates the store with the demo layout so users can explore the UI immediately
+- Note: The actual 3D models (house GLB + furniture GLB) that the user has imported are stored in localStorage/server state — we cannot bundle those. Instead, we create a procedural demo with walls/rooms that demonstrates the build system.
 
-**New file `src/components/home/cards/DisplaySettings.tsx`**:
-A settings card with three sections:
+### 4. Version Bump to 0.1.8
 
-1. **App Mode** — info text explaining `--app` flag for Chrome/Edge with copyable command examples.
-2. **Browser Fullscreen** — "Gå Fullscreen" / "Lämna Fullscreen" buttons using `document.fullscreenElement` API. Toggle for "auto-fullscreen vid start" (stored in profile, attempted on first user gesture).
-3. **OS Kiosk** — info-only section with instructions for Windows kiosk, Linux `--kiosk`, and how to exit (ESC, Alt+F4, Ctrl+Alt+Del).
+- `package.json`: version `"0.1.5"` → `"0.1.8"`
 
-Add "Admin unlock" hint: long-press 5s on the top nav bar reveals exit tips overlay.
-
-**`src/components/home/DashboardGrid.tsx`**:
-- Add `DisplaySettings` to the Settings category, in a new "Skärm" section between System and Anslutning.
-
-**`src/store/types.ts`** + **`src/store/useAppStore.ts`**:
-- Add `autoFullscreen: boolean` to profile (default false).
-
-**`src/components/home/HomeNav.tsx`** or **`src/pages/Index.tsx`**:
-- Add long-press (5s) handler on nav bar that shows a small overlay with "Lämna fullscreen" / kiosk exit tips.
-
-### Files Modified/Created (approx 10)
-1. `src/components/Scene3D.tsx` — add key for Canvas remount
-2. `src/components/home/cards/PerformanceSettings.tsx` — toast feedback
-3. `src/components/home/cards/ProfilePanel.tsx` — save & backup button
-4. `server/api/backups.js` — new backup endpoint
-5. `server/server.js` — mount backup route
-6. `index.html` — branding, manifest link, favicon
-7. `public/manifest.json` — new PWA manifest
-8. `public/favicon.png` — copied from logo
-9. `src/components/home/cards/DisplaySettings.tsx` — new kiosk/display card
-10. `src/components/home/DashboardGrid.tsx` — add DisplaySettings to settings
-11. `src/store/types.ts` — add autoFullscreen
-12. `src/store/useAppStore.ts` — add autoFullscreen default + setter
-13. `src/components/home/HomeNav.tsx` — long-press admin unlock
+### Files Modified/Created (4-5)
+1. `src/components/home/cards/PerformanceSettings.tsx` — performance score dashboard + device recommendation
+2. `src/components/build/ImportedHome3D.tsx` — fix transparency preservation for glass/windows
+3. `src/lib/demoData.ts` — new: demo project layout data + loader function
+4. `src/components/home/cards/ProfilePanel.tsx` — add "Ladda demo-projekt" button
+5. `package.json` — version bump to 0.1.8
 
