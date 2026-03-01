@@ -1,7 +1,7 @@
-// Force Vite restart v2
+// Force Vite restart v3
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
-import path from "path";
+import { fileURLToPath, URL } from "node:url";
 import { componentTagger } from "lovable-tagger";
 
 export default defineConfig(({ mode }) => ({
@@ -15,7 +15,7 @@ export default defineConfig(({ mode }) => ({
   ].filter(Boolean),
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"),
+      "@": fileURLToPath(new URL("./src", import.meta.url)),
     },
     dedupe: ["react", "react-dom", "react/jsx-runtime"],
   },
