@@ -1,6 +1,7 @@
 import { useAppStore } from '../../../store/useAppStore';
 import { Gauge, Monitor, Sun, Sparkles } from 'lucide-react';
 import { Switch } from '../../ui/switch';
+import OptionButton from '../../ui/OptionButton';
 import type { QualityLevel } from '../../../store/types';
 
 const qualityOptions: { value: QualityLevel; label: string; desc: string }[] = [
@@ -22,7 +23,7 @@ export default function PerformanceSettings() {
   };
 
   return (
-    <div className="glass-panel rounded-2xl p-5 space-y-4">
+    <div className="glass-panel rounded-2xl p-[var(--space-panel)] space-y-4">
       <div className="flex items-center gap-2">
         <Gauge size={18} className="text-primary" />
         <h3 className="text-sm font-semibold text-foreground">Prestanda</h3>
@@ -45,18 +46,13 @@ export default function PerformanceSettings() {
         <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Kvalitet</span>
         <div className="flex gap-2">
           {qualityOptions.map((q) => (
-            <button
+            <OptionButton
               key={q.value}
+              active={perf.quality === q.value}
               onClick={() => setPerformance({ quality: q.value, tabletMode: false })}
-              className={`flex-1 rounded-lg px-2 py-2 text-center text-[11px] border transition-all ${
-                perf.quality === q.value
-                  ? 'border-primary bg-primary/10 text-primary font-semibold'
-                  : 'border-border text-muted-foreground hover:border-primary/30'
-              }`}
-            >
-              <span className="block font-medium">{q.label}</span>
-              <span className="block text-[9px] opacity-70">{q.desc}</span>
-            </button>
+              label={q.label}
+              description={q.desc}
+            />
           ))}
         </div>
       </div>
