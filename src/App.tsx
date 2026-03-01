@@ -1,14 +1,14 @@
-// Diagnostic Step 2h: Test clsx alone
+// Diagnostic Step 2i: Test tailwind-merge after reinstall
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
 
 const App = () => (
   <BrowserRouter>
     <Routes>
       <Route path="/" element={
-        <div className={clsx("p-8")} style={{ color: 'white', fontFamily: 'system-ui' }}>
-          <h1>HomeTwin — Step 2h ✅</h1>
-          <p>clsx only</p>
+        <div className={twMerge("p-8 text-white font-sans")}>
+          <h1>HomeTwin — Step 2i ✅</h1>
+          <p>tailwind-merge reinstalled</p>
         </div>
       } />
     </Routes>
