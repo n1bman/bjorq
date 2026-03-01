@@ -26,6 +26,7 @@ function SceneContent() {
   const sunAzimuth = useAppStore((s) => s.environment.sunAzimuth);
   const sunElevation = useAppStore((s) => s.environment.sunElevation);
   const weatherCondition = useAppStore((s) => s.environment.weather.condition);
+  const perf = useAppStore((s) => s.performance);
 
   // Calculate sun position from azimuth and elevation
   const sunPos = useMemo(() => {
@@ -44,6 +45,9 @@ function SceneContent() {
   const ambientIntensity = isNight ? 0.1 : isTwilight ? 0.25 : (weatherCondition === 'cloudy' || weatherCondition === 'rain' ? 0.5 : 0.35);
   const ambientColor = isNight ? '#1a1a3e' : isTwilight ? '#ff9966' : '#b8c4d4';
   const sunIntensity = isNight ? 0 : (weatherCondition === 'cloudy' ? 0.4 : weatherCondition === 'rain' ? 0.2 : weatherCondition === 'snow' ? 0.3 : 1.2);
+
+  const enableShadows = perf.shadows && !isNight;
+  const shadowMapSize = perf.quality === 'low' ? 512 : perf.quality === 'medium' ? 1024 : 2048;
 
   const setWallDrawing = useAppStore((s) => s.setWallDrawing);
   const addWall = useAppStore((s) => s.addWall);
@@ -149,11 +153,11 @@ function SceneContent() {
   return (
     <>
       <ambientLight intensity={ambientIntensity} color={ambientColor} />
-      <directionalLight position={sunPos} intensity={sunIntensity} color="#ffd699" castShadow
-        shadow-mapSize-width={2048} shadow-mapSize-height={2048}
+      <directionalLight position={sunPos} intensity={sunIntensity} color="#ffd699" castShadow={enableShadows}
+        shadow-mapSize-width={shadowMapSize} shadow-mapSize-height={shadowMapSize}
         shadow-camera-far={50} shadow-camera-left={-20} shadow-camera-right={20}
         shadow-camera-top={20} shadow-camera-bottom={-20} />
-      {!isNight && <pointLight position={[0, 8, 0]} intensity={0.15} color="#4a9eff" />}
+      {!isNight && perf.quality !== 'low' && <pointLight position={[0, 8, 0]} intensity={0.15} color="#4a9eff" />}
 
       <GroundPlane onPointerDown={handleGroundPointerDown} onPointerMove={handleGroundPointerMove} />
 
@@ -229,13 +233,18 @@ export default function BuildScene3D() {
     }
   }, [activeTool, wallDrawing, activeFloorId, activeFloor, pushUndo, addWall, setWallDrawing]);
 
+  const perfShadows = useAppStore((s) => s.performance.shadows);
+  const perfQuality = useAppStore((s) => s.performance.quality);
+  const dpr = perfQuality === 'low' ? 1 : perfQuality === 'medium' ? 1.5 : undefined;
+
   return (
     <div className="w-full h-full" onDoubleClick={handleDoubleClick}>
       <Canvas
-        shadows
+        shadows={perfShadows}
         camera={{ position: [12, 12, 12], fov: 45 }}
         style={{ background: 'transparent' }}
-        gl={{ antialias: true, alpha: true }}
+        gl={{ antialias: perfQuality !== 'low', alpha: true }}
+        dpr={dpr}
       >
         <Suspense fallback={null}>
           <SceneContent />

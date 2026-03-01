@@ -213,6 +213,7 @@ export interface ImportedHomeSettings {
   modelStats?: ModelStats;
   originalSize?: number; // bytes — size of original upload (ZIP/folder)
   optimizedSize?: number; // bytes — size of optimized GLB
+  importedOpacity?: number; // 0.0–1.0, default 1.0. When < 1, model becomes transparent for sunlight
 }
 
 export interface HomeGeometryState {
