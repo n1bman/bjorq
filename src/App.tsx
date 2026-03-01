@@ -1,21 +1,18 @@
-// Diagnostic Step 2f: shadcn tooltip wrapper with cn
+// Diagnostic Step 2g: Just cn import test
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { TooltipProvider } from "@/components/ui/tooltip";
 
 const App = () => (
-  <TooltipProvider>
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={
-          <div className={cn("text-white p-8 font-sans")}>
-            <h1>HomeTwin — Step 2f ✅</h1>
-            <p>shadcn TooltipProvider + cn()</p>
-          </div>
-        } />
-      </Routes>
-    </BrowserRouter>
-  </TooltipProvider>
+  <BrowserRouter>
+    <Routes>
+      <Route path="/" element={
+        <div className={cn("p-8 font-sans")} style={{ color: 'white' }}>
+          <h1>HomeTwin — Step 2g ✅</h1>
+          <p>cn() only, no Radix</p>
+        </div>
+      } />
+    </Routes>
+  </BrowserRouter>
 );
 
 export default App;
