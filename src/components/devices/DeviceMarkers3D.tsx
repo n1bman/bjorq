@@ -1250,13 +1250,15 @@ export default function DeviceMarkers3D({ buildMode }: DeviceMarkers3DProps) {
       {markers.map((marker) => {
         const isSelected = buildMode && selectedId === marker.id && selectedType === 'device';
 
-        // When hiding visuals, only render light pointLights
+        // When hiding visuals, render invisible click targets + light sources
         if (hideVisuals) {
           if (marker.kind === 'light') {
-            return <LightMarkerLightOnly key={marker.id} position={marker.position} id={marker.id} />;
+            return <LightMarkerLightOnly key={marker.id} position={marker.position} id={marker.id} onSelect={() => handleSelect(marker.id)} />;
           }
-          // Skip all other markers
-          return null;
+          // Invisible click sphere for all other marker types
+          return (
+            <InvisibleClickTarget key={marker.id} position={marker.position} onSelect={() => handleSelect(marker.id)} />
+          );
         }
 
         // Use special renderer for media_screen
@@ -1318,8 +1320,23 @@ export default function DeviceMarkers3D({ buildMode }: DeviceMarkers3DProps) {
   );
 }
 
-/** Light-only marker: renders just the light source without any visible mesh */
-function LightMarkerLightOnly({ position, id }: { position: [number, number, number]; id: string }) {
+/** Invisible click target for hidden device markers — opacity 0, but still raycastable */
+function InvisibleClickTarget({ position, onSelect }: { position: [number, number, number]; onSelect: () => void }) {
+  const handleClick = useCallback((e: ThreeEvent<PointerEvent>) => {
+    e.stopPropagation();
+    onSelect();
+  }, [onSelect]);
+
+  return (
+    <mesh position={position} onClick={handleClick}>
+      <sphereGeometry args={[0.3, 8, 8]} />
+      <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+    </mesh>
+  );
+}
+
+/** Light-only marker: renders just the light source without any visible mesh + invisible click target */
+function LightMarkerLightOnly({ position, id, onSelect }: { position: [number, number, number]; id: string; onSelect?: () => void }) {
   const state = useAppStore((s) => s.devices.deviceStates[id]);
   const marker = useAppStore((s) => s.devices.markers.find((m) => m.id === id));
   const lightData = state?.kind === 'light' ? state.data : null;
@@ -1349,6 +1366,11 @@ function LightMarkerLightOnly({ position, id }: { position: [number, number, num
     }
   });
 
+  const handleClick = useCallback((e: ThreeEvent<PointerEvent>) => {
+    e.stopPropagation();
+    if (onSelect) onSelect();
+  }, [onSelect]);
+
   return (
     <group position={position} rotation={rot as [number, number, number]}>
       {(lightType === 'ceiling' || lightType === 'strip') && (
@@ -1369,6 +1391,11 @@ function LightMarkerLightOnly({ position, id }: { position: [number, number, num
           <object3D ref={spotTargetRef} position={lightType === 'spot' ? [0, -3, 0] : [0, -1, 1]} />
         </>
       )}
+      {/* Invisible click sphere for toggling lights when hidden */}
+      <mesh onClick={handleClick}>
+        <sphereGeometry args={[0.3, 8, 8]} />
+        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+      </mesh>
     </group>
   );
 }
