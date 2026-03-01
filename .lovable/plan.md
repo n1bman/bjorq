@@ -1,17 +1,21 @@
 
 
-## Problem
+## Förebyggande plan
 
-The "Module failed to load" error persists because **4 files still have `@/` imports** that were missed in the previous bulk conversion. The session replay confirms the error: `Failed to resolve import "@/components/ui/button" from "src/components/ui/calendar.tsx"`.
+### 1. Kodkonvention: Använd alltid relativa importer
+Alla nya filer ska använda relativa importer (`../`, `./`) istället för `@/`-alias. Alias-konfigurationen kan finnas kvar i tsconfig/vite för kompatibilitet, men ska inte användas i importerna.
 
-## Fix — 4 remaining `@/` imports
+### 2. Lint-regel (valfri framtida förbättring)
+Lägg till en ESLint-regel som varnar vid `@/`-importer, t.ex. via `eslint-plugin-no-restricted-imports`. Detta fångar problemet innan det når produktion.
 
-| File | Current import | Fix |
-|---|---|---|
-| `src/components/ui/calendar.tsx:6` | `@/components/ui/button` | `./button` |
-| `src/components/ui/carousel.tsx:6` | `@/components/ui/button` | `./button` |
-| `src/components/ui/skeleton.tsx:1` | `@/lib/utils` | `../../lib/utils` |
-| `src/components/ui/resizable.tsx:4` | `@/lib/utils` | `../../lib/utils` |
+### 3. Uppdatera .lovable/plan.md
+Dokumentera beslutet att använda relativa importer i projektets plan-fil så att AI:n och framtida utvecklare följer samma konvention.
 
-That is all. No rollback needed — the app should load once these 4 lines are fixed.
+### 4. Verifiera devmiljön
+Appen laddar nu korrekt. Nästa steg är att testa alla vyer (Hem, Kontrollpanel, Bygge/3D) för att säkerställa att inga andra problem uppstått under felsökningen.
+
+### Tekniska detaljer
+- **Filer ändrade:** ~80 filer, ~254 importrader
+- **Typ av ändring:** Rent mekanisk omskrivning, ingen funktionalitet påverkad
+- **Konfiguration:** `vite.config.ts` och `tsconfig.app.json` behåller `@`-alias för bakåtkompatibilitet men det används inte
 
