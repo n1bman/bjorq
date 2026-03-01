@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useAppStore } from '../../store/useAppStore';
 import Scene3D from '../Scene3D';
 import HomeNav from './HomeNav';
@@ -8,19 +9,37 @@ import EnergyWidget from './cards/EnergyWidget';
 import TemperatureWidget from './cards/TemperatureWidget';
 import DeviceControlCard from './cards/DeviceControlCard';
 import { useWeatherSync } from '../../hooks/useWeatherSync';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, EyeClosed, Lightbulb, Thermometer, Wind, Camera, Power, Tv, Fan, Shield, Droplets, X } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { Switch } from '../ui/switch';
+import type { DeviceKind } from '../../store/types';
 
 const TOGGLEABLE_KINDS = new Set(['light', 'switch', 'climate', 'vacuum', 'media_screen', 'power-outlet', 'camera', 'fridge', 'oven', 'washer']);
+
+const KIND_ICONS: Partial<Record<DeviceKind, typeof Lightbulb>> = {
+  light: Lightbulb,
+  sensor: Thermometer,
+  climate: Wind,
+  camera: Camera,
+  switch: Power,
+  'power-outlet': Power,
+  'media_screen': Tv,
+  fan: Fan,
+  alarm: Shield,
+  humidifier: Droplets,
+};
 
 export default function HomeView() {
   const visibleWidgets = useAppStore((s) => s.homeView.visibleWidgets);
   const homeScreenDevices = useAppStore((s) => s.homeView.homeScreenDevices ?? []);
   const markers = useAppStore((s) => s.devices.markers);
-  const showDeviceMarkers = useAppStore((s) => s.homeView.showDeviceMarkers ?? true);
-  const toggleShowDeviceMarkers = useAppStore((s) => s.toggleShowDeviceMarkers);
+  const hiddenMarkerIds = useAppStore((s) => s.homeView.hiddenMarkerIds ?? []);
+  const toggleMarkerVisibility = useAppStore((s) => s.toggleMarkerVisibility);
+  const setAllMarkersVisible = useAppStore((s) => s.setAllMarkersVisible);
+  const hideAllMarkers = useAppStore((s) => s.hideAllMarkers);
   const toggleDeviceState = useAppStore((s) => s.toggleDeviceState);
   const deviceStates = useAppStore((s) => s.devices.deviceStates);
+  const [pickerOpen, setPickerOpen] = useState(false);
   useWeatherSync();
 
   const selectedMarkers = markers.filter((m) => homeScreenDevices.includes(m.id));
@@ -32,6 +51,9 @@ export default function HomeView() {
     if (state.kind === 'door-lock') return !(state.data as any).locked;
     return true;
   };
+
+  const hiddenCount = hiddenMarkerIds.length;
+  const allHidden = markers.length > 0 && hiddenCount === markers.length;
 
   return (
     <div className="fixed inset-0 bg-background">
@@ -74,14 +96,76 @@ export default function HomeView() {
         </div>
       )}
 
-      {/* Toggle device markers visibility - positioned above camera FAB */}
-      <button
-        onClick={toggleShowDeviceMarkers}
-        className="fixed bottom-36 right-4 z-50 pointer-events-auto glass-panel rounded-full w-12 h-12 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
-        title={showDeviceMarkers ? 'Dölj enheter' : 'Visa enheter'}
-      >
-        {showDeviceMarkers ? <Eye size={18} /> : <EyeOff size={18} />}
-      </button>
+      {/* Device visibility picker - bottom left to avoid camera FAB overlap */}
+      {markers.length > 0 && (
+        <div className="fixed bottom-36 left-4 z-50 pointer-events-auto">
+          <button
+            onClick={() => setPickerOpen(!pickerOpen)}
+            className={cn(
+              'glass-panel rounded-full w-12 h-12 flex items-center justify-center transition-colors relative',
+              allHidden ? 'text-muted-foreground' : 'text-foreground'
+            )}
+            title={pickerOpen ? 'Stäng' : 'Visa/dölj enheter'}
+          >
+            {allHidden ? <EyeOff size={18} /> : <Eye size={18} />}
+            {hiddenCount > 0 && !allHidden && (
+              <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                {hiddenCount}
+              </span>
+            )}
+          </button>
+
+          {/* Picker popup */}
+          {pickerOpen && (
+            <div className="absolute bottom-14 left-0 glass-panel rounded-2xl p-3 w-72 max-h-80 overflow-y-auto space-y-2 shadow-xl">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-semibold text-foreground">Enhetsmarkörer</span>
+                <button onClick={() => setPickerOpen(false)} className="text-muted-foreground hover:text-foreground">
+                  <X size={14} />
+                </button>
+              </div>
+
+              {/* Bulk actions */}
+              <div className="flex gap-2 mb-2">
+                <button
+                  onClick={setAllMarkersVisible}
+                  className="flex-1 text-[11px] px-2 py-1.5 rounded-lg bg-secondary/40 text-foreground hover:bg-secondary/60 transition-colors"
+                >
+                  Visa alla
+                </button>
+                <button
+                  onClick={hideAllMarkers}
+                  className="flex-1 text-[11px] px-2 py-1.5 rounded-lg bg-secondary/40 text-muted-foreground hover:bg-secondary/60 transition-colors"
+                >
+                  Dölj alla
+                </button>
+              </div>
+
+              {/* Device list */}
+              {markers.map((m) => {
+                const isHidden = hiddenMarkerIds.includes(m.id);
+                const Icon = KIND_ICONS[m.kind] || Power;
+                return (
+                  <div
+                    key={m.id}
+                    className="flex items-center gap-3 px-2 py-1.5 rounded-lg hover:bg-secondary/20 transition-colors"
+                  >
+                    <Icon size={14} className={cn('shrink-0', isHidden ? 'text-muted-foreground/50' : 'text-primary')} />
+                    <span className={cn('text-xs flex-1 truncate', isHidden && 'text-muted-foreground/50')}>
+                      {m.name || m.kind}
+                    </span>
+                    <Switch
+                      checked={!isHidden}
+                      onCheckedChange={() => toggleMarkerVisibility(m.id)}
+                      className="scale-75"
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       <CameraFab />
       <HomeNav />

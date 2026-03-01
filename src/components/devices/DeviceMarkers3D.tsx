@@ -1163,6 +1163,7 @@ export default function DeviceMarkers3D({ buildMode }: DeviceMarkers3DProps) {
   const markers = useAppStore((s) => s.devices.markers);
   const floors = useAppStore((s) => s.layout.floors);
   const showDeviceMarkers = useAppStore((s) => s.homeView.showDeviceMarkers ?? true);
+  const hiddenMarkerIds = useAppStore((s) => s.homeView.hiddenMarkerIds ?? []);
   const setSelection = useAppStore((s) => s.setSelection);
   const updateDevice = useAppStore((s) => s.updateDevice);
   const toggleDeviceState = useAppStore((s) => s.toggleDeviceState);
@@ -1250,8 +1251,11 @@ export default function DeviceMarkers3D({ buildMode }: DeviceMarkers3DProps) {
       {markers.map((marker) => {
         const isSelected = buildMode && selectedId === marker.id && selectedType === 'device';
 
-        // When hiding visuals, render invisible click targets + light sources
-        if (hideVisuals) {
+        // Per-device hidden check (only in non-build mode)
+        const isMarkerHidden = !buildMode && hiddenMarkerIds.includes(marker.id);
+
+        // When hiding visuals globally or per-device, render invisible click targets + light sources
+        if (hideVisuals || isMarkerHidden) {
           if (marker.kind === 'light') {
             return <LightMarkerLightOnly key={marker.id} position={marker.position} id={marker.id} onSelect={() => handleSelect(marker.id)} />;
           }
