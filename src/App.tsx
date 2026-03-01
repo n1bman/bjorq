@@ -1,35 +1,9 @@
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
-import NotFound from "./pages/NotFound";
-import { useThemeEffect } from "./hooks/useThemeEffect";
-
-const queryClient = new QueryClient();
-
-function ThemeProvider({ children }: { children: React.ReactNode }) {
-  useThemeEffect();
-  return <>{children}</>;
-}
-
+// Diagnostic Step 1: Minimal App to isolate Vite 500 error
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <ThemeProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </ThemeProvider>
-    </TooltipProvider>
-  </QueryClientProvider>
+  <div style={{ color: 'white', padding: '2rem', fontFamily: 'system-ui' }}>
+    <h1>HomeTwin — Build OK ✅</h1>
+    <p>If you see this, the Vite build pipeline works.</p>
+  </div>
 );
 
 export default App;
