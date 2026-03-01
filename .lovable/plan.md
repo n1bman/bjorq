@@ -1,145 +1,67 @@
 
 
-# Plan: bjorQ Dashboard — Disk-first + Node Host + Settings UI + GitHub Release
+# Plan: Fix Build Errors + 3-Mode Architecture (HOSTED / DEV / DEV-HOSTED)
 
-## Overview
+## Build Error Fixes (2 issues)
 
-Add an Express server that owns all persistent data on disk (`data/`). Frontend detects hosted mode and routes all reads/writes through `/api/*`, disabling localStorage persistence. Settings UI gets a compact 2-column layout. GitHub Actions packages releases for Windows/Linux.
+### 1. CSS `@import` order — `src/index.css`
+Move the Google Fonts `@import` to line 1, before the `@tailwind` directives. CSS spec requires `@import` before all other statements.
 
-**Lovable limitation**: Server files are created as source but only run when cloned locally.
+### 2. Toaster import — cascading failure
+The toaster resolve error is caused by the CSS build failing first. Fixing the CSS fixes both.
 
-## Architecture
+---
 
-```text
-Browser (dist/)
-  ├─ isHosted() probe → GET /api/config
-  ├─ Hosted: load/save via /api/*, no localStorage
-  └─ Not hosted: localStorage fallback + warning banner
+## 3-Mode Architecture
 
-Express (server/server.js, port 3000, 0.0.0.0)
-  ├─ Static: dist/ + SPA fallback
-  ├─ /api/config, /api/profiles, /api/projects, /api/projects/:id/assets
-  ├─ /api/ha/* → proxy to HA (token server-side only)
-  └─ /projects/:id/assets/:type/:assetId/:variant.glb (static)
+### Mode Detection — `src/lib/apiClient.ts`
 
-data/
-  ├─ config.json, profiles.json
-  └─ projects/<id>/project.json + assets/...
+Add a mode resolver that runs once at startup:
+
+```typescript
+type AppMode = 'HOSTED' | 'DEV';
+
+// Resolution logic:
+// 1. If import.meta.env.VITE_FORCE_DEV === '1' → DEV (skip probe)
+// 2. If import.meta.env.VITE_FORCE_HOSTED === '1' → HOSTED (fail loudly if probe fails)
+// 3. Probe GET /api/bootstrap with 1000ms timeout
+//    - OK → HOSTED
+//    - Fail → DEV
 ```
 
-## File Changes
+Rename existing `isHosted()` → use the new mode resolver. `isHostedSync()` returns `mode === 'HOSTED'`.
 
-### New: Server (7 files)
+### DEV Mode Behavior
 
-**`server/package.json`** — Express, multer, http-proxy-middleware deps
+- **No `/api/*` calls** — all state from Zustand + localStorage (current behavior)
+- **Direct HA WebSocket** — `useHomeAssistant` connects with `wsUrl` + `token` from store (current behavior)
+- **Banner**: "DEV — HA token lagrad lokalt (ej rekommenderat för produktion)"
 
-**`server/server.js`** — Express entry: static serve `dist/`, mount API routes, serve asset GLBs from `data/`, auto-create `data/` structure on boot, bind `0.0.0.0:${PORT||3000}`
+### HOSTED Mode Behavior
 
-**`server/storage/paths.js`** — Path helpers: `dataDir()`, `configPath()`, `profilesPath()`, `projectDir(id)`, `assetDir(projectId, type, assetId)`
+- **Load via `/api/bootstrap`** — config, profiles, projects (current `initHostedMode()`)
+- **Disable localStorage** — `partialize` returns `{}` (already implemented)
+- **HA via proxy** — REST polling `/api/ha/states`, service calls via `/api/ha/services/*`
+- **No token in browser** — token never leaves server
+- **Autosave** — debounced sync for profiles + projects (already implemented)
+- **Banner**: "HOSTED — Diskpersistens aktiv"
 
-**`server/storage/readWrite.js`** — `readJSON(path)`, `writeJSON(path, data)` (atomic: write `.tmp` then rename), `ensureDir(path)`
+### File Changes
 
-**`server/api/config.js`** — `GET /api/config` (mask token → `"***"`), `PUT /api/config` (merge, store token)
-
-**`server/api/profiles.js`** — `GET /api/profiles`, `PUT /api/profiles`
-
-**`server/api/projects.js`** — CRUD: `GET /api/projects`, `POST /api/projects`, `GET /api/projects/:id`, `PUT /api/projects/:id`
-
-**`server/api/assets.js`** — `GET /api/projects/:id/assets`, `GET /api/projects/:id/assets/:assetId`, `POST /api/projects/:id/assets/upload` (multer multipart: fields `type`, `name`, `variant`, `file`; creates folders + `asset.json`)
-
-**`server/api/haProxy.js`** — Proxy `GET/POST/PUT/PATCH/DELETE /api/ha/*` → `${config.ha.baseUrl}/api/*` with stored bearer token. Token never sent to frontend.
-
-### New: Frontend API Adapter
-
-**`src/lib/apiClient.ts`**
-- `isHosted()`: probe `GET /api/config` with 2s timeout, cache result
-- `fetchConfig()`, `saveConfig()`, `fetchProfiles()`, `saveProfiles()`
-- `fetchProjects()`, `saveProject(id, data)`, `uploadAsset(projectId, type, name, variant, file)`
-- `haProxyFetch(path, options)` — calls `/api/ha/*`
-
-### Modified: Store — Hosted Mode
-
-**`src/store/useAppStore.ts`**
-- Import `apiClient`
-- On init: if `isHosted()`, load state from API endpoints, **skip** Zustand `persist` middleware (use a wrapper that conditionally applies `persist` only when not hosted)
-- Add `_hostedMode: boolean` flag to state
-- Add `syncToServer()`: debounced (500ms) — after state changes, `PUT` profiles/projects to server
-- Subscribe to state changes → call `syncToServer()` when hosted
-
-### Modified: HA Connection in Hosted Mode
-
-**`src/components/home/cards/HAConnectionPanel.tsx`**
-- When hosted: save HA config via `PUT /api/config` (token goes to server)
-- Show masked token from server
-- HA WebSocket still connects directly (needed for real-time), but token loaded from server config
-
-**`src/hooks/useHomeAssistant.ts`**
-- When hosted: fetch token from `/api/config` (server returns full token for WebSocket init only via a separate secure endpoint or pass through initial config load)
-
-### Modified: Settings UI Layout
-
-**`src/components/home/DashboardGrid.tsx`** — `SettingsCategory`:
-- Wrap in `max-w-[1100px] mx-auto`
-- Use `grid grid-cols-1 lg:grid-cols-2 gap-4`
-- Left: ProfilePanel, CameraStartSettings
-- Right: PerformanceSettings, StandbySettingsPanel, LocationSettings, HAConnectionPanel, HomeWidgetConfig
-
-**`src/components/home/cards/ProfilePanel.tsx`**:
-- Merge 4 small glass-panels into 2 cards (Profile+Theme+Accent+Background | Data&Backup)
-- When hosted: export/import calls server ZIP endpoint
-- Tighter spacing
-
-**`src/components/home/cards/HAConnectionPanel.tsx`**:
-- Entity list: `max-h-48` with ScrollArea
-
-### Modified: Not-Hosted Banner
-
-**`src/pages/Index.tsx`**
-- If `!isHosted()`: show a subtle top banner "⚠ Inte värdläge — data sparas i webbläsaren"
-
-### New: Install/Start Scripts
-
-**`install.bat`** — `cd server && npm ci --omit=dev && cd ..`
-**`install.sh`** — same, bash, with `#!/bin/bash`
-**`start.bat`** — `node server/server.js`
-**`start.sh`** — same, bash
-
-### New: GitHub Release
-
-**`.github/workflows/release.yml`**
-- Trigger: `v*` tags
-- Steps: checkout → Node 20 → `npm ci` → `npm run build` → package two zips (`bjorq-dashboard-windows.zip`, `bjorq-dashboard-linux.zip`) containing `dist/`, `server/`, `install.*`, `start.*`, `README.md`, `data/.gitkeep`
-- Publish via `softprops/action-gh-release`
-
-### New/Updated: Data + Docs
-
-**`data/.gitkeep`** — empty placeholder
-**`README.md`** — Rewrite: installation (Windows/Linux), Node.js requirement, autostart hints, architecture, backup strategy
-
-## File Summary
-
-| File | Action |
+| File | Change |
 |------|--------|
-| `server/package.json` | New |
-| `server/server.js` | New |
-| `server/storage/paths.js` | New |
-| `server/storage/readWrite.js` | New |
-| `server/api/config.js` | New |
-| `server/api/profiles.js` | New |
-| `server/api/projects.js` | New |
-| `server/api/assets.js` | New |
-| `server/api/haProxy.js` | New |
-| `src/lib/apiClient.ts` | New |
-| `src/store/useAppStore.ts` | Modify — hosted mode, conditional persist |
-| `src/pages/Index.tsx` | Modify — not-hosted banner |
-| `src/components/home/DashboardGrid.tsx` | Modify — 2-col settings grid |
-| `src/components/home/cards/ProfilePanel.tsx` | Modify — merged cards, API backup |
-| `src/components/home/cards/HAConnectionPanel.tsx` | Modify — proxy mode, compact entities |
-| `install.bat` | New |
-| `install.sh` | New |
-| `start.bat` | New |
-| `start.sh` | New |
-| `.github/workflows/release.yml` | New |
-| `data/.gitkeep` | New |
-| `README.md` | Rewrite |
+| `src/index.css` | Move `@import` to line 1 |
+| `src/lib/apiClient.ts` | Replace `isHosted()`/`isHostedSync()` with mode resolver supporting env overrides; keep all API functions |
+| `src/hooks/useHomeAssistant.ts` | Already has dual path (hosted=REST poll, non-hosted=WebSocket). No structural change needed, just ensure it reads mode correctly |
+| `src/pages/Index.tsx` | Update banner text based on mode; in DEV show dev warning, in HOSTED show hosted badge |
+| `src/store/useAppStore.ts` | No change — already checks `isHostedSync()` for partialize and sync |
+
+### Minimal touches — no store refactor needed
+
+The current code already has the dual paths:
+- `useHomeAssistant` already branches on `isHostedSync()` for REST polling vs WebSocket
+- `partialize` already returns `{}` when hosted
+- `syncProfileToServer`/`syncProjectToServer` already check `isHostedSync()`
+
+The only real change is making mode detection support env var overrides and ensuring Lovable preview (which is `import.meta.env.DEV === true` without `VITE_FORCE_HOSTED`) always falls into DEV mode without attempting the `/api/bootstrap` probe.
 
