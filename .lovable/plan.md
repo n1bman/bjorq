@@ -1,51 +1,36 @@
 
 
-## Plan: Performance Dashboard, Transparency Fix, Demo Models, v0.1.8
+## Plan: Create Official Documentation & User Handbook
 
-### 1. Performance Status Dashboard in PerformanceSettings
+Create 8 structured markdown files in `/docs/` plus update the root `README.md`. All content based on the actual codebase architecture, features, and current v0.1.8 state.
 
-Add a visual "Performance Impact" summary to `src/components/home/cards/PerformanceSettings.tsx`:
+### Files to Create/Modify (9 total)
 
-- Show a computed "performance score" (0-100) based on current settings:
-  - Quality: low=30, medium=60, high=100
-  - Shadows: +25 if on
-  - Postprocessing: +15 if on
-  - TabletMode: override to 20
-- Display as a colored progress bar (green/yellow/red) with label like "Lätt", "Balanserad", "Krävande"
-- Show estimated resource usage: shadow map resolution, DPR value, effects count
-- Add a "Rekommendation" section: if score > 80 and device has low GPU (detect via `navigator.hardwareConcurrency` or `gl.getParameter` for renderer info), suggest switching to Medium or Low
-- Show a device capability hint based on `navigator.hardwareConcurrency` (cores) and screen resolution
+**1. `docs/01-overview.md`** — What BJORQ Dashboard is, target use case (wall tablet / kiosk smart home), architecture diagram (Vite+React frontend, Express server, HA integration), dual-mode system (HOSTED vs DEV), supported platforms.
 
-### 2. Fix Transparent Textures (Windows/Glass)
+**2. `docs/02-installation.md`** — Windows (start.bat, PowerShell note), Linux/RPi (start.sh, chmod), Node 18+ requirement, custom PORT, dev mode explanation (Lovable preview = DEV, token in browser). Reference kiosk.bat/app-mode from Display settings.
 
-**Bug in `src/components/build/ImportedHome3D.tsx`** lines 126-132:
+**3. `docs/03-using-the-dashboard.md`** — Walk through all DashboardGrid categories: Home (widgets, categories, device cards), Weather, Calendar, Devices (filter by kind), Energy (manual watt estimates + HA live), Automations, Scenes, Surveillance, Robot, Activity, Settings (Profile, Performance, Standby, Display/Kiosk, HA Connection, Location, WiFi, Widgets). Also cover Build Mode tabs: Structure (walls, rooms, templates), Import (3D model, floor bands, opacity), Furnish (props catalog), Devices (place markers, light types, HA entity binding).
 
-When `opacity >= 1` (default), the code forcefully sets `transparent = false` on ALL materials, destroying inherent transparency from the GLTF model (glass, windows, etc.).
+**4. `docs/04-performance-and-3d.md`** — Quality levels (low/medium/high → DPR, shadow maps, antialias), shadows toggle, postprocessing, tablet mode override, Canvas remount on settings change, performance score (0-100), hardware detection (hardwareConcurrency), WebGL context loss recovery, model stats (triangles/materials/textures rating), tips for optimization.
 
-**Fix**: Track each material's original `transparent` state before modifying. When opacity is 1, only reset materials that were NOT originally transparent.
+**5. `docs/05-data-and-backups.md`** — HOSTED: disk persistence in `data/` (config.json, profiles.json, projects/), atomic writes via tmp+rename. DEV: Zustand persist to localStorage. Backup system: "Spara & Backup" button → browser download + server POST to `data/backups/`. Manual export/import. Clear all data option. Folder structure table.
 
-- On initial load (line 71-83): store `child.material._originalTransparent = child.material.transparent` before any modifications
-- In the re-apply effect (line 127): check `child.material._originalTransparent` — if it was originally transparent, leave it alone when opacity is 1
+**6. `docs/06-kiosk-and-display-modes.md`** — App Mode (Chrome/Edge `--app` flag with examples), Browser Fullscreen (in-app toggle, auto-fullscreen option), OS Kiosk (info-only: Windows kiosk, Linux `--kiosk`), how to exit each mode (ESC, Alt+F4), admin unlock (5s long-press on nav bar), autostart suggestions (systemd unit example from README).
 
-### 3. Bundle Demo Models as Examples
+**7. `docs/07-troubleshooting.md`** — Practical table: server not starting, port in use, Node not found, HA not connecting (token/URL issues, proxy vs direct), 3D model not loading (timeout, retry), WebGL context lost (auto-recovery), black screen (hard reload), permissions (chmod), blank page (wait + Ctrl+Shift+R), performance issues (lower quality).
 
-Add two built-in demo assets so new users have something to start with. Since we can't ship GLB files in the Lovable preview, we'll use a different approach:
+**8. `docs/08-developer-notes.md`** — Folder structure (src/, server/, data/, public/, docs/), API endpoints (GET/PUT /api/config, /api/profiles, /api/projects, POST /api/backup, /api/ha/* proxy), mode resolution flow (apiClient.ts probe logic), state management (Zustand store structure from types.ts), build/release workflow (GitHub Actions, v* tags, ZIP artifacts), import conventions (relative only, no @/), CI checks.
 
-- Create `src/lib/demoData.ts` with a function `loadDemoProject()` that sets up:
-  - A small procedural house layout (walls + rooms on floor-1)
-  - A couple of demo device markers (light, sensor)
-- Add a "Ladda demo-projekt" button in the home/settings area (e.g. in ProfilePanel under Data & Backup)
-- The button populates the store with the demo layout so users can explore the UI immediately
-- Note: The actual 3D models (house GLB + furniture GLB) that the user has imported are stored in localStorage/server state — we cannot bundle those. Instead, we create a procedural demo with walls/rooms that demonstrates the build system.
+**9. `README.md`** — Rewrite to be short and professional: one-liner description, Quick Start (Windows + Linux, 3 steps each), link to `/docs/` for full handbook, current version (v0.1.8), tech stack one-liner, license placeholder. No mention of "Lovable".
 
-### 4. Version Bump to 0.1.8
+### Writing Approach
+- Product handbook tone, not developer notes (except 08)
+- Swedish UI labels referenced as-is (e.g., "Inställningar → Prestanda")
+- English documentation text
+- No mention of "Lovable" anywhere
+- Consistent heading structure (H1 = title, H2 = sections, H3 = subsections)
 
-- `package.json`: version `"0.1.5"` → `"0.1.8"`
-
-### Files Modified/Created (4-5)
-1. `src/components/home/cards/PerformanceSettings.tsx` — performance score dashboard + device recommendation
-2. `src/components/build/ImportedHome3D.tsx` — fix transparency preservation for glass/windows
-3. `src/lib/demoData.ts` — new: demo project layout data + loader function
-4. `src/components/home/cards/ProfilePanel.tsx` — add "Ladda demo-projekt" button
-5. `package.json` — version bump to 0.1.8
+### No Code Changes
+Pure documentation — no functional changes to the application.
 
