@@ -7,6 +7,7 @@ import profilesRouter from './api/profiles.js';
 import projectsRouter from './api/projects.js';
 import assetsRouter from './api/assets.js';
 import haProxyRouter from './api/haProxy.js';
+import bootstrapRouter from './api/bootstrap.js';
 
 const app = express();
 const PORT = parseInt(process.env.PORT || '3000', 10);
@@ -15,6 +16,7 @@ const PORT = parseInt(process.env.PORT || '3000', 10);
 app.use(express.json({ limit: '50mb' }));
 
 // API routes
+app.use('/api', bootstrapRouter);
 app.use('/api', configRouter);
 app.use('/api', profilesRouter);
 app.use('/api', assetsRouter);

@@ -21,7 +21,17 @@ const Index = () => {
   useIdleTimer();
 
   useEffect(() => {
-    initHostedMode().finally(() => setInitDone(true));
+    initHostedMode().then((hosted) => {
+      if (hosted) {
+        // Set global HA service caller to REST proxy
+        import('@/hooks/useHomeAssistant').then(({ haServiceCaller }) => {
+          import('@/lib/apiClient').then(({ callHAService }) => {
+            haServiceCaller.current = (domain, service, data) =>
+              callHAService(domain, service, data).catch(console.warn);
+          });
+        });
+      }
+    }).finally(() => setInitDone(true));
   }, []);
 
   if (appMode === 'standby') {

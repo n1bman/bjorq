@@ -31,6 +31,19 @@ export function isHostedSync(): boolean {
   return _hostedResult === true;
 }
 
+// ── Bootstrap (single fetch for all data) ──
+
+export async function fetchBootstrap(): Promise<{
+  config: Record<string, unknown>;
+  profiles: Record<string, unknown>;
+  projects: Record<string, unknown>[];
+  activeProjectId: string;
+}> {
+  const res = await fetch('/api/bootstrap');
+  if (!res.ok) throw new Error('Failed to fetch bootstrap');
+  return res.json();
+}
+
 // ── Config ──
 
 export async function fetchConfig() {
@@ -46,12 +59,6 @@ export async function saveConfig(data: Record<string, unknown>) {
     body: JSON.stringify(data),
   });
   if (!res.ok) throw new Error('Failed to save config');
-  return res.json();
-}
-
-export async function fetchWSToken(): Promise<{ wsUrl: string; token: string }> {
-  const res = await fetch('/api/config/ws-token');
-  if (!res.ok) throw new Error('Failed to fetch WS token');
   return res.json();
 }
 
@@ -112,7 +119,7 @@ export async function uploadAsset(
   return res.json();
 }
 
-// ── HA Proxy ──
+// ── HA Proxy (token NEVER sent to browser) ──
 
 export async function haProxyFetch(path: string, options?: RequestInit) {
   const url = `/api/ha/${path.replace(/^\//, '')}`;
@@ -126,11 +133,37 @@ export async function haProxyFetch(path: string, options?: RequestInit) {
   return res;
 }
 
-// ── Debounced sync helper ──
+/** Fetch all HA entity states via server proxy */
+export async function fetchHAStates(): Promise<any[]> {
+  const res = await haProxyFetch('states');
+  if (!res.ok) throw new Error('Failed to fetch HA states');
+  return res.json();
+}
 
-let _syncTimer: ReturnType<typeof setTimeout> | null = null;
+/** Call an HA service via server proxy */
+export async function callHAService(
+  domain: string,
+  service: string,
+  serviceData: Record<string, unknown>
+) {
+  const res = await haProxyFetch(`services/${domain}/${service}`, {
+    method: 'POST',
+    body: JSON.stringify(serviceData),
+  });
+  return res;
+}
+
+// ── Debounced sync helpers ──
+
+let _profileSyncTimer: ReturnType<typeof setTimeout> | null = null;
+let _projectSyncTimer: ReturnType<typeof setTimeout> | null = null;
 
 export function debouncedSync(fn: () => void, ms = 500) {
-  if (_syncTimer) clearTimeout(_syncTimer);
-  _syncTimer = setTimeout(fn, ms);
+  if (_profileSyncTimer) clearTimeout(_profileSyncTimer);
+  _profileSyncTimer = setTimeout(fn, ms);
+}
+
+export function debouncedProjectSync(fn: () => void, ms = 1000) {
+  if (_projectSyncTimer) clearTimeout(_projectSyncTimer);
+  _projectSyncTimer = setTimeout(fn, ms);
 }

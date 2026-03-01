@@ -25,15 +25,8 @@ router.get('/config', async (_req, res) => {
   }
 });
 
-// Separate secure endpoint for WebSocket init — returns real token
-router.get('/config/ws-token', async (_req, res) => {
-  try {
-    const cfg = await getConfig();
-    res.json({ wsUrl: cfg.ha?.baseUrl || '', token: cfg.ha?.token || '' });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+// NOTE: ws-token endpoint removed — token must never be sent to the browser.
+// All HA communication goes through /api/ha/* proxy.
 
 router.put('/config', async (req, res) => {
   try {
