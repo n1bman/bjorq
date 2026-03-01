@@ -264,6 +264,7 @@ export interface DeviceMarker {
   widgetConfig?: WidgetConfig;
   energyTracking?: EnergyTracking;
   lightType?: LightType;
+  estimatedWatts?: number;
 }
 
 // ─── Rich Device States (HA-ready) ───
@@ -554,6 +555,33 @@ export interface WifiSettings {
   visible: boolean;
 }
 
+export interface EnergyConfig {
+  pricePerKwh: number;
+  currency: string;
+}
+
+export interface CalendarSource {
+  id: string;
+  type: 'manual' | 'google' | 'outlook';
+  name: string;
+  connected: boolean;
+}
+
+export interface CalendarEvent {
+  id: string;
+  sourceId: string;
+  title: string;
+  date: string; // ISO
+  endDate?: string;
+  color: string;
+  reminder?: number; // minutes before
+}
+
+export interface CalendarState {
+  sources: CalendarSource[];
+  events: CalendarEvent[];
+}
+
 export interface UserProfile {
   name: string;
   theme: 'dark' | 'midnight' | 'light';
@@ -594,12 +622,24 @@ export interface AppState {
   _preStandbyMode: AppMode;
   performance: PerformanceSettings;
   wifi: WifiSettings;
+  energyConfig: EnergyConfig;
+  calendar: CalendarState;
 
   // Performance actions
   setPerformance: (changes: Partial<PerformanceSettings>) => void;
 
   // WiFi actions
   setWifi: (changes: Partial<WifiSettings>) => void;
+
+  // Energy config actions
+  setEnergyConfig: (changes: Partial<EnergyConfig>) => void;
+
+  // Calendar actions
+  addCalendarEvent: (event: CalendarEvent) => void;
+  removeCalendarEvent: (id: string) => void;
+  updateCalendarEvent: (id: string, changes: Partial<CalendarEvent>) => void;
+  addCalendarSource: (source: CalendarSource) => void;
+  removeCalendarSource: (id: string) => void;
 
   // Standby actions
   setStandbySettings: (s: Partial<StandbySettings>) => void;

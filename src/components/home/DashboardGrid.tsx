@@ -165,8 +165,8 @@ function HomeCategory() {
 function WeatherCategory() {
   return (
     <div className="space-y-4">
-      <WeatherWidget />
-      <div className="glass-panel rounded-2xl">
+      <WeatherWidget expanded />
+      <div className="glass-panel rounded-2xl p-4">
         <p className="text-xs text-muted-foreground">
           Väderprognosen synkas automatiskt med din plats.
           Aktivera "Live väder" för att synka med Open-Meteo.
@@ -178,7 +178,7 @@ function WeatherCategory() {
 }
 
 function CalendarCategory() {
-  return <CalendarWidget />;
+  return <CalendarWidget expanded />;
 }
 
 function DevicesCategory() {
