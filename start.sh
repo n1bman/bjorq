@@ -30,12 +30,25 @@ if [ ! -d "server/node_modules" ]; then
 fi
 
 PORT=${PORT:-3000}
+
+# Detect network IP
+NET_IP=$(hostname -I 2>/dev/null | awk '{print $1}')
+[ -z "$NET_IP" ] && NET_IP=$(ipconfig getifaddr en0 2>/dev/null)
+[ -z "$NET_IP" ] && NET_IP="<your-ip>"
+
 echo ""
 echo "  Starting server..."
 echo "  -------------------"
 echo "  Local:   http://localhost:$PORT"
+echo "  Network: http://$NET_IP:$PORT"
 echo "  Data:    $(pwd)/data"
-echo "  (Set PORT=8080 before running to change port)"
 echo ""
+
+# Best-effort browser open (non-fatal)
+if command -v xdg-open &> /dev/null; then
+    xdg-open "http://localhost:$PORT" 2>/dev/null &
+elif command -v open &> /dev/null; then
+    open "http://localhost:$PORT" 2>/dev/null &
+fi
 
 node server/server.js
