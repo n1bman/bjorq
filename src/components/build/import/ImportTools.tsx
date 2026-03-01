@@ -126,24 +126,30 @@ export default function ImportTools() {
             </div>
           </div>
 
-          {/* Rotation (Y-axis) */}
+          {/* Rotation (XYZ) */}
           <div className="space-y-2">
             <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
               <RotateCw size={12} /> Rotation
             </h4>
-            <div className="flex items-center gap-2">
-              <Slider
-                min={0} max={360} step={1}
-                value={[THREE.MathUtils.radToDeg(imported.rotation[1]) || 0]}
-                onValueChange={([v]) => {
-                  const rad = THREE.MathUtils.degToRad(v);
-                  setImportedModel({ rotation: [imported.rotation[0], rad, imported.rotation[2]] });
-                }}
-                className="flex-1"
-              />
-              <span className="text-[10px] text-foreground w-8 text-right">
-                {Math.round(THREE.MathUtils.radToDeg(imported.rotation[1]) || 0)}°
-              </span>
+            <div className="space-y-1.5">
+              {(['x', 'y', 'z'] as const).map((axis, i) => (
+                <div key={axis} className="flex items-center gap-2">
+                  <span className="text-[10px] text-muted-foreground w-4 uppercase">{axis}</span>
+                  <Slider
+                    min={-180} max={180} step={1}
+                    value={[Math.round(THREE.MathUtils.radToDeg(imported.rotation[i])) || 0]}
+                    onValueChange={([v]) => {
+                      const rot = [...imported.rotation] as [number, number, number];
+                      rot[i] = THREE.MathUtils.degToRad(v);
+                      setImportedModel({ rotation: rot });
+                    }}
+                    className="flex-1"
+                  />
+                  <span className="text-[10px] text-foreground w-8 text-right">
+                    {Math.round(THREE.MathUtils.radToDeg(imported.rotation[i]) || 0)}°
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
 

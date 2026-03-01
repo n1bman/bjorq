@@ -1,6 +1,6 @@
-import { Canvas } from '@react-three/fiber';
+import { Canvas, useThree } from '@react-three/fiber';
 import { OrbitControls, Grid, Environment } from '@react-three/drei';
-import { Suspense, useMemo, useRef, useEffect } from 'react';
+import { Suspense, useMemo, useRef, useEffect, useState, useCallback } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useAppStore } from '../store/useAppStore';
@@ -70,7 +70,6 @@ function CameraController() {
   const prevMode = useRef(appMode);
   const lerpingTo = useRef<{ pos: THREE.Vector3; target: THREE.Vector3 } | null>(null);
 
-  // When switching to home/dashboard, animate to custom start or topdown
   useEffect(() => {
     if ((appMode === 'dashboard' || appMode === 'home') && prevMode.current !== appMode) {
       const pos = customStartPos
@@ -84,7 +83,6 @@ function CameraController() {
     prevMode.current = appMode;
   }, [appMode, customStartPos, customStartTarget]);
 
-  // When user picks a preset (not free), animate to it
   useEffect(() => {
     if (cameraPreset !== 'free') {
       lerpingTo.current = {
@@ -95,13 +93,10 @@ function CameraController() {
   }, [cameraPreset]);
 
   useFrame(({ camera }, delta) => {
-    // Always update global camera ref
     cameraRef.position.copy(camera.position);
     if (controlsRef.current) {
       cameraRef.target.copy(controlsRef.current.target);
     }
-
-    // Animate to target then release
     if (lerpingTo.current) {
       const { pos: targetPos, target: targetTarget } = lerpingTo.current;
       camera.position.lerp(targetPos, delta * 3);
@@ -132,6 +127,36 @@ function CameraController() {
   );
 }
 
+/** Handles WebGL context loss/restore inside the Canvas */
+function ContextLossHandler() {
+  const { gl } = useThree();
+  const [contextLost, setContextLost] = useState(false);
+
+  useEffect(() => {
+    const canvas = gl.domElement;
+    const handleLost = (e: Event) => {
+      e.preventDefault();
+      console.warn('[Scene3D] WebGL context lost');
+      setContextLost(true);
+    };
+    const handleRestored = () => {
+      console.info('[Scene3D] WebGL context restored');
+      setContextLost(false);
+    };
+    canvas.addEventListener('webglcontextlost', handleLost);
+    canvas.addEventListener('webglcontextrestored', handleRestored);
+    return () => {
+      canvas.removeEventListener('webglcontextlost', handleLost);
+      canvas.removeEventListener('webglcontextrestored', handleRestored);
+    };
+  }, [gl]);
+
+  if (contextLost) {
+    return null; // Canvas will auto-recover; the flag prevents further renders
+  }
+  return null;
+}
+
 function SceneContent() {
   const appMode = useAppStore((s) => s.appMode);
   const sunAzimuth = useAppStore((s) => s.environment.sunAzimuth);
@@ -150,20 +175,19 @@ function SceneContent() {
     ] as [number, number, number];
   }, [sunAzimuth, sunElevation]);
 
-  // Day/night ambient
   const isNight = sunElevation < 0;
   const isTwilight = sunElevation >= 0 && sunElevation < 15;
   const ambientIntensity = isNight ? 0.1 : isTwilight ? 0.25 : (weatherCondition === 'cloudy' || weatherCondition === 'rain' ? 0.5 : 0.35);
   const ambientColor = isNight ? '#1a1a3e' : isTwilight ? '#ff9966' : '#b8c4d4';
   const sunIntensity = isNight ? 0 : (weatherCondition === 'cloudy' ? 0.4 : weatherCondition === 'rain' ? 0.2 : weatherCondition === 'snow' ? 0.3 : 1.2);
 
-  // Performance: shadow map size based on quality
   const shadowMapSize = perf.quality === 'low' ? 512 : perf.quality === 'medium' ? 1024 : 2048;
-  const showGrid = appMode === 'build'; // Hide grid in dashboard/home
+  const showGrid = appMode === 'build';
   const enableShadows = perf.shadows && !isNight;
 
   return (
     <>
+      <ContextLossHandler />
       <ambientLight intensity={ambientIntensity} color={ambientColor} />
       <directionalLight position={sunPos} intensity={sunIntensity} color="#ffd699" castShadow={enableShadows}
         shadow-mapSize-width={shadowMapSize} shadow-mapSize-height={shadowMapSize}
@@ -205,7 +229,7 @@ function SceneContent() {
 export default function Scene3D() {
   const shadows = useAppStore((s) => s.performance.shadows);
   const quality = useAppStore((s) => s.performance.quality);
-  const dpr = quality === 'low' ? 1 : quality === 'medium' ? 1.5 : undefined; // undefined = device default
+  const dpr = quality === 'low' ? 1 : quality === 'medium' ? 1.5 : undefined;
 
   return (
     <Canvas
