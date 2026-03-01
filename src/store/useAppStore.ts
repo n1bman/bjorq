@@ -207,6 +207,7 @@ const storeCreator = (set: any, get: any): AppState => ({
       timestamp: new Date().toISOString(),
       deviceId: id,
       kind: 'state_change',
+      category: 'device',
       title: `${marker?.name || 'Enhet'} ändrades`,
       detail: Object.entries(partialData).map(([k, v]) => `${k}: ${v}`).join(', '),
       severity: 'info',
@@ -261,7 +262,7 @@ const storeCreator = (set: any, get: any): AppState => ({
         s.updateDeviceState(snap.deviceId, snap.state);
       }
     }
-    s.pushActivity({ deviceId: undefined, kind: 'state_change', title: `Scen "${scene.name}" aktiverad`, severity: 'info' });
+    s.pushActivity({ deviceId: undefined, kind: 'state_change', category: 'system', title: `Scen "${scene.name}" aktiverad`, severity: 'info' });
   },
   setPerformance: (changes) => { set((s: any) => ({ performance: { ...s.performance, ...changes } })); syncProfileToServer(); },
 
