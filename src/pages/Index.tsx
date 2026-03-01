@@ -8,8 +8,9 @@ import { useAppStore, initHostedMode } from '@/store/useAppStore';
 import { useHomeAssistant } from '@/hooks/useHomeAssistant';
 import { useHABridge, useVacuumRoomSync } from '@/hooks/useHABridge';
 import { useIdleTimer } from '@/components/standby/useIdleTimer';
-import { isHostedSync } from '@/lib/apiClient';
-import { AlertTriangle } from 'lucide-react';
+import { isHostedSync, getMode, callHAService } from '@/lib/apiClient';
+import { haServiceCaller } from '@/hooks/useHomeAssistant';
+import { AlertTriangle, Server, Monitor } from 'lucide-react';
 
 const Index = () => {
   const appMode = useAppStore((s) => s.appMode);
@@ -23,13 +24,9 @@ const Index = () => {
   useEffect(() => {
     initHostedMode().then((hosted) => {
       if (hosted) {
-        // Set global HA service caller to REST proxy
-        import('@/hooks/useHomeAssistant').then(({ haServiceCaller }) => {
-          import('@/lib/apiClient').then(({ callHAService }) => {
-            haServiceCaller.current = (domain, service, data) =>
-              callHAService(domain, service, data).catch(console.warn);
-          });
-        });
+        // In hosted mode, route HA service calls through REST proxy
+        haServiceCaller.current = (domain, service, data) =>
+          callHAService(domain, service, data).catch(console.warn);
       }
     }).finally(() => setInitDone(true));
   }, []);
@@ -38,10 +35,12 @@ const Index = () => {
     return <StandbyMode />;
   }
 
+  const banner = initDone ? <ModeBanner /> : null;
+
   if (appMode === 'home') {
     return (
       <>
-        {initDone && !isHostedSync() && <NotHostedBanner />}
+        {banner}
         <HomeView />
       </>
     );
@@ -50,7 +49,7 @@ const Index = () => {
   if (appMode === 'dashboard') {
     return (
       <>
-        {initDone && !isHostedSync() && <NotHostedBanner />}
+        {banner}
         <DashboardView />
       </>
     );
@@ -58,7 +57,7 @@ const Index = () => {
 
   return (
     <div className="fixed inset-0 bg-background overflow-hidden">
-      {initDone && !isHostedSync() && <NotHostedBanner />}
+      {banner}
       <ModeHeader />
       <div className="absolute inset-0 pt-14">
         <BuildModeV2 />
@@ -67,11 +66,23 @@ const Index = () => {
   );
 };
 
-function NotHostedBanner() {
+function ModeBanner() {
+  const mode = getMode();
+
+  if (mode === 'HOSTED') {
+    return (
+      <div className="fixed top-0 left-0 right-0 z-[9999] bg-primary/90 text-primary-foreground text-xs text-center py-1 px-4 flex items-center justify-center gap-1.5 backdrop-blur-sm">
+        <Server size={12} />
+        <span>HOSTED — Diskpersistens aktiv</span>
+      </div>
+    );
+  }
+
+  // DEV mode
   return (
     <div className="fixed top-0 left-0 right-0 z-[9999] bg-accent/90 text-accent-foreground text-xs text-center py-1 px-4 flex items-center justify-center gap-1.5 backdrop-blur-sm">
-      <AlertTriangle size={12} />
-      <span>Inte värdläge — data sparas i webbläsaren</span>
+      <Monitor size={12} />
+      <span>DEV — HA-token lagras lokalt (ej rekommenderat för produktion)</span>
     </div>
   );
 }
