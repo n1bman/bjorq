@@ -1,52 +1,50 @@
 
 
-## Plan: Phase 7 — 3D Lighting Engine + Light Type Behavior + Full Rotation
+## Plan: Shadow System Fix + Imported Model Transparency + Performance Toggle
 
-### 1. Light type affects 3D light source
+### Problems Identified
 
-Currently `LightMarker` always uses a `pointLight` regardless of `lightType`. Each type should emit light differently:
+1. **Imported house model and props don't cast/receive shadows** — `ImportedHome3D.tsx` and `Props3D.tsx` never set `castShadow`/`receiveShadow` on meshes
+2. **BuildScene3D ignores performance settings** — shadows are always on regardless of the Prestanda toggle
+3. **No option to make imported models semi-transparent** for sunlight penetration
+4. **Performance shadow toggle has no effect in Build mode**
 
-- **ceiling** — `pointLight` casting downward, moderate distance (8), decay 2 (current behavior)
-- **strip** — `rectAreaLight`-like effect via a stretched mesh + wider `pointLight` with higher distance (10), lower intensity
-- **spot** — `spotLight` with narrow angle (~30°), sharp cone, high intensity, supports X/Z rotation for aiming
-- **wall** — `spotLight` with wider angle (~60°), medium distance, side-mounted wash effect
-- **custom** — `pointLight` (same as ceiling, user controls all params)
+### Changes
 
-Changes in `DeviceMarkers3D.tsx` `LightMarker`:
-- Read `marker.lightType` (need to pass marker data into LightMarker)
-- Switch light source type based on `lightType`
-- Apply marker rotation to spotlight target direction
-- Visual mesh shape changes: sphere for point lights, elongated box for strip, cone indicator for spot
+#### 1. `src/components/build/ImportedHome3D.tsx` — Enable shadows on imported model meshes
+- After loading the GLTF scene, `traverse` all meshes and set `castShadow = true` and `receiveShadow = true`
+- Read `performance.shadows` from store; only enable when shadows are on
+- Add optional transparency: read a new `importedOpacity` field from `homeGeometry.imported` (default 1.0). When < 1, set material transparent + opacity on all meshes, allowing sunlight through
 
-### 2. Full XYZ rotation for ALL devices (not just screens)
+#### 2. `src/components/build/Props3D.tsx` — Enable shadows on props
+- In `PropModel`, traverse the cloned GLTF scene and set `castShadow = true` and `receiveShadow = true` on all meshes
 
-Currently only `media_screen` gets XYZ rotation sliders; other devices get Y-only.
+#### 3. `src/components/build/BuildScene3D.tsx` — Respect performance settings
+- Read `performance.shadows` and `performance.quality` from store
+- Pass `shadows={perf.shadows}` to `<Canvas>`
+- Conditionally set `castShadow={perf.shadows}` on the directional light
+- Adjust shadow map size based on quality level (same as Scene3D)
 
-In `BuildInspector.tsx` `DeviceInspector`:
-- Change rotation section to always show X and Y axes (at minimum) for all devices
-- Lights especially need X and Z rotation to aim spotlights/wall lights
-- Apply rotation in `LightMarker` group to orient the light source
+#### 4. `src/store/types.ts` — Add `importedOpacity` to imported geometry config
+- Add `importedOpacity?: number` to the imported model config (0.0–1.0, default 1.0)
 
-### 3. Remove "Anpassad" (custom) light type, keep 4 types
+#### 5. `src/components/build/BuildInspector.tsx` — Add opacity slider for imported model
+- In the import inspector section, add a slider "Solljus-transparens" (0–100%) that controls `importedOpacity`
+- This lets users choose whether sunlight passes through the 3D model walls
 
-Per user feedback, remove `custom` from the light type options. Update `LightType` in `types.ts`.
+#### 6. `src/components/Scene3D.tsx` — Also apply shadow flags to directional light conditionally
+- Already partially done, but ensure `castShadow={enableShadows}` is properly gated
 
-### 4. Improved shadow quality
+### Technical Notes
+- GLB model shadow traversal uses `scene.traverse((child) => { if (child.isMesh) { child.castShadow = true; child.receiveShadow = true; } })`
+- Transparency for sunlight: setting material opacity to ~0.2 on imported model meshes lets the directional light's shadow map "see through" the walls partially. For true light penetration, we set `material.transparent = true` and reduce opacity
+- Shadow map: Three.js shadow maps are binary (shadow or no shadow), so transparency won't create partial shadows. Instead, when opacity < 1 we can optionally set `castShadow = false` on the imported model so it doesn't block the sun at all — giving the effect of sunlight coming through
 
-In `Scene3D.tsx` and `BuildScene3D.tsx`:
-- Enable `castShadow` on spotlights from light markers
-- Ensure `receiveShadow` on ground/floor meshes (already done)
-
-### Files modified
-
-- `src/store/types.ts` — Remove `'custom'` from `LightType`
-- `src/components/devices/DeviceMarkers3D.tsx` — Rewrite `LightMarker` to use different Three.js lights per type, accept rotation, pass marker data
-- `src/components/build/BuildInspector.tsx` — XYZ rotation for all devices, remove "Anpassad" option
-- `docs/roadmap-vNext.md` — Mark Phase 7 done
-
-### Technical details
-
-- `SpotLight` target requires a `target` object positioned relative to the group; we use `useRef` + `useFrame` to update the target position based on rotation
-- Strip lights use an elongated emissive mesh + wider pointLight to approximate area lighting
-- The marker's `rotation` field already stores `[x, y, z]` radians; currently only Y is set for non-screens. No schema change needed for rotation.
+### Files Modified
+- `src/store/types.ts` — add `importedOpacity`
+- `src/components/build/ImportedHome3D.tsx` — shadow traversal + opacity
+- `src/components/build/Props3D.tsx` — shadow traversal
+- `src/components/build/BuildScene3D.tsx` — respect perf settings
+- `src/components/build/BuildInspector.tsx` — opacity slider for imported model
+- `docs/roadmap-vNext.md` — update
 
