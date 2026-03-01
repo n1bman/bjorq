@@ -82,16 +82,18 @@ function PropModel({ id, url, position, rotation, scale }: {
 
   const scene = gltf.scene.clone();
 
-  // Add highlight to selected props
-  if (isSelected) {
-    scene.traverse((child: any) => {
-      if (child.isMesh) {
+  // Enable shadows + highlight on all meshes
+  scene.traverse((child: any) => {
+    if (child.isMesh) {
+      child.castShadow = true;
+      child.receiveShadow = true;
+      if (isSelected) {
         child.material = child.material.clone();
         child.material.emissive = new THREE.Color('#4a9eff');
         child.material.emissiveIntensity = 0.3;
       }
-    });
-  }
+    }
+  });
 
   return (
     <group ref={groupRef}>

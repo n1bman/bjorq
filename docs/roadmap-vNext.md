@@ -224,9 +224,12 @@ Simplified to 4 clear light types: Tak, Strip, Vägg, Spot.
 
 ### 7.4 Shadow Improvements
 
-SpotLights from spot and wall light types now cast shadows with 512×512 shadow maps.
+- SpotLights from spot and wall light types cast shadows with quality-scaled shadow maps
+- Imported 3D models and props now `castShadow` and `receiveShadow` on all meshes
+- BuildScene3D respects global performance settings (shadows toggle, quality level, DPR)
+- New "Solljus-transparens" slider lets users make imported models semi-transparent so sunlight enters the house (opacity < 80% disables shadow casting)
 
-**Files modified:** `src/store/types.ts`, `src/components/devices/DeviceMarkers3D.tsx`, `src/components/build/BuildInspector.tsx`
+**Files modified:** `src/store/types.ts`, `src/components/devices/DeviceMarkers3D.tsx`, `src/components/build/BuildInspector.tsx`, `src/components/build/ImportedHome3D.tsx`, `src/components/build/Props3D.tsx`, `src/components/build/BuildScene3D.tsx`, `src/components/build/import/ImportTools.tsx`
 
 ---
 

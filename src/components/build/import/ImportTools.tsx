@@ -1,6 +1,6 @@
 import { useAppStore } from '../../../store/useAppStore';
 import { useRef, useState } from 'react';
-import { Upload, Compass, Ruler, Layers, Move, RotateCw, FileArchive, Trash2 } from 'lucide-react';
+import { Upload, Compass, Ruler, Layers, Move, RotateCw, FileArchive, Trash2, Sun } from 'lucide-react';
 import { Slider } from '../../ui/slider';
 import { Input } from '../../ui/input';
 import SketchUpWizard from './SketchUpWizard';
@@ -191,6 +191,25 @@ export default function ImportTools() {
               />
               <span className="text-[10px] text-foreground w-8 text-right">{imported.northAngle}°</span>
             </div>
+          </div>
+
+          {/* Sunlight transparency */}
+          <div className="space-y-2">
+            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+              <Sun size={12} /> Solljus-transparens
+            </h4>
+            <div className="flex items-center gap-2">
+              <Slider
+                min={0} max={100} step={5}
+                value={[Math.round(((imported.importedOpacity ?? 1) * 100))]}
+                onValueChange={([v]) => setImportedModel({ importedOpacity: v / 100 })}
+                className="flex-1"
+              />
+              <span className="text-[10px] text-foreground w-8 text-right">{Math.round((imported.importedOpacity ?? 1) * 100)}%</span>
+            </div>
+            <p className="text-[9px] text-muted-foreground">
+              Sänk för att låta solljus passera genom modellen. Under 80% blockeras inga skuggor.
+            </p>
           </div>
 
 

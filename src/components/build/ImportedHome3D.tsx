@@ -4,8 +4,9 @@ import { useAppStore } from '../../store/useAppStore';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { ErrorBoundary } from './ErrorBoundary3D';
 import { analyzeModel } from '../../lib/modelAnalysis';
+import * as THREE from 'three';
 
-function ImportedModel({ url }: { url: string }) {
+function ImportedModel({ url, opacity, shadowsEnabled }: { url: string; opacity: number; shadowsEnabled: boolean }) {
   const gltf = useLoader(GLTFLoader, url);
   const setImportedModel = useAppStore((s) => s.setImportedModel);
   const hasStats = useAppStore((s) => !!s.homeGeometry.imported.modelStats);
@@ -23,7 +24,27 @@ function ImportedModel({ url }: { url: string }) {
     }
   }, [gltf, hasStats, setImportedModel]);
 
-  return <primitive object={gltf.scene.clone()} />;
+  const scene = gltf.scene.clone();
+
+  // Traverse meshes: enable shadows + apply opacity
+  scene.traverse((child: any) => {
+    if (child.isMesh) {
+      // Shadows: only cast if opacity is high enough (otherwise sunlight passes through)
+      const shouldCast = shadowsEnabled && opacity >= 0.8;
+      child.castShadow = shouldCast;
+      child.receiveShadow = shadowsEnabled;
+
+      // Opacity/transparency
+      if (opacity < 1) {
+        child.material = child.material.clone();
+        child.material.transparent = true;
+        child.material.opacity = opacity;
+        child.material.depthWrite = opacity > 0.5;
+      }
+    }
+  });
+
+  return <primitive object={scene} />;
 }
 
 function FallbackBox() {
@@ -43,12 +64,10 @@ function useRestoredUrl() {
   const [validUrl, setValidUrl] = useState<string | null>(url);
 
   useEffect(() => {
-    // If url is a blob that no longer exists, restore from fileData
     if (url && url.startsWith('blob:')) {
       fetch(url).then(() => {
         setValidUrl(url);
       }).catch(() => {
-        // Blob is stale, restore from fileData
         if (fileData) {
           const binary = atob(fileData);
           const bytes = new Uint8Array(binary.length);
@@ -62,10 +81,8 @@ function useRestoredUrl() {
         }
       });
     } else if (url && fileData && !url.startsWith('blob:')) {
-      // Non-blob url (unlikely but handle)
       setValidUrl(url);
     } else if (!url && fileData) {
-      // No url but fileData exists - restore
       const binary = atob(fileData);
       const bytes = new Uint8Array(binary.length);
       for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
@@ -83,11 +100,13 @@ function useRestoredUrl() {
 
 export default function ImportedHome3D() {
   const homeGeometry = useAppStore((s) => s.homeGeometry);
+  const shadowsEnabled = useAppStore((s) => s.performance.shadows);
   const validUrl = useRestoredUrl();
 
   if (homeGeometry.source !== 'imported' || !validUrl) return null;
 
-  const { position, rotation, scale } = homeGeometry.imported;
+  const { position, rotation, scale, importedOpacity } = homeGeometry.imported;
+  const opacity = importedOpacity ?? 1;
 
   return (
     <group
@@ -97,7 +116,7 @@ export default function ImportedHome3D() {
     >
       <ErrorBoundary fallback={<FallbackBox />}>
         <Suspense fallback={<FallbackBox />}>
-          <ImportedModel url={validUrl} />
+          <ImportedModel url={validUrl} opacity={opacity} shadowsEnabled={shadowsEnabled} />
         </Suspense>
       </ErrorBoundary>
     </group>
