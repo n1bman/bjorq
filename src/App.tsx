@@ -1,20 +1,21 @@
-// Diagnostic Step 2e: Test raw Radix import (no shadcn wrapper)
+// Diagnostic Step 2f: shadcn tooltip wrapper with cn
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import * as TooltipPrimitive from "@radix-ui/react-tooltip";
+import { cn } from "@/lib/utils";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 const App = () => (
-  <TooltipPrimitive.Provider>
+  <TooltipProvider>
     <BrowserRouter>
       <Routes>
         <Route path="/" element={
-          <div style={{ color: 'white', padding: '2rem', fontFamily: 'system-ui' }}>
-            <h1>HomeTwin — Step 2e ✅</h1>
-            <p>Raw Radix TooltipProvider (no shadcn wrapper)</p>
+          <div className={cn("text-white p-8 font-sans")}>
+            <h1>HomeTwin — Step 2f ✅</h1>
+            <p>shadcn TooltipProvider + cn()</p>
           </div>
         } />
       </Routes>
     </BrowserRouter>
-  </TooltipPrimitive.Provider>
+  </TooltipProvider>
 );
 
 export default App;
