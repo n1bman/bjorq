@@ -80,6 +80,8 @@ function syncProfileToServer() {
       environment: s.environment,
       customCategories: s.customCategories,
       wifi: s.wifi,
+      energyConfig: s.energyConfig,
+      calendar: s.calendar,
     }).catch((err) => console.warn('[Sync] Failed to save profiles:', err));
   });
 }
@@ -227,7 +229,18 @@ const storeCreator = (set: any, get: any): AppState => ({
   profile: { name: '', theme: 'dark', accentColor: '#f59e0b', dashboardBg: 'scene3d' },
   performance: { quality: 'high', shadows: true, postprocessing: false, tabletMode: false },
   wifi: { ssid: '', password: '', visible: false },
+  energyConfig: { pricePerKwh: 1.5, currency: 'kr' },
+  calendar: {
+    sources: [{ id: 'manual', type: 'manual' as const, name: 'Manuell', connected: true }],
+    events: [],
+  },
   setWifi: (changes) => { set((s: any) => ({ wifi: { ...s.wifi, ...changes } })); syncProfileToServer(); },
+  setEnergyConfig: (changes) => { set((s: any) => ({ energyConfig: { ...s.energyConfig, ...changes } })); syncProfileToServer(); },
+  addCalendarEvent: (event) => { set((s: any) => ({ calendar: { ...s.calendar, events: [...s.calendar.events, event] } })); syncProfileToServer(); },
+  removeCalendarEvent: (id) => { set((s: any) => ({ calendar: { ...s.calendar, events: s.calendar.events.filter((e: any) => e.id !== id) } })); syncProfileToServer(); },
+  updateCalendarEvent: (id, changes) => { set((s: any) => ({ calendar: { ...s.calendar, events: s.calendar.events.map((e: any) => e.id === id ? { ...e, ...changes } : e) } })); syncProfileToServer(); },
+  addCalendarSource: (source) => { set((s: any) => ({ calendar: { ...s.calendar, sources: [...s.calendar.sources, source] } })); syncProfileToServer(); },
+  removeCalendarSource: (id) => { set((s: any) => ({ calendar: { ...s.calendar, sources: s.calendar.sources.filter((s2: any) => s2.id !== id) } })); syncProfileToServer(); },
   setPerformance: (changes) => { set((s: any) => ({ performance: { ...s.performance, ...changes } })); syncProfileToServer(); },
 
   // Standby actions
@@ -1193,6 +1206,8 @@ export const useAppStore = create<AppState>()(
           customCategories: state.customCategories,
           standby: state.standby,
           wifi: state.wifi,
+          energyConfig: state.energyConfig,
+          calendar: state.calendar,
           homeAssistant: {
             wsUrl: state.homeAssistant.wsUrl,
             token: state.homeAssistant.token,
@@ -1235,6 +1250,8 @@ export async function initHostedMode() {
       if (p.environment) stateUpdate.environment = { ...useAppStore.getState().environment, ...p.environment };
       if (p.customCategories) stateUpdate.customCategories = p.customCategories;
       if (p.wifi) stateUpdate.wifi = p.wifi;
+      if (p.energyConfig) stateUpdate.energyConfig = p.energyConfig;
+      if (p.calendar) stateUpdate.calendar = p.calendar;
     }
 
     // Apply project data
