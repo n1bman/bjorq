@@ -1,30 +1,27 @@
 
 
-# Plan: Restore Missing Config Files to Fix Build
+# Plan: Restore Missing PostCSS Config
 
 ## Root Cause
 
-The `vite.config.ts` and `tsconfig.json`/`tsconfig.app.json` files are missing from the project. Without these, the `@/` path alias used throughout the codebase (e.g., `@/components/ui/toaster`) cannot be resolved by Vite, causing the build failure.
+The project is missing `postcss.config.js`. Tailwind CSS requires PostCSS to process `@tailwind` directives in `index.css`. Without this config file, Vite cannot transform the CSS, resulting in a white screen with no visible errors.
 
-## Changes
+This file was likely lost during earlier edits when config files were accidentally deleted.
 
-### 1. Create `vite.config.ts`
-Standard Vite config with:
-- `@vitejs/plugin-react-swc` plugin
-- Path alias: `@` → `./src`
-- `lovable-tagger` componentTagger plugin (already a devDependency)
+## Change
 
-### 2. Create `tsconfig.json`
-Root tsconfig that references `tsconfig.app.json` and `tsconfig.node.json`.
+### Create `postcss.config.js`
 
-### 3. Create `tsconfig.app.json`
-TypeScript config for the app with:
-- `baseUrl: "."`
-- `paths: { "@/*": ["./src/*"] }`
-- Standard React/Vite compiler options
+Standard Lovable/Tailwind PostCSS config:
 
-### 4. Create `tsconfig.node.json`
-Minimal config for Vite config file itself.
+```js
+export default {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
+  },
+};
+```
 
-These are standard Lovable project scaffolding files that were accidentally deleted.
+This single file should restore the entire app — all other files (vite.config.ts, tsconfig, index.css, App.tsx, store, etc.) are intact and correct.
 
