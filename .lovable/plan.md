@@ -1,48 +1,87 @@
 
 
-## Plan: Banner Cleanup + Release Script Polish
+## Plan: App Polish — Performance Feedback, Branding, Kiosk Mode
 
-### FAS 1 — Remove debug banners, add System Status card in Settings
+### FAS 1 — Performance Settings Feedback + Save/Backup
 
-**`src/pages/Index.tsx`**
-- Remove the `ModeBanner` component entirely
-- Remove `banner` variable and all `{banner}` references
-- Remove unused imports (`Server`, `Monitor`, `AlertTriangle`, `getMode`)
+**Problem**: Performance settings (shadows, quality, DPR) are applied via Zustand state and consumed by `Scene3D.tsx` Canvas props (`shadows`, `dpr`, `gl.antialias`) and `SceneContent` (shadow map size, point light). These ARE reactive — but the Canvas `shadows`, `dpr`, and `gl` props only take effect on mount, not on re-render. The Canvas needs to remount when quality/shadows change.
 
-**`src/components/home/cards/ProfilePanel.tsx`**
-- Update `APP_VERSION` from `'0.0.0'` to `'0.1.5'`
-- Add a new "Systemstatus" card at the bottom of the panel showing:
-  - Mode: DEV / HOSTED (from `getMode()`)
-  - Persistens: LocalStorage (DEV) / Disk (`data/`) (HOSTED)
-  - HA-läge: Direkt WebSocket (DEV) / Server Proxy (HOSTED)
-  - Server: `window.location.origin` if HOSTED
-- Uses existing glass-panel styling, compact `text-xs` rows with labels
+**Fix `src/components/Scene3D.tsx`**:
+- Add a `key` prop to `<Canvas>` derived from `shadows + quality` so it remounts when these change.
 
-### FAS 2 — Release scripts and packaging
+**Fix `src/components/home/cards/PerformanceSettings.tsx`**:
+- Add a toast notification ("Ändringar sparade") when any setting changes via `sonner` toast.
+- Add note text: "3D-scenen laddas om automatiskt" under the card title.
 
-**`start.bat`**
-- Add `start "" "http://localhost:%PORT%"` after `node server/server.js` is launched (use `start /b node server/server.js` to run server in background, then open browser, then wait)
-- Actually: simpler approach — open browser first, then start server (blocking). The browser will retry on its own. Add `start "" "http://localhost:%PORT%"` right before `node server/server.js`
+**Fix `src/components/home/cards/ProfilePanel.tsx`**:
+- Add a "Spara & Backup" button in the Data & Backup card.
+- On click: trigger the existing export logic + show toast "Backup sparad".
+- In hosted mode: POST to a new endpoint `POST /api/backup` that writes to `data/backups/bjorq-backup-{timestamp}.json`.
+- Keep existing manual "Exportera backup" button as-is.
 
-**`start.sh`**
-- Add network IP detection: `hostname -I | awk '{print $1}'` or fallback
-- Add `xdg-open` / `open` browser launch (best-effort, non-fatal) before starting server
-- Print Network URL with detected IP
+**New file `server/api/backups.js`**:
+- `POST /api/backup` — reads current state from profiles + projects, writes timestamped JSON to `data/backups/`.
 
-**`README.md`**
-- Rewrite Quick Start to be more concise and "idiot-proof"
-- Add PowerShell note: `.\start.bat`
-- Mention browser opens automatically
-- Simplify structure
+### FAS 2 — Branding: Title, Favicon, PWA Manifest
 
-**`package.json`**
-- Bump version to `0.1.5`
+**`index.html`**:
+- Change `<title>` to "BJORQ Dashboard".
+- Update all `og:title`, `og:description`, `twitter:site` meta tags.
+- Add `<link rel="manifest" href="/manifest.json">`.
+- Add `<meta name="theme-color" content="#0a0a0f">`.
+- Change favicon link to `/favicon.png` (the logo).
 
-### Files modified (5)
-1. `src/pages/Index.tsx` — remove ModeBanner
-2. `src/components/home/cards/ProfilePanel.tsx` — add Systemstatus card, update version
-3. `start.bat` — auto-open browser
-4. `start.sh` — auto-open browser, show network IP
-5. `README.md` — simplified Quick Start
-6. `package.json` — version bump to 0.1.5
+**Copy logo files to `public/`**:
+- Copy `borq-logo6.png` → `public/favicon.png` (icon mark).
+- Copy `borq-logo7.png` → `public/logo-text.png` (wordmark, for PWA splash).
+
+**New `public/manifest.json`**:
+```json
+{
+  "name": "BJORQ Dashboard",
+  "short_name": "BJORQ",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0f",
+  "theme_color": "#f59e0b",
+  "icons": [
+    { "src": "/favicon.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
+```
+
+### FAS 3 — Display / Kiosk Mode Settings
+
+**New file `src/components/home/cards/DisplaySettings.tsx`**:
+A settings card with three sections:
+
+1. **App Mode** — info text explaining `--app` flag for Chrome/Edge with copyable command examples.
+2. **Browser Fullscreen** — "Gå Fullscreen" / "Lämna Fullscreen" buttons using `document.fullscreenElement` API. Toggle for "auto-fullscreen vid start" (stored in profile, attempted on first user gesture).
+3. **OS Kiosk** — info-only section with instructions for Windows kiosk, Linux `--kiosk`, and how to exit (ESC, Alt+F4, Ctrl+Alt+Del).
+
+Add "Admin unlock" hint: long-press 5s on the top nav bar reveals exit tips overlay.
+
+**`src/components/home/DashboardGrid.tsx`**:
+- Add `DisplaySettings` to the Settings category, in a new "Skärm" section between System and Anslutning.
+
+**`src/store/types.ts`** + **`src/store/useAppStore.ts`**:
+- Add `autoFullscreen: boolean` to profile (default false).
+
+**`src/components/home/HomeNav.tsx`** or **`src/pages/Index.tsx`**:
+- Add long-press (5s) handler on nav bar that shows a small overlay with "Lämna fullscreen" / kiosk exit tips.
+
+### Files Modified/Created (approx 10)
+1. `src/components/Scene3D.tsx` — add key for Canvas remount
+2. `src/components/home/cards/PerformanceSettings.tsx` — toast feedback
+3. `src/components/home/cards/ProfilePanel.tsx` — save & backup button
+4. `server/api/backups.js` — new backup endpoint
+5. `server/server.js` — mount backup route
+6. `index.html` — branding, manifest link, favicon
+7. `public/manifest.json` — new PWA manifest
+8. `public/favicon.png` — copied from logo
+9. `src/components/home/cards/DisplaySettings.tsx` — new kiosk/display card
+10. `src/components/home/DashboardGrid.tsx` — add DisplaySettings to settings
+11. `src/store/types.ts` — add autoFullscreen
+12. `src/store/useAppStore.ts` — add autoFullscreen default + setter
+13. `src/components/home/HomeNav.tsx` — long-press admin unlock
 
