@@ -17,7 +17,15 @@ echo "  Node.js $(node --version) detected"
 # Auto-install server dependencies if missing
 if [ ! -d "server/node_modules" ]; then
     echo "  Installing server dependencies..."
-    cd server && npm ci --omit=dev && cd ..
+    cd server && npm install --omit=dev
+    if [ $? -ne 0 ]; then
+        echo ""
+        echo "  ERROR: Failed to install server dependencies!"
+        echo "  Check your internet connection and try again."
+        echo ""
+        exit 1
+    fi
+    cd ..
     echo "  Dependencies installed."
 fi
 

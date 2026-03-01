@@ -21,15 +21,25 @@ echo   Node.js %NODE_VER% detected
 if not exist "server\node_modules" (
     echo   Installing server dependencies...
     cd server
-    call npm ci --omit=dev
+    call npm install --omit=dev
+    if %errorlevel% neq 0 (
+        echo.
+        echo   ERROR: Failed to install server dependencies!
+        echo   Check your internet connection and try again.
+        echo.
+        pause
+        exit /b 1
+    )
     cd ..
     echo   Dependencies installed.
 )
 
+if "%PORT%"=="" set PORT=3000
+
 echo.
 echo   Starting server...
 echo   -------------------
-echo   Local:   http://localhost:3000
+echo   Local:   http://localhost:%PORT%
 echo   Data:    %cd%\data
 echo   (Set PORT=8080 before running to change port)
 echo.
