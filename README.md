@@ -1,92 +1,42 @@
-# bjorQ Dashboard
+# BJORQ Dashboard
 
-A 3D smart home dashboard that runs locally alongside Home Assistant.
+A 3D smart home dashboard for wall-mounted tablets and kiosks, powered by Home Assistant.
+
+![Version](https://img.shields.io/badge/version-0.1.8-blue)
 
 ## Quick Start
 
-**Krav:** Node.js 18+ — [nodejs.org](https://nodejs.org/)
+**Requires:** Node.js 18+ — [nodejs.org](https://nodejs.org/)
 
 ### Windows
 
-1. Ladda ner `bjorq-dashboard-windows.zip` från [Releases](../../releases/latest)
-2. Packa upp
-3. Dubbelklicka **`start.bat`** (PowerShell: `.\start.bat`)
-4. Webbläsaren öppnas automatiskt till `http://localhost:3000`
+1. Download `bjorq-dashboard-windows.zip` from [Releases](../../releases/latest)
+2. Unzip and double-click **`start.bat`**
+3. Opens at `http://localhost:3000`
 
 ### Linux / Raspberry Pi
 
-1. Ladda ner `bjorq-dashboard-linux.zip` från [Releases](../../releases/latest)
-2. Packa upp och kör:
+1. Download `bjorq-dashboard-linux.zip` from [Releases](../../releases/latest)
+2. Unzip and run:
    ```bash
    chmod +x start.sh && ./start.sh
    ```
-3. Öppna adressen som skrivs ut (t.ex. `http://192.168.1.x:3000`)
+3. Open the address printed in the terminal
 
-### Anpassad port
+## Documentation
 
-```bash
-# Linux / macOS
-PORT=8080 ./start.sh
+Full handbook available in [`/docs`](./docs/):
 
-# Windows
-set PORT=8080
-start.bat
-```
-
-## Data
-
-All data sparas i `data/`-mappen bredvid servern. Kopiera den för backup.
-
-| Fil | Innehåll |
-|-----|----------|
-| `data/config.json` | HA-anslutning, UI-inställningar |
-| `data/profiles.json` | Tema, prestanda, standby |
-| `data/projects/` | Byggnadsmodeller, assets, scener |
-
-## Home Assistant
-
-1. Öppna **Inställningar → Home Assistant** i dashboarden
-2. Ange din HA-URL (t.ex. `http://homeassistant.local:8123`)
-3. Ange en [long-lived access token](https://developers.home-assistant.io/docs/auth_api/#long-lived-access-tokens)
-
-Token lagras enbart på servern. Alla HA-anrop proxas via `/api/ha/*`.
-
-## Nätverksåtkomst
-
-Servern lyssnar på `0.0.0.0` — alla enheter på LAN når den. För fjärråtkomst, använd samma reverse proxy / VPN som för Home Assistant.
-
-## Felsökning
-
-| Problem | Lösning |
-|---------|---------|
-| "Node.js not found" | Installera Node.js 18+ |
-| "Port in use" | Sätt annan port: `PORT=8080 ./start.sh` |
-| "Permission denied" | `chmod +x start.sh` |
-| Blank sida | Vänta några sekunder, hårdladda (`Ctrl+Shift+R`) |
-
-## Autostart (Linux systemd)
-
-```ini
-# /etc/systemd/system/bjorq-dashboard.service
-[Unit]
-Description=bjorQ Dashboard
-After=network.target
-
-[Service]
-Type=simple
-WorkingDirectory=/path/to/bjorq-dashboard
-ExecStart=/usr/bin/node server/server.js
-Restart=always
-User=pi
-
-[Install]
-WantedBy=multi-user.target
-```
-
-```bash
-sudo systemctl enable bjorq-dashboard
-sudo systemctl start bjorq-dashboard
-```
+| Guide | Description |
+|-------|-------------|
+| [Overview](docs/01-overview.md) | Architecture, modes, supported platforms |
+| [Installation](docs/02-installation.md) | Setup for Windows, Linux, Raspberry Pi |
+| [Using the Dashboard](docs/03-using-the-dashboard.md) | Features, Build Mode, Settings |
+| [Performance & 3D](docs/04-performance-and-3d.md) | Quality settings, optimization tips |
+| [Data & Backups](docs/05-data-and-backups.md) | Storage, backup, restore |
+| [Kiosk & Display](docs/06-kiosk-and-display-modes.md) | App mode, kiosk setup |
+| [Troubleshooting](docs/07-troubleshooting.md) | Common issues and fixes |
+| [Developer Notes](docs/08-developer-notes.md) | API, state, build system |
 
 ## Development
 
@@ -95,8 +45,12 @@ npm install
 npm run dev
 ```
 
-**Import convention:** Använd alltid relativa imports (`./`, `../`) — aldrig `@/`.
+**Import convention:** Always use relative imports (`./`, `../`) — never `@/`.
 
 ## Tech Stack
 
-React · TypeScript · Vite · Three.js / React Three Fiber · Tailwind CSS · shadcn/ui · Zustand · Express
+React · TypeScript · Vite · Three.js · Tailwind CSS · shadcn/ui · Zustand · Express
+
+## License
+
+MIT
