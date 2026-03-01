@@ -225,11 +225,29 @@ Simplified to 4 clear light types: Tak, Strip, Vägg, Spot.
 ### 7.4 Shadow Improvements
 
 - SpotLights from spot and wall light types cast shadows with quality-scaled shadow maps
-- Imported 3D models and props now `castShadow` and `receiveShadow` on all meshes
+- **Imported house model does NOT cast shadows** (so sunlight/lamp light enters interiors); only receives shadows
+- Props/furniture `castShadow` and `receiveShadow` on all meshes — realistic furniture shadows
 - BuildScene3D respects global performance settings (shadows toggle, quality level, DPR)
-- New "Solljus-transparens" slider lets users make imported models semi-transparent so sunlight enters the house (opacity < 80% disables shadow casting)
+- "Solljus-transparens" slider lets users make imported models semi-transparent so sunlight enters the house
 
-**Files modified:** `src/store/types.ts`, `src/components/devices/DeviceMarkers3D.tsx`, `src/components/build/BuildInspector.tsx`, `src/components/build/ImportedHome3D.tsx`, `src/components/build/Props3D.tsx`, `src/components/build/BuildScene3D.tsx`, `src/components/build/import/ImportTools.tsx`
+### 7.5 Full XYZ Rotation for Imported Models
+
+- Three independent rotation sliders (X, Y, Z) each -180° to 180°
+- Fixed double-conversion bug (radians stored, were re-converted in renderer)
+
+### 7.6 Robust 3D Loader & WebGL Context Recovery
+
+- Manual GLTFLoader with state machine (`idle` → `loading` → `ready` | `error`)
+- 30-second timeout with automatic retry + cache-busting
+- "Ladda om 3D-modell" button on persistent error
+- Proper `geometry.dispose()` / `material.dispose()` / texture disposal on model swap (prevents GPU memory leaks)
+- WebGL `contextlost` / `contextrestored` handlers in both Scene3D and BuildScene3D — auto-recovery on tablets
+
+### 7.7 Black Text Fix
+
+- Input component and ModeHeader explicitly use `text-foreground` to prevent invisible text on dark themes
+
+**Files modified:** `src/store/types.ts`, `src/components/devices/DeviceMarkers3D.tsx`, `src/components/build/BuildInspector.tsx`, `src/components/build/ImportedHome3D.tsx`, `src/components/build/Props3D.tsx`, `src/components/build/BuildScene3D.tsx`, `src/components/build/import/ImportTools.tsx`, `src/components/Scene3D.tsx`, `src/components/ui/input.tsx`, `src/components/ModeHeader.tsx`
 
 ---
 

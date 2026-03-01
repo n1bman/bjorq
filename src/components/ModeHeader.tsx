@@ -14,7 +14,7 @@ export default function ModeHeader() {
             <span className="text-primary font-bold text-sm font-display">HT</span>
           </div>
           <div>
-            <h1 className="text-sm font-semibold tracking-tight font-display">Bygge</h1>
+            <h1 className="text-sm font-semibold tracking-tight font-display text-foreground">Bygge</h1>
             <p className="text-[11px] text-muted-foreground">Redigera planlösning</p>
           </div>
         </div>

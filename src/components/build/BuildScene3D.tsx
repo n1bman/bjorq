@@ -1,6 +1,6 @@
-import { Canvas } from '@react-three/fiber';
+import { Canvas, useThree } from '@react-three/fiber';
 import { OrbitControls, Grid, Environment } from '@react-three/drei';
-import { Suspense, useRef, useState, useCallback, useMemo } from 'react';
+import { Suspense, useRef, useState, useCallback, useMemo, useEffect } from 'react';
 import * as THREE from 'three';
 import GroundPlane from './GroundPlane';
 import WallDrawing3D from './WallDrawing3D';
@@ -16,6 +16,33 @@ import { useAppStore } from '../../store/useAppStore';
 import type { WallSegment, DeviceKind } from '../../store/types';
 
 const generateId = () => Math.random().toString(36).slice(2, 10);
+
+/** Handles WebGL context loss/restore inside the Canvas */
+function ContextLossHandler() {
+  const { gl } = useThree();
+  const [contextLost, setContextLost] = useState(false);
+
+  useEffect(() => {
+    const canvas = gl.domElement;
+    const handleLost = (e: Event) => {
+      e.preventDefault();
+      console.warn('[BuildScene3D] WebGL context lost');
+      setContextLost(true);
+    };
+    const handleRestored = () => {
+      console.info('[BuildScene3D] WebGL context restored');
+      setContextLost(false);
+    };
+    canvas.addEventListener('webglcontextlost', handleLost);
+    canvas.addEventListener('webglcontextrestored', handleRestored);
+    return () => {
+      canvas.removeEventListener('webglcontextlost', handleLost);
+      canvas.removeEventListener('webglcontextrestored', handleRestored);
+    };
+  }, [gl]);
+
+  return null;
+}
 
 function SceneContent() {
   const activeTool = useAppStore((s) => s.build.activeTool);
@@ -152,6 +179,7 @@ function SceneContent() {
 
   return (
     <>
+      <ContextLossHandler />
       <ambientLight intensity={ambientIntensity} color={ambientColor} />
       <directionalLight position={sunPos} intensity={sunIntensity} color="#ffd699" castShadow={enableShadows}
         shadow-mapSize-width={shadowMapSize} shadow-mapSize-height={shadowMapSize}

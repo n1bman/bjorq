@@ -1,48 +1,165 @@
-import { Suspense, useEffect, useState } from 'react';
-import { useLoader } from '@react-three/fiber';
+import { Suspense, useEffect, useState, useRef, useCallback } from 'react';
+import { useThree } from '@react-three/fiber';
+import { Html } from '@react-three/drei';
 import { useAppStore } from '../../store/useAppStore';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { ErrorBoundary } from './ErrorBoundary3D';
 import { analyzeModel } from '../../lib/modelAnalysis';
 import * as THREE from 'three';
 
-function ImportedModel({ url, opacity, shadowsEnabled }: { url: string; opacity: number; shadowsEnabled: boolean }) {
-  const gltf = useLoader(GLTFLoader, url);
-  const setImportedModel = useAppStore((s) => s.setImportedModel);
-  const hasStats = useAppStore((s) => !!s.homeGeometry.imported.modelStats);
+type ModelStatus = 'idle' | 'loading' | 'ready' | 'error';
 
-  useEffect(() => {
-    if (gltf.scene) {
-      let meshCount = 0;
-      gltf.scene.traverse((c) => { if ((c as any).isMesh) meshCount++; });
-      console.log(`[ImportedHome3D] Loaded model: ${meshCount} meshes, children: ${gltf.scene.children.length}`);
-      
-      if (!hasStats) {
-        const stats = analyzeModel(gltf.scene);
-        setImportedModel({ modelStats: stats });
-      }
-    }
-  }, [gltf, hasStats, setImportedModel]);
-
-  const scene = gltf.scene.clone();
-
-  // Traverse meshes: enable shadows + apply opacity
+function disposeScene(scene: THREE.Object3D) {
   scene.traverse((child: any) => {
     if (child.isMesh) {
-      // Shadows: only cast if opacity is high enough (otherwise sunlight passes through)
-      const shouldCast = shadowsEnabled && opacity >= 0.8;
-      child.castShadow = shouldCast;
-      child.receiveShadow = shadowsEnabled;
-
-      // Opacity/transparency
-      if (opacity < 1) {
-        child.material = child.material.clone();
-        child.material.transparent = true;
-        child.material.opacity = opacity;
-        child.material.depthWrite = opacity > 0.5;
+      child.geometry?.dispose();
+      if (child.material) {
+        const mats = Array.isArray(child.material) ? child.material : [child.material];
+        mats.forEach((mat: any) => {
+          if (mat.map) mat.map.dispose();
+          if (mat.normalMap) mat.normalMap.dispose();
+          if (mat.roughnessMap) mat.roughnessMap.dispose();
+          if (mat.metalnessMap) mat.metalnessMap.dispose();
+          if (mat.aoMap) mat.aoMap.dispose();
+          if (mat.emissiveMap) mat.emissiveMap.dispose();
+          if (mat.envMap) mat.envMap.dispose();
+          mat.dispose();
+        });
       }
     }
   });
+}
+
+function ImportedModel({ url, opacity, shadowsEnabled }: { url: string; opacity: number; shadowsEnabled: boolean }) {
+  const [status, setStatus] = useState<ModelStatus>('idle');
+  const [scene, setScene] = useState<THREE.Group | null>(null);
+  const retriedRef = useRef(false);
+  const prevSceneRef = useRef<THREE.Group | null>(null);
+  const setImportedModel = useAppStore((s) => s.setImportedModel);
+  const hasStats = useAppStore((s) => !!s.homeGeometry.imported.modelStats);
+
+  const loadModel = useCallback((loadUrl: string) => {
+    setStatus('loading');
+    const loader = new GLTFLoader();
+    const timeout = setTimeout(() => {
+      if (!retriedRef.current) {
+        retriedRef.current = true;
+        const bustUrl = loadUrl.includes('?') ? `${loadUrl}&v=${Date.now()}` : `${loadUrl}?v=${Date.now()}`;
+        loadModel(bustUrl);
+      } else {
+        setStatus('error');
+      }
+    }, 30000);
+
+    loader.load(
+      loadUrl,
+      (gltf) => {
+        clearTimeout(timeout);
+        if (prevSceneRef.current) {
+          disposeScene(prevSceneRef.current);
+        }
+        const cloned = gltf.scene.clone();
+        prevSceneRef.current = cloned;
+
+        // Analyze model stats
+        if (!hasStats) {
+          const stats = analyzeModel(gltf.scene);
+          setImportedModel({ modelStats: stats });
+        }
+
+        // Setup meshes: house model does NOT cast shadows, only receives
+        cloned.traverse((child: any) => {
+          if (child.isMesh) {
+            child.castShadow = false;
+            child.receiveShadow = shadowsEnabled;
+
+            if (opacity < 1) {
+              child.material = child.material.clone();
+              child.material.transparent = true;
+              child.material.opacity = opacity;
+              child.material.depthWrite = opacity > 0.5;
+            }
+          }
+        });
+
+        setScene(cloned);
+        setStatus('ready');
+      },
+      undefined,
+      (err) => {
+        clearTimeout(timeout);
+        console.error('[ImportedHome3D] Load error:', err);
+        if (!retriedRef.current) {
+          retriedRef.current = true;
+          const bustUrl = loadUrl.includes('?') ? `${loadUrl}&v=${Date.now()}` : `${loadUrl}?v=${Date.now()}`;
+          loadModel(bustUrl);
+        } else {
+          setStatus('error');
+        }
+      }
+    );
+  }, [opacity, shadowsEnabled, hasStats, setImportedModel]);
+
+  useEffect(() => {
+    retriedRef.current = false;
+    loadModel(url);
+    return () => {
+      if (prevSceneRef.current) {
+        disposeScene(prevSceneRef.current);
+        prevSceneRef.current = null;
+      }
+    };
+  }, [url]); // Only reload on URL change
+
+  // Re-apply shadow/opacity settings when they change without reloading
+  useEffect(() => {
+    if (scene) {
+      scene.traverse((child: any) => {
+        if (child.isMesh) {
+          child.castShadow = false;
+          child.receiveShadow = shadowsEnabled;
+          if (opacity < 1) {
+            child.material = child.material.clone();
+            child.material.transparent = true;
+            child.material.opacity = opacity;
+            child.material.depthWrite = opacity > 0.5;
+          } else {
+            if (child.material.transparent) {
+              child.material = child.material.clone();
+              child.material.transparent = false;
+              child.material.opacity = 1;
+              child.material.depthWrite = true;
+            }
+          }
+        }
+      });
+    }
+  }, [opacity, shadowsEnabled, scene]);
+
+  if (status === 'error') {
+    return (
+      <Html center>
+        <div className="bg-destructive/90 text-destructive-foreground px-4 py-3 rounded-lg text-center space-y-2">
+          <p className="text-sm font-medium">3D-modellen kunde inte laddas</p>
+          <button
+            onClick={() => { retriedRef.current = false; loadModel(url); }}
+            className="px-3 py-1.5 rounded bg-background text-foreground text-xs hover:bg-muted transition"
+          >
+            Ladda om 3D-modell
+          </button>
+        </div>
+      </Html>
+    );
+  }
+
+  if (status === 'loading' || !scene) {
+    return (
+      <mesh>
+        <boxGeometry args={[1, 1, 1]} />
+        <meshStandardMaterial color="#4a9eff" wireframe />
+      </mesh>
+    );
+  }
 
   return <primitive object={scene} />;
 }
@@ -111,13 +228,11 @@ export default function ImportedHome3D() {
   return (
     <group
       position={position}
-      rotation={rotation.map((r) => (r * Math.PI) / 180) as [number, number, number]}
+      rotation={rotation as [number, number, number]}
       scale={scale}
     >
       <ErrorBoundary fallback={<FallbackBox />}>
-        <Suspense fallback={<FallbackBox />}>
-          <ImportedModel url={validUrl} opacity={opacity} shadowsEnabled={shadowsEnabled} />
-        </Suspense>
+        <ImportedModel url={validUrl} opacity={opacity} shadowsEnabled={shadowsEnabled} />
       </ErrorBoundary>
     </group>
   );
