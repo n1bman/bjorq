@@ -3,9 +3,11 @@ import { useAppStore } from '../../../store/useAppStore';
 import { Input } from '../../ui/input';
 import { Button } from '../../ui/button';
 import { cn } from '../../../lib/utils';
-import { User, Palette, Monitor, Download, Upload, Trash2 } from 'lucide-react';
+import { User, Palette, Monitor, Download, Upload, Trash2, MapPin, Info } from 'lucide-react';
 import { useRef } from 'react';
 import { isHostedSync } from '../../../lib/apiClient';
+
+const APP_VERSION = '0.0.0'; // synced with package.json
 
 const themes = [
   { key: 'dark' as const, label: 'Mörkt' },
@@ -30,6 +32,7 @@ const backgrounds = [
 export default function ProfilePanel() {
   const profile = useAppStore((s) => s.profile);
   const setProfile = useAppStore((s) => s.setProfile);
+  const location = useAppStore((s) => s.environment.location);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [confirmClear, setConfirmClear] = useState(false);
 
@@ -76,8 +79,37 @@ export default function ProfilePanel() {
 
   return (
     <div className="space-y-4">
-      {/* Card 1: Profile + Theme + Accent + Background */}
-      <div className="glass-panel rounded-2xl p-4 space-y-4">
+      {/* Card 1: Profile info bar */}
+      <div className="glass-panel rounded-2xl p-[var(--space-panel)] flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-9 h-9 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
+            <User size={16} className="text-primary" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-foreground truncate">{profile.name || 'Användare'}</p>
+            <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+              <span className="flex items-center gap-0.5">
+                <MapPin size={9} />
+                {location.lat.toFixed(1)}°, {location.lon.toFixed(1)}°
+              </span>
+              <span>·</span>
+              <span className="flex items-center gap-0.5">
+                <Info size={9} />
+                v{APP_VERSION}
+              </span>
+              {isHostedSync() && (
+                <>
+                  <span>·</span>
+                  <span className="text-primary">Hosted</span>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Card 2: Theme + Accent + Background */}
+      <div className="glass-panel rounded-2xl p-[var(--space-panel)] space-y-4">
         {/* Profile name */}
         <div className="space-y-2">
           <div className="flex items-center gap-2">
@@ -154,8 +186,8 @@ export default function ProfilePanel() {
         </div>
       </div>
 
-      {/* Card 2: Data & Backup */}
-      <div className="glass-panel rounded-2xl p-4 space-y-3">
+      {/* Card 3: Data & Backup */}
+      <div className="glass-panel rounded-2xl p-[var(--space-panel)] space-y-3">
         <div className="flex items-center gap-2">
           <Download size={14} className="text-muted-foreground" />
           <span className="text-xs font-semibold text-foreground">Data & Backup</span>

@@ -163,11 +163,11 @@ function WeatherCategory() {
   return (
     <div className="space-y-4">
       <WeatherWidget />
-      <LocationSettings />
-      <div className="glass-panel rounded-2xl p-4">
+      <div className="glass-panel rounded-2xl">
         <p className="text-xs text-muted-foreground">
           Väderprognosen synkas automatiskt med din plats.
           Aktivera "Live väder" för att synka med Open-Meteo.
+          Ändra plats under Inställningar → Plats.
         </p>
       </div>
     </div>
@@ -299,20 +299,39 @@ function StandbySettingsPanel() {
 
 function SettingsCategory() {
   return (
-    <div className="max-w-[1100px] mx-auto">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="space-y-4">
+    <div className="max-w-[1100px] mx-auto space-y-[var(--space-section)]">
+      {/* Utseende */}
+      <section className="space-y-1">
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1">Utseende</h2>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <ProfilePanel />
           <CameraStartSettings />
         </div>
-        <div className="space-y-4">
+      </section>
+
+      {/* System */}
+      <section className="space-y-1">
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1">System</h2>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <PerformanceSettings />
           <StandbySettingsPanel />
-          <LocationSettings />
-          <HAConnectionPanel />
-          <HomeWidgetConfig />
         </div>
-      </div>
+      </section>
+
+      {/* Anslutning */}
+      <section className="space-y-1">
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1">Anslutning</h2>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <HAConnectionPanel />
+          <LocationSettings />
+        </div>
+      </section>
+
+      {/* Widgets */}
+      <section className="space-y-1">
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1">Widgets</h2>
+        <HomeWidgetConfig />
+      </section>
     </div>
   );
 }
