@@ -1,16 +1,22 @@
+import { useState } from 'react';
 import { useAppStore } from '../../../store/useAppStore';
-import { Camera, Wifi, WifiOff, Eye } from 'lucide-react';
+import { Camera, Eye, Video, X, Bell } from 'lucide-react';
+import { Button } from '../../ui/button';
 import { cn } from '../../../lib/utils';
 
 export default function SurveillancePanel() {
   const cameras = useAppStore((s) => s.devices.markers.filter((m) => m.kind === 'camera'));
   const deviceStates = useAppStore((s) => s.devices.deviceStates);
+  const activityLog = useAppStore((s) => s.activityLog.filter((e) => e.category === 'device' && e.deviceId && cameras.some((c) => c.id === e.deviceId)).slice(0, 10));
   const motionSensors = useAppStore((s) =>
     s.devices.markers.filter((m) => {
       const st = s.devices.deviceStates[m.id];
       return m.kind === 'sensor' && st?.kind === 'sensor' && st.data.sensorType === 'motion';
     })
   );
+
+  const [expandedCam, setExpandedCam] = useState<string | null>(null);
+  const [showLog, setShowLog] = useState(false);
 
   if (cameras.length === 0) {
     return (
@@ -23,38 +29,81 @@ export default function SurveillancePanel() {
   }
 
   return (
-    <div className="grid grid-cols-2 gap-3">
-      {cameras.map((cam) => {
+    <div className="space-y-3">
+      {/* Expanded camera view */}
+      {expandedCam && (() => {
+        const cam = cameras.find((c) => c.id === expandedCam);
+        if (!cam) return null;
         const state = deviceStates[cam.id];
         const isOn = state && 'on' in state.data ? (state.data as any).on : true;
-
         return (
-          <div key={cam.id} className="glass-panel rounded-2xl overflow-hidden">
-            {/* Camera feed placeholder */}
-            <div className="relative aspect-video bg-black/60 flex items-center justify-center">
-              <Camera size={32} className="text-muted-foreground/30" />
+          <div className="glass-panel rounded-2xl overflow-hidden animate-fade-in">
+            <div className="relative aspect-video bg-black/80 flex items-center justify-center">
+              <Video size={48} className="text-muted-foreground/20" />
               <div className={cn(
-                'absolute top-2 left-2 flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-medium',
+                'absolute top-3 left-3 flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-semibold',
                 isOn ? 'bg-green-500/20 text-green-400' : 'bg-destructive/20 text-destructive'
               )}>
-                {isOn ? <Wifi size={8} /> : <WifiOff size={8} />}
-                {isOn ? 'Live' : 'Offline'}
+                <span className={cn('w-2 h-2 rounded-full', isOn ? 'bg-green-400 animate-pulse' : 'bg-destructive')} />
+                {isOn ? 'LIVE' : 'OFFLINE'}
               </div>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="absolute top-2 right-2 h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+                onClick={() => setExpandedCam(null)}
+              >
+                <X size={16} />
+              </Button>
             </div>
-            {/* Info */}
-            <div className="p-3">
-              <p className="text-sm font-medium text-foreground truncate">{cam.name || 'Kamera'}</p>
-              <p className="text-xs text-muted-foreground">
-                {isOn ? 'Ansluten' : 'Ej ansluten'}
-              </p>
+            <div className="p-4 flex items-center justify-between">
+              <div>
+                <p className="text-sm font-semibold text-foreground">{cam.name || 'Kamera'}</p>
+                <p className="text-xs text-muted-foreground">{isOn ? 'Ansluten — Redo för HA-stream' : 'Ej ansluten'}</p>
+              </div>
+              <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1">
+                <Bell size={10} /> Notiser
+              </Button>
             </div>
           </div>
         );
-      })}
+      })()}
+
+      {/* Camera grid */}
+      <div className="grid grid-cols-2 gap-3">
+        {cameras.map((cam) => {
+          const state = deviceStates[cam.id];
+          const isOn = state && 'on' in state.data ? (state.data as any).on : true;
+          if (cam.id === expandedCam) return null;
+
+          return (
+            <div
+              key={cam.id}
+              className="glass-panel rounded-2xl overflow-hidden cursor-pointer hover:ring-1 hover:ring-primary/30 transition-all"
+              onClick={() => setExpandedCam(cam.id)}
+            >
+              <div className="relative aspect-video bg-black/60 flex items-center justify-center">
+                <Camera size={32} className="text-muted-foreground/30" />
+                <div className={cn(
+                  'absolute top-2 left-2 flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-medium',
+                  isOn ? 'bg-green-500/20 text-green-400' : 'bg-destructive/20 text-destructive'
+                )}>
+                  <span className={cn('w-1.5 h-1.5 rounded-full', isOn ? 'bg-green-400 animate-pulse' : 'bg-destructive')} />
+                  {isOn ? 'Live' : 'Offline'}
+                </div>
+              </div>
+              <div className="p-3">
+                <p className="text-sm font-medium text-foreground truncate">{cam.name || 'Kamera'}</p>
+                <p className="text-xs text-muted-foreground">{isOn ? 'Ansluten' : 'Ej ansluten'}</p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
 
       {/* Motion sensor summary */}
       {motionSensors.length > 0 && (
-        <div className="col-span-2 glass-panel rounded-2xl p-4">
+        <div className="glass-panel rounded-2xl p-4">
           <div className="flex items-center gap-2 mb-2">
             <Eye size={14} className="text-muted-foreground" />
             <span className="text-xs font-medium text-foreground">Rörelsesensorer</span>
@@ -75,6 +124,35 @@ export default function SurveillancePanel() {
           </div>
         </div>
       )}
+
+      {/* Camera activity log */}
+      <div className="glass-panel rounded-2xl p-4">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <Bell size={14} className="text-muted-foreground" />
+            <span className="text-xs font-medium text-foreground">Kameralogg</span>
+          </div>
+          <Button size="sm" variant="ghost" className="h-6 text-[10px]" onClick={() => setShowLog(!showLog)}>
+            {showLog ? 'Dölj' : 'Visa'}
+          </Button>
+        </div>
+        {showLog && (
+          <div className="space-y-1 mt-2">
+            {activityLog.length === 0 ? (
+              <p className="text-[11px] text-muted-foreground/60">Inga kamerahändelser loggade</p>
+            ) : (
+              activityLog.map((e) => (
+                <div key={e.id} className="flex items-center justify-between text-[11px]">
+                  <span className="text-muted-foreground truncate flex-1">{e.title}</span>
+                  <span className="text-muted-foreground/50 shrink-0 ml-2">
+                    {new Date(e.timestamp).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

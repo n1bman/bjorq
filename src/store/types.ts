@@ -536,11 +536,14 @@ export interface HomeViewState {
 }
 
 // ─── Activity Log ───
+export type ActivityCategory = 'system' | 'device';
+
 export interface ActivityEvent {
   id: string;
   timestamp: string;
   deviceId?: string;
   kind: 'state_change' | 'alert' | 'connection' | 'notification';
+  category: ActivityCategory;
   title: string;
   detail?: string;
   severity: 'info' | 'warning' | 'error';
