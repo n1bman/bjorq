@@ -1,45 +1,52 @@
 
 
-## Plan: Document Full Roadmap + Implement Phase 1
+## Plan: Phase 7 — 3D Lighting Engine + Light Type Behavior + Full Rotation
 
-### Step 1 — Create `/docs/roadmap-vNext.md`
+### 1. Light type affects 3D light source
 
-Create a comprehensive roadmap document containing all 7 phases with:
-- Phase title, description, and deliverables for each
-- Status tracking (todo/in-progress/done)
-- Technical notes on architecture impact (dual-mode, state schema changes)
-- Dependencies between phases
-- Implementation rules (relative imports, no breaking dev mode, etc.)
+Currently `LightMarker` always uses a `pointLight` regardless of `lightType`. Each type should emit light differently:
 
-Content will mirror the user's specification, enriched with technical details from the current codebase (store shape, component structure, server API).
+- **ceiling** — `pointLight` casting downward, moderate distance (8), decay 2 (current behavior)
+- **strip** — `rectAreaLight`-like effect via a stretched mesh + wider `pointLight` with higher distance (10), lower intensity
+- **spot** — `spotLight` with narrow angle (~30°), sharp cone, high intensity, supports X/Z rotation for aiming
+- **wall** — `spotLight` with wider angle (~60°), medium distance, side-mounted wash effect
+- **custom** — `pointLight` (same as ceiling, user controls all params)
 
-### Step 2 — Phase 1.1: Design System Consistency
+Changes in `DeviceMarkers3D.tsx` `LightMarker`:
+- Read `marker.lightType` (need to pass marker data into LightMarker)
+- Switch light source type based on `lightType`
+- Apply marker rotation to spotlight target direction
+- Visual mesh shape changes: sphere for point lights, elongated box for strip, cone indicator for spot
 
-Changes across the UI:
+### 2. Full XYZ rotation for ALL devices (not just screens)
 
-1. **Unified spacing tokens** — Add CSS custom properties for consistent padding/gaps (`--space-panel`, `--space-section`) used in all `glass-panel` components.
+Currently only `media_screen` gets XYZ rotation sliders; other devices get Y-only.
 
-2. **Toggle state clarity** — The `PerformanceSettings` quality buttons use ad-hoc border styling. Refactor to a shared `OptionButton` component with clear active/inactive/disabled states that works across all themes.
+In `BuildInspector.tsx` `DeviceInspector`:
+- Change rotation section to always show X and Y axes (at minimum) for all devices
+- Lights especially need X and Z rotation to aim spotlights/wall lights
+- Apply rotation in `LightMarker` group to orient the light source
 
-3. **Theme improvements** — Review `src/index.css` for Midnight and Light theme variants. Midnight currently only exists as a profile option but has no distinct CSS variables. Add `:root[data-theme="midnight"]` and `:root[data-theme="light"]` variable blocks with appropriate contrast for wall-mounted tablet readability.
+### 3. Remove "Anpassad" (custom) light type, keep 4 types
 
-4. **Glass panel consistency** — Audit all panels in DashboardGrid for consistent `rounded-2xl p-4/p-5` usage. Standardize to `p-4` for cards, `p-5` for settings panels.
+Per user feedback, remove `custom` from the light type options. Update `LightType` in `types.ts`.
 
-### Step 3 — Phase 1.2: Settings Restructure
+### 4. Improved shadow quality
 
-1. **Move Location** — Remove `<LocationSettings />` from `WeatherCategory` in `DashboardGrid.tsx`. It already exists in `SettingsCategory`. Update `WeatherCategory` to show weather data only.
+In `Scene3D.tsx` and `BuildScene3D.tsx`:
+- Enable `castShadow` on spotlights from light markers
+- Ensure `receiveShadow` on ground/floor meshes (already done)
 
-2. **Enhance ProfilePanel** — Add version display (from `package.json`), active location summary, and backup status indicator to `ProfilePanel.tsx`.
+### Files modified
 
-3. **Improve Prestanda visual states** — Make the quality option buttons in `PerformanceSettings.tsx` use the new shared `OptionButton` component with stronger active/inactive contrast.
+- `src/store/types.ts` — Remove `'custom'` from `LightType`
+- `src/components/devices/DeviceMarkers3D.tsx` — Rewrite `LightMarker` to use different Three.js lights per type, accept rotation, pass marker data
+- `src/components/build/BuildInspector.tsx` — XYZ rotation for all devices, remove "Anpassad" option
+- `docs/roadmap-vNext.md` — Mark Phase 7 done
 
-4. **Settings grouping** — Reorder `SettingsCategory` panels into clearer logical groups with section headers: "Utseende" (Profile), "System" (Performance, Standby), "Anslutning" (HA, Location), "Data" (Backup/Export in ProfilePanel).
+### Technical details
 
-### Technical Details
-
-- **Files created:** `docs/roadmap-vNext.md`
-- **Files modified:** `src/index.css` (theme vars), `src/components/home/DashboardGrid.tsx` (settings restructure, remove Location from Weather), `src/components/home/cards/ProfilePanel.tsx` (version + status), `src/components/home/cards/PerformanceSettings.tsx` (visual states)
-- **New component:** Shared `OptionButton` or extend existing Button variants
-- **No state schema changes** — Phase 1 is purely visual/structural
-- **Import convention:** All new files use relative imports only
+- `SpotLight` target requires a `target` object positioned relative to the group; we use `useRef` + `useFrame` to update the target position based on rotation
+- Strip lights use an elongated emissive mesh + wider pointLight to approximate area lighting
+- The marker's `rotation` field already stores `[x, y, z]` radians; currently only Y is set for non-screens. No schema change needed for rotation.
 
