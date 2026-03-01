@@ -20,6 +20,7 @@ import CalendarWidget from './cards/CalendarWidget';
 import RobotPanel from './cards/RobotPanel';
 import CameraStartSettings from './cards/CameraStartSettings';
 import PerformanceSettings from './cards/PerformanceSettings';
+import DisplaySettings from './cards/DisplaySettings';
 import WifiPanel from './cards/WifiPanel';
 import WifiWidget from './cards/WifiWidget';
 import AutomationsPanel from './cards/AutomationsPanel';
@@ -326,6 +327,14 @@ function SettingsCategory() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <PerformanceSettings />
           <StandbySettingsPanel />
+        </div>
+      </section>
+
+      {/* Skärm / Display */}
+      <section className="space-y-1">
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1">Skärm</h2>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <DisplaySettings />
         </div>
       </section>
 

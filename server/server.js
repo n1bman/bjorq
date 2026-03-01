@@ -8,6 +8,7 @@ import projectsRouter from './api/projects.js';
 import assetsRouter from './api/assets.js';
 import haProxyRouter from './api/haProxy.js';
 import bootstrapRouter from './api/bootstrap.js';
+import backupsRouter from './api/backups.js';
 
 const app = express();
 const PORT = parseInt(process.env.PORT || '3000', 10);
@@ -22,6 +23,7 @@ app.use('/api', profilesRouter);
 app.use('/api', assetsRouter);
 app.use('/api', projectsRouter);
 app.use('/api', haProxyRouter);
+app.use('/api', backupsRouter);
 
 // Serve GLB assets from data/projects/
 app.use('/projects', express.static(path.join(dataDir(), 'projects')));

@@ -1,7 +1,8 @@
 import { useAppStore } from '../../../store/useAppStore';
-import { Gauge, Monitor, Sun, Sparkles } from 'lucide-react';
+import { Gauge, Monitor, Sun, Sparkles, RefreshCw } from 'lucide-react';
 import { Switch } from '../../ui/switch';
 import OptionButton from '../../ui/OptionButton';
+import { toast } from 'sonner';
 import type { QualityLevel } from '../../../store/types';
 
 const qualityOptions: { value: QualityLevel; label: string; desc: string }[] = [
@@ -9,6 +10,10 @@ const qualityOptions: { value: QualityLevel; label: string; desc: string }[] = [
   { value: 'medium', label: 'Medium', desc: 'Balanserad prestanda' },
   { value: 'high', label: 'Hög', desc: 'Full kvalitet' },
 ];
+
+function notify() {
+  toast.success('Ändringar sparade ✅', { description: '3D-scenen laddas om automatiskt.' });
+}
 
 export default function PerformanceSettings() {
   const perf = useAppStore((s) => s.performance);
@@ -20,13 +25,19 @@ export default function PerformanceSettings() {
     } else {
       setPerformance({ tabletMode: false });
     }
+    notify();
   };
 
   return (
     <div className="glass-panel rounded-2xl p-[var(--space-panel)] space-y-4">
       <div className="flex items-center gap-2">
         <Gauge size={18} className="text-primary" />
-        <h3 className="text-sm font-semibold text-foreground">Prestanda</h3>
+        <div>
+          <h3 className="text-sm font-semibold text-foreground">Prestanda</h3>
+          <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+            <RefreshCw size={9} /> 3D-scenen laddas om automatiskt vid ändring
+          </p>
+        </div>
       </div>
 
       {/* Tablet mode */}
@@ -49,7 +60,7 @@ export default function PerformanceSettings() {
             <OptionButton
               key={q.value}
               active={perf.quality === q.value}
-              onClick={() => setPerformance({ quality: q.value, tabletMode: false })}
+              onClick={() => { setPerformance({ quality: q.value, tabletMode: false }); notify(); }}
               label={q.label}
               description={q.desc}
             />
@@ -65,7 +76,7 @@ export default function PerformanceSettings() {
         </div>
         <Switch
           checked={perf.shadows}
-          onCheckedChange={(v) => setPerformance({ shadows: v, tabletMode: false })}
+          onCheckedChange={(v) => { setPerformance({ shadows: v, tabletMode: false }); notify(); }}
         />
       </div>
 
@@ -77,7 +88,7 @@ export default function PerformanceSettings() {
         </div>
         <Switch
           checked={perf.postprocessing}
-          onCheckedChange={(v) => setPerformance({ postprocessing: v, tabletMode: false })}
+          onCheckedChange={(v) => { setPerformance({ postprocessing: v, tabletMode: false }); notify(); }}
         />
       </div>
     </div>
