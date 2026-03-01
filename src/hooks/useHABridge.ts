@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
-import { useAppStore } from '@/store/useAppStore';
+import { useAppStore } from '../store/useAppStore';
 import { haServiceCaller } from './useHomeAssistant';
-import type { DeviceState } from '@/store/types';
+import type { DeviceState } from '../store/types';
 
 /**
  * Set of entityIds currently suppressed (we just sent a command, ignore HA echo).

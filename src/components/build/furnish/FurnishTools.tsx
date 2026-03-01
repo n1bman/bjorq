@@ -1,7 +1,7 @@
-import { useAppStore } from '@/store/useAppStore';
+import { useAppStore } from '../../../store/useAppStore';
 import { useRef } from 'react';
 import { Upload, Trash2, RotateCcw } from 'lucide-react';
-import { Slider } from '@/components/ui/slider';
+import { Slider } from '../../ui/slider';
 
 const generateId = () => Math.random().toString(36).slice(2, 10);
 

@@ -1,4 +1,4 @@
-import type { DeviceKind } from '@/store/types';
+import type { DeviceKind } from '../store/types';
 
 /** Maps a DeviceKind to the HA entity domains it should show */
 export const kindToDomains: Record<DeviceKind, string[] | null> = {

@@ -1,7 +1,7 @@
-import { useAppStore } from '@/store/useAppStore';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
+import { useAppStore } from '../../../store/useAppStore';
+import { Input } from '../../ui/input';
+import { Button } from '../../ui/button';
+import { Switch } from '../../ui/switch';
 import { MapPin, Navigation, Search } from 'lucide-react';
 import { useState } from 'react';
 

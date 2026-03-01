@@ -1,7 +1,7 @@
-import { useAppStore } from '@/store/useAppStore';
+import { useAppStore } from '../../../store/useAppStore';
 import { Bell, AlertTriangle, AlertCircle, Info, Trash2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import { Button } from '../../ui/button';
+import { cn } from '../../../lib/utils';
 
 const severityConfig = {
   info: { icon: Info, className: 'text-muted-foreground' },

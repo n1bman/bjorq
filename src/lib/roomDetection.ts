@@ -1,4 +1,4 @@
-import type { WallSegment, Room } from '@/store/types';
+import type { WallSegment, Room } from '../store/types';
 
 const EPSILON = 0.05; // 5cm tolerance for node matching
 

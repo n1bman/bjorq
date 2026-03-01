@@ -1,6 +1,6 @@
 import { useEffect, useCallback } from 'react';
-import { useAppStore } from '@/store/useAppStore';
-import Scene3D from '@/components/Scene3D';
+import { useAppStore } from '../../store/useAppStore';
+import Scene3D from '../Scene3D';
 import StandbyClock from './StandbyClock';
 import StandbyWeather from './StandbyWeather';
 import StandbyWidgets from './StandbyWidgets';

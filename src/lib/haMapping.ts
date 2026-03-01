@@ -1,4 +1,4 @@
-import type { DeviceState } from '@/store/types';
+import type { DeviceState } from '../store/types';
 
 /**
  * Maps a Home Assistant entity state + attributes to our internal DeviceState format.

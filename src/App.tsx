@@ -1,18 +1,33 @@
-// Diagnostic Step 3e: Test @/lib/utils after cache bust
+import { Toaster } from "./components/ui/toaster";
+import { Toaster as Sonner } from "./components/ui/sonner";
+import { TooltipProvider } from "./components/ui/tooltip";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { cn } from "@/lib/utils";
+import Index from "./pages/Index";
+import NotFound from "./pages/NotFound";
+import { useThemeEffect } from "./hooks/useThemeEffect";
+
+const queryClient = new QueryClient();
+
+function ThemeInit() {
+  useThemeEffect();
+  return null;
+}
 
 const App = () => (
-  <BrowserRouter>
-    <Routes>
-      <Route path="/" element={
-        <div className={cn("p-8")} style={{ color: 'white', fontFamily: 'system-ui' }}>
-          <h1>HomeTwin — Step 3e ✅</h1>
-          <p>@/lib/utils after cache bust</p>
-        </div>
-      } />
-    </Routes>
-  </BrowserRouter>
+  <QueryClientProvider client={queryClient}>
+    <TooltipProvider>
+      <Toaster />
+      <Sonner />
+      <ThemeInit />
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<Index />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </BrowserRouter>
+    </TooltipProvider>
+  </QueryClientProvider>
 );
 
 export default App;

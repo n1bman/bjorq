@@ -1,7 +1,7 @@
-import { useAppStore } from '@/store/useAppStore';
+import { useAppStore } from '../../../store/useAppStore';
 import { Thermometer } from 'lucide-react';
 import { useState } from 'react';
-import { cn } from '@/lib/utils';
+import { cn } from '../../../lib/utils';
 
 export default function TemperatureWidget() {
   const markers = useAppStore((s) => s.devices.markers);

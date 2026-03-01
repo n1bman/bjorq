@@ -3,8 +3,8 @@ import { OrbitControls, Grid, Environment } from '@react-three/drei';
 import { Suspense, useMemo, useRef, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { useAppStore } from '@/store/useAppStore';
-import { cameraRef } from '@/lib/cameraRef';
+import { useAppStore } from '../store/useAppStore';
+import { cameraRef } from '../lib/cameraRef';
 import Walls3D from './build/Walls3D';
 import Floors3D from './build/Floors3D';
 import Ceilings3D from './build/Ceilings3D';
@@ -14,7 +14,7 @@ import Props3D from './build/Props3D';
 import DeviceMarkers3D from './devices/DeviceMarkers3D';
 import WeatherEffects3D from './build/WeatherEffects3D';
 import GroundPlane from './build/GroundPlane';
-import type { CameraPreset, StandbyCameraView } from '@/store/types';
+import type { CameraPreset, StandbyCameraView } from '../store/types';
 
 const presetPositions: Record<CameraPreset, THREE.Vector3> = {
   free: new THREE.Vector3(12, 12, 12),

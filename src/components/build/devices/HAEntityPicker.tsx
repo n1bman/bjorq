@@ -1,12 +1,12 @@
 import { useState, useMemo } from 'react';
-import { useAppStore } from '@/store/useAppStore';
-import type { DeviceKind, HAEntity } from '@/store/types';
-import { kindToDomains } from '@/lib/haDomainMapping';
-import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
-import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command';
-import { Input } from '@/components/ui/input';
+import { useAppStore } from '../../../store/useAppStore';
+import type { DeviceKind, HAEntity } from '../../../store/types';
+import { kindToDomains } from '../../../lib/haDomainMapping';
+import { Popover, PopoverTrigger, PopoverContent } from '../../ui/popover';
+import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '../../ui/command';
+import { Input } from '../../ui/input';
 import { Check, ChevronsUpDown, Unlink, Wifi, WifiOff } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn } from '../../../lib/utils';
 
 interface Props {
   deviceId: string;

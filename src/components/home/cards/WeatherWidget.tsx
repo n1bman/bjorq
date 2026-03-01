@@ -1,7 +1,7 @@
-import { useAppStore } from '@/store/useAppStore';
+import { useAppStore } from '../../../store/useAppStore';
 import { Thermometer, Wind, Droplets } from 'lucide-react';
 import { useState } from 'react';
-import { cn } from '@/lib/utils';
+import { cn } from '../../../lib/utils';
 
 const weatherIcons: Record<string, string> = {
   clear: '☀️',

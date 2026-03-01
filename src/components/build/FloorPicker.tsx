@@ -1,6 +1,6 @@
-import { useAppStore } from '@/store/useAppStore';
+import { useAppStore } from '../../store/useAppStore';
 import { Plus, ChevronDown } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn } from '../../lib/utils';
 import { useState } from 'react';
 
 export default function FloorPicker() {

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import type { ModelStats, PerformanceRating } from '@/store/types';
+import type { ModelStats, PerformanceRating } from '../store/types';
 
 export function analyzeModel(scene: THREE.Object3D): ModelStats {
   let triangles = 0;

@@ -1,6 +1,6 @@
-import { useAppStore } from '@/store/useAppStore';
+import { useAppStore } from '../../../store/useAppStore';
 import { Camera, Wifi, WifiOff, Eye } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn } from '../../../lib/utils';
 
 export default function SurveillancePanel() {
   const cameras = useAppStore((s) => s.devices.markers.filter((m) => m.kind === 'camera'));

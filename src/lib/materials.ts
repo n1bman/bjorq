@@ -1,4 +1,4 @@
-import type { Material } from '@/store/types';
+import type { Material } from '../store/types';
 
 export const presetMaterials: Material[] = [
   { id: 'mat-white-paint', name: 'Vit färg', type: 'paint', color: '#f5f5f0', roughness: 0.9 },

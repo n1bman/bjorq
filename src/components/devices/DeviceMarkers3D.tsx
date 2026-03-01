@@ -1,11 +1,11 @@
 // @ts-nocheck — R3F ThreeEvent<PointerEvent> vs ThreeEvent<MouseEvent> mismatch is safe
 import { useRef, useCallback, useMemo, useEffect, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
-import { useAppStore } from '@/store/useAppStore';
-import type { DeviceKind, DeviceMarker, VacuumZone } from '@/store/types';
+import { useAppStore } from '../../store/useAppStore';
+import type { DeviceKind, DeviceMarker, VacuumZone } from '../../store/types';
 import * as THREE from 'three';
 import type { ThreeEvent } from '@react-three/fiber';
-import { randomPointInPolygon } from '@/lib/vacuumGeometry';
+import { randomPointInPolygon } from '../../lib/vacuumGeometry';
 
 interface MarkerProps {
   position: [number, number, number];

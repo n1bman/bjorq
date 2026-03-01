@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useAppStore } from '@/store/useAppStore';
+import { useAppStore } from '../../store/useAppStore';
 import * as THREE from 'three';
 import { Line } from '@react-three/drei';
 

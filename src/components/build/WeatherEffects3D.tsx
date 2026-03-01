@@ -1,7 +1,7 @@
 import { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { useAppStore } from '@/store/useAppStore';
+import { useAppStore } from '../../store/useAppStore';
 
 const MIN_RADIUS = 6; // meters from center — particles only spawn outside this
 const MAX_HEIGHT = 6; // max spawn height in meters (stays below roof level)

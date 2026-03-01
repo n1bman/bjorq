@@ -1,4 +1,4 @@
-import { useAppStore } from '@/store/useAppStore';
+import { useAppStore } from '../store/useAppStore';
 
 export default function ModeHeader() {
   const appMode = useAppStore((s) => s.appMode);

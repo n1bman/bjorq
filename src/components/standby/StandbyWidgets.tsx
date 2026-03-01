@@ -1,4 +1,4 @@
-import { useAppStore } from '@/store/useAppStore';
+import { useAppStore } from '../../store/useAppStore';
 
 export default function StandbyWidgets() {
   const markers = useAppStore((s) => s.devices.markers);

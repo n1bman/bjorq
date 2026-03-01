@@ -2,7 +2,7 @@ import { Canvas, useThree, useFrame } from '@react-three/fiber';
 import { Grid } from '@react-three/drei';
 import { Suspense, useRef, useEffect } from 'react';
 import * as THREE from 'three';
-import { useAppStore } from '@/store/useAppStore';
+import { useAppStore } from '../../store/useAppStore';
 import ImportedHome3D from './ImportedHome3D';
 
 function SyncCamera() {

@@ -1,9 +1,9 @@
 import { useState, useRef, useCallback } from 'react';
-import { useAppStore } from '@/store/useAppStore';
-import type { DeviceMarker, DeviceState, DeviceKind } from '@/store/types';
-import { Switch } from '@/components/ui/switch';
-import { Slider } from '@/components/ui/slider';
-import { cn } from '@/lib/utils';
+import { useAppStore } from '../../../store/useAppStore';
+import type { DeviceMarker, DeviceState, DeviceKind } from '../../../store/types';
+import { Switch } from '../../ui/switch';
+import { Slider } from '../../ui/slider';
+import { cn } from '../../../lib/utils';
 import { ChevronDown, Wifi, GripVertical } from 'lucide-react';
 import DeviceControlCard from './DeviceControlCard';
 

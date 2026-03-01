@@ -1,7 +1,7 @@
-import { useAppStore } from '@/store/useAppStore';
+import { useAppStore } from '../store/useAppStore';
 import { Home, PenTool } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import type { AppMode } from '@/store/types';
+import { cn } from '../lib/utils';
+import type { AppMode } from '../store/types';
 
 const modes: { key: AppMode; label: string; icon: typeof Home }[] = [
   { key: 'home', label: 'Hem', icon: Home },

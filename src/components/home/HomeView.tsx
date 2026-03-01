@@ -1,5 +1,5 @@
-import { useAppStore } from '@/store/useAppStore';
-import Scene3D from '@/components/Scene3D';
+import { useAppStore } from '../../store/useAppStore';
+import Scene3D from '../Scene3D';
 import HomeNav from './HomeNav';
 import CameraFab from './CameraFab';
 import ClockWidget from './cards/ClockWidget';
@@ -7,9 +7,9 @@ import WeatherWidget from './cards/WeatherWidget';
 import EnergyWidget from './cards/EnergyWidget';
 import TemperatureWidget from './cards/TemperatureWidget';
 import DeviceControlCard from './cards/DeviceControlCard';
-import { useWeatherSync } from '@/hooks/useWeatherSync';
+import { useWeatherSync } from '../../hooks/useWeatherSync';
 import { Eye, EyeOff } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn } from '../../lib/utils';
 
 const TOGGLEABLE_KINDS = new Set(['light', 'switch', 'climate', 'vacuum', 'media_screen', 'power-outlet', 'camera', 'fridge', 'oven', 'washer']);
 

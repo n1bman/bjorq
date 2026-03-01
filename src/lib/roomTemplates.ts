@@ -1,4 +1,4 @@
-import type { RoomTemplate } from '@/store/types';
+import type { RoomTemplate } from '../store/types';
 
 export const roomTemplates: RoomTemplate[] = [
   { id: 'tpl-bedroom-small', name: 'Sovrum (litet)', width: 3, depth: 3, category: 'bedroom' },

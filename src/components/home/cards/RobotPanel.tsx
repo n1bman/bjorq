@@ -1,16 +1,16 @@
-import { useAppStore } from '@/store/useAppStore';
-import type { VacuumState, DeviceMarker, CleaningLogEntry } from '@/store/types';
-import { pointInPolygon } from '@/lib/vacuumGeometry';
-import { Button } from '@/components/ui/button';
-import { Slider } from '@/components/ui/slider';
-import { Switch } from '@/components/ui/switch';
-import { Progress } from '@/components/ui/progress';
+import { useAppStore } from '../../../store/useAppStore';
+import type { VacuumState, DeviceMarker, CleaningLogEntry } from '../../../store/types';
+import { pointInPolygon } from '../../../lib/vacuumGeometry';
+import { Button } from '../../ui/button';
+import { Slider } from '../../ui/slider';
+import { Switch } from '../../ui/switch';
+import { Progress } from '../../ui/progress';
 import {
   Battery, Play, Square, Home as HomeIcon, MapPin, AlertTriangle,
   Clock, Ruler, Wind, Pause, History, Info, AlertCircle,
 } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils';
+import { toast } from '../../../hooks/use-toast';
+import { cn } from '../../../lib/utils';
 import { useEffect, useRef } from 'react';
 
 const statusLabels: Record<string, string> = {

@@ -6,7 +6,7 @@ import { ColladaLoader } from 'three/examples/jsm/loaders/ColladaLoader.js';
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { analyzeModel } from './modelAnalysis';
-import type { ModelStats } from '@/store/types';
+import type { ModelStats } from '../store/types';
 
 // ── Types ──
 

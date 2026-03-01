@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useAppStore } from '@/store/useAppStore';
+import { useAppStore } from '../store/useAppStore';
 
 type ThemePalette = Record<string, string>;
 

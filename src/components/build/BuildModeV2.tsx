@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { useAppStore } from '@/store/useAppStore';
+import { useAppStore } from '../../store/useAppStore';
 import BuildTopToolbar from './BuildTopToolbar';
 import BuildTabBar from './BuildTabBar';
 import BuildLeftPanel from './BuildLeftPanel';

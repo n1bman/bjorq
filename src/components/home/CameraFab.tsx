@@ -1,8 +1,8 @@
-import { useAppStore } from '@/store/useAppStore';
+import { useAppStore } from '../../store/useAppStore';
 import { Camera, ArrowDown, RotateCcw, Square, Maximize } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn } from '../../lib/utils';
 import { useState } from 'react';
-import type { CameraPreset } from '@/store/types';
+import type { CameraPreset } from '../../store/types';
 
 const presets: { key: CameraPreset; label: string; icon: typeof Camera }[] = [
   { key: 'free', label: 'Fri', icon: RotateCcw },

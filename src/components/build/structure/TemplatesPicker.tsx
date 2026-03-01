@@ -1,8 +1,8 @@
-import { useAppStore } from '@/store/useAppStore';
-import { roomTemplates, templateCategoryLabels, templateCategoryIcons } from '@/lib/roomTemplates';
-import type { RoomTemplateCategory } from '@/store/types';
+import { useAppStore } from '../../../store/useAppStore';
+import { roomTemplates, templateCategoryLabels, templateCategoryIcons } from '../../../lib/roomTemplates';
+import type { RoomTemplateCategory } from '../../../store/types';
 import { useState } from 'react';
-import { cn } from '@/lib/utils';
+import { cn } from '../../../lib/utils';
 
 const categories: RoomTemplateCategory[] = ['bedroom', 'kitchen', 'livingroom', 'bathroom'];
 

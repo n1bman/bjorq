@@ -1,10 +1,10 @@
-import { useAppStore } from '@/store/useAppStore';
-import { Switch } from '@/components/ui/switch';
-import { Checkbox } from '@/components/ui/checkbox';
+import { useAppStore } from '../../../store/useAppStore';
+import { Switch } from '../../ui/switch';
+import { Checkbox } from '../../ui/checkbox';
 import { Eye, ChevronDown, ChevronUp } from 'lucide-react';
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Button } from '../../ui/button';
+import { Input } from '../../ui/input';
 
 const widgetOptions: { key: 'clock' | 'weather' | 'temperature' | 'energy'; label: string }[] = [
   { key: 'clock', label: 'Klocka & datum' },

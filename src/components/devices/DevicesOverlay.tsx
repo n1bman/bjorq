@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { useAppStore } from '@/store/useAppStore';
-import { cn } from '@/lib/utils';
+import { useAppStore } from '../../store/useAppStore';
+import { cn } from '../../lib/utils';
 import { Plus, Lightbulb, ToggleLeft, Thermometer, Wind, Bot, Trash2 } from 'lucide-react';
-import type { DeviceKind } from '@/store/types';
+import type { DeviceKind } from '../../store/types';
 
 const deviceKinds: { kind: DeviceKind; label: string; icon: typeof Lightbulb }[] = [
   { kind: 'light', label: 'Lampa', icon: Lightbulb },

@@ -1,15 +1,15 @@
 import { useEffect, useState } from 'react';
-import BuildModeV2 from '@/components/build/BuildModeV2';
-import HomeView from '@/components/home/HomeView';
-import DashboardView from '@/components/home/DashboardView';
-import StandbyMode from '@/components/standby/StandbyMode';
-import ModeHeader from '@/components/ModeHeader';
-import { useAppStore, initHostedMode } from '@/store/useAppStore';
-import { useHomeAssistant } from '@/hooks/useHomeAssistant';
-import { useHABridge, useVacuumRoomSync } from '@/hooks/useHABridge';
-import { useIdleTimer } from '@/components/standby/useIdleTimer';
-import { isHostedSync, getMode, callHAService } from '@/lib/apiClient';
-import { haServiceCaller } from '@/hooks/useHomeAssistant';
+import BuildModeV2 from '../components/build/BuildModeV2';
+import HomeView from '../components/home/HomeView';
+import DashboardView from '../components/home/DashboardView';
+import StandbyMode from '../components/standby/StandbyMode';
+import ModeHeader from '../components/ModeHeader';
+import { useAppStore, initHostedMode } from '../store/useAppStore';
+import { useHomeAssistant } from '../hooks/useHomeAssistant';
+import { useHABridge, useVacuumRoomSync } from '../hooks/useHABridge';
+import { useIdleTimer } from '../components/standby/useIdleTimer';
+import { isHostedSync, getMode, callHAService } from '../lib/apiClient';
+import { haServiceCaller } from '../hooks/useHomeAssistant';
 import { AlertTriangle, Server, Monitor } from 'lucide-react';
 
 const Index = () => {

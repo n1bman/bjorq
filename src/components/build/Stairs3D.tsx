@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useAppStore } from '@/store/useAppStore';
+import { useAppStore } from '../../store/useAppStore';
 
 export default function Stairs3D() {
   const floors = useAppStore((s) => s.layout.floors);
