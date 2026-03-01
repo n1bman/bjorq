@@ -1,9 +1,9 @@
-import { useAppStore } from '@/store/useAppStore';
+import { useAppStore } from '../../../store/useAppStore';
 import { useState } from 'react';
-import type { DeviceMarker, LightState, ClimateState, MediaState, VacuumState, LockState, SensorState, GenericDeviceState, CameraState, FanState, CoverState, SceneState, AlarmState, WaterHeaterState, HumidifierState, ValveState, LawnMowerState, SpeakerState } from '@/store/types';
-import { Switch } from '@/components/ui/switch';
-import { Slider } from '@/components/ui/slider';
-import { Button } from '@/components/ui/button';
+import type { DeviceMarker, LightState, ClimateState, MediaState, VacuumState, LockState, SensorState, GenericDeviceState, CameraState, FanState, CoverState, SceneState, AlarmState, WaterHeaterState, HumidifierState, ValveState, LawnMowerState, SpeakerState } from '../../../store/types';
+import { Switch } from '../../ui/switch';
+import { Slider } from '../../ui/slider';
+import { Button } from '../../ui/button';
 import {
   Sun, Thermometer, Play, Pause, Square, Volume2,
   Lock, Unlock, Battery, Home as HomeIcon,
@@ -12,7 +12,7 @@ import {
   SkipBack, SkipForward, Tv, MapPin, Wind, Ruler, Clock, AlertTriangle,
   ShieldAlert, Droplets, Bell, Grip, Trees, Speaker, Music, Info,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn } from '../../../lib/utils';
 
 interface Props { marker: DeviceMarker; compact?: boolean }
 type UpdateFn = (id: string, partial: Record<string, unknown>) => void;

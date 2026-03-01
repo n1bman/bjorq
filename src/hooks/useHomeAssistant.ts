@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'react';
-import { useAppStore } from '@/store/useAppStore';
-import type { HAEntity } from '@/store/types';
+import { useAppStore } from '../store/useAppStore';
+import type { HAEntity } from '../store/types';
 import { isSuppressed } from './useHABridge';
-import { isHostedSync, fetchHAStates, callHAService } from '@/lib/apiClient';
+import { isHostedSync, fetchHAStates, callHAService } from '../lib/apiClient';
 
 // ── Module-level singleton state ──────────────────────────────────
 let msgId = 10;

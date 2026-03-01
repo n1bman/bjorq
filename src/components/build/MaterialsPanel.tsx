@@ -1,6 +1,6 @@
-import { useAppStore } from '@/store/useAppStore';
-import { presetMaterials } from '@/lib/materials';
-import { cn } from '@/lib/utils';
+import { useAppStore } from '../../store/useAppStore';
+import { presetMaterials } from '../../lib/materials';
+import { cn } from '../../lib/utils';
 
 export default function MaterialsPanel() {
   const activeFloorId = useAppStore((s) => s.layout.activeFloorId);

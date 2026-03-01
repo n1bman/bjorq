@@ -1,7 +1,7 @@
 import { Suspense, useRef, useState, useCallback } from 'react';
 import { ErrorBoundary } from './ErrorBoundary3D';
 import { useLoader, useThree } from '@react-three/fiber';
-import { useAppStore } from '@/store/useAppStore';
+import { useAppStore } from '../../store/useAppStore';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import * as THREE from 'three';
 import type { ThreeEvent } from '@react-three/fiber';

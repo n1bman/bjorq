@@ -1,9 +1,9 @@
 import { Suspense, useEffect, useState } from 'react';
 import { useLoader } from '@react-three/fiber';
-import { useAppStore } from '@/store/useAppStore';
+import { useAppStore } from '../../store/useAppStore';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { ErrorBoundary } from './ErrorBoundary3D';
-import { analyzeModel } from '@/lib/modelAnalysis';
+import { analyzeModel } from '../../lib/modelAnalysis';
 
 function ImportedModel({ url }: { url: string }) {
   const gltf = useLoader(GLTFLoader, url);

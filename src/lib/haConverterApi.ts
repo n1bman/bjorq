@@ -3,7 +3,7 @@
  * Communicates via HA ingress to upload OBJ/MTL/textures and download optimized GLB.
  */
 
-import { useAppStore } from '@/store/useAppStore';
+import { useAppStore } from '../store/useAppStore';
 
 const ADDON_SLUG = 'hometwin_converter';
 

@@ -1,6 +1,6 @@
-import { useAppStore } from '@/store/useAppStore';
+import { useAppStore } from '../../../store/useAppStore';
 import { Lightbulb, ToggleLeft, Thermometer, Wind, Bot, Camera, Refrigerator, CookingPot, WashingMachine, DoorOpen, Lock, Plug, Monitor, Fan, PanelTop, Clapperboard, ShieldAlert, Flame, Droplets, Bell, Grip, Wifi, Trees, Speaker, Music } from 'lucide-react';
-import type { DeviceKind } from '@/store/types';
+import type { DeviceKind } from '../../../store/types';
 
 const deviceIcons: Record<DeviceKind, typeof Lightbulb> = {
   light: Lightbulb,

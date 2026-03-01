@@ -1,8 +1,8 @@
-import Scene3D from '@/components/Scene3D';
+import Scene3D from '../Scene3D';
 import DashboardGrid from './DashboardGrid';
 import HomeNav from './HomeNav';
-import { useWeatherSync } from '@/hooks/useWeatherSync';
-import { useAppStore } from '@/store/useAppStore';
+import { useWeatherSync } from '../../hooks/useWeatherSync';
+import { useAppStore } from '../../store/useAppStore';
 
 export default function DashboardView() {
   useWeatherSync();

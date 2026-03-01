@@ -1,9 +1,9 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { AppState, AppMode, BuildState, LayoutState, WallSegment, Room, DeviceState, DeviceKind, ActivityEvent } from './types';
-import { mapHAEntityToDeviceState } from '@/lib/haMapping';
-import { setFromHA } from '@/hooks/useHABridge';
-import { isHostedSync, debouncedSync, debouncedProjectSync, saveProfiles, saveProject, fetchBootstrap } from '@/lib/apiClient';
+import { mapHAEntityToDeviceState } from '../lib/haMapping';
+import { setFromHA } from '../hooks/useHABridge';
+import { isHostedSync, debouncedSync, debouncedProjectSync, saveProfiles, saveProject, fetchBootstrap } from '../lib/apiClient';
 
 export function getDefaultState(kind: DeviceKind): DeviceState {
   switch (kind) {

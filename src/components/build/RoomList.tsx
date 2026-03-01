@@ -1,7 +1,7 @@
-import { useAppStore } from '@/store/useAppStore';
-import { detectRooms } from '@/lib/roomDetection';
+import { useAppStore } from '../../store/useAppStore';
+import { detectRooms } from '../../lib/roomDetection';
 import { Search, Trash2, RefreshCw } from 'lucide-react';
-import { getMaterialById } from '@/lib/materials';
+import { getMaterialById } from '../../lib/materials';
 
 export default function RoomList() {
   const activeFloorId = useAppStore((s) => s.layout.activeFloorId);

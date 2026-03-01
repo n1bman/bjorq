@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
-import { useAppStore } from '@/store/useAppStore';
-import type { WeatherCondition, ForecastDay } from '@/store/types';
+import { useAppStore } from '../store/useAppStore';
+import type { WeatherCondition, ForecastDay } from '../store/types';
 
 // Map WMO weather codes to our conditions
 function wmoToCondition(code: number): WeatherCondition {

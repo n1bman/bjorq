@@ -1,21 +1,21 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Progress } from '@/components/ui/progress';
-import { Switch } from '@/components/ui/switch';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../../ui/dialog';
+import { Progress } from '../../ui/progress';
+import { Switch } from '../../ui/switch';
+import { RadioGroup, RadioGroupItem } from '../../ui/radio-group';
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '../../ui/collapsible';
 import { Upload, FolderOpen, FileArchive, AlertTriangle, CheckCircle2, XCircle, ChevronRight, ChevronDown, Bug, Server, Monitor, Info } from 'lucide-react';
-import { useAppStore } from '@/store/useAppStore';
+import { useAppStore } from '../../../store/useAppStore';
 import {
   extractZip, extractFolder, validateFileMap, convertSketchUp,
   testLoadOnly, testGLBExportSanity, buildZipFromFileMap,
   type FileMap, type ValidationResult, type ConversionProgress, type ConversionResult, type TargetDevice, type DebugInfo, type LoaderTestResult,
-} from '@/lib/sketchupImport';
+} from '../../../lib/sketchupImport';
 import {
   getHABaseUrl, checkAddonAvailable, uploadForConversion,
   pollConversionStatus, downloadResult,
-} from '@/lib/haConverterApi';
-import { analyzeModel } from '@/lib/modelAnalysis';
+} from '../../../lib/haConverterApi';
+import { analyzeModel } from '../../../lib/modelAnalysis';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import * as THREE from 'three';
 

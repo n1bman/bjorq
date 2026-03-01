@@ -1,7 +1,7 @@
-import { useAppStore } from '@/store/useAppStore';
+import { useAppStore } from '../../../store/useAppStore';
 import { Gauge, Monitor, Sun, Sparkles } from 'lucide-react';
-import { Switch } from '@/components/ui/switch';
-import type { QualityLevel } from '@/store/types';
+import { Switch } from '../../ui/switch';
+import type { QualityLevel } from '../../../store/types';
 
 const qualityOptions: { value: QualityLevel; label: string; desc: string }[] = [
   { value: 'low', label: 'Låg', desc: 'Minimal – bra för surfplatta/RPi' },

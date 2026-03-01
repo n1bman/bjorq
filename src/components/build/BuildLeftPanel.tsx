@@ -1,11 +1,11 @@
-import { useAppStore } from '@/store/useAppStore';
-import { detectRooms } from '@/lib/roomDetection';
-import type { BuildTool } from '@/store/types';
+import { useAppStore } from '../../store/useAppStore';
+import { detectRooms } from '../../lib/roomDetection';
+import type { BuildTool } from '../../store/types';
 import {
   Minus, Square, DoorOpen, SquareStack, Paintbrush,
   Ruler, Upload, Layers, Move, Package, Plus, RefreshCw,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn } from '../../lib/utils';
 import TemplatesPicker from './structure/TemplatesPicker';
 import PaintTool from './structure/PaintTool';
 import ImportTools from './import/ImportTools';

@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { useAppStore } from '@/store/useAppStore';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { useAppStore } from '../../../store/useAppStore';
+import { Button } from '../../ui/button';
+import { Input } from '../../ui/input';
 import { Plus, Trash2, ChevronRight, ArrowRight } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import type { DeviceCategory, DeviceMarker } from '@/store/types';
+import { cn } from '../../../lib/utils';
+import type { DeviceCategory, DeviceMarker } from '../../../store/types';
 
 const defaultEmojis = ['🏠', '💡', '❄️', '🔒', '📺', '🤖', '⚡', '🌡️', '📷', '🧊'];
 

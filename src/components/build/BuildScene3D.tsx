@@ -12,8 +12,8 @@ import ImportedHome3D from './ImportedHome3D';
 import Props3D from './Props3D';
 import WeatherEffects3D from './WeatherEffects3D';
 import DeviceMarkers3D from '../devices/DeviceMarkers3D';
-import { useAppStore } from '@/store/useAppStore';
-import type { WallSegment, DeviceKind } from '@/store/types';
+import { useAppStore } from '../../store/useAppStore';
+import type { WallSegment, DeviceKind } from '../../store/types';
 
 const generateId = () => Math.random().toString(36).slice(2, 10);
 

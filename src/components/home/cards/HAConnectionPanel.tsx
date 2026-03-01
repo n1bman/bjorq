@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { useAppStore } from '@/store/useAppStore';
-import { useHomeAssistant } from '@/hooks/useHomeAssistant';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { useAppStore } from '../../../store/useAppStore';
+import { useHomeAssistant } from '../../../hooks/useHomeAssistant';
+import { Input } from '../../ui/input';
+import { Button } from '../../ui/button';
+import { ScrollArea } from '../../ui/scroll-area';
 import { Wifi, WifiOff, AlertCircle, RefreshCw } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { isHostedSync, saveConfig } from '@/lib/apiClient';
+import { cn } from '../../../lib/utils';
+import { isHostedSync, saveConfig } from '../../../lib/apiClient';
 
 export default function HAConnectionPanel() {
   const status = useAppStore((s) => s.homeAssistant.status);

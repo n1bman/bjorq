@@ -1,5 +1,5 @@
-import { useAppStore } from '@/store/useAppStore';
-import { Switch } from '@/components/ui/switch';
+import { useAppStore } from '../../../store/useAppStore';
+import { Switch } from '../../ui/switch';
 import { Zap, TrendingUp } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 

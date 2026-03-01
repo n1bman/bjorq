@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { useAppStore } from '@/store/useAppStore';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import { useAppStore } from '../../../store/useAppStore';
+import { Input } from '../../ui/input';
+import { Button } from '../../ui/button';
+import { cn } from '../../../lib/utils';
 import { User, Palette, Monitor, Download, Upload, Trash2 } from 'lucide-react';
 import { useRef } from 'react';
-import { isHostedSync } from '@/lib/apiClient';
+import { isHostedSync } from '../../../lib/apiClient';
 
 const themes = [
   { key: 'dark' as const, label: 'Mörkt' },

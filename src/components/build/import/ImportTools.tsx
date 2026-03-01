@@ -1,8 +1,8 @@
-import { useAppStore } from '@/store/useAppStore';
+import { useAppStore } from '../../../store/useAppStore';
 import { useRef, useState } from 'react';
 import { Upload, Compass, Ruler, Layers, Move, RotateCw, FileArchive, Trash2 } from 'lucide-react';
-import { Slider } from '@/components/ui/slider';
-import { Input } from '@/components/ui/input';
+import { Slider } from '../../ui/slider';
+import { Input } from '../../ui/input';
 import SketchUpWizard from './SketchUpWizard';
 
 export default function ImportTools() {

@@ -1,5 +1,5 @@
-import { useAppStore } from '@/store/useAppStore';
-import { cameraRef } from '@/lib/cameraRef';
+import { useAppStore } from '../../../store/useAppStore';
+import { cameraRef } from '../../../lib/cameraRef';
 import { Camera, Save, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 

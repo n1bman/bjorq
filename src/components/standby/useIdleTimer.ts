@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { useAppStore } from '@/store/useAppStore';
+import { useAppStore } from '../../store/useAppStore';
 
 export function useIdleTimer() {
   const enabled = useAppStore((s) => s.standby.enabled);

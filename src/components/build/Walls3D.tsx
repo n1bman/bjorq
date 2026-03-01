@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
-import { useAppStore } from '@/store/useAppStore';
-import { getMaterialById } from '@/lib/materials';
+import { useAppStore } from '../../store/useAppStore';
+import { getMaterialById } from '../../lib/materials';
 import * as THREE from 'three';
 
 export default function Walls3D() {

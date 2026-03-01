@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { Calendar } from '@/components/ui/calendar';
+import { Calendar } from '../../ui/calendar';
 import { CalendarDays, Link } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import { Button } from '../../ui/button';
+import { cn } from '../../../lib/utils';
 
 const placeholderEvents = [
   { id: '1', date: new Date(), title: 'Elräkning förfaller', color: 'bg-primary' },

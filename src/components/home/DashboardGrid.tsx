@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Home, Cloud, Cpu, Zap, Bell, Video, Settings, Pencil, X, CalendarDays, Bot, Moon, Save } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { useAppStore } from '@/store/useAppStore';
+import { cn } from '../../lib/utils';
+import { Button } from '../ui/button';
+import { useAppStore } from '../../store/useAppStore';
 import ClockWidget from './cards/ClockWidget';
 import WeatherWidget from './cards/WeatherWidget';
 import EnergyWidget from './cards/EnergyWidget';
@@ -20,8 +20,8 @@ import CalendarWidget from './cards/CalendarWidget';
 import RobotPanel from './cards/RobotPanel';
 import CameraStartSettings from './cards/CameraStartSettings';
 import PerformanceSettings from './cards/PerformanceSettings';
-import type { DeviceKind, DeviceMarker, StandbyCameraView } from '@/store/types';
-import { cameraRef } from '@/lib/cameraRef';
+import type { DeviceKind, DeviceMarker, StandbyCameraView } from '../../store/types';
+import { cameraRef } from '../../lib/cameraRef';
 
 type DashCategory = 'home' | 'weather' | 'calendar' | 'devices' | 'energy' | 'surveillance' | 'robot' | 'activity' | 'settings';
 
