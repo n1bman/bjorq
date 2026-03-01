@@ -20,7 +20,16 @@
   </head>
 
   <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <div id="root"><p style="color:white;padding:2rem;font-family:system-ui">Loading…</p></div>
+    <script type="module" src="/src/main.tsx" onerror="document.body.innerHTML='<pre style=color:red;padding:2rem>Module failed to load</pre>'"></script>
+    <script>
+      // Fallback: if nothing renders in 5s, show diagnostic
+      setTimeout(function() {
+        var root = document.getElementById('root');
+        if (root && root.innerText === 'Loading…') {
+          root.innerHTML = '<pre style="color:orange;padding:2rem;font-family:system-ui">⚠ JS bundle did not load after 5s.\nCheck browser console (F12) for errors.\nThis usually means a Vite compilation error.</pre>';
+        }
+      }, 5000);
+    </script>
   </body>
 </html>
