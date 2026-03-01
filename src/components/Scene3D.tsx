@@ -229,10 +229,15 @@ function SceneContent() {
 export default function Scene3D() {
   const shadows = useAppStore((s) => s.performance.shadows);
   const quality = useAppStore((s) => s.performance.quality);
+  const postprocessing = useAppStore((s) => s.performance.postprocessing);
   const dpr = quality === 'low' ? 1 : quality === 'medium' ? 1.5 : undefined;
+
+  // Key forces Canvas remount when renderer-critical settings change
+  const canvasKey = `${quality}-${shadows}-${postprocessing}`;
 
   return (
     <Canvas
+      key={canvasKey}
       shadows={shadows}
       camera={{ position: [0, 25, 0.01], fov: 45 }}
       style={{ background: 'transparent' }}

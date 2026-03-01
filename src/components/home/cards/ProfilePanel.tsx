@@ -3,9 +3,10 @@ import { useAppStore } from '../../../store/useAppStore';
 import { Input } from '../../ui/input';
 import { Button } from '../../ui/button';
 import { cn } from '../../../lib/utils';
-import { User, Palette, Monitor, Download, Upload, Trash2, MapPin, Info } from 'lucide-react';
+import { User, Palette, Monitor, Download, Upload, Trash2, MapPin, Info, Save } from 'lucide-react';
 import { useRef } from 'react';
 import { isHostedSync, getMode } from '../../../lib/apiClient';
+import { toast } from 'sonner';
 
 const APP_VERSION = '0.1.5'; // synced with package.json
 
@@ -50,6 +51,22 @@ export default function ProfilePanel() {
     a.download = `bjorq-backup-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  const handleSaveAndBackup = async () => {
+    // Always do a browser download export
+    handleExport();
+    // In hosted mode, also save on server
+    if (isHostedSync()) {
+      try {
+        await fetch('/api/backup', { method: 'POST' });
+        toast.success('Backup sparad på servern ✅');
+      } catch {
+        toast.error('Kunde inte spara backup på servern.');
+      }
+    } else {
+      toast.success('Backup exporterad ✅');
+    }
   };
 
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -198,6 +215,10 @@ export default function ProfilePanel() {
             Data sparas på serverns disk (data/-mapp). Exportera/importera för backup.
           </p>
         )}
+
+        <Button size="sm" variant="default" className="w-full h-9 text-xs gap-2" onClick={handleSaveAndBackup}>
+          <Save size={14} /> Spara & Backup
+        </Button>
 
         <Button size="sm" variant="outline" className="w-full h-8 text-xs gap-2" onClick={handleExport}>
           <Download size={14} /> Exportera backup

@@ -3,31 +3,34 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!-- TODO: Set the document title to the name of your application -->
-    <title>Lovable App</title>
-    <meta name="description" content="Lovable Generated Project" />
-    <meta name="author" content="Lovable" />
+    <title>BJORQ Dashboard</title>
+    <meta name="description" content="BJORQ Dashboard — Smart hem-kontrollpanel med 3D-vy, Home Assistant-integration och enhetsstyrning." />
+    <meta name="author" content="BJORQ" />
+    <meta name="theme-color" content="#0a0a0f" />
 
-    <!-- TODO: Update og:title to match your application name -->
-    <meta property="og:title" content="Lovable App" />
-    <meta property="og:description" content="Lovable Generated Project" />
+    <meta property="og:title" content="BJORQ Dashboard" />
+    <meta property="og:description" content="Smart hem-kontrollpanel med 3D-vy och Home Assistant-integration." />
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+    <meta property="og:image" content="/logo-text.png" />
 
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:site" content="@Lovable" />
-    <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+    <meta name="twitter:image" content="/logo-text.png" />
+
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="apple-touch-icon" href="/favicon.png" />
   </head>
 
   <body>
     <div id="root"><p style="color:white;padding:2rem;font-family:system-ui">Loading…</p></div>
     <script type="module" src="/src/main.tsx" onerror="document.body.innerHTML='<pre style=color:red;padding:2rem>Module failed to load</pre>'"></script>
     <script>
-      // Fallback: if nothing renders in 5s, show diagnostic
       setTimeout(function() {
         var root = document.getElementById('root');
         if (root && root.innerText === 'Loading…') {
-          root.innerHTML = '<pre style="color:orange;padding:2rem;font-family:system-ui">⚠ JS bundle did not load after 5s.\nCheck browser console (F12) for errors.\nThis usually means a Vite compilation error.</pre>';
+          root.innerHTML = '<pre style="color:orange;padding:2rem;font-family:system-ui">⚠ JS bundle did not load after 5s.\nCheck browser console (F12) for errors.</pre>';
         }
       }, 5000);
     </script>
