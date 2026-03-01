@@ -50,7 +50,7 @@ export default function DeviceControlCard({ marker, compact }: Props) {
   }
 }
 
-function CompactDeviceView({ marker, state }: { marker: DeviceMarker; state: import('@/store/types').DeviceState }) {
+function CompactDeviceView({ marker, state }: { marker: DeviceMarker; state: import('../../../store/types').DeviceState }) {
   const kindIcons: Record<string, React.ReactNode> = {
     light: <Sun size={14} />,
     climate: <Thermometer size={14} />,
@@ -110,7 +110,7 @@ function CompactDeviceView({ marker, state }: { marker: DeviceMarker; state: imp
 
   // Speaker/soundbar compact: show play/pause + volume
   if (state.kind === 'speaker' || state.kind === 'soundbar') {
-    const sd = state.data as import('@/store/types').SpeakerState;
+    const sd = state.data as import('../../../store/types').SpeakerState;
     const updateDeviceState = useAppStore.getState().updateDeviceState;
     return (
       <div className="space-y-1.5">
@@ -712,7 +712,7 @@ function HumidifierControl({ id, data, update }: { id: string; data: HumidifierS
   );
 }
 
-function SirenControl({ id, data, update }: { id: string; data: import('@/store/types').SirenState; update: UpdateFn }) {
+function SirenControl({ id, data, update }: { id: string; data: import('../../../store/types').SirenState; update: UpdateFn }) {
   return (
     <div className="space-y-3 pt-2">
       <div className="flex items-center justify-between">

@@ -884,7 +884,7 @@ export default function BuildCanvas2D({ overlayMode = false }: { overlayMode?: b
       // ─── Device placement tools ───
       if (activeTool.startsWith('place-') && activeFloorId) {
         const rawKind = activeTool.replace('place-', '');
-        const kind = (rawKind === 'media-screen' ? 'media_screen' : rawKind) as import('@/store/types').DeviceKind;
+        const kind = (rawKind === 'media-screen' ? 'media_screen' : rawKind) as import('../../store/types').DeviceKind;
         const [wx, wz] = screenToWorld(sx, sy);
         const snapped = snapToGrid(wx, wz);
         const fl = floors.find((f) => f.id === activeFloorId);
