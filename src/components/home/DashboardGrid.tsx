@@ -211,7 +211,7 @@ function DevicesCategory() {
 function EnergyCategory() {
   return (
     <div className="space-y-3">
-      <EnergyWidget />
+      <EnergyWidget alwaysExpanded />
       <EnergyDeviceList />
     </div>
   );
