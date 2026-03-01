@@ -82,6 +82,8 @@ function syncProfileToServer() {
       wifi: s.wifi,
       energyConfig: s.energyConfig,
       calendar: s.calendar,
+      automations: s.automations,
+      savedScenes: s.savedScenes,
     }).catch((err) => console.warn('[Sync] Failed to save profiles:', err));
   });
 }
@@ -241,6 +243,26 @@ const storeCreator = (set: any, get: any): AppState => ({
   updateCalendarEvent: (id, changes) => { set((s: any) => ({ calendar: { ...s.calendar, events: s.calendar.events.map((e: any) => e.id === id ? { ...e, ...changes } : e) } })); syncProfileToServer(); },
   addCalendarSource: (source) => { set((s: any) => ({ calendar: { ...s.calendar, sources: [...s.calendar.sources, source] } })); syncProfileToServer(); },
   removeCalendarSource: (id) => { set((s: any) => ({ calendar: { ...s.calendar, sources: s.calendar.sources.filter((s2: any) => s2.id !== id) } })); syncProfileToServer(); },
+  automations: [],
+  savedScenes: [],
+  addAutomation: (automation) => { set((s: any) => ({ automations: [...s.automations, automation] })); syncProfileToServer(); },
+  removeAutomation: (id) => { set((s: any) => ({ automations: s.automations.filter((a: any) => a.id !== id) })); syncProfileToServer(); },
+  updateAutomation: (id, changes) => { set((s: any) => ({ automations: s.automations.map((a: any) => a.id === id ? { ...a, ...changes } : a) })); syncProfileToServer(); },
+  toggleAutomation: (id) => { set((s: any) => ({ automations: s.automations.map((a: any) => a.id === id ? { ...a, enabled: !a.enabled } : a) })); syncProfileToServer(); },
+  addScene: (scene) => { set((s: any) => ({ savedScenes: [...s.savedScenes, scene] })); syncProfileToServer(); },
+  removeScene: (id) => { set((s: any) => ({ savedScenes: s.savedScenes.filter((sc: any) => sc.id !== id) })); syncProfileToServer(); },
+  activateScene: (id) => {
+    const s = get();
+    const scene = s.savedScenes.find((sc: any) => sc.id === id);
+    if (!scene) return;
+    for (const snap of scene.snapshots) {
+      const current = s.devices.deviceStates[snap.deviceId];
+      if (current) {
+        s.updateDeviceState(snap.deviceId, snap.state);
+      }
+    }
+    s.pushActivity({ deviceId: undefined, kind: 'state_change', title: `Scen "${scene.name}" aktiverad`, severity: 'info' });
+  },
   setPerformance: (changes) => { set((s: any) => ({ performance: { ...s.performance, ...changes } })); syncProfileToServer(); },
 
   // Standby actions
@@ -1208,6 +1230,8 @@ export const useAppStore = create<AppState>()(
           wifi: state.wifi,
           energyConfig: state.energyConfig,
           calendar: state.calendar,
+          automations: state.automations,
+          savedScenes: state.savedScenes,
           homeAssistant: {
             wsUrl: state.homeAssistant.wsUrl,
             token: state.homeAssistant.token,
@@ -1252,6 +1276,8 @@ export async function initHostedMode() {
       if (p.wifi) stateUpdate.wifi = p.wifi;
       if (p.energyConfig) stateUpdate.energyConfig = p.energyConfig;
       if (p.calendar) stateUpdate.calendar = p.calendar;
+      if (p.automations) stateUpdate.automations = p.automations;
+      if (p.savedScenes) stateUpdate.savedScenes = p.savedScenes;
     }
 
     // Apply project data

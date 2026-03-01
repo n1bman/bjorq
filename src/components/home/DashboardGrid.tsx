@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Home, Cloud, Cpu, Zap, Bell, Video, Settings, Pencil, X, CalendarDays, Bot, Moon, Save } from 'lucide-react';
+import { Home, Cloud, Cpu, Zap, Bell, Video, Settings, Pencil, X, CalendarDays, Bot, Moon, Save, Workflow, Palette } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Button } from '../ui/button';
 import { useAppStore } from '../../store/useAppStore';
@@ -22,10 +22,12 @@ import CameraStartSettings from './cards/CameraStartSettings';
 import PerformanceSettings from './cards/PerformanceSettings';
 import WifiPanel from './cards/WifiPanel';
 import WifiWidget from './cards/WifiWidget';
+import AutomationsPanel from './cards/AutomationsPanel';
+import ScenesPanel from './cards/ScenesPanel';
 import type { DeviceKind, DeviceMarker, StandbyCameraView } from '../../store/types';
 import { cameraRef } from '../../lib/cameraRef';
 
-type DashCategory = 'home' | 'weather' | 'calendar' | 'devices' | 'energy' | 'surveillance' | 'robot' | 'activity' | 'settings';
+type DashCategory = 'home' | 'weather' | 'calendar' | 'devices' | 'energy' | 'automations' | 'scenes' | 'surveillance' | 'robot' | 'activity' | 'settings';
 
 const categories: { key: DashCategory; label: string; icon: typeof Home }[] = [
   { key: 'home', label: 'Hem', icon: Home },
@@ -33,6 +35,8 @@ const categories: { key: DashCategory; label: string; icon: typeof Home }[] = [
   { key: 'calendar', label: 'Kalender', icon: CalendarDays },
   { key: 'devices', label: 'Enheter', icon: Cpu },
   { key: 'energy', label: 'Energi', icon: Zap },
+  { key: 'automations', label: 'Automation', icon: Workflow },
+  { key: 'scenes', label: 'Scener', icon: Palette },
   { key: 'surveillance', label: 'Övervakning', icon: Video },
   { key: 'robot', label: 'Robot', icon: Bot },
   { key: 'activity', label: 'Aktivitet', icon: Bell },
@@ -346,6 +350,8 @@ const categoryContent: Record<DashCategory, React.FC> = {
   calendar: CalendarCategory,
   devices: DevicesCategory,
   energy: EnergyCategory,
+  automations: AutomationsPanel,
+  scenes: ScenesPanel,
   surveillance: SurveillancePanel,
   robot: RobotPanel,
   activity: ActivityFeed,
