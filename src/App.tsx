@@ -1,6 +1,6 @@
 // Diagnostic Step 3e: Test @/lib/utils after cache bust
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { cn } from "@/lib/utils";
+import { cn } from "./lib/utils";
 
 const App = () => (
   <BrowserRouter>
