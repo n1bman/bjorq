@@ -436,6 +436,7 @@ export interface PropCatalogItem {
   url: string;
   source: 'builtin' | 'user';
   thumbnail?: string;
+  category?: string;
 }
 
 export interface PropItem {

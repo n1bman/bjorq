@@ -24,6 +24,8 @@ import WifiPanel from './cards/WifiPanel';
 import WifiWidget from './cards/WifiWidget';
 import AutomationsPanel from './cards/AutomationsPanel';
 import ScenesPanel from './cards/ScenesPanel';
+import ScenesWidget from './cards/ScenesWidget';
+import AutomationsWidget from './cards/AutomationsWidget';
 import type { DeviceKind, DeviceMarker, StandbyCameraView } from '../../store/types';
 import { cameraRef } from '../../lib/cameraRef';
 
@@ -118,6 +120,8 @@ function HomeCategory() {
         <WeatherWidget />
         <EnergyWidget />
         <WifiWidget />
+        <ScenesWidget />
+        <AutomationsWidget />
       </div>
 
       <div className="flex justify-end gap-2">
