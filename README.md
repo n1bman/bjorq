@@ -1,79 +1,70 @@
 # bjorQ Dashboard
 
-A 3D smart home dashboard that runs locally alongside Home Assistant. Control lights, climate, vacuums, cameras, and more from a beautiful tablet-friendly interface.
+A 3D smart home dashboard that runs locally alongside Home Assistant.
 
 ## Quick Start
 
-### Requirements
-
-- **Node.js 18+** — [Download here](https://nodejs.org/) (LTS recommended)
+**Krav:** Node.js 18+ — [nodejs.org](https://nodejs.org/)
 
 ### Windows
 
-1. Download `bjorq-dashboard-windows.zip` from [Releases](../../releases/latest)
-2. Extract the ZIP
-3. Double-click **`start.bat`**
-4. Open **http://localhost:3000**
+1. Ladda ner `bjorq-dashboard-windows.zip` från [Releases](../../releases/latest)
+2. Packa upp
+3. Dubbelklicka **`start.bat`** (PowerShell: `.\start.bat`)
+4. Webbläsaren öppnas automatiskt till `http://localhost:3000`
 
 ### Linux / Raspberry Pi
 
-1. Download `bjorq-dashboard-linux.zip` from [Releases](../../releases/latest)
-2. Extract and open a terminal in the folder:
+1. Ladda ner `bjorq-dashboard-linux.zip` från [Releases](../../releases/latest)
+2. Packa upp och kör:
    ```bash
-   chmod +x start.sh
-   ./start.sh
+   chmod +x start.sh && ./start.sh
    ```
-3. Open **http://localhost:3000**
+3. Öppna adressen som skrivs ut (t.ex. `http://192.168.1.x:3000`)
 
-> The start scripts automatically install server dependencies on first run — no separate install step needed.
-
-### Custom Port
+### Anpassad port
 
 ```bash
 # Linux / macOS
 PORT=8080 ./start.sh
 
-# Windows (Command Prompt)
+# Windows
 set PORT=8080
 start.bat
 ```
 
-## Data & Persistence
+## Data
 
-All user data is stored in the `data/` folder next to the server:
+All data sparas i `data/`-mappen bredvid servern. Kopiera den för backup.
 
-| File | Content |
-|------|---------|
-| `data/config.json` | HA connection, UI defaults |
-| `data/profiles.json` | Theme, performance, standby settings |
-| `data/projects/` | Building models, assets, scenes |
+| Fil | Innehåll |
+|-----|----------|
+| `data/config.json` | HA-anslutning, UI-inställningar |
+| `data/profiles.json` | Tema, prestanda, standby |
+| `data/projects/` | Byggnadsmodeller, assets, scener |
 
-**Backup:** Copy the entire `data/` folder.
+## Home Assistant
 
-## Home Assistant Integration
+1. Öppna **Inställningar → Home Assistant** i dashboarden
+2. Ange din HA-URL (t.ex. `http://homeassistant.local:8123`)
+3. Ange en [long-lived access token](https://developers.home-assistant.io/docs/auth_api/#long-lived-access-tokens)
 
-1. Open **Settings → Home Assistant** in the dashboard
-2. Enter your HA URL (e.g. `http://homeassistant.local:8123`)
-3. Enter a [long-lived access token](https://developers.home-assistant.io/docs/auth_api/#long-lived-access-tokens)
+Token lagras enbart på servern. Alla HA-anrop proxas via `/api/ha/*`.
 
-Your token is stored server-side only. All HA API calls are proxied through `/api/ha/*` — the token never reaches the browser.
+## Nätverksåtkomst
 
-## Network Access
+Servern lyssnar på `0.0.0.0` — alla enheter på LAN når den. För fjärråtkomst, använd samma reverse proxy / VPN som för Home Assistant.
 
-The server binds to `0.0.0.0`, so any device on your LAN can reach it. For remote access, use the same reverse proxy or VPN you use for Home Assistant.
+## Felsökning
 
-## Troubleshooting
+| Problem | Lösning |
+|---------|---------|
+| "Node.js not found" | Installera Node.js 18+ |
+| "Port in use" | Sätt annan port: `PORT=8080 ./start.sh` |
+| "Permission denied" | `chmod +x start.sh` |
+| Blank sida | Vänta några sekunder, hårdladda (`Ctrl+Shift+R`) |
 
-| Problem | Solution |
-|---------|----------|
-| **"Node.js not found"** | Install Node.js 18+ from [nodejs.org](https://nodejs.org/) |
-| **"Port in use"** | Set a different port: `PORT=8080 ./start.sh` |
-| **"Permission denied" (Linux)** | Run `chmod +x start.sh` first |
-| **Blank page after start** | Wait a few seconds, then hard-refresh (`Ctrl+Shift+R`) |
-
-## Autostart
-
-### Linux (systemd)
+## Autostart (Linux systemd)
 
 ```ini
 # /etc/systemd/system/bjorq-dashboard.service
@@ -97,15 +88,6 @@ sudo systemctl enable bjorq-dashboard
 sudo systemctl start bjorq-dashboard
 ```
 
-### Windows (Task Scheduler)
-
-1. Open Task Scheduler → Create Basic Task
-2. Trigger: "When the computer starts"
-3. Action: Start a program → `node.exe` with arguments `server/server.js`
-4. Set "Start in" to your bjorQ folder
-
----
-
 ## Development
 
 ```bash
@@ -113,11 +95,7 @@ npm install
 npm run dev
 ```
 
-The dev server runs on port 5173 with hot reload. The Node host is only needed for disk persistence and HA proxy features.
-
-### Import Convention
-
-**Always use relative imports** (`./`, `../`) — never `@/` aliases. See CI check in `.github/workflows/ci.yml`.
+**Import convention:** Använd alltid relativa imports (`./`, `../`) — aldrig `@/`.
 
 ## Tech Stack
 

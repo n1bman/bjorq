@@ -41,7 +41,8 @@ echo   Starting server...
 echo   -------------------
 echo   Local:   http://localhost:%PORT%
 echo   Data:    %cd%\data
-echo   (Set PORT=8080 before running to change port)
 echo.
 
+:: Open browser then start server (browser retries until server is ready)
+start "" "http://localhost:%PORT%"
 node server/server.js
