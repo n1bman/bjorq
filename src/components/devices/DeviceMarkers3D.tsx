@@ -2,7 +2,7 @@
 import { useRef, useCallback, useMemo, useEffect, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { useAppStore } from '../../store/useAppStore';
-import type { DeviceKind, DeviceMarker, VacuumZone } from '../../store/types';
+import type { DeviceKind, DeviceMarker, VacuumZone, LightType } from '../../store/types';
 import * as THREE from 'three';
 import type { ThreeEvent } from '@react-three/fiber';
 import { randomPointInPolygon } from '../../lib/vacuumGeometry';
@@ -34,8 +34,13 @@ function miredsToColor(mireds: number): THREE.Color {
 
 function LightMarker({ position, id, onSelect, onDragStart, selected }: MarkerProps) {
   const state = useAppStore((s) => s.devices.deviceStates[id]);
+  const marker = useAppStore((s) => s.devices.markers.find((m) => m.id === id));
   const lightData = state?.kind === 'light' ? state.data : null;
   const isOn = lightData?.on ?? false;
+  const lightType: LightType = marker?.lightType ?? 'ceiling';
+
+  const spotTargetRef = useRef<THREE.Object3D>(null);
+  const spotLightRef = useRef<THREE.SpotLight>(null);
 
   // Compute color from state
   const lightColor = useMemo(() => {
@@ -51,6 +56,13 @@ function LightMarker({ position, id, onSelect, onDragStart, selected }: MarkerPr
 
   const brightness = isOn ? (lightData?.brightness ?? 200) / 255 : 0;
 
+  // Update spotlight target each frame
+  useFrame(() => {
+    if (spotLightRef.current && spotTargetRef.current) {
+      spotLightRef.current.target = spotTargetRef.current;
+    }
+  });
+
   const handleClick = useCallback((e: ThreeEvent<PointerEvent>) => {
     e.stopPropagation();
     if (onSelect) { onSelect(id); }
@@ -58,13 +70,78 @@ function LightMarker({ position, id, onSelect, onDragStart, selected }: MarkerPr
   const handlePointerDown = useCallback((e: ThreeEvent<MouseEvent>) => {
     if (selected && onDragStart) { onDragStart(id, e); }
   }, [selected, onDragStart, id]);
+
+  const intensity = isOn ? brightness * 5 : 0;
+
   return (
     <group position={position} onClick={handleClick} onPointerDown={handlePointerDown}>
-      <pointLight color={lightColor} intensity={isOn ? brightness * 5 : 0} distance={8} decay={2} />
-      <mesh>
-        <sphereGeometry args={[selected ? 0.15 : 0.1, 16, 16]} />
-        <meshStandardMaterial color={lightColor} emissive={lightColor} emissiveIntensity={isOn ? brightness * 2 : 0.1} transparent opacity={isOn ? 0.9 : 0.4} />
-      </mesh>
+      {/* Light source varies by type */}
+      {lightType === 'ceiling' && (
+        <pointLight color={lightColor} intensity={intensity} distance={8} decay={2} />
+      )}
+      {lightType === 'strip' && (
+        <>
+          <pointLight color={lightColor} intensity={intensity * 0.6} distance={10} decay={1.5} />
+          {/* Elongated emissive strip mesh */}
+          <mesh>
+            <boxGeometry args={[0.6, 0.03, 0.05]} />
+            <meshStandardMaterial color={lightColor} emissive={lightColor} emissiveIntensity={isOn ? brightness * 3 : 0.1} transparent opacity={isOn ? 0.95 : 0.4} />
+          </mesh>
+        </>
+      )}
+      {lightType === 'spot' && (
+        <>
+          <spotLight
+            ref={spotLightRef}
+            color={lightColor}
+            intensity={intensity * 2}
+            distance={12}
+            angle={Math.PI / 6}
+            penumbra={0.3}
+            decay={2}
+            castShadow
+            shadow-mapSize-width={512}
+            shadow-mapSize-height={512}
+          />
+          {/* Target positioned below the light (in local space, pointing down by default) */}
+          <object3D ref={spotTargetRef} position={[0, -3, 0]} />
+          {/* Cone indicator mesh */}
+          <mesh rotation={[Math.PI, 0, 0]}>
+            <coneGeometry args={[0.08, 0.15, 8]} />
+            <meshStandardMaterial color={lightColor} emissive={lightColor} emissiveIntensity={isOn ? brightness * 2 : 0.1} transparent opacity={isOn ? 0.9 : 0.4} />
+          </mesh>
+        </>
+      )}
+      {lightType === 'wall' && (
+        <>
+          <spotLight
+            ref={spotLightRef}
+            color={lightColor}
+            intensity={intensity * 1.5}
+            distance={8}
+            angle={Math.PI / 3}
+            penumbra={0.5}
+            decay={2}
+            castShadow
+            shadow-mapSize-width={512}
+            shadow-mapSize-height={512}
+          />
+          {/* Target positioned forward and down for wall wash */}
+          <object3D ref={spotTargetRef} position={[0, -1, 1]} />
+          {/* Half-dome mesh for wall light */}
+          <mesh>
+            <sphereGeometry args={[selected ? 0.12 : 0.08, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2]} />
+            <meshStandardMaterial color={lightColor} emissive={lightColor} emissiveIntensity={isOn ? brightness * 2 : 0.1} transparent opacity={isOn ? 0.9 : 0.4} />
+          </mesh>
+        </>
+      )}
+      {/* Default sphere for ceiling type */}
+      {lightType === 'ceiling' && (
+        <mesh>
+          <sphereGeometry args={[selected ? 0.15 : 0.1, 16, 16]} />
+          <meshStandardMaterial color={lightColor} emissive={lightColor} emissiveIntensity={isOn ? brightness * 2 : 0.1} transparent opacity={isOn ? 0.9 : 0.4} />
+        </mesh>
+      )}
       {selected && <SelectionRing radius={0.2} />}
     </group>
   );
@@ -1241,11 +1318,15 @@ export default function DeviceMarkers3D({ buildMode }: DeviceMarkers3DProps) {
   );
 }
 
-/** Light-only marker: renders just the pointLight without any visible mesh */
+/** Light-only marker: renders just the light source without any visible mesh */
 function LightMarkerLightOnly({ position, id }: { position: [number, number, number]; id: string }) {
   const state = useAppStore((s) => s.devices.deviceStates[id]);
+  const marker = useAppStore((s) => s.devices.markers.find((m) => m.id === id));
   const lightData = state?.kind === 'light' ? state.data : null;
   const isOn = lightData?.on ?? false;
+  const lightType: LightType = marker?.lightType ?? 'ceiling';
+  const spotTargetRef = useRef<THREE.Object3D>(null);
+  const spotLightRef = useRef<THREE.SpotLight>(null);
 
   const lightColor = useMemo(() => {
     if (!lightData || !isOn) return new THREE.Color('#555555');
@@ -1259,10 +1340,35 @@ function LightMarkerLightOnly({ position, id }: { position: [number, number, num
   }, [lightData?.colorMode, lightData?.rgbColor?.[0], lightData?.rgbColor?.[1], lightData?.rgbColor?.[2], lightData?.colorTemp, isOn]);
 
   const brightness = isOn ? (lightData?.brightness ?? 200) / 255 : 0;
+  const intensity = isOn ? brightness * 5 : 0;
+  const rot = marker?.rotation ?? [0, 0, 0];
+
+  useFrame(() => {
+    if (spotLightRef.current && spotTargetRef.current) {
+      spotLightRef.current.target = spotTargetRef.current;
+    }
+  });
 
   return (
-    <group position={position}>
-      <pointLight color={lightColor} intensity={isOn ? brightness * 5 : 0} distance={8} decay={2} />
+    <group position={position} rotation={rot as [number, number, number]}>
+      {(lightType === 'ceiling' || lightType === 'strip') && (
+        <pointLight color={lightColor} intensity={lightType === 'strip' ? intensity * 0.6 : intensity} distance={lightType === 'strip' ? 10 : 8} decay={lightType === 'strip' ? 1.5 : 2} />
+      )}
+      {(lightType === 'spot' || lightType === 'wall') && (
+        <>
+          <spotLight
+            ref={spotLightRef}
+            color={lightColor}
+            intensity={lightType === 'spot' ? intensity * 2 : intensity * 1.5}
+            distance={lightType === 'spot' ? 12 : 8}
+            angle={lightType === 'spot' ? Math.PI / 6 : Math.PI / 3}
+            penumbra={lightType === 'spot' ? 0.3 : 0.5}
+            decay={2}
+            castShadow
+          />
+          <object3D ref={spotTargetRef} position={lightType === 'spot' ? [0, -3, 0] : [0, -1, 1]} />
+        </>
+      )}
     </group>
   );
 }

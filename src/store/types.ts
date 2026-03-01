@@ -551,7 +551,7 @@ export interface ActivityEvent {
 }
 
 // ─── User Profile ───
-export type LightType = 'ceiling' | 'strip' | 'wall' | 'spot' | 'custom';
+export type LightType = 'ceiling' | 'strip' | 'wall' | 'spot';
 
 export interface WifiSettings {
   ssid: string;
