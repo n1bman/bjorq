@@ -20,7 +20,7 @@
 | Phase | Title | Status | Dependencies |
 |-------|-------|--------|-------------|
 | 1 | UI/UX Consistency & Settings Restructure | ✅ Done | — |
-| 2 | Core Feature Expansion | 🔲 Todo | Phase 1 |
+| 2 | Core Feature Expansion | ✅ Done | Phase 1 |
 | 3 | Dashboard Enhancements | 🔲 Todo | Phase 2 |
 | 4 | Smart Home Intelligence Layer | 🔲 Todo | Phase 2 |
 | 5 | Build & Asset Improvements | 🔲 Todo | Phase 1 |

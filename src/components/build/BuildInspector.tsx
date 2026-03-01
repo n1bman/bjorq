@@ -5,7 +5,7 @@ import { Input } from '../ui/input';
 import { Switch } from '../ui/switch';
 import { presetMaterials } from '../../lib/materials';
 import { useState } from 'react';
-import type { DeviceKind, DeviceSurface, ScreenConfig } from '../../store/types';
+import type { DeviceKind, DeviceSurface, ScreenConfig, LightType } from '../../store/types';
 import HAEntityPicker from './devices/HAEntityPicker';
 
 const generateId = () => Math.random().toString(36).slice(2, 10);
@@ -471,8 +471,17 @@ function DeviceInspector({ deviceId, close }: { deviceId: string; close: React.R
   if (!device) return null;
 
   const isScreen = device.kind === 'media_screen';
+  const isLight = device.kind === 'light';
   const screenConfig = device.screenConfig ?? { aspectRatio: 16 / 9, uiStyle: 'minimal' as const, showProgress: true };
   const scale = device.scale ?? [1.2, 0.675, 1];
+
+  const lightTypeOptions: { value: LightType; label: string; emoji: string }[] = [
+    { value: 'ceiling', label: 'Tak', emoji: '🔵' },
+    { value: 'strip', label: 'Strip', emoji: '🟢' },
+    { value: 'wall', label: 'Vägg', emoji: '🟡' },
+    { value: 'spot', label: 'Spot', emoji: '⚪' },
+    { value: 'custom', label: 'Anpassad', emoji: '🟣' },
+  ];
 
   const handleDelete = () => {
     removeDevice(device.id);
@@ -522,6 +531,28 @@ function DeviceInspector({ deviceId, close }: { deviceId: string; close: React.R
           className="h-8 text-xs bg-secondary/30"
         />
       </div>
+
+      {/* Light type selector */}
+      {isLight && (
+        <div className="space-y-2">
+          <label className="text-muted-foreground text-[10px]">Ljustyp</label>
+          <div className="flex gap-1 flex-wrap">
+            {lightTypeOptions.map(({ value, label, emoji }) => (
+              <button
+                key={value}
+                onClick={() => updateDevice(device.id, { lightType: value })}
+                className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-[10px] font-medium transition-all border ${
+                  (device.lightType ?? 'ceiling') === value
+                    ? 'border-primary bg-primary/15 text-primary'
+                    : 'border-border text-muted-foreground hover:border-primary/40'
+                }`}
+              >
+                <span>{emoji}</span>{label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Screen-specific controls */}
       {isScreen && (

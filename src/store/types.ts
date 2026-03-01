@@ -263,6 +263,7 @@ export interface DeviceMarker {
   notifyOnHomeScreen?: boolean;
   widgetConfig?: WidgetConfig;
   energyTracking?: EnergyTracking;
+  lightType?: LightType;
 }
 
 // ─── Rich Device States (HA-ready) ───
@@ -545,6 +546,14 @@ export interface ActivityEvent {
 }
 
 // ─── User Profile ───
+export type LightType = 'ceiling' | 'strip' | 'wall' | 'spot' | 'custom';
+
+export interface WifiSettings {
+  ssid: string;
+  password: string;
+  visible: boolean;
+}
+
 export interface UserProfile {
   name: string;
   theme: 'dark' | 'midnight' | 'light';
@@ -584,9 +593,13 @@ export interface AppState {
   standby: StandbySettings;
   _preStandbyMode: AppMode;
   performance: PerformanceSettings;
+  wifi: WifiSettings;
 
   // Performance actions
   setPerformance: (changes: Partial<PerformanceSettings>) => void;
+
+  // WiFi actions
+  setWifi: (changes: Partial<WifiSettings>) => void;
 
   // Standby actions
   setStandbySettings: (s: Partial<StandbySettings>) => void;
