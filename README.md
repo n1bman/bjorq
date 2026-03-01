@@ -6,76 +6,70 @@ A 3D smart home dashboard that runs locally alongside Home Assistant. Control li
 
 ### Requirements
 
-- **Node.js 18+** (LTS recommended)
-- A modern browser (Chrome, Firefox, Edge)
+- **Node.js 18+** — [Download here](https://nodejs.org/) (LTS recommended)
 
-### Installation
+### Windows
 
-1. Download the latest release for your platform from [Releases](../../releases)
-2. Extract the ZIP file
-3. Open a terminal in the extracted folder
+1. Download `bjorq-dashboard-windows.zip` from [Releases](../../releases/latest)
+2. Extract the ZIP
+3. Double-click **`start.bat`**
+4. Open **http://localhost:3000**
 
-**Windows:**
-```bat
-install.bat
-start.bat
-```
+### Linux / Raspberry Pi
 
-**Linux / Raspberry Pi:**
-```bash
-chmod +x install.sh start.sh
-./install.sh
-./start.sh
-```
+1. Download `bjorq-dashboard-linux.zip` from [Releases](../../releases/latest)
+2. Extract and open a terminal in the folder:
+   ```bash
+   chmod +x start.sh
+   ./start.sh
+   ```
+3. Open **http://localhost:3000**
 
-4. Open `http://localhost:3000` in your browser
+> The start scripts automatically install server dependencies on first run — no separate install step needed.
 
 ### Custom Port
 
 ```bash
-PORT=8080 node server/server.js
+# Linux / macOS
+PORT=8080 ./start.sh
+
+# Windows (Command Prompt)
+set PORT=8080
+start.bat
 ```
 
-## Architecture
+## Data & Persistence
 
-```
-bjorq-dashboard/
-├── dist/           # Frontend build (served by Express)
-├── server/         # Node.js Express host
-│   ├── server.js   # Entry point
-│   ├── api/        # REST API routes
-│   └── storage/    # Disk I/O helpers
-├── data/           # Persistent user data (auto-created)
-│   ├── config.json
-│   ├── profiles.json
-│   └── projects/
-└── start.sh/.bat   # Launch scripts
-```
+All user data is stored in the `data/` folder next to the server:
 
-### Data Persistence
+| File | Content |
+|------|---------|
+| `data/config.json` | HA connection, UI defaults |
+| `data/profiles.json` | Theme, performance, standby settings |
+| `data/projects/` | Building models, assets, scenes |
 
-All data is stored on disk in the `data/` folder:
+**Backup:** Copy the entire `data/` folder.
 
-- **config.json** — Global config + Home Assistant connection (token stored securely, never exposed to browser)
-- **profiles.json** — UI preferences, theme, performance settings
-- **projects/** — Building models, assets, scenes
+## Home Assistant Integration
 
-**Backup:** Copy the entire `data/` folder, or use the in-app export feature.
+1. Open **Settings → Home Assistant** in the dashboard
+2. Enter your HA URL (e.g. `http://homeassistant.local:8123`)
+3. Enter a [long-lived access token](https://developers.home-assistant.io/docs/auth_api/#long-lived-access-tokens)
 
-### Home Assistant Integration
+Your token is stored server-side only. All HA API calls are proxied through `/api/ha/*` — the token never reaches the browser.
 
-1. Open Settings → Home Assistant in the dashboard
-2. Enter your HA URL (e.g., `http://homeassistant.local:8123`)
-3. Enter a long-lived access token
+## Network Access
 
-The token is stored server-side only. All HA API calls are proxied through the server (`/api/ha/*`), so your token never touches the browser.
+The server binds to `0.0.0.0`, so any device on your LAN can reach it. For remote access, use the same reverse proxy or VPN you use for Home Assistant.
 
-### Remote Access
+## Troubleshooting
 
-The dashboard binds to `0.0.0.0`, making it accessible from any device on your network. For remote access outside your LAN:
-
-- Use the same reverse proxy / VPN setup you use for Home Assistant
-- Or configure HA Cloud / Nabu Casa
+| Problem | Solution |
+|---------|----------|
+| **"Node.js not found"** | Install Node.js 18+ from [nodejs.org](https://nodejs.org/) |
+| **"Port in use"** | Set a different port: `PORT=8080 ./start.sh` |
+| **"Permission denied" (Linux)** | Run `chmod +x start.sh` first |
+| **Blank page after start** | Wait a few seconds, then hard-refresh (`Ctrl+Shift+R`) |
 
 ## Autostart
 
@@ -110,6 +104,8 @@ sudo systemctl start bjorq-dashboard
 3. Action: Start a program → `node.exe` with arguments `server/server.js`
 4. Set "Start in" to your bjorQ folder
 
+---
+
 ## Development
 
 ```bash
@@ -121,20 +117,8 @@ The dev server runs on port 5173 with hot reload. The Node host is only needed f
 
 ### Import Convention
 
-**Always use relative imports** (`./`, `../`) — never `@/` aliases.
-
-This project is developed in Lovable, whose Vite environment does not reliably resolve the `@/` path alias. To prevent "Module failed to load" errors:
-
-- ✅ `import { cn } from "../../lib/utils"`
-- ✅ `import { Button } from "./button"`
-- ❌ `import { cn } from "@/lib/utils"`
-
-The CI pipeline includes a grep check that blocks PRs containing `@/` imports. The alias config remains in `tsconfig.app.json` and `vite.config.ts` for IDE autocompletion but must not be used in committed code.
+**Always use relative imports** (`./`, `../`) — never `@/` aliases. See CI check in `.github/workflows/ci.yml`.
 
 ## Tech Stack
 
-- React + TypeScript + Vite
-- Three.js / React Three Fiber
-- Tailwind CSS + shadcn/ui
-- Zustand (state management)
-- Express (production host)
+React · TypeScript · Vite · Three.js / React Three Fiber · Tailwind CSS · shadcn/ui · Zustand · Express
