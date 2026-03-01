@@ -1,50 +1,37 @@
 
 
-## Plan: Beta Packaging — GitHub Release + Foolproof Scripts + README
+## Plan: Fix Release Build — Lockfile Sync + Fallback
 
-### Phase 1: Release Workflow
-The current `.github/workflows/release.yml` looks correctly formatted already. No YAML fix needed — it will work as-is when a `v*` tag is pushed. Both zip artifacts include `dist/`, `server/`, scripts, and `README.md`.
+### Root Cause
+The `package-lock.json` gets out of sync in Lovable's environment because dependency edits don't always regenerate it properly. `npm ci` is strict and fails on any mismatch.
 
-**One improvement**: Both zips currently include the opposite platform's start script. The Windows zip has `install.bat` but not `start.sh`, and vice versa. This is fine. However, we should include **both** start scripts in **both** zips for convenience (some Windows users use WSL). Also add `server/package.json` and `server/package-lock.json` explicitly (they're already included via `cp -r server`).
+### Fix: Use `npm install` as safe fallback in workflow
 
-No changes needed to `release.yml` — it's valid YAML and functional.
+Since we cannot reliably regenerate `package-lock.json` from Lovable's environment, the pragmatic fix is to switch the workflow to `npm install --ignore-scripts` temporarily. This still installs exact versions from the lockfile when possible but tolerates minor mismatches. Once we see a green release, we can switch back to `npm ci`.
 
-### Phase 2: Foolproof Start Scripts
+### Changes
 
-**`start.bat` (Windows)**
-- Check `node --version`, if fails print "Node.js not found" + download link and exit
-- If `server\node_modules` doesn't exist, auto-run `npm ci --omit=dev` in `server/`
-- Start `node server/server.js`
-- Print URL and data path
+**`.github/workflows/release.yml`** (1 line change)
+- Line 23: Change `npm ci` to `npm install`
+- This is the only blocker — the rest of the workflow (build, zip, upload) is correct
 
-**`start.sh` (Linux)**
-- Same: node check, auto-install, start, print info
-- Already set executable in release workflow (`chmod +x`)
+**`package.json`** (1 line change)  
+- Bump version to `"0.1.2"` so we have a fresh tag to use
 
-**`install.bat` / `install.sh`** — Keep as-is (they still work standalone), but now they're optional since start scripts auto-install.
+### Files modified (2)
+- `.github/workflows/release.yml` — `npm install` instead of `npm ci`
+- `package.json` — version bump to 0.1.2
 
-### Phase 3: README Rewrite
-Complete rewrite focused on beta download-and-run:
-- Quick Start: Download → Extract → Run
-- Windows steps, Linux steps
-- Requirements (Node 18+)
-- Port config (`PORT=8080`)
-- Data location (`data/` folder)
-- Troubleshooting section (Node not found, port in use, permission denied)
-- Remove dev-focused content from top (move to bottom "Development" section)
+### README and start scripts
+Already updated in previous iteration — no changes needed.
 
-### Phase 4: Package.json Metadata
-- `"name": "bjorq-dashboard"`
-- `"version": "0.1.0"`
-Only these two fields change.
+### Release Checklist (for you after merge)
+1. Push changes to `main`
+2. Create tag: `git tag v0.1.2 && git push origin v0.1.2`
+3. Go to Actions tab — verify workflow passes
+4. Go to Releases — verify both zip files appear under Assets
+5. Download a zip, extract, run `start.bat` or `./start.sh`
+6. Open `http://localhost:3000`
 
-### Phase 5: Dry Run
-Cannot create tags from here — you'll push a tag `v0.1.0` after merging. I'll provide a checklist.
-
-### Files modified (5)
-- `start.bat` — node check, auto-install, info output
-- `start.sh` — node check, auto-install, info output
-- `README.md` — beta-focused rewrite
-- `package.json` — name + version metadata
-- `.github/workflows/release.yml` — minor: include both scripts in both zips for robustness
+Once green, we switch back to `npm ci` in a follow-up commit.
 
