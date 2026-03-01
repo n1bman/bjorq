@@ -1,34 +1,20 @@
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+// Diagnostic Step 2e: Test raw Radix import (no shadcn wrapper)
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
-import NotFound from "./pages/NotFound";
-import { useThemeEffect } from "./hooks/useThemeEffect";
-
-const queryClient = new QueryClient();
-
-function ThemeProvider({ children }: { children: React.ReactNode }) {
-  useThemeEffect();
-  return <>{children}</>;
-}
+import * as TooltipPrimitive from "@radix-ui/react-tooltip";
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <ThemeProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </ThemeProvider>
-    </TooltipProvider>
-  </QueryClientProvider>
+  <TooltipPrimitive.Provider>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={
+          <div style={{ color: 'white', padding: '2rem', fontFamily: 'system-ui' }}>
+            <h1>HomeTwin — Step 2e ✅</h1>
+            <p>Raw Radix TooltipProvider (no shadcn wrapper)</p>
+          </div>
+        } />
+      </Routes>
+    </BrowserRouter>
+  </TooltipPrimitive.Provider>
 );
 
 export default App;
