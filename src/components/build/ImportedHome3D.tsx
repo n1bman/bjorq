@@ -73,8 +73,12 @@ function ImportedModel({ url, opacity, shadowsEnabled }: { url: string; opacity:
             child.castShadow = false;
             child.receiveShadow = shadowsEnabled;
 
+            // Preserve original transparency state (for glass/windows)
+            child.material = child.material.clone();
+            child.material._originalTransparent = child.material.transparent;
+            child.material._originalOpacity = child.material.opacity;
+
             if (opacity < 1) {
-              child.material = child.material.clone();
               child.material.transparent = true;
               child.material.opacity = opacity;
               child.material.depthWrite = opacity > 0.5;
@@ -124,11 +128,14 @@ function ImportedModel({ url, opacity, shadowsEnabled }: { url: string; opacity:
             child.material.opacity = opacity;
             child.material.depthWrite = opacity > 0.5;
           } else {
-            if (child.material.transparent) {
+            // Restore original transparency (preserve glass/windows)
+            const origTransparent = child.material._originalTransparent ?? false;
+            const origOpacity = child.material._originalOpacity ?? 1;
+            if (child.material.transparent !== origTransparent || child.material.opacity !== origOpacity) {
               child.material = child.material.clone();
-              child.material.transparent = false;
-              child.material.opacity = 1;
-              child.material.depthWrite = true;
+              child.material.transparent = origTransparent;
+              child.material.opacity = origOpacity;
+              child.material.depthWrite = !origTransparent || origOpacity > 0.5;
             }
           }
         }

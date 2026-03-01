@@ -1,6 +1,8 @@
+import { useMemo } from 'react';
 import { useAppStore } from '../../../store/useAppStore';
-import { Gauge, Monitor, Sun, Sparkles, RefreshCw } from 'lucide-react';
+import { Gauge, Monitor, Sun, Sparkles, RefreshCw, Cpu, AlertTriangle, CheckCircle } from 'lucide-react';
 import { Switch } from '../../ui/switch';
+import { Progress } from '../../ui/progress';
 import OptionButton from '../../ui/OptionButton';
 import { toast } from 'sonner';
 import type { QualityLevel } from '../../../store/types';
@@ -15,9 +17,59 @@ function notify() {
   toast.success('Ändringar sparade ✅', { description: '3D-scenen laddas om automatiskt.' });
 }
 
+function computeScore(quality: QualityLevel, shadows: boolean, postprocessing: boolean, tabletMode: boolean) {
+  if (tabletMode) return 20;
+  let score = quality === 'low' ? 30 : quality === 'medium' ? 60 : 100;
+  if (shadows) score += 25;
+  if (postprocessing) score += 15;
+  return Math.min(score, 140);
+}
+
+function getScoreInfo(score: number) {
+  if (score <= 40) return { label: 'Lätt', color: 'hsl(142, 71%, 45%)', tier: 'light' as const };
+  if (score <= 75) return { label: 'Balanserad', color: 'hsl(45, 93%, 47%)', tier: 'balanced' as const };
+  return { label: 'Krävande', color: 'hsl(0, 84%, 60%)', tier: 'heavy' as const };
+}
+
+function getDprForQuality(quality: QualityLevel, tabletMode: boolean) {
+  if (tabletMode) return 1;
+  return quality === 'low' ? 1 : quality === 'medium' ? 1.5 : 2;
+}
+
+function getShadowMapRes(quality: QualityLevel) {
+  return quality === 'low' ? 512 : quality === 'medium' ? 1024 : 2048;
+}
+
+function getDeviceInfo() {
+  const cores = navigator.hardwareConcurrency || 0;
+  const screenRes = `${window.screen.width}×${window.screen.height}`;
+  const memGB = (navigator as any).deviceMemory || null;
+  return { cores, screenRes, memGB };
+}
+
+function getRecommendation(score: number, cores: number, memGB: number | null) {
+  const isWeak = cores > 0 && cores <= 4;
+  const isLowMem = memGB !== null && memGB <= 4;
+  
+  if (score > 75 && (isWeak || isLowMem)) {
+    return 'Din enhet verkar ha begränsade resurser. Prova "Medium" eller "Låg" kvalitet för bättre prestanda.';
+  }
+  if (score > 100) {
+    return 'Höga inställningar med alla effekter. Kan vara tungt på äldre enheter.';
+  }
+  return null;
+}
+
 export default function PerformanceSettings() {
   const perf = useAppStore((s) => s.performance);
   const setPerformance = useAppStore((s) => s.setPerformance);
+
+  const score = useMemo(() => computeScore(perf.quality, perf.shadows, perf.postprocessing, perf.tabletMode), [perf]);
+  const scoreInfo = getScoreInfo(score);
+  const device = useMemo(() => getDeviceInfo(), []);
+  const dpr = getDprForQuality(perf.quality, perf.tabletMode);
+  const shadowRes = getShadowMapRes(perf.quality);
+  const recommendation = getRecommendation(score, device.cores, device.memGB);
 
   const applyTabletMode = (on: boolean) => {
     if (on) {
@@ -39,6 +91,52 @@ export default function PerformanceSettings() {
           </p>
         </div>
       </div>
+
+      {/* Performance Score */}
+      <div className="space-y-2 p-3 rounded-xl bg-muted/30 border border-border/50">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-medium text-muted-foreground">Belastning</span>
+          <span className="text-xs font-bold" style={{ color: scoreInfo.color }}>{scoreInfo.label}</span>
+        </div>
+        <Progress value={Math.min(score, 140) / 1.4} className="h-2" />
+        <div className="grid grid-cols-3 gap-2 text-[10px] text-muted-foreground">
+          <div className="text-center">
+            <span className="block text-foreground font-medium">{dpr}x</span>
+            DPR
+          </div>
+          <div className="text-center">
+            <span className="block text-foreground font-medium">{perf.shadows ? `${shadowRes}px` : 'Av'}</span>
+            Skuggor
+          </div>
+          <div className="text-center">
+            <span className="block text-foreground font-medium">{perf.postprocessing ? 'På' : 'Av'}</span>
+            Effekter
+          </div>
+        </div>
+      </div>
+
+      {/* Device Info */}
+      <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+        <Cpu size={10} />
+        <span>{device.cores > 0 ? `${device.cores} kärnor` : 'Okänd CPU'}</span>
+        <span>·</span>
+        <span>{device.screenRes}</span>
+        {device.memGB && <><span>·</span><span>{device.memGB} GB RAM</span></>}
+      </div>
+
+      {/* Recommendation */}
+      {recommendation && (
+        <div className="flex items-start gap-2 p-2 rounded-lg bg-destructive/10 border border-destructive/20">
+          <AlertTriangle size={14} className="text-destructive shrink-0 mt-0.5" />
+          <p className="text-[10px] text-destructive">{recommendation}</p>
+        </div>
+      )}
+      {!recommendation && score <= 75 && (
+        <div className="flex items-start gap-2 p-2 rounded-lg bg-primary/10 border border-primary/20">
+          <CheckCircle size={14} className="text-primary shrink-0 mt-0.5" />
+          <p className="text-[10px] text-primary">Bra balans mellan kvalitet och prestanda.</p>
+        </div>
+      )}
 
       {/* Tablet mode */}
       <div className="flex items-center justify-between">

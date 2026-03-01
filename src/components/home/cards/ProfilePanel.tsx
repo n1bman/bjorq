@@ -3,12 +3,14 @@ import { useAppStore } from '../../../store/useAppStore';
 import { Input } from '../../ui/input';
 import { Button } from '../../ui/button';
 import { cn } from '../../../lib/utils';
-import { User, Palette, Monitor, Download, Upload, Trash2, MapPin, Info, Save } from 'lucide-react';
+import { User, Palette, Monitor, Download, Upload, Trash2, MapPin, Info, Save, Play } from 'lucide-react';
+import { createDemoLayout, createDemoDevices } from '../../../lib/demoData';
+import { getDefaultState } from '../../../store/useAppStore';
 import { useRef } from 'react';
 import { isHostedSync, getMode } from '../../../lib/apiClient';
 import { toast } from 'sonner';
 
-const APP_VERSION = '0.1.5'; // synced with package.json
+const APP_VERSION = '0.1.8'; // synced with package.json
 
 const themes = [
   { key: 'dark' as const, label: 'Mörkt' },
@@ -92,6 +94,21 @@ export default function ProfilePanel() {
     }
     localStorage.clear();
     window.location.reload();
+  };
+
+  const handleLoadDemo = () => {
+    const layout = createDemoLayout();
+    const demoDevices = createDemoDevices();
+    const deviceStates: Record<string, any> = {};
+    demoDevices.markers.forEach((m) => {
+      deviceStates[m.id] = getDefaultState(m.kind);
+    });
+    useAppStore.setState({
+      layout,
+      devices: { markers: demoDevices.markers, deviceStates },
+      homeGeometry: { ...useAppStore.getState().homeGeometry, source: 'procedural' },
+    });
+    toast.success('Demo-projekt laddat ✅', { description: '3 rum, 4 enheter — redo att utforska.' });
   };
 
   return (
@@ -242,6 +259,15 @@ export default function ProfilePanel() {
             Klicka igen för att radera alla inställningar och enheter permanent.
           </p>
         )}
+
+        <div className="border-t border-border/50 pt-3 mt-1">
+          <Button size="sm" variant="outline" className="w-full h-8 text-xs gap-2" onClick={handleLoadDemo}>
+            <Play size={14} /> Ladda demo-projekt
+          </Button>
+          <p className="text-[10px] text-muted-foreground text-center mt-1">
+            Laddar ett exempelhus med rum och enheter att utforska.
+          </p>
+        </div>
       </div>
 
       {/* Card 4: System Status */}
