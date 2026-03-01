@@ -76,7 +76,7 @@ export default function BuildTopToolbar() {
 
   return (
     <div className="relative z-50">
-    <div className="flex items-center gap-1 px-2 py-1 border-b border-border bg-card/80 backdrop-blur-sm overflow-x-auto flex-nowrap">
+    <div className="flex items-center gap-1 px-2 pr-32 py-1 border-b border-border bg-card/80 backdrop-blur-sm overflow-x-auto flex-nowrap">
       {/* Primary tools */}
       <ToolBtn tool="select" icon={MousePointer2} label="Markera" />
       <ToolBtn tool="copy" icon={Copy} label="Kopiera" />
@@ -201,9 +201,11 @@ export default function BuildTopToolbar() {
       {/* Spacer */}
       <div className="flex-1" />
 
-      {/* Floor picker */}
-      <FloorPicker />
+      </div>
 
+      {/* Floor picker - rendered OUTSIDE overflow container so dropdown isn't clipped */}
+      <div className="absolute top-1 right-2 z-[60]">
+        <FloorPicker />
       </div>
 
       {/* Environment panel - rendered OUTSIDE overflow container */}
