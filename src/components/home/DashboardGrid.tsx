@@ -299,14 +299,20 @@ function StandbySettingsPanel() {
 
 function SettingsCategory() {
   return (
-    <div className="space-y-4">
-      <ProfilePanel />
-      <CameraStartSettings />
-      <PerformanceSettings />
-      <StandbySettingsPanel />
-      <LocationSettings />
-      <HAConnectionPanel />
-      <HomeWidgetConfig />
+    <div className="max-w-[1100px] mx-auto">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="space-y-4">
+          <ProfilePanel />
+          <CameraStartSettings />
+        </div>
+        <div className="space-y-4">
+          <PerformanceSettings />
+          <StandbySettingsPanel />
+          <LocationSettings />
+          <HAConnectionPanel />
+          <HomeWidgetConfig />
+        </div>
+      </div>
     </div>
   );
 }
