@@ -1,38 +1,49 @@
 
 
-# Plan: Fix Vite 500 Error on App.tsx
+# Plan: Fix "Module failed to load" — Isolate Compilation Error
 
-## Root Cause
+## What we know
 
-The white screen is caused by Vite returning HTTP 500 for `/src/App.tsx?t=1772376042745`. This is NOT a hosted-mode issue — the mode detection code correctly falls into DEV mode in preview.
+1. Vite returns **HTTP 500** for `/src/App.tsx` — this means a compilation error somewhere in App.tsx's import tree
+2. `main.tsx` loads fine (200), `index.css` loads fine (200) — the build pipeline (PostCSS, Tailwind, Vite) works
+3. All config files are restored (`vite.config.ts`, `tsconfig.json`, `postcss.config.js`, `tailwind.config.ts`)
+4. We cannot see the actual Vite error message in the 500 response body
+5. Code inspection of ~30 source files shows no obvious syntax errors or missing imports
 
-The `?t=` timestamp is a stale HMR cache-bust parameter from a previous failed compilation (before config files were restored). The Vite dev server cached the failed transform and continues returning 500 for that specific timestamped URL.
+## Root cause hypothesis
 
-## Fix
+One of the ~80 source files in App.tsx's deep import tree has a compilation error that Vite's esbuild transform cannot handle. Since we cannot see the actual error, we need to isolate it.
 
-### 1. Force Vite module graph invalidation — `src/main.tsx`
-Add a trivial comment and wrap the render in a try-catch with visible error fallback. This forces Vite to create a new module graph entry, bypassing the cached 500.
+## Strategy: Minimal App → Gradual Rebuild
 
-```typescript
-// Force HMR invalidation
-console.log('[App] main.tsx loaded');
-try {
-  createRoot(document.getElementById("root")!).render(<App />);
-} catch (err) {
-  console.error('[App] Failed to render:', err);
-  document.body.innerHTML = `<pre style="color:red;padding:2rem">${err}</pre>`;
-}
+### Step 1: Replace App.tsx with a minimal version
+Strip all imports temporarily. Render just a `<div>Hello</div>`. This confirms the build pipeline works.
+
+### Step 2: Add back imports one group at a time
+Add imports in this order (each group = one test):
+1. UI components (toaster, sonner, tooltip)
+2. React Router + basic pages (NotFound)
+3. Store + hooks (useAppStore, useThemeEffect)
+4. Index page (which pulls in the entire app)
+
+### Step 3: Fix the failing import
+Once we identify which import group breaks the build, we drill down to the specific file and fix the compilation error.
+
+### Safety net
+Keep the `index.html` fallback diagnostic and `main.tsx` try-catch from the previous changes.
+
+## Technical details
+
+The minimal App.tsx for Step 1:
+```tsx
+const App = () => (
+  <div style={{ color: 'white', padding: '2rem' }}>
+    <h1>HomeTwin — Build OK</h1>
+    <p>If you see this, the Vite build pipeline works.</p>
+  </div>
+);
+export default App;
 ```
 
-### 2. Safety fallback in `index.html`
-Add a visible loading indicator inside `<div id="root">` so we can distinguish between "JS didn't load" (text visible) and "JS loaded but crashed" (text replaced by React).
-
-```html
-<div id="root"><p style="color:white;padding:2rem;font-family:system-ui">Loading…</p></div>
-```
-
-These two changes together will:
-- Force Vite to recompile the full module graph with a fresh timestamp
-- Make any future compile errors visible (not just a white screen)
-- If the 500 persists after the invalidation, the loading text will remain visible, confirming the build failure vs runtime crash
+If this renders, we know the issue is in the component tree, not in the config. Then we add imports back until we find the failing one. The fix will depend on what we find — likely a TypeScript/ESM issue in one of the 3D components or store files.
 
