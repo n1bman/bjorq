@@ -1,52 +1,66 @@
 
 
-## Plan: Fix 5 Issues + Release v0.2.0
+## Plan: UI Refinements, Camera Fix, HA Audit, Changelog — v0.2.1
 
-### Issue Analysis
+### Phase 1: UI Changes (3 files)
 
-**1. Speaker not syncing with HA**
-Root cause: `getDefaultState()` in `useAppStore.ts` has no `case 'speaker'` or `case 'soundbar'` — falls through to `default`, returning `{ kind: 'generic', data: { on: false } }`. This means newly placed speakers have `kind: 'generic'` state, so `SpeakerMarker3D` reads `null` from `state?.kind === 'speaker'`. The HA bridge (`useHABridge.ts`) dispatches commands based on `entityId` domain (`media_player`), which works for the command side — but the initial state mismatch prevents the marker from reflecting HA state until the first `updateHALiveState` call maps it correctly. Additionally, the bridge's `media_player` handler silently drops commands when `data.state === 'idle'`, which is the speaker's default mapped state.
+**1. Move device visibility picker to top-right** (`src/components/home/HomeView.tsx`)
+- Remove the `fixed bottom-36 left-4` eye button
+- Place it in the top-right area (e.g., `fixed top-5 right-5`) as a small glass-panel icon button
+- Popup opens downward from the button instead of upward
+- Keeps the same per-device toggle list with "Visa alla" / "Dölj alla"
 
-**2. Sync delay in hosted mode**
-The hosted mode polls HA states every 5 seconds (`setInterval(pollStates, 5000)` in `useHomeAssistant.ts`). This is noticeably slower than WebSocket real-time updates. Reducing the interval to 2 seconds will improve responsiveness.
+**2. Shrink CameraStartSettings panel** (`src/components/home/cards/CameraStartSettings.tsx`)
+- Remove the long description paragraph
+- Make it a compact single-row layout: title + Save button + Reset button inline
+- Show saved position as a subtle badge, not a full paragraph
 
-**3. Screen device not visible in release**
-The `MediaScreenMarker` renders a `CanvasTexture` on a `planeGeometry`. In production builds, the issue is likely that `canvasRef.current` initialization happens outside React lifecycle (lines 427-431 in DeviceMarkers3D.tsx), and the canvas dimensions depend on `config.aspectRatio`. The screen marker works in dev but the production build may have different initialization timing. Need to verify the marker renders with a proper fallback.
+**3. Fix camera not applying on navigation** (`src/components/Scene3D.tsx`)
+- Bug: the CameraController effect at line 73 only fires when `appMode` changes AND `prevMode.current !== appMode`. This works for mode transitions but has a subtle issue: if the user saves a new start position while already on 'home', then navigates to 'dashboard' (which also passes the condition), `prevMode.current` is already 'home'/'dashboard' and the lerpingTo might not trigger correctly because both modes share the same condition group.
+- Fix: Also trigger lerp when `customStartPos`/`customStartTarget` change while already on home/dashboard (provide immediate visual feedback after save). Add a separate effect that applies the saved position immediately when saving, independent of mode changes.
 
-**4. Version shows v0.0.0 in release**
-The version is hardcoded as `APP_VERSION = '0.1.8'` in `ProfilePanel.tsx`. This is manually maintained and easily forgotten. The release build doesn't inject the version from `package.json`. Fix: Use Vite's `define` to inject `__APP_VERSION__` at build time from `package.json`.
+### Phase 2: HA Sync Audit (review only, fix where needed)
 
-**5. Sliders too sensitive in build mode**
-Build mode sliders use `step={0.1}` for position/scale, making it hard to land on exact integers. Fix: Add number input fields alongside sliders for precise values, and use coarser steps (0.5 for position, 0.25 for scale) with the option to type exact values.
+I'll audit `useHABridge.ts` against all supported domains. Current coverage:
+- `light` — turn_on/off with brightness, color_temp, rgb_color ✓
+- `switch` / `input_boolean` — turn_on/off ✓
+- `climate` — set_hvac_mode, set_temperature ✓
+- `lock` — lock/unlock ✓
+- `vacuum` — start/stop/pause/return_to_base, fan_speed, segment clean ✓
+- `media_player` — play/pause/stop, volume, next/prev, turn_off ✓ (now with idle volume fix)
+- `fan` — turn_on/off, set_percentage ✓
+- `cover` — open/close/stop, set_position ✓
+- `scene` / `script` / `automation` — trigger ✓
+- `alarm_control_panel` — arm/disarm with code ✓
+- `water_heater` — temperature, operation_mode ✓
+- `humidifier` — on/off, humidity, mode ✓
+- `siren` — on/off with tone/volume ✓
+- `button` — press ✓
+- `number` / `input_number` — set_value ✓
+- `select` / `input_select` — select_option ✓
+- `valve` — open/close, set_position ✓
+- `lawn_mower` — start/dock/pause ✓
 
-### Changes
+Sync looks comprehensive. Potential issue to fix:
+- `fan` calls both `turn_on` AND `set_percentage` — the `turn_on` already includes percentage. Remove the duplicate `set_percentage` call.
 
-**1. `src/store/useAppStore.ts`** — Add `case 'speaker'` and `case 'soundbar'` to `getDefaultState()` returning proper `SpeakerState`.
+Widgets, standby, and build mode use the same `deviceStates` store so they share the sync pipeline.
 
-**2. `src/hooks/useHomeAssistant.ts`** — Reduce hosted poll interval from 5000ms to 2000ms.
+### Phase 3: Changelog + Version Management (3 files)
 
-**3. `src/hooks/useHABridge.ts`** — In the `media_player` case, handle speaker kind separately: don't drop commands for `idle` state speakers when volume changes. Add explicit handling for speaker volume-only changes.
+**Create `CHANGELOG.md`** at project root using Keep a Changelog format:
+- Document all changes from v0.1.0 through v0.2.0
+- Going forward, every change session adds entries before bumping version
 
-**4. `vite.config.ts`** — Add `define: { '__APP_VERSION__': JSON.stringify(require('./package.json').version) }` to inject version at build time.
+**Bump `package.json`** to `0.2.1`
 
-**5. `src/components/home/cards/ProfilePanel.tsx`** — Replace hardcoded `APP_VERSION` with `__APP_VERSION__` (declared in a `.d.ts` or inline).
+**Update `docs/roadmap-vNext.md`** or create a development workflow note in `docs/08-developer-notes.md` documenting the versioning convention: bump version in `package.json` before each release tag push.
 
-**6. `src/components/build/BuildInspector.tsx`** — For position/scale/rotation sliders in the device inspector: add a small numeric `<Input>` next to each slider showing the current value, editable for precision. Round slider values to step precision on change. Use `step={0.5}` for position, `step={0.25}` for scale.
-
-**7. `src/components/devices/DeviceMarkers3D.tsx`** — Ensure `MediaScreenMarker` has a visible fallback when canvas texture fails (solid colored plane with label).
-
-**8. `package.json`** — Bump version to `0.2.0`.
-
-**9. `src/vite-env.d.ts`** — Declare `__APP_VERSION__` global constant.
-
-### Files Modified (8-9)
-1. `src/store/useAppStore.ts` — speaker/soundbar default state
-2. `src/hooks/useHomeAssistant.ts` — faster poll interval
-3. `src/hooks/useHABridge.ts` — speaker command handling
-4. `vite.config.ts` — version injection via define
-5. `src/vite-env.d.ts` — type declaration for __APP_VERSION__
-6. `src/components/home/cards/ProfilePanel.tsx` — dynamic version
-7. `src/components/build/BuildInspector.tsx` — precise slider inputs
-8. `src/components/devices/DeviceMarkers3D.tsx` — screen marker fallback
-9. `package.json` — version 0.2.0
+### Files Modified (6)
+1. `src/components/home/HomeView.tsx` — move picker to top-right
+2. `src/components/home/cards/CameraStartSettings.tsx` — compact layout
+3. `src/components/Scene3D.tsx` — fix camera apply logic
+4. `src/hooks/useHABridge.ts` — remove duplicate fan command
+5. `CHANGELOG.md` — new file with full history
+6. `package.json` — version 0.2.1
 
