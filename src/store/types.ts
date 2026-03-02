@@ -199,6 +199,9 @@ export interface PerformanceSettings {
   shadows: boolean;
   postprocessing: boolean;
   tabletMode: boolean;
+  showHUD: boolean;
+  maxLights: number; // 0 = unlimited
+  _autoDetectedPerformance?: boolean; // prevents re-applying auto-detection
 }
 
 export interface ImportedHomeSettings {

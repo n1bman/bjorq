@@ -249,7 +249,7 @@ const storeCreator = (set: any, get: any): AppState => ({
   standby: { enabled: false, idleMinutes: 2, vioMinutes: 5, cameraView: 'standard' as const, phase: 'standby' as const },
   _preStandbyMode: 'home' as AppMode,
   profile: { name: '', theme: 'dark', accentColor: '#f59e0b', dashboardBg: 'scene3d' },
-  performance: { quality: 'high', shadows: true, postprocessing: false, tabletMode: false },
+  performance: { quality: 'high', shadows: true, postprocessing: false, tabletMode: false, showHUD: false, maxLights: 0 },
   wifi: { ssid: '', password: '', visible: false },
   energyConfig: { pricePerKwh: 1.5, currency: 'kr' },
   calendar: {
@@ -1352,6 +1352,23 @@ export async function initHostedMode() {
   } catch (err) {
     console.warn('[Hosted] Failed to load from server:', err);
     return false;
+  }
+}
+
+/** I1: Auto-detect weak hardware and enable tablet mode on first boot */
+export function autoDetectPerformance() {
+  const perf = useAppStore.getState().performance;
+  if (perf._autoDetectedPerformance) return; // already ran
+  const cores = navigator.hardwareConcurrency || 8;
+  const memGB = (navigator as any).deviceMemory ?? 8;
+  const isWeak = cores <= 4 || memGB <= 4;
+  if (isWeak) {
+    console.log('[Perf] Weak hardware detected (cores=%d, mem=%dGB) — enabling tablet mode', cores, memGB);
+    useAppStore.setState({
+      performance: { ...perf, tabletMode: true, quality: 'low' as const, shadows: false, postprocessing: false, showHUD: false, maxLights: 4, _autoDetectedPerformance: true },
+    });
+  } else {
+    useAppStore.setState({ performance: { ...perf, _autoDetectedPerformance: true } });
   }
 }
 

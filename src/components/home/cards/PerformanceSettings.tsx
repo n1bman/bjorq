@@ -1,7 +1,8 @@
 import { useMemo } from 'react';
 import { useAppStore } from '../../../store/useAppStore';
-import { Gauge, Monitor, Sun, Sparkles, RefreshCw, Cpu, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Gauge, Monitor, Sun, Sparkles, RefreshCw, Cpu, AlertTriangle, CheckCircle, Activity, Lightbulb } from 'lucide-react';
 import { Switch } from '../../ui/switch';
+import { Slider } from '../../ui/slider';
 import { Progress } from '../../ui/progress';
 import OptionButton from '../../ui/OptionButton';
 import { toast } from 'sonner';
@@ -32,7 +33,7 @@ function getScoreInfo(score: number) {
 }
 
 function getDprForQuality(quality: QualityLevel, tabletMode: boolean) {
-  if (tabletMode) return 1;
+  if (tabletMode) return 0.75;
   return quality === 'low' ? 1 : quality === 'medium' ? 1.5 : 2;
 }
 
@@ -189,6 +190,50 @@ export default function PerformanceSettings() {
           onCheckedChange={(v) => { setPerformance({ postprocessing: v, tabletMode: false }); notify(); }}
         />
       </div>
+
+      {/* Max lights (tablet mode) */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Lightbulb size={14} className="text-muted-foreground" />
+            <span className="text-sm text-foreground">Max ljuskällor</span>
+          </div>
+          <span className="text-xs font-mono text-muted-foreground">
+            {perf.maxLights === 0 ? 'Obegränsat' : perf.maxLights}
+          </span>
+        </div>
+        <Slider
+          value={[perf.maxLights]}
+          min={0}
+          max={16}
+          step={1}
+          onValueChange={([v]) => { setPerformance({ maxLights: v }); }}
+        />
+        <p className="text-[9px] text-muted-foreground">0 = obegränsat. Lägre värde → bättre prestanda på RPi.</p>
+      </div>
+
+      {/* Performance HUD */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Activity size={14} className="text-muted-foreground" />
+          <div>
+            <span className="text-sm text-foreground">Performance HUD</span>
+            <p className="text-[10px] text-muted-foreground">Visar FPS-räknare i hörnet</p>
+          </div>
+        </div>
+        <Switch
+          checked={perf.showHUD}
+          onCheckedChange={(v) => { setPerformance({ showHUD: v }); }}
+        />
+      </div>
+
+      {/* Auto-detection info */}
+      {perf._autoDetectedPerformance && perf.tabletMode && (
+        <div className="flex items-start gap-2 p-2 rounded-lg bg-primary/10 border border-primary/20">
+          <Cpu size={14} className="text-primary shrink-0 mt-0.5" />
+          <p className="text-[10px] text-primary">Surfplatteläge aktiverades automatiskt baserat på din hårdvara.</p>
+        </div>
+      )}
     </div>
   );
 }

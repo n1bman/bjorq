@@ -263,7 +263,8 @@ export default function BuildScene3D() {
 
   const perfShadows = useAppStore((s) => s.performance.shadows);
   const perfQuality = useAppStore((s) => s.performance.quality);
-  const dpr = perfQuality === 'low' ? 1 : perfQuality === 'medium' ? 1.5 : undefined;
+  const perfTablet = useAppStore((s) => s.performance.tabletMode);
+  const dpr = perfTablet ? 0.75 : perfQuality === 'low' ? 1 : perfQuality === 'medium' ? 1.5 : undefined;
 
   return (
     <div className="w-full h-full" onDoubleClick={handleDoubleClick}>
