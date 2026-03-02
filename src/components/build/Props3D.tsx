@@ -87,6 +87,7 @@ function PropModel({ id, url, position, rotation, scale }: {
   rotation: [number, number, number];
   scale: [number, number, number];
 }) {
+  const appMode = useAppStore((s) => s.appMode);
   const selection = useAppStore((s) => s.build.selection);
   const setSelection = useAppStore((s) => s.setSelection);
   const updateProp = useAppStore((s) => s.updateProp);
@@ -94,7 +95,7 @@ function PropModel({ id, url, position, rotation, scale }: {
   const tab = useAppStore((s) => s.build.tab);
   const catalog = useAppStore((s) => s.props.catalog);
 
-  const isSelected = selection.type === 'prop' && selection.id === id;
+  const isSelected = appMode === 'build' && selection.type === 'prop' && selection.id === id;
   const groupRef = useRef<THREE.Group>(null);
   const [isDragging, setIsDragging] = useState(false);
   const dragPlane = useRef(new THREE.Plane(new THREE.Vector3(0, 1, 0), 0));
@@ -161,13 +162,13 @@ function PropModel({ id, url, position, rotation, scale }: {
   }, [url, doLoad, modelName]);
 
   const handleClick = useCallback((e: ThreeEvent<PointerEvent>) => {
-    if (activeTool !== 'select') return;
+    if (appMode !== 'build' || activeTool !== 'select') return;
     e.stopPropagation();
     setSelection({ type: 'prop', id });
-  }, [activeTool, id, setSelection]);
+  }, [appMode, activeTool, id, setSelection]);
 
   const handlePointerDown = useCallback((e: ThreeEvent<PointerEvent>) => {
-    if (activeTool !== 'select' || tab !== 'furnish') return;
+    if (appMode !== 'build' || activeTool !== 'select' || tab !== 'furnish') return;
     e.stopPropagation();
     setSelection({ type: 'prop', id });
 
@@ -210,7 +211,7 @@ function PropModel({ id, url, position, rotation, scale }: {
 
     window.addEventListener('pointermove', onPointerMove);
     window.addEventListener('pointerup', onPointerUp);
-  }, [activeTool, tab, id, position, camera, raycaster, gl, updateProp, setSelection]);
+  }, [appMode, activeTool, tab, id, position, camera, raycaster, gl, updateProp, setSelection]);
 
   // Loading state
   if (status === 'loading' || status === 'idle') {
