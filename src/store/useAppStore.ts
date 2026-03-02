@@ -1277,6 +1277,19 @@ export async function initHostedMode() {
   const mode = await resolveMode();
   if (mode !== 'HOSTED') return false;
 
+  // A2: Hard cleanup — remove any stale localStorage keys in hosted mode
+  try {
+    const keysToRemove = ['hometwin-store'];
+    for (const key of keysToRemove) {
+      if (localStorage.getItem(key) !== null) {
+        localStorage.removeItem(key);
+        console.log('[Hosted] Cleaned stale localStorage key:', key);
+      }
+    }
+  } catch (e) {
+    console.warn('[Hosted] localStorage cleanup failed:', e);
+  }
+
   try {
     const { config, profiles, projects, activeProjectId } = await fetchBootstrap();
     _activeProjectId = activeProjectId;
