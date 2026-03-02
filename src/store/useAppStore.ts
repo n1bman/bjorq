@@ -27,6 +27,9 @@ export function getDefaultState(kind: DeviceKind): DeviceState {
       return { kind: 'cover', data: { position: 100, state: 'open' } };
     case 'scene':
       return { kind: 'scene', data: {} };
+    case 'speaker':
+    case 'soundbar':
+      return { kind: 'media_screen', data: { on: false, state: 'idle', volume: 0.5 } };
     default:
       return { kind: 'generic', data: { on: false } };
   }

@@ -200,6 +200,7 @@ function sendHACommand(entityId: string, state: DeviceState, prevState?: DeviceS
 
     case 'media_player': {
       const data = state.data as any;
+      const prevData = prevStateData as any;
       // Handle explicit actions (next/previous/stop) — never send volume alongside
       if (data._action === 'next') {
         callService('media_player', 'media_next_track', { entity_id: entityId });
@@ -213,10 +214,15 @@ function sendHACommand(entityId: string, state: DeviceState, prevState?: DeviceS
         callService('media_player', 'media_stop', { entity_id: entityId });
         break;
       }
-      // Don't send commands for idle/off states (HA echo)
+      // Don't send commands for idle/off states (HA echo) — but allow volume changes for speakers
       if (data.state === 'idle' || data.state === 'off' || data.state === 'standby') {
         if (!data.on) {
           callService('media_player', 'turn_off', { entity_id: entityId });
+          break;
+        }
+        // Allow volume changes even in idle state (speakers)
+        if (typeof data.volume === 'number' && data.volume !== prevData?.volume) {
+          callService('media_player', 'volume_set', { entity_id: entityId, volume_level: data.volume });
         }
         break;
       }
@@ -225,7 +231,6 @@ function sendHACommand(entityId: string, state: DeviceState, prevState?: DeviceS
         break;
       }
       // Only send play/pause if state actually changed from previous
-      const prevData = prevStateData as any;
       if (data.state === 'playing' && prevData?.state !== 'playing') {
         callService('media_player', 'media_play', { entity_id: entityId });
       } else if (data.state === 'paused' && prevData?.state !== 'paused') {

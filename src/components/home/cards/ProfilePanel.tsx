@@ -10,7 +10,7 @@ import { useRef } from 'react';
 import { isHostedSync, getMode } from '../../../lib/apiClient';
 import { toast } from 'sonner';
 
-const APP_VERSION = '0.1.8'; // synced with package.json
+const APP_VERSION = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '0.0.0';
 
 const themes = [
   { key: 'dark' as const, label: 'Mörkt' },
