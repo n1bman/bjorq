@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Home, Cloud, Cpu, Zap, Bell, Video, Settings, Pencil, X, CalendarDays, Bot, Moon, Save, Workflow, Palette } from 'lucide-react';
+import { Home, Cloud, Cpu, Zap, Bell, Video, Settings, Pencil, X, CalendarDays, Bot, Moon, Save, Workflow, Palette, LayoutGrid } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Button } from '../ui/button';
 import { useAppStore } from '../../store/useAppStore';
@@ -14,6 +14,9 @@ import HAConnectionPanel from './cards/HAConnectionPanel';
 import ActivityFeed from './cards/ActivityFeed';
 import SurveillancePanel from './cards/SurveillancePanel';
 import ProfilePanel from './cards/ProfilePanel';
+import ThemeCard from './cards/ThemeCard';
+import DataBackupCard from './cards/DataBackupCard';
+import SystemStatusCard from './cards/SystemStatusCard';
 import CategoryCard from './cards/CategoryCard';
 import CategoryManager from './cards/CategoryManager';
 import CalendarWidget from './cards/CalendarWidget';
@@ -30,7 +33,7 @@ import AutomationsWidget from './cards/AutomationsWidget';
 import type { DeviceKind, DeviceMarker, StandbyCameraView } from '../../store/types';
 import { cameraRef } from '../../lib/cameraRef';
 
-type DashCategory = 'home' | 'weather' | 'calendar' | 'devices' | 'energy' | 'automations' | 'scenes' | 'surveillance' | 'robot' | 'activity' | 'settings';
+type DashCategory = 'home' | 'weather' | 'calendar' | 'devices' | 'energy' | 'automations' | 'scenes' | 'surveillance' | 'robot' | 'activity' | 'widgets' | 'settings';
 
 const categories: { key: DashCategory; label: string; icon: typeof Home }[] = [
   { key: 'home', label: 'Hem', icon: Home },
@@ -43,6 +46,7 @@ const categories: { key: DashCategory; label: string; icon: typeof Home }[] = [
   { key: 'surveillance', label: 'Övervakning', icon: Video },
   { key: 'robot', label: 'Robot', icon: Bot },
   { key: 'activity', label: 'Aktivitet', icon: Bell },
+  { key: 'widgets', label: 'Widgets', icon: LayoutGrid },
   { key: 'settings', label: 'Inställningar', icon: Settings },
 ];
 
@@ -309,14 +313,35 @@ function StandbySettingsPanel() {
   );
 }
 
+function WidgetsCategory() {
+  return <HomeWidgetConfig />;
+}
+
 function SettingsCategory() {
   return (
     <div className="max-w-[1100px] mx-auto space-y-[var(--space-section)]">
+      {/* Profil */}
+      <section className="space-y-1">
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1">Profil</h2>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+          <ProfilePanel />
+        </div>
+      </section>
+
       {/* Utseende */}
       <section className="space-y-1">
         <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1">Utseende</h2>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
-          <ProfilePanel />
+          <ThemeCard />
+        </div>
+      </section>
+
+      {/* Skärm */}
+      <section className="space-y-1">
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1">Skärm</h2>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+          <DisplaySettings />
+          <StandbySettingsPanel />
           <CameraStartSettings />
         </div>
       </section>
@@ -326,15 +351,7 @@ function SettingsCategory() {
         <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1">System</h2>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
           <PerformanceSettings />
-          <StandbySettingsPanel />
-        </div>
-      </section>
-
-      {/* Skärm / Display */}
-      <section className="space-y-1">
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1">Skärm</h2>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
-          <DisplaySettings />
+          <SystemStatusCard />
         </div>
       </section>
 
@@ -348,10 +365,12 @@ function SettingsCategory() {
         </div>
       </section>
 
-      {/* Widgets */}
+      {/* Data */}
       <section className="space-y-1">
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1">Widgets</h2>
-        <HomeWidgetConfig />
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1">Data</h2>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+          <DataBackupCard />
+        </div>
       </section>
     </div>
   );
@@ -368,6 +387,7 @@ const categoryContent: Record<DashCategory, React.FC> = {
   surveillance: SurveillancePanel,
   robot: RobotPanel,
   activity: ActivityFeed,
+  widgets: WidgetsCategory,
   settings: SettingsCategory,
 };
 
