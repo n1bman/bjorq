@@ -242,7 +242,7 @@ const storeCreator = (set: any, get: any): AppState => ({
   devices: { markers: [], deviceStates: {} },
   activityLog: [],
   customCategories: [],
-  standby: { enabled: false, idleMinutes: 2, cameraView: 'standard' as const },
+  standby: { enabled: false, idleMinutes: 2, vioMinutes: 5, cameraView: 'standard' as const, phase: 'standby' as const },
   _preStandbyMode: 'home' as AppMode,
   profile: { name: '', theme: 'dark', accentColor: '#f59e0b', dashboardBg: 'scene3d' },
   performance: { quality: 'high', shadows: true, postprocessing: false, tabletMode: false },
@@ -286,9 +286,11 @@ const storeCreator = (set: any, get: any): AppState => ({
   enterStandby: () => set((s: any) => ({
     _preStandbyMode: s.appMode === 'standby' ? s._preStandbyMode : s.appMode,
     appMode: 'standby' as AppMode,
+    standby: { ...s.standby, phase: 'standby' },
   })),
   exitStandby: () => set((s: any) => ({
     appMode: s._preStandbyMode || 'home',
+    standby: { ...s.standby, phase: 'standby' },
   })),
   props: { catalog: [], items: [] },
 

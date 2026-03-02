@@ -303,6 +303,39 @@ function StandbySettingsPanel() {
         </select>
       </div>
 
+      {/* Vio mode settings */}
+      <div className="pt-2 border-t border-border/30 space-y-3">
+        <h4 className="text-xs font-semibold text-foreground">Vio-läge (djup standby)</h4>
+        <p className="text-[10px] text-muted-foreground">
+          Efter standby-perioden övergår skärmen till Vio-läge: nästan svart, GPU pausad, minimal klocka.
+        </p>
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-foreground">Tid till Vio</span>
+          <select
+            value={standby.vioMinutes}
+            onChange={(e) => setStandbySettings({ vioMinutes: Number(e.target.value) })}
+            className="bg-secondary text-foreground text-sm rounded-lg px-3 py-1.5 border border-border"
+          >
+            <option value={0}>Av</option>
+            <option value={1}>1 min</option>
+            <option value={2}>2 min</option>
+            <option value={5}>5 min</option>
+            <option value={10}>10 min</option>
+            <option value={30}>30 min</option>
+          </select>
+        </div>
+
+        {/* Motion sensor entity picker */}
+        <div className="space-y-1.5">
+          <span className="text-sm text-foreground">Rörelsesensor (väck)</span>
+          <p className="text-[10px] text-muted-foreground">Välj en rörelsesensor från HA som väcker skärmen automatiskt.</p>
+          <MotionEntityPicker
+            value={standby.motionEntityId}
+            onChange={(id) => setStandbySettings({ motionEntityId: id })}
+          />
+        </div>
+      </div>
+
       <div className="flex items-center justify-between">
         <span className="text-sm text-foreground">Kameravy</span>
         <select
@@ -337,6 +370,39 @@ function StandbySettingsPanel() {
         Förhandsgranska Standby
       </Button>
     </div>
+  );
+}
+
+function MotionEntityPicker({ value, onChange }: { value?: string; onChange: (id?: string) => void }) {
+  const entities = useAppStore((s) => s.homeAssistant.entities);
+  const haStatus = useAppStore((s) => s.homeAssistant.status);
+
+  const motionSensors = entities.filter((e) =>
+    e.domain === 'binary_sensor' &&
+    (e.attributes.device_class === 'motion' || /motion|rörelse/i.test(e.entityId))
+  );
+
+  if (haStatus !== 'connected' || motionSensors.length === 0) {
+    return (
+      <p className="text-[10px] text-muted-foreground/60">
+        {haStatus !== 'connected' ? 'Anslut HA för att välja sensor' : 'Inga rörelsesensorer hittades'}
+      </p>
+    );
+  }
+
+  return (
+    <select
+      value={value || ''}
+      onChange={(e) => onChange(e.target.value || undefined)}
+      className="w-full bg-secondary text-foreground text-xs rounded-lg px-3 py-1.5 border border-border"
+    >
+      <option value="">Ingen (manuell väckning)</option>
+      {motionSensors.map((s) => (
+        <option key={s.entityId} value={s.entityId}>
+          {s.friendlyName || s.entityId}
+        </option>
+      ))}
+    </select>
   );
 }
 

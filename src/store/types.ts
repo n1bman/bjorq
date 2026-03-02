@@ -662,12 +662,17 @@ export interface UserProfile {
 
 // ─── Standby Settings ───
 export type StandbyCameraView = 'standard' | 'topdown' | 'angled-left' | 'angled-right' | 'close' | 'custom';
+export type StandbyPhase = 'standby' | 'vio'; // standby = dim overlay; vio = near-black, GPU paused
+
 export interface StandbySettings {
   enabled: boolean;
   idleMinutes: number; // 0.5, 1, 2, 5
+  vioMinutes: number; // minutes after standby → vio (0 = disabled)
+  motionEntityId?: string; // binary_sensor.* for motion wake
   cameraView: StandbyCameraView;
   customPos?: [number, number, number];
   customTarget?: [number, number, number];
+  phase: StandbyPhase;
 }
 
 // ─── App State ───

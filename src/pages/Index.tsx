@@ -7,7 +7,7 @@ import ModeHeader from '../components/ModeHeader';
 import { useAppStore, initHostedMode } from '../store/useAppStore';
 import { useHomeAssistant } from '../hooks/useHomeAssistant';
 import { useHABridge, useVacuumRoomSync } from '../hooks/useHABridge';
-import { useIdleTimer } from '../components/standby/useIdleTimer';
+import { useIdleTimer, useVioTimer } from '../components/standby/useIdleTimer';
 import { callHAService } from '../lib/apiClient';
 import { haServiceCaller } from '../hooks/useHomeAssistant';
 import { createThrottledCaller } from '../lib/serviceThrottle';
@@ -20,6 +20,7 @@ const IndexInner = () => {
   useHABridge();
   useVacuumRoomSync();
   useIdleTimer();
+  useVioTimer();
 
   if (appMode === 'standby') return <StandbyMode />;
   if (appMode === 'home') return <HomeView />;

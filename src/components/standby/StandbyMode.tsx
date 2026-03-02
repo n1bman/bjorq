@@ -7,6 +7,7 @@ import StandbyWidgets from './StandbyWidgets';
 
 export default function StandbyMode() {
   const exitStandby = useAppStore((s) => s.exitStandby);
+  const phase = useAppStore((s) => s.standby.phase);
 
   const handleExit = useCallback(() => {
     exitStandby();
@@ -23,6 +24,23 @@ export default function StandbyMode() {
       events.forEach((e) => window.removeEventListener(e, handleExit));
     };
   }, [handleExit]);
+
+  // Vio mode: near-black screen with minimal clock, no 3D rendering
+  if (phase === 'vio') {
+    return (
+      <div
+        className="fixed inset-0 bg-black flex items-center justify-center cursor-none animate-fade-in"
+        onClick={handleExit}
+        onTouchStart={handleExit}
+      >
+        <div className="text-center opacity-30">
+          <p className="text-4xl font-light text-white font-display tabular-nums tracking-wider">
+            {new Date().toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 bg-background overflow-hidden animate-fade-in">
