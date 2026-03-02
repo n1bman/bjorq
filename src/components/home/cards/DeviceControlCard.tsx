@@ -13,7 +13,7 @@ import {
   ShieldAlert, Droplets, Bell, Grip, Trees, Speaker, Music, Info,
 } from 'lucide-react';
 import { cn } from '../../../lib/utils';
-
+import ColorWheel from './ColorWheel';
 interface Props { marker: DeviceMarker; compact?: boolean }
 type UpdateFn = (id: string, partial: Record<string, unknown>) => void;
 
@@ -296,18 +296,14 @@ function LightControl({ id, data, update }: { id: string; data: LightState; upda
         </div>
       )}
       {data.on && data.colorMode === 'rgb' && (
-        <div className="space-y-1">
+        <div className="space-y-2">
           <p className="text-[10px] text-muted-foreground">Färg</p>
-          <div className="h-6 rounded-full" style={{ background: 'linear-gradient(to right, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000)' }} />
-          <div className="flex gap-1">
-            {(['R', 'G', 'B'] as const).map((ch, i) => (
-              <div key={ch} className="flex-1">
-                <p className="text-[9px] text-muted-foreground text-center">{ch}</p>
-                <Slider value={[data.rgbColor?.[i] ?? 255]} max={255} step={1}
-                  onValueChange={([v]) => { const rgb = [...(data.rgbColor ?? [255, 255, 255])] as [number, number, number]; rgb[i] = v; update(id, { rgbColor: rgb }); }} />
-              </div>
-            ))}
-          </div>
+          <ColorWheel
+            rgb={data.rgbColor ?? [255, 255, 255]}
+            onChange={(rgb) => update(id, { rgbColor: rgb })}
+            size={140}
+            disabled={!data.on}
+          />
         </div>
       )}
     </div>
