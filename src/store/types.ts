@@ -493,6 +493,8 @@ export interface ForecastDay {
   minTemp: number;
 }
 
+export type PrecipitationOverride = 'auto' | 'rain' | 'snow' | 'off';
+
 export interface EnvironmentState {
   source: 'ha' | 'manual' | 'auto';
   location: { lat: number; lon: number; timezone: string };
@@ -502,6 +504,7 @@ export interface EnvironmentState {
   forecast?: ForecastDay[];
   sunAzimuth: number;
   sunElevation: number;
+  precipitationOverride: PrecipitationOverride;
 }
 
 // ─── Home Assistant Layer ───
@@ -814,6 +817,7 @@ export interface AppState {
   setWeather: (condition: WeatherCondition) => void;
   setWeatherData: (data: { condition: WeatherCondition; temperature: number; windSpeed?: number; humidity?: number; intensity?: number; forecast?: ForecastDay[] }) => void;
   setWeatherSource: (source: 'manual' | 'auto' | 'ha') => void;
+  setPrecipitationOverride: (override: PrecipitationOverride) => void;
   setLocation: (lat: number, lon: number) => void;
 
   // Opening/Stair update actions
