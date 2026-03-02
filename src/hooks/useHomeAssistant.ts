@@ -320,9 +320,9 @@ export function useHomeAssistant() {
       }
     };
 
-    // Initial fetch + poll every 5s
+    // Initial fetch + poll every 2s
     pollStates();
-    hostedPollTimer = setInterval(pollStates, 5000);
+    hostedPollTimer = setInterval(pollStates, 2000);
 
     return () => {
       if (hostedPollTimer) clearInterval(hostedPollTimer);

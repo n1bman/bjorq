@@ -492,15 +492,22 @@ function MediaScreenMarker({ position, id, onSelect, onDragStart, selected, mark
         <meshBasicMaterial color={ambientColor} transparent opacity={0.0} side={THREE.FrontSide} depthWrite={false} />
       </mesh>
 
-      {/* Screen plane — darker emissive */}
+      {/* Screen plane — darker emissive with fallback */}
       <mesh>
         <planeGeometry args={[scale[0], scale[1]]} />
         {texture ? (
           <meshStandardMaterial map={texture} emissive="#000000" emissiveIntensity={0.02} side={THREE.DoubleSide} toneMapped={false} />
         ) : (
-          <meshStandardMaterial color="#1a1a2e" emissive="#818cf8" emissiveIntensity={0.1} side={THREE.DoubleSide} />
+          <meshStandardMaterial color="#1a1a2e" emissive="#818cf8" emissiveIntensity={0.15} side={THREE.DoubleSide} />
         )}
       </mesh>
+      {/* Fallback label when no texture (production build edge case) */}
+      {!texture && buildMode && (
+        <mesh position={[0, 0, 0.01]}>
+          <planeGeometry args={[scale[0] * 0.8, scale[1] * 0.3]} />
+          <meshBasicMaterial color="#818cf8" transparent opacity={0.3} side={THREE.FrontSide} />
+        </mesh>
+      )}
 
       {/* Bezel — always visible */}
       <mesh position={[0, 0, -0.005]}>
