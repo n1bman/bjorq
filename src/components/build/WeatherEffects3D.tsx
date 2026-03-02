@@ -19,10 +19,16 @@ function randomRingPosition(): [number, number, number] {
 export default function WeatherEffects3D() {
   const weather = useAppStore((s) => s.environment.weather.condition);
   const intensity = useAppStore((s) => s.environment.weather.intensity);
+  const precipOverride = useAppStore((s) => s.environment.precipitationOverride);
   const ref = useRef<THREE.Points>(null);
 
-  const baseCount = weather === 'rain' ? 3000 : weather === 'snow' ? 1500 : 0;
-  const effectiveIntensity = intensity > 0 ? intensity : (weather === 'rain' || weather === 'snow' ? 0.5 : 0);
+  // Apply override: 'auto' uses weather condition, others force rain/snow/off
+  const effectiveWeather = precipOverride === 'auto' ? weather
+    : precipOverride === 'off' ? 'clear'
+    : precipOverride; // 'rain' | 'snow'
+
+  const baseCount = effectiveWeather === 'rain' ? 3000 : effectiveWeather === 'snow' ? 1500 : 0;
+  const effectiveIntensity = intensity > 0 ? intensity : (effectiveWeather === 'rain' || effectiveWeather === 'snow' ? 0.5 : 0);
   const count = Math.round(baseCount * effectiveIntensity);
 
   const positions = useMemo(() => {
@@ -39,7 +45,7 @@ export default function WeatherEffects3D() {
   useFrame((_, delta) => {
     if (!ref.current || count === 0) return;
     const pos = ref.current.geometry.attributes.position;
-    const speed = weather === 'rain' ? 15 : 2;
+    const speed = effectiveWeather === 'rain' ? 15 : 2;
     for (let i = 0; i < count; i++) {
       let y = (pos as any).array[i * 3 + 1] - speed * delta;
       if (y < 0) {
@@ -49,7 +55,7 @@ export default function WeatherEffects3D() {
         y = MAX_HEIGHT;
       }
       (pos as any).array[i * 3 + 1] = y;
-      if (weather === 'snow') {
+      if (effectiveWeather === 'snow') {
         (pos as any).array[i * 3] += Math.sin(Date.now() * 0.001 + i) * 0.01;
       }
     }
@@ -68,10 +74,10 @@ export default function WeatherEffects3D() {
         />
       </bufferGeometry>
       <pointsMaterial
-        size={weather === 'rain' ? 0.05 : 0.08}
-        color={weather === 'rain' ? '#aaddff' : '#ffffff'}
+        size={effectiveWeather === 'rain' ? 0.05 : 0.08}
+        color={effectiveWeather === 'rain' ? '#aaddff' : '#ffffff'}
         transparent
-        opacity={weather === 'rain' ? 0.6 : 0.8}
+        opacity={effectiveWeather === 'rain' ? 0.6 : 0.8}
         sizeAttenuation
       />
     </points>

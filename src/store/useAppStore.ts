@@ -313,6 +313,7 @@ const storeCreator = (set: any, get: any): AppState => ({
     weather: { condition: 'clear', temperature: 18, intensity: 0 },
     sunAzimuth: 135,
     sunElevation: 45,
+    precipitationOverride: 'auto',
   },
 
   homeAssistant: {
@@ -830,6 +831,9 @@ const storeCreator = (set: any, get: any): AppState => ({
 
   setWeatherSource: (source) =>
     set((s: any) => ({ environment: { ...s.environment, source } })),
+
+  setPrecipitationOverride: (override) =>
+    set((s: any) => ({ environment: { ...s.environment, precipitationOverride: override } })),
 
   setLocation: (lat, lon) =>
     set((s: any) => ({ environment: { ...s.environment, location: { ...s.environment.location, lat, lon } } })),
