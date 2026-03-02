@@ -11,13 +11,43 @@ permissions:
   packages: write
 
 jobs:
-  build:
+  build-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Upload dist artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: dist/
+          retention-days: 1
+
+  package:
+    needs: build-frontend
     runs-on: ubuntu-latest
     strategy:
       matrix:
         arch: [amd64, aarch64, armv7]
     steps:
       - uses: actions/checkout@v4
+
+      - name: Download frontend dist
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: dist/
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -45,7 +75,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: bjorq_dashboard/Dockerfile
+          file: bjorq_dashboard/Dockerfile.runtime
           platforms: ${{ steps.platform.outputs.platform }}
           push: true
           tags: ghcr.io/n1bman/bjorq-dashboard-${{ matrix.arch }}:${{ github.ref_name }},ghcr.io/n1bman/bjorq-dashboard-${{ matrix.arch }}:latest
