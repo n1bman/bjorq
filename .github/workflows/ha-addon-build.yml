@@ -71,6 +71,12 @@ jobs:
             armv7)    echo "platform=linux/arm/v7" >> $GITHUB_OUTPUT ;;
           esac
 
+      - name: Read addon version
+        id: addon_version
+        run: |
+          VERSION=$(grep '^version:' bjorq_dashboard/config.yaml | sed 's/version: *"\?\([^"]*\)"\?/\1/')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
@@ -78,6 +84,6 @@ jobs:
           file: bjorq_dashboard/Dockerfile.runtime
           platforms: ${{ steps.platform.outputs.platform }}
           push: true
-          tags: ghcr.io/n1bman/bjorq-dashboard-${{ matrix.arch }}:${{ github.ref_name }},ghcr.io/n1bman/bjorq-dashboard-${{ matrix.arch }}:latest
+          tags: ghcr.io/n1bman/bjorq-dashboard-${{ matrix.arch }}:${{ steps.addon_version.outputs.version }},ghcr.io/n1bman/bjorq-dashboard-${{ matrix.arch }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
