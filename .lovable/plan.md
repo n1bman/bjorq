@@ -1,66 +1,114 @@
 
 
-## Plan: UI Refinements, Camera Fix, HA Audit, Changelog — v0.2.1
+## Plan: Settings Reorganization, Camera Fix, Profile, Widgets Tab, Install Scripts — v0.2.2
 
-### Phase 1: UI Changes (3 files)
+This is a large scope. Breaking into 3 phases.
 
-**1. Move device visibility picker to top-right** (`src/components/home/HomeView.tsx`)
-- Remove the `fixed bottom-36 left-4` eye button
-- Place it in the top-right area (e.g., `fixed top-5 right-5`) as a small glass-panel icon button
-- Popup opens downward from the button instead of upward
-- Keeps the same per-device toggle list with "Visa alla" / "Dölj alla"
+---
 
-**2. Shrink CameraStartSettings panel** (`src/components/home/cards/CameraStartSettings.tsx`)
-- Remove the long description paragraph
-- Make it a compact single-row layout: title + Save button + Reset button inline
-- Show saved position as a subtle badge, not a full paragraph
+### Phase 1: Camera Start View Fix + Saved View in Camera FAB (critical bug)
 
-**3. Fix camera not applying on navigation** (`src/components/Scene3D.tsx`)
-- Bug: the CameraController effect at line 73 only fires when `appMode` changes AND `prevMode.current !== appMode`. This works for mode transitions but has a subtle issue: if the user saves a new start position while already on 'home', then navigates to 'dashboard' (which also passes the condition), `prevMode.current` is already 'home'/'dashboard' and the lerpingTo might not trigger correctly because both modes share the same condition group.
-- Fix: Also trigger lerp when `customStartPos`/`customStartTarget` change while already on home/dashboard (provide immediate visual feedback after save). Add a separate effect that applies the saved position immediately when saving, independent of mode changes.
+**Root cause**: `Index.tsx` renders completely different component trees for `home` vs `dashboard` vs `build`. When switching modes, `Scene3D` (and `CameraController` inside it) is **unmounted and remounted**. On mount, `prevMode.current` is initialized to the current `appMode`, so the condition `prevMode.current !== appMode` is immediately false — the saved camera position never applies.
 
-### Phase 2: HA Sync Audit (review only, fix where needed)
+**Fix** (`src/components/Scene3D.tsx`):
+- On `CameraController` mount, immediately apply the saved start position if in `home`/`dashboard` mode (remove the `prevMode.current !== appMode` guard for the initial mount). Use an `initialApplied` ref to ensure it only fires once on mount.
+- Keep the second effect for live saves.
 
-I'll audit `useHABridge.ts` against all supported domains. Current coverage:
-- `light` — turn_on/off with brightness, color_temp, rgb_color ✓
-- `switch` / `input_boolean` — turn_on/off ✓
-- `climate` — set_hvac_mode, set_temperature ✓
-- `lock` — lock/unlock ✓
-- `vacuum` — start/stop/pause/return_to_base, fan_speed, segment clean ✓
-- `media_player` — play/pause/stop, volume, next/prev, turn_off ✓ (now with idle volume fix)
-- `fan` — turn_on/off, set_percentage ✓
-- `cover` — open/close/stop, set_position ✓
-- `scene` / `script` / `automation` — trigger ✓
-- `alarm_control_panel` — arm/disarm with code ✓
-- `water_heater` — temperature, operation_mode ✓
-- `humidifier` — on/off, humidity, mode ✓
-- `siren` — on/off with tone/volume ✓
-- `button` — press ✓
-- `number` / `input_number` — set_value ✓
-- `select` / `input_select` — select_option ✓
-- `valve` — open/close, set_position ✓
-- `lawn_mower` — start/dock/pause ✓
+**Add "Sparad vy" to Camera FAB** (`src/components/home/CameraFab.tsx`):
+- If `customStartPos` exists, add a 5th option: `{ key: 'saved', label: 'Sparad vy', icon: Save }`.
+- When clicked, set `lerpingTo` to the saved coordinates. Implement by calling `setCameraPreset('free')` first, then dispatching a custom action or directly setting the store's start pos values to trigger the second effect.
+- Simplest: add a new store action `applySavedCameraView()` that re-sets `customStartPos` to itself (triggering the effect), or add a dedicated `cameraLerpTrigger` counter.
 
-Sync looks comprehensive. Potential issue to fix:
-- `fan` calls both `turn_on` AND `set_percentage` — the `turn_on` already includes percentage. Remove the duplicate `set_percentage` call.
+### Phase 2: Settings Reorganization + Enhanced Profile
 
-Widgets, standby, and build mode use the same `deviceStates` store so they share the sync pipeline.
+**Reorganize settings sections** (`src/components/home/DashboardGrid.tsx` SettingsCategory):
 
-### Phase 3: Changelog + Version Management (3 files)
+Current layout:
+```text
+Utseende:   ProfilePanel | CameraStartSettings
+System:     PerformanceSettings | StandbySettingsPanel
+Skärm:      DisplaySettings
+Anslutning: HAConnectionPanel | LocationSettings | WifiPanel
+Widgets:    HomeWidgetConfig
+```
 
-**Create `CHANGELOG.md`** at project root using Keep a Changelog format:
-- Document all changes from v0.1.0 through v0.2.0
-- Going forward, every change session adds entries before bumping version
+New layout:
+```text
+Profil:     ProfilePanel (enhanced)
+Utseende:   ThemeCard (extracted from ProfilePanel: tema, accent, bakgrund)
+System:     PerformanceSettings | SystemStatusCard (moved from ProfilePanel)
+Skärm:      DisplaySettings | StandbySettingsPanel | CameraStartSettings
+Anslutning: HAConnectionPanel | LocationSettings | WifiPanel
+Data:       DataBackupCard (extracted from ProfilePanel)
+```
 
-**Bump `package.json`** to `0.2.1`
+**Enhanced ProfilePanel** — split into focused cards:
+- **ProfilePanel** (top): Name, version, location, connected accounts section with placeholders for Spotify, Gmail/Outlook, HA status. Keep compact.
+- **ThemeCard** (new): Theme selector, accent color, background — extracted from current ProfilePanel.
+- **DataBackupCard** (new): Export/import/clear/demo — extracted from current ProfilePanel.
+- **SystemStatusCard**: Move to System section as its own card (already a separate component inside ProfilePanel).
 
-**Update `docs/roadmap-vNext.md`** or create a development workflow note in `docs/08-developer-notes.md` documenting the versioning convention: bump version in `package.json` before each release tag push.
+**Move Standby to Skärm**: Standby is display-related (screen timeout). Move `StandbySettingsPanel` from System to Skärm section.
 
-### Files Modified (6)
-1. `src/components/home/HomeView.tsx` — move picker to top-right
-2. `src/components/home/cards/CameraStartSettings.tsx` — compact layout
-3. `src/components/Scene3D.tsx` — fix camera apply logic
-4. `src/hooks/useHABridge.ts` — remove duplicate fan command
-5. `CHANGELOG.md` — new file with full history
-6. `package.json` — version 0.2.1
+**Move CameraStartSettings to Skärm**: Camera start view is a display/viewing concern.
+
+**Move SystemStatusCard to System**: Currently nested inside ProfilePanel.
+
+### Phase 3: Widgets Tab + Install Script Improvements + Release
+
+**Add Widgets tab** (`src/components/home/DashboardGrid.tsx`):
+- Add `'widgets'` to `DashCategory` type.
+- Insert between `activity` and `settings` in the tab bar with a grid/layout icon.
+- Content: render `HomeWidgetConfig` component.
+- Remove Widgets section from SettingsCategory.
+
+**Improve install/start scripts for PowerShell compatibility**:
+
+`start.bat` — works in CMD but not PowerShell. Issues:
+- `%errorlevel%` doesn't work in PowerShell
+- `where` command behaves differently
+- `start ""` syntax is CMD-specific
+
+**Create `start.ps1`** (new):
+```powershell
+# PowerShell-native start script
+if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
+    Write-Error "Node.js not found..."
+    exit 1
+}
+# Auto-install, start server, open browser
+```
+
+**Create `install.ps1`** (new):
+```powershell
+# PowerShell-native install script
+```
+
+**Update `start.bat`**: Add a shim at the top that detects PowerShell and re-launches as `start.ps1` if needed. Or keep separate and document both options.
+
+**Update `.github/workflows/release.yml`**:
+- Include `start.ps1` and `install.ps1` in both artifacts.
+- Add a clear `QUICK-START.txt` file to the ZIP with step-by-step instructions for Windows (CMD, PowerShell, WSL) and Linux.
+
+**Update CHANGELOG.md** with all changes.
+
+**Bump `package.json`** to `0.2.2`.
+
+### Files Modified/Created (~12)
+
+Phase 1 (2):
+1. `src/components/Scene3D.tsx` — fix mount-time camera apply
+2. `src/components/home/CameraFab.tsx` — add "Sparad vy" option
+
+Phase 2 (3):
+3. `src/components/home/cards/ProfilePanel.tsx` — split into ProfilePanel + ThemeCard + DataBackupCard
+4. `src/components/home/DashboardGrid.tsx` — reorganize sections, add widgets tab
+
+Phase 3 (6):
+5. `start.ps1` — new PowerShell start script
+6. `install.ps1` — new PowerShell install script
+7. `public/QUICK-START.txt` — new installation guide included in release
+8. `.github/workflows/release.yml` — include PS1 scripts + QUICK-START.txt
+9. `CHANGELOG.md` — document all changes
+10. `package.json` — version 0.2.2
 
