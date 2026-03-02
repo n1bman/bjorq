@@ -1,6 +1,6 @@
 import { Canvas, useThree } from '@react-three/fiber';
 import { OrbitControls, Grid, Environment } from '@react-three/drei';
-import { Suspense, useMemo, useRef, useEffect, useState, useCallback } from 'react';
+import { Suspense, useMemo, useRef, useEffect, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useAppStore } from '../store/useAppStore';
@@ -69,6 +69,13 @@ function CameraController() {
   const controlsRef = useRef<any>(null);
   const lerpingTo = useRef<{ pos: THREE.Vector3; target: THREE.Vector3 } | null>(null);
   const initialApplied = useRef(false);
+  const [ready, setReady] = useState(false);
+
+  // Defer OrbitControls until scene is mounted (fixes camera freeze after refresh)
+  useEffect(() => {
+    const t = setTimeout(() => setReady(true), 100);
+    return () => clearTimeout(t);
+  }, []);
 
   // Apply saved camera on mount (fixes remount losing position)
   useEffect(() => {
@@ -128,6 +135,8 @@ function CameraController() {
   if (appMode === 'standby') {
     return <StandbyStaticCamera />;
   }
+
+  if (!ready) return null;
 
   return (
     <OrbitControls
