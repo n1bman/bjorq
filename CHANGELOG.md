@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.8] - 2026-03-02
+
+### Fixed
+- HA Add-on install returning 404 "manifest unknown" — Docker image tags now read from `config.yaml` version instead of git ref (which included a `v` prefix)
+- Switched Dockerfile.runtime base from `node:20-alpine` to `node:20-bookworm-slim` to fix QEMU illegal instruction crashes on arm64/armv7
+
 ## [0.2.5] - 2026-03-02
 
 ### Fixed
