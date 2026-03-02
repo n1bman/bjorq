@@ -100,6 +100,18 @@ function sendHACommand(entityId: string, state: DeviceState, prevState?: DeviceS
           callService('climate', 'set_temperature', { entity_id: entityId, temperature: data.targetTemp });
         }
       }
+      // Fan mode
+      if (data.fanMode) {
+        callService('climate', 'set_fan_mode', { entity_id: entityId, fan_mode: data.fanMode });
+      }
+      // Swing mode
+      if (data.swingMode) {
+        callService('climate', 'set_swing_mode', { entity_id: entityId, swing_mode: data.swingMode });
+      }
+      // Preset mode
+      if (data.presetMode) {
+        callService('climate', 'set_preset_mode', { entity_id: entityId, preset_mode: data.presetMode });
+      }
       break;
     }
 
@@ -251,6 +263,18 @@ function sendHACommand(entityId: string, state: DeviceState, prevState?: DeviceS
         const serviceData: Record<string, unknown> = { entity_id: entityId };
         if (typeof data.speed === 'number') serviceData.percentage = data.speed;
         callService('fan', 'turn_on', serviceData);
+      }
+      // Oscillate
+      if (typeof data.oscillating === 'boolean') {
+        callService('fan', 'oscillate', { entity_id: entityId, oscillating: data.oscillating });
+      }
+      // Direction
+      if (data.direction) {
+        callService('fan', 'set_direction', { entity_id: entityId, direction: data.direction });
+      }
+      // Preset mode
+      if (data.presetMode) {
+        callService('fan', 'set_preset_mode', { entity_id: entityId, preset_mode: data.presetMode });
       }
       break;
     }

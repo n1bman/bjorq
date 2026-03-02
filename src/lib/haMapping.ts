@@ -28,7 +28,11 @@ export function mapHAEntityToDeviceState(
       const speed = typeof attributes.percentage === 'number' ? attributes.percentage : (on ? 100 : 0);
       const presetMap: Record<string, 'low' | 'medium' | 'high'> = { low: 'low', medium: 'medium', high: 'high' };
       const preset = typeof attributes.preset_mode === 'string' ? presetMap[attributes.preset_mode] : undefined;
-      return { kind: 'fan', data: { on, speed, preset } };
+      const oscillating = typeof attributes.oscillating === 'boolean' ? attributes.oscillating : undefined;
+      const direction = attributes.direction === 'reverse' ? 'reverse' as const : attributes.direction === 'forward' ? 'forward' as const : undefined;
+      const presetMode = typeof attributes.preset_mode === 'string' ? attributes.preset_mode : undefined;
+      const availablePresetModes = Array.isArray(attributes.preset_modes) ? attributes.preset_modes as string[] : undefined;
+      return { kind: 'fan', data: { on, speed, preset, oscillating, direction, presetMode, availablePresetModes } };
     }
 
     case 'cover': {
@@ -46,12 +50,25 @@ export function mapHAEntityToDeviceState(
 
     case 'climate': {
       const on = state !== 'off';
-      const mode = (['heat', 'cool', 'auto', 'off'] as const).includes(state as any)
-        ? (state as 'heat' | 'cool' | 'auto' | 'off')
+      const validModes = ['heat', 'cool', 'auto', 'off', 'dry', 'fan_only', 'heat_cool'] as const;
+      const mode = validModes.includes(state as any)
+        ? (state as typeof validModes[number])
         : (on ? 'auto' : 'off');
       const targetTemp = typeof attributes.temperature === 'number' ? attributes.temperature : 22;
       const currentTemp = typeof attributes.current_temperature === 'number' ? attributes.current_temperature : 20;
-      return { kind: 'climate', data: { on, mode, targetTemp, currentTemp } };
+      const hvacModes = Array.isArray(attributes.hvac_modes) ? attributes.hvac_modes as string[] : undefined;
+      const fanMode = typeof attributes.fan_mode === 'string' ? attributes.fan_mode : undefined;
+      const fanModes = Array.isArray(attributes.fan_modes) ? attributes.fan_modes as string[] : undefined;
+      const swingMode = typeof attributes.swing_mode === 'string' ? attributes.swing_mode : undefined;
+      const swingModes = Array.isArray(attributes.swing_modes) ? attributes.swing_modes as string[] : undefined;
+      const presetMode = typeof attributes.preset_mode === 'string' ? attributes.preset_mode : undefined;
+      const presetModes = Array.isArray(attributes.preset_modes) ? attributes.preset_modes as string[] : undefined;
+      const targetTempLow = typeof attributes.target_temp_low === 'number' ? attributes.target_temp_low : undefined;
+      const targetTempHigh = typeof attributes.target_temp_high === 'number' ? attributes.target_temp_high : undefined;
+      const currentHumidity = typeof attributes.current_humidity === 'number' ? attributes.current_humidity : undefined;
+      const minTemp = typeof attributes.min_temp === 'number' ? attributes.min_temp : undefined;
+      const maxTemp = typeof attributes.max_temp === 'number' ? attributes.max_temp : undefined;
+      return { kind: 'climate', data: { on, mode, targetTemp, currentTemp, hvacModes, fanMode, fanModes, swingMode, swingModes, presetMode, presetModes, targetTempLow, targetTempHigh, currentHumidity, minTemp, maxTemp } };
     }
     case 'sensor':
     case 'binary_sensor': {

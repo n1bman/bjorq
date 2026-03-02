@@ -311,33 +311,111 @@ function LightControl({ id, data, update }: { id: string; data: LightState; upda
 }
 
 function ClimateControl({ id, data, update }: { id: string; data: ClimateState; update: UpdateFn }) {
-  const modes = [
+  const defaultModes = [
     { key: 'heat', label: 'Värme', icon: Flame },
     { key: 'cool', label: 'Kyla', icon: Snowflake },
     { key: 'auto', label: 'Auto', icon: RotateCcw },
     { key: 'off', label: 'Av', icon: Square },
-  ] as const;
+  ];
+  const modeLabels: Record<string, string> = { heat: 'Värme', cool: 'Kyla', auto: 'Auto', off: 'Av', dry: 'Torka', fan_only: 'Fläkt', heat_cool: 'Värme/Kyla' };
+  const modeIcons: Record<string, typeof Flame> = { heat: Flame, cool: Snowflake, auto: RotateCcw, off: Square, dry: Droplets, fan_only: Fan, heat_cool: Thermometer };
+
+  const availableModes = data.hvacModes
+    ? data.hvacModes.map((key) => ({ key, label: modeLabels[key] || key, icon: modeIcons[key] || Thermometer }))
+    : defaultModes;
+
+  const minT = data.minTemp ?? 5;
+  const maxT = data.maxTemp ?? 35;
+
   return (
     <div className="space-y-4 pt-2">
       <div className="flex items-center justify-between">
-        <span className="text-xs text-muted-foreground">Nuvarande: {data.currentTemp}°C</span>
-        <Switch checked={data.on} onCheckedChange={(v) => update(id, { on: v })} />
+        <span className="text-xs text-muted-foreground">
+          Nuvarande: {data.currentTemp}°C
+          {data.currentHumidity !== undefined && ` · ${data.currentHumidity}% RH`}
+        </span>
+        <Switch checked={data.on} onCheckedChange={(v) => update(id, { on: v, mode: v ? 'auto' : 'off' })} />
       </div>
+
+      {/* Target temp */}
       <div className="flex items-center justify-center gap-3">
         <Button size="sm" variant="outline" className="h-10 w-10 p-0" disabled={!data.on}
-          onClick={() => update(id, { targetTemp: data.targetTemp - 0.5 })}>−</Button>
+          onClick={() => update(id, { targetTemp: Math.max(minT, data.targetTemp - 0.5) })}>−</Button>
         <span className="text-3xl font-bold text-foreground">{data.targetTemp}°</span>
         <Button size="sm" variant="outline" className="h-10 w-10 p-0" disabled={!data.on}
-          onClick={() => update(id, { targetTemp: data.targetTemp + 0.5 })}>+</Button>
+          onClick={() => update(id, { targetTemp: Math.min(maxT, data.targetTemp + 0.5) })}>+</Button>
       </div>
+
+      {/* Quick actions */}
       <div className="flex gap-1">
-        {modes.map(({ key, label, icon: Icon }) => (
-          <Button key={key} size="sm" variant={data.mode === key ? 'default' : 'outline'} className="flex-1 h-10 text-xs gap-1"
+        <Button size="sm" variant="outline" className="flex-1 h-7 text-[10px] gap-1" disabled={!data.on}
+          onClick={() => update(id, { mode: 'heat', targetTemp: 21, on: true })}>
+          <Flame size={10} /> Värme 21°
+        </Button>
+        <Button size="sm" variant="outline" className="flex-1 h-7 text-[10px] gap-1" disabled={!data.on}
+          onClick={() => update(id, { mode: 'cool', targetTemp: 23, on: true })}>
+          <Snowflake size={10} /> Kyla 23°
+        </Button>
+        <Button size="sm" variant="outline" className="flex-1 h-7 text-[10px] gap-1"
+          onClick={() => update(id, { mode: 'auto', on: true })}>
+          <RotateCcw size={10} /> Auto
+        </Button>
+      </div>
+
+      {/* HVAC modes */}
+      <div className="flex gap-1 flex-wrap">
+        {availableModes.map(({ key, label, icon: Icon }) => (
+          <Button key={key} size="sm" variant={data.mode === key ? 'default' : 'outline'} className="flex-1 h-8 text-[10px] gap-1 min-w-[60px]"
             onClick={() => update(id, { mode: key, on: key !== 'off' })}>
-            <Icon size={12} />{label}
+            <Icon size={10} />{label}
           </Button>
         ))}
       </div>
+
+      {/* Fan mode */}
+      {data.fanModes && data.fanModes.length > 0 && (
+        <div className="space-y-1">
+          <p className="text-[10px] text-muted-foreground flex items-center gap-1"><Fan size={10} /> Fläktläge</p>
+          <div className="flex gap-1 flex-wrap">
+            {data.fanModes.map((fm) => (
+              <Button key={fm} size="sm" variant={data.fanMode === fm ? 'default' : 'outline'} className="h-6 text-[9px]"
+                onClick={() => update(id, { fanMode: fm })} disabled={!data.on}>
+                {fm}
+              </Button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Swing mode */}
+      {data.swingModes && data.swingModes.length > 0 && (
+        <div className="space-y-1">
+          <p className="text-[10px] text-muted-foreground flex items-center gap-1"><Wind size={10} /> Svängläge</p>
+          <div className="flex gap-1 flex-wrap">
+            {data.swingModes.map((sm) => (
+              <Button key={sm} size="sm" variant={data.swingMode === sm ? 'default' : 'outline'} className="h-6 text-[9px]"
+                onClick={() => update(id, { swingMode: sm })} disabled={!data.on}>
+                {sm}
+              </Button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Preset mode */}
+      {data.presetModes && data.presetModes.length > 0 && (
+        <div className="space-y-1">
+          <p className="text-[10px] text-muted-foreground">Förinställning</p>
+          <div className="flex gap-1 flex-wrap">
+            {data.presetModes.map((pm) => (
+              <Button key={pm} size="sm" variant={data.presetMode === pm ? 'default' : 'outline'} className="h-6 text-[9px]"
+                onClick={() => update(id, { presetMode: pm })} disabled={!data.on}>
+                {pm}
+              </Button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -578,16 +656,49 @@ function FanControl({ id, data, update }: { id: string; data: FanState; update: 
         <Switch checked={data.on} onCheckedChange={(v) => update(id, { on: v, speed: v ? (data.speed || 50) : 0 })} />
       </div>
       <Slider value={[data.speed]} max={100} step={1} onValueChange={([v]) => update(id, { speed: v, on: v > 0 })} disabled={!data.on} />
-      <div className="flex gap-1">
-        {(['low', 'medium', 'high'] as const).map((preset) => (
-          <Button key={preset} size="sm" variant={data.preset === preset ? 'default' : 'outline'} className="flex-1 h-7 text-[10px]"
-            onClick={() => {
-              const speeds = { low: 25, medium: 50, high: 100 };
-              update(id, { preset, speed: speeds[preset], on: true });
-            }} disabled={!data.on}>
-            {preset === 'low' ? 'Låg' : preset === 'medium' ? 'Med' : 'Hög'}
+
+      {/* Preset modes from HA */}
+      {data.availablePresetModes && data.availablePresetModes.length > 0 ? (
+        <div className="space-y-1">
+          <p className="text-[10px] text-muted-foreground">Förinställning</p>
+          <div className="flex gap-1 flex-wrap">
+            {data.availablePresetModes.map((pm) => (
+              <Button key={pm} size="sm" variant={data.presetMode === pm ? 'default' : 'outline'} className="h-7 text-[10px]"
+                onClick={() => update(id, { presetMode: pm, on: true })} disabled={!data.on}>
+                {pm}
+              </Button>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className="flex gap-1">
+          {(['low', 'medium', 'high'] as const).map((preset) => (
+            <Button key={preset} size="sm" variant={data.preset === preset ? 'default' : 'outline'} className="flex-1 h-7 text-[10px]"
+              onClick={() => {
+                const speeds = { low: 25, medium: 50, high: 100 };
+                update(id, { preset, speed: speeds[preset], on: true });
+              }} disabled={!data.on}>
+              {preset === 'low' ? 'Låg' : preset === 'medium' ? 'Med' : 'Hög'}
+            </Button>
+          ))}
+        </div>
+      )}
+
+      {/* Oscillate + Direction */}
+      <div className="flex gap-2">
+        {data.oscillating !== undefined && (
+          <div className="flex items-center gap-1.5 flex-1">
+            <Wind size={12} className="text-muted-foreground shrink-0" />
+            <span className="text-[10px] text-muted-foreground">Oscillera</span>
+            <Switch checked={data.oscillating} onCheckedChange={(v) => update(id, { oscillating: v })} disabled={!data.on} />
+          </div>
+        )}
+        {data.direction !== undefined && (
+          <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1" disabled={!data.on}
+            onClick={() => update(id, { direction: data.direction === 'forward' ? 'reverse' : 'forward' })}>
+            <RotateCcw size={10} /> {data.direction === 'forward' ? 'Framåt' : 'Bakåt'}
           </Button>
-        ))}
+        )}
       </div>
     </div>
   );
