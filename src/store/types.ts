@@ -246,6 +246,8 @@ export interface EnergyTracking {
   dailyKwh?: number;
   weeklyKwh?: number;
   monthlyKwh?: number;
+  powerEntityId?: string;   // sensor.*_power for live watts
+  energyEntityId?: string;  // sensor.*_energy for cumulative kWh
 }
 
 export interface DeviceMarker {
@@ -279,9 +281,21 @@ export interface LightState {
 
 export interface ClimateState {
   on: boolean;
-  mode: 'heat' | 'cool' | 'auto' | 'off';
+  mode: 'heat' | 'cool' | 'auto' | 'off' | 'dry' | 'fan_only' | 'heat_cool';
   targetTemp: number;
   currentTemp: number;
+  hvacModes?: string[];
+  fanMode?: string;
+  fanModes?: string[];
+  swingMode?: string;
+  swingModes?: string[];
+  presetMode?: string;
+  presetModes?: string[];
+  targetTempLow?: number;
+  targetTempHigh?: number;
+  currentHumidity?: number;
+  minTemp?: number;
+  maxTemp?: number;
 }
 
 export interface MediaState {
@@ -337,6 +351,10 @@ export interface FanState {
   on: boolean;
   speed: number; // 0-100 percentage
   preset?: 'low' | 'medium' | 'high';
+  oscillating?: boolean;
+  direction?: 'forward' | 'reverse';
+  presetMode?: string;
+  availablePresetModes?: string[];
 }
 
 export interface CoverState {

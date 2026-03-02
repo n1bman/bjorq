@@ -1,31 +1,62 @@
 import { useAppStore } from '../../../store/useAppStore';
 import { Switch } from '../../ui/switch';
 import { Input } from '../../ui/input';
-import { Zap, TrendingUp, Settings2 } from 'lucide-react';
+import { Zap, TrendingUp, Settings2, Link2 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { useState } from 'react';
+import { Button } from '../../ui/button';
 
 export default function EnergyDeviceList() {
   const markers = useAppStore((s) => s.devices.markers);
   const updateDevice = useAppStore((s) => s.updateDevice);
   const energyConfig = useAppStore((s) => s.energyConfig);
   const setEnergyConfig = useAppStore((s) => s.setEnergyConfig);
+  const liveStates = useAppStore((s) => s.homeAssistant.liveStates);
+  const haEntities = useAppStore((s) => s.homeAssistant.entities);
+  const haStatus = useAppStore((s) => s.homeAssistant.status);
   const [showConfig, setShowConfig] = useState(false);
+  const [pickingFor, setPickingFor] = useState<string | null>(null);
+
+  // Build list of available power/energy sensors from HA
+  const powerSensors = haEntities.filter((e) =>
+    e.domain === 'sensor' && (
+      (typeof e.attributes.device_class === 'string' && ['power', 'energy'].includes(e.attributes.device_class)) ||
+      /power|energy|watt/i.test(e.entityId)
+    )
+  );
+
+  // Get live watts from HA sensor for a device
+  const getLiveWatts = (m: typeof markers[0]): number | undefined => {
+    const eid = m.energyTracking?.powerEntityId;
+    if (!eid || haStatus !== 'connected') return undefined;
+    const live = liveStates[eid];
+    if (!live) return undefined;
+    const v = parseFloat(live.state);
+    return isNaN(v) ? undefined : v;
+  };
 
   const trackedDevices = markers.filter((m) => m.energyTracking?.enabled);
-  const totalWatts = trackedDevices.reduce((sum, m) => sum + (m.energyTracking?.currentWatts ?? m.estimatedWatts ?? 0), 0);
-  const totalDailyKwh = trackedDevices.reduce((sum, m) => sum + (m.energyTracking?.dailyKwh ?? ((m.estimatedWatts ?? 0) * 8 / 1000)), 0);
+  const totalWatts = trackedDevices.reduce((sum, m) => {
+    const live = getLiveWatts(m);
+    return sum + (live ?? m.energyTracking?.currentWatts ?? m.estimatedWatts ?? 0);
+  }, 0);
+  const totalDailyKwh = trackedDevices.reduce((sum, m) => {
+    const live = getLiveWatts(m);
+    const watts = live ?? m.energyTracking?.currentWatts ?? m.estimatedWatts ?? 0;
+    return sum + (m.energyTracking?.dailyKwh ?? (watts * 8 / 1000));
+  }, 0);
   const totalWeeklyKwh = trackedDevices.reduce((sum, m) => sum + (m.energyTracking?.weeklyKwh ?? totalDailyKwh * 7), 0);
   const totalMonthlyKwh = trackedDevices.reduce((sum, m) => sum + (m.energyTracking?.monthlyKwh ?? totalDailyKwh * 30), 0);
 
-  const maxWatts = Math.max(...trackedDevices.map((m) => m.energyTracking?.currentWatts ?? m.estimatedWatts ?? 0), 1);
+  const getDeviceWatts = (m: typeof markers[0]) => getLiveWatts(m) ?? m.energyTracking?.currentWatts ?? m.estimatedWatts ?? 0;
+  const maxWatts = Math.max(...trackedDevices.map(getDeviceWatts), 1);
 
   const chartData = trackedDevices
-    .sort((a, b) => (b.energyTracking?.weeklyKwh ?? (b.estimatedWatts ?? 0) * 56 / 1000) - (a.energyTracking?.weeklyKwh ?? (a.estimatedWatts ?? 0) * 56 / 1000))
+    .sort((a, b) => (b.energyTracking?.weeklyKwh ?? (getDeviceWatts(b) * 56 / 1000)) - (a.energyTracking?.weeklyKwh ?? (getDeviceWatts(a) * 56 / 1000)))
     .slice(0, 8)
     .map((m) => ({
       name: m.name || m.kind,
-      kwh: m.energyTracking?.weeklyKwh ?? ((m.estimatedWatts ?? 0) * 56 / 1000),
+      kwh: m.energyTracking?.weeklyKwh ?? (getDeviceWatts(m) * 56 / 1000),
     }));
 
   return (
@@ -68,7 +99,7 @@ export default function EnergyDeviceList() {
         <div className="grid grid-cols-2 gap-3">
           <div>
             <p className="text-lg font-bold text-foreground">{totalWatts} W</p>
-            <p className="text-[10px] text-muted-foreground">Just nu</p>
+            <p className="text-[10px] text-muted-foreground">Just nu {haStatus === 'connected' ? '(live)' : '(est.)'}</p>
           </div>
           <div>
             <p className="text-lg font-bold text-foreground">{totalDailyKwh.toFixed(1)} kWh</p>
@@ -114,15 +145,18 @@ export default function EnergyDeviceList() {
         <div className="glass-panel rounded-2xl p-4 space-y-2">
           <h4 className="text-xs font-semibold text-foreground mb-2">Enheter med energiövervakning</h4>
           {trackedDevices
-            .sort((a, b) => (b.energyTracking?.currentWatts ?? b.estimatedWatts ?? 0) - (a.energyTracking?.currentWatts ?? a.estimatedWatts ?? 0))
+            .sort((a, b) => getDeviceWatts(b) - getDeviceWatts(a))
             .map((m) => {
-              const watts = m.energyTracking?.currentWatts ?? m.estimatedWatts ?? 0;
+              const watts = getDeviceWatts(m);
+              const isLive = getLiveWatts(m) !== undefined;
               const pct = (watts / maxWatts) * 100;
               return (
                 <div key={m.id} className="space-y-1">
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-foreground">{m.name || m.kind}</span>
-                    <span className="text-xs font-medium text-foreground">{watts} W</span>
+                    <span className="text-xs font-medium text-foreground">
+                      {watts} W {isLive && <span className="text-[8px] text-primary ml-0.5">LIVE</span>}
+                    </span>
                   </div>
                   <div className="h-1.5 rounded-full bg-muted overflow-hidden">
                     <div
@@ -140,7 +174,7 @@ export default function EnergyDeviceList() {
         </div>
       )}
 
-      {/* Enable energy tracking + estimated watts */}
+      {/* Enable energy tracking + estimated watts + HA sensor linking */}
       <div className="glass-panel rounded-2xl p-4 space-y-2">
         <h4 className="text-xs font-semibold text-foreground mb-2">Aktivera energiövervakning</h4>
         <div className="space-y-2.5 max-h-64 overflow-y-auto">
@@ -156,15 +190,61 @@ export default function EnergyDeviceList() {
                 />
               </div>
               {(m.energyTracking?.enabled) && (
-                <div className="flex items-center gap-2 pl-1">
-                  <label className="text-[9px] text-muted-foreground shrink-0">Est. W:</label>
-                  <Input
-                    type="number"
-                    value={m.estimatedWatts ?? ''}
-                    placeholder="t.ex. 60"
-                    onChange={(e) => updateDevice(m.id, { estimatedWatts: parseFloat(e.target.value) || undefined })}
-                    className="h-6 text-[10px] w-20"
-                  />
+                <div className="space-y-1.5 pl-1">
+                  <div className="flex items-center gap-2">
+                    <label className="text-[9px] text-muted-foreground shrink-0">Est. W:</label>
+                    <Input
+                      type="number"
+                      value={m.estimatedWatts ?? ''}
+                      placeholder="t.ex. 60"
+                      onChange={(e) => updateDevice(m.id, { estimatedWatts: parseFloat(e.target.value) || undefined })}
+                      className="h-6 text-[10px] w-20"
+                    />
+                  </div>
+                  {/* HA sensor linking */}
+                  {haStatus === 'connected' && powerSensors.length > 0 && (
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1">
+                        <Link2 size={9} className="text-muted-foreground" />
+                        <span className="text-[9px] text-muted-foreground">HA-sensor:</span>
+                        {m.energyTracking?.powerEntityId ? (
+                          <span className="text-[9px] text-primary truncate max-w-[120px]">{m.energyTracking.powerEntityId}</span>
+                        ) : (
+                          <span className="text-[9px] text-muted-foreground/50">Ej kopplad</span>
+                        )}
+                      </div>
+                      {pickingFor === m.id ? (
+                        <div className="max-h-32 overflow-y-auto rounded bg-secondary/30 p-1 space-y-0.5">
+                          {powerSensors.map((s) => (
+                            <button key={s.entityId}
+                              className="w-full text-left text-[9px] px-1.5 py-1 rounded hover:bg-primary/20 text-foreground truncate"
+                              onClick={() => {
+                                updateDevice(m.id, {
+                                  energyTracking: { ...(m.energyTracking ?? { enabled: true }), powerEntityId: s.entityId },
+                                });
+                                setPickingFor(null);
+                              }}>
+                              {s.friendlyName || s.entityId}
+                              <span className="text-muted-foreground ml-1">({liveStates[s.entityId]?.state ?? '?'} {String(s.attributes.unit_of_measurement ?? 'W')})</span>
+                            </button>
+                          ))}
+                          <button className="w-full text-left text-[9px] px-1.5 py-1 rounded hover:bg-destructive/20 text-destructive"
+                            onClick={() => {
+                              updateDevice(m.id, {
+                                energyTracking: { ...(m.energyTracking ?? { enabled: true }), powerEntityId: undefined },
+                              });
+                              setPickingFor(null);
+                            }}>
+                            Ta bort koppling
+                          </button>
+                        </div>
+                      ) : (
+                        <Button size="sm" variant="ghost" className="h-5 text-[9px] px-1" onClick={() => setPickingFor(m.id)}>
+                          {m.energyTracking?.powerEntityId ? 'Byt sensor' : 'Välj sensor'}
+                        </Button>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
