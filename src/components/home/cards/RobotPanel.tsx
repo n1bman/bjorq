@@ -7,7 +7,7 @@ import { Switch } from '../../ui/switch';
 import { Progress } from '../../ui/progress';
 import {
   Battery, Play, Square, Home as HomeIcon, MapPin, AlertTriangle,
-  Clock, Ruler, Wind, Pause, History, Info, AlertCircle,
+  Clock, Ruler, Wind, Pause, History, Info, AlertCircle, Bug,
 } from 'lucide-react';
 import { toast } from '../../../hooks/use-toast';
 import { cn } from '../../../lib/utils';
@@ -371,6 +371,50 @@ function VacuumMiniMap({ marker, data }: { marker: DeviceMarker; data: VacuumSta
   );
 }
 
+/** Debug overlay showing real-time 3D telemetry */
+function VacuumDebugOverlay({ markerId }: { markerId: string }) {
+  const debug = useAppStore((s) => s.devices.vacuumDebug[markerId]);
+
+  if (!debug) {
+    return (
+      <div className="bg-secondary/50 border border-border/50 rounded-lg p-3">
+        <p className="text-[10px] text-muted-foreground font-mono">Väntar på telemetri från 3D-scenen…</p>
+      </div>
+    );
+  }
+
+  const age = Date.now() - debug.timestamp;
+  const stale = age > 2000;
+
+  return (
+    <div className="bg-secondary/50 border border-border/50 rounded-lg p-3 space-y-1.5 font-mono text-[10px]">
+      <div className="flex items-center gap-2 text-xs font-semibold text-foreground mb-1">
+        <Bug size={12} />
+        <span>3D Debug</span>
+        <span className={cn('ml-auto text-[9px]', stale ? 'text-destructive' : 'text-green-400')}>
+          {stale ? '⚠ stale' : '● live'}
+        </span>
+      </div>
+      <Row label="Position" value={`X:${debug.pos3D[0].toFixed(2)} Y:${debug.pos3D[1].toFixed(2)} Z:${debug.pos3D[2].toFixed(2)}`} />
+      <Row label="Status" value={debug.status} />
+      <Row label="Aktiv zon" value={debug.activeZone ?? '—'} />
+      <Row label="Target" value={debug.targetPos ? `${debug.targetPos[0].toFixed(2)}, ${debug.targetPos[1].toFixed(2)}` : '—'} />
+      <Row label="Stripe" value={`${debug.stripeIdx}/${debug.stripesTotal} pt:${debug.pointIdx}`} />
+      <Row label="FPS" value={`${debug.fps}`} />
+      <Row label="Ålder" value={`${age}ms`} />
+    </div>
+  );
+}
+
+function Row({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex justify-between">
+      <span className="text-muted-foreground">{label}</span>
+      <span className="text-foreground">{value}</span>
+    </div>
+  );
+}
+
 export default function RobotPanel() {
   const markers = useAppStore((s) => s.devices.markers);
   const deviceStates = useAppStore((s) => s.devices.deviceStates);
@@ -550,6 +594,21 @@ function VacuumCard({ marker, data, update }: { marker: DeviceMarker; data: Vacu
           onCheckedChange={(checked) => update(id, { showDustEffect: checked, _3dOnly: true })}
         />
       </div>
+
+      {/* Debug overlay toggle */}
+      <div className="flex items-center justify-between bg-secondary/30 rounded-lg px-3 py-2">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Bug size={14} />
+          <span>Debug-overlay (3D-position)</span>
+        </div>
+        <Switch
+          checked={data.showDebugOverlay === true}
+          onCheckedChange={(checked) => update(id, { showDebugOverlay: checked, _3dOnly: true })}
+        />
+      </div>
+
+      {/* Debug overlay data */}
+      {data.showDebugOverlay && <VacuumDebugOverlay markerId={id} />}
 
       {/* 3D Speed slider */}
       <div className="space-y-2">

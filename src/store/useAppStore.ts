@@ -237,10 +237,13 @@ const storeCreator = (set: any, get: any): AppState => ({
       activityLog: [newEvent, ...s.activityLog].slice(0, 100),
     };
   }),
+  setVacuumDebug: (id: string, info: any) => set((s: any) => ({
+    devices: { ...s.devices, vacuumDebug: { ...s.devices.vacuumDebug, [id]: info } },
+  })),
 
   layout: initialLayout,
   build: initialBuild,
-  devices: { markers: [], deviceStates: {} },
+  devices: { markers: [], deviceStates: {}, vacuumDebug: {} },
   activityLog: [],
   customCategories: [],
   standby: { enabled: false, idleMinutes: 2, vioMinutes: 5, cameraView: 'standard' as const, phase: 'standby' as const },

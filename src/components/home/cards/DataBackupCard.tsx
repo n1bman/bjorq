@@ -93,7 +93,7 @@ export default function DataBackupCard() {
     });
     useAppStore.setState({
       layout,
-      devices: { markers: demoDevices.markers, deviceStates },
+      devices: { markers: demoDevices.markers, deviceStates, vacuumDebug: {} },
       homeGeometry: { ...useAppStore.getState().homeGeometry, source: 'procedural' },
     });
     toast.success('Demo-projekt laddat ✅', { description: '3 rum, 4 enheter — redo att utforska.' });
@@ -120,7 +120,7 @@ export default function DataBackupCard() {
           activeFloorId: 'floor-1',
           scaleCalibrated: false,
         },
-        devices: { markers: [], deviceStates: {} },
+        devices: { markers: [], deviceStates: {}, vacuumDebug: {} },
         homeGeometry: {
           source: 'procedural' as const,
           imported: {

@@ -550,6 +550,7 @@ function MediaScreenMarker({ position, id, onSelect, onDragStart, selected, mark
 function VacuumMarker3D({ position, id, onSelect, onDragStart, selected }: MarkerProps) {
   const state = useAppStore((s) => s.devices.deviceStates[id]);
   const vacData = state?.kind === 'vacuum' ? state.data : null;
+  const setVacuumDebug = useAppStore((s) => s.setVacuumDebug);
   const status = vacData?.status ?? 'docked';
   const battery = vacData?.battery ?? 100;
   const currentRoom = vacData?.currentRoom;
@@ -566,6 +567,7 @@ function VacuumMarker3D({ position, id, onSelect, onDragStart, selected }: Marke
   const currentTarget = useRef<[number, number] | null>(null);
   const smoothRotation = useRef(0);
   const prevRoom = useRef<string | undefined>(undefined);
+  const debugTimer = useRef(0);
 
   // Dust particles state
   const dustParticles = useRef<Array<{ x: number; y: number; z: number; life: number; vx: number; vy: number; vz: number }>>([]); 
@@ -839,6 +841,25 @@ function VacuumMarker3D({ position, id, onSelect, onDragStart, selected }: Marke
           : status === 'paused' ? 0.3 + Math.sin(t * 1.5) * 0.2
           : status === 'docked' ? 0.3 : 0.7;
         mat.emissiveIntensity = pulse;
+      }
+    }
+
+    // Write debug telemetry (throttled to ~2Hz)
+    if (vacData?.showDebugOverlay && meshRef.current) {
+      debugTimer.current += delta;
+      if (debugTimer.current > 0.5) {
+        debugTimer.current = 0;
+        setVacuumDebug(id, {
+          pos3D: [meshRef.current.position.x, meshRef.current.position.y, meshRef.current.position.z] as [number, number, number],
+          targetPos: currentTarget.current,
+          stripeIdx: stripeIndex.current,
+          pointIdx: pointIndex.current,
+          stripesTotal: stripeLines.current.length,
+          status,
+          activeZone: activeZone ? (rooms.find(r => r.id === activeZone.roomId)?.name ?? activeZone.roomId) : null,
+          fps: Math.round(1 / Math.max(delta, 0.001)),
+          timestamp: Date.now(),
+        });
       }
     }
   });
