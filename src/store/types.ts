@@ -334,6 +334,20 @@ export interface VacuumState {
   cleaningLog?: CleaningLogEntry[];
   showDustEffect?: boolean;  // Show dust particles in 3D (default true)
   vacuumSpeed?: number;      // 3D movement speed m/s (default 0.07, range 0.02–0.15)
+  showDebugOverlay?: boolean; // Toggle debug overlay in vacuum control card
+}
+
+/** Real-time telemetry from the 3D vacuum marker, written by useFrame */
+export interface VacuumDebugInfo {
+  pos3D: [number, number, number];
+  targetPos: [number, number] | null;
+  stripeIdx: number;
+  pointIdx: number;
+  stripesTotal: number;
+  status: string;
+  activeZone: string | null;
+  fps: number;
+  timestamp: number;
 }
 
 export interface LockState {
@@ -446,6 +460,7 @@ export type DeviceState =
 export interface DevicesState {
   markers: DeviceMarker[];
   deviceStates: Record<string, DeviceState>;
+  vacuumDebug: Record<string, VacuumDebugInfo>;
 }
 
 // ─── Props Layer ───
@@ -755,8 +770,8 @@ export interface AppState {
   toggleDeviceState: (id: string) => void;
   setDeviceState: (id: string, state: DeviceState) => void;
   updateDeviceState: (id: string, partialData: Record<string, unknown>) => void;
+  setVacuumDebug: (id: string, info: VacuumDebugInfo) => void;
 
-  // Layout actions
   addFloor: (name: string) => void;
   removeFloor: (id: string) => void;
   renameFloor: (id: string, name: string) => void;
