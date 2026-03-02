@@ -34,6 +34,17 @@ router.all('/ha/*', async (req, res) => {
     const response = await fetch(url, fetchOptions);
     const contentType = response.headers.get('content-type') || '';
 
+    // Camera proxy: return image data as-is
+    if (haPath.startsWith('camera_proxy/')) {
+      const imgResponse = await fetch(url, { method: 'GET', headers: { 'Authorization': `Bearer ${token}` } });
+      if (!imgResponse.ok) {
+        return res.status(imgResponse.status).json({ error: 'Camera proxy failed' });
+      }
+      const ct = imgResponse.headers.get('content-type') || 'image/jpeg';
+      const buffer = Buffer.from(await imgResponse.arrayBuffer());
+      return res.status(200).type(ct).send(buffer);
+    }
+
     if (contentType.includes('application/json')) {
       const data = await response.json();
       res.status(response.status).json(data);

@@ -8,6 +8,7 @@ import WeatherWidget from './cards/WeatherWidget';
 import EnergyWidget from './cards/EnergyWidget';
 import EnergyDeviceList from './cards/EnergyDeviceList';
 import DevicesSection from './cards/DevicesSection';
+import MediaScreenWidget from './cards/MediaScreenWidget';
 import LocationSettings from './cards/LocationSettings';
 import HomeWidgetConfig from './cards/HomeWidgetConfig';
 import HAConnectionPanel from './cards/HAConnectionPanel';
@@ -209,6 +210,7 @@ function DevicesCategory() {
         ))}
       </div>
       <DevicesSection filter={kindFilter} />
+      {(!kindFilter || kindFilter === 'media_screen') && <MediaScreenWidget />}
     </div>
   );
 }

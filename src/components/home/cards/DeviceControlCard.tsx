@@ -1,5 +1,5 @@
 import { useAppStore } from '../../../store/useAppStore';
-import { useState } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import type { DeviceMarker, LightState, ClimateState, MediaState, VacuumState, LockState, SensorState, GenericDeviceState, CameraState, FanState, CoverState, SceneState, AlarmState, WaterHeaterState, HumidifierState, ValveState, LawnMowerState, SpeakerState } from '../../../store/types';
 import { Switch } from '../../ui/switch';
 import { Slider } from '../../ui/slider';
@@ -233,27 +233,89 @@ function CompactMediaControl({ id, data, update, label }: { id: string; data: Me
 }
 
 function CameraControl({ id, data, update }: { id: string; data: CameraState; update: UpdateFn }) {
+  const marker = useAppStore((s) => s.devices.markers.find((m) => m.id === id));
+  const liveStates = useAppStore((s) => s.homeAssistant.liveStates);
+  const haStatus = useAppStore((s) => s.homeAssistant.status);
+  const isHosted = useAppStore((s) => s._hostedMode);
+  const [imgError, setImgError] = useState(false);
+  const [snapshotUrl, setSnapshotUrl] = useState<string | null>(null);
+  const snapshotTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const entityId = marker?.ha?.entityId;
+  const live = entityId ? liveStates[entityId] : undefined;
+  const entityPicture = live?.attributes?.entity_picture as string | undefined;
+
+  // Build stream/snapshot URL
+  const getImageUrl = useCallback(() => {
+    if (!entityId || haStatus !== 'connected') return null;
+    if (isHosted) {
+      // Proxy through server
+      return `/api/ha/camera_proxy/${entityId}?t=${Date.now()}`;
+    }
+    if (entityPicture) {
+      // entityPicture is relative path like /api/camera_proxy/camera.xxx
+      const wsUrl = useAppStore.getState().homeAssistant.wsUrl;
+      const baseUrl = wsUrl.replace(/^ws/, 'http').replace(/\/api\/websocket$/, '');
+      return `${baseUrl}${entityPicture}?t=${Date.now()}`;
+    }
+    return null;
+  }, [entityId, haStatus, isHosted, entityPicture]);
+
+  // Snapshot polling (every 5s when streaming)
+  useEffect(() => {
+    if (data.on && data.streaming) {
+      const poll = () => {
+        const url = getImageUrl();
+        if (url) {
+          setSnapshotUrl(url);
+          setImgError(false);
+        }
+      };
+      poll();
+      snapshotTimerRef.current = setInterval(poll, 5000);
+    } else {
+      setSnapshotUrl(null);
+    }
+    return () => {
+      if (snapshotTimerRef.current) clearInterval(snapshotTimerRef.current);
+    };
+  }, [data.on, data.streaming, getImageUrl]);
+
+  const streamSource: 'live' | 'snapshot' | 'placeholder' = snapshotUrl && !imgError ? 'snapshot' : 'placeholder';
+
   return (
     <div className="space-y-3 pt-2">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <Camera size={14} />
-          <span>{data.streaming ? 'Strömmar' : 'Standby'}</span>
+          <span>{data.streaming ? (streamSource === 'snapshot' ? 'Snapshot (5s)' : 'Strömmar') : 'Standby'}</span>
         </div>
         <Switch checked={data.on} onCheckedChange={(v) => update(id, { on: v })} />
       </div>
-      {/* Camera preview placeholder */}
+      {/* Camera preview */}
       <div className={cn(
         'relative rounded-lg overflow-hidden aspect-video',
-        data.on ? 'bg-gradient-to-br from-slate-800 to-slate-900' : 'bg-muted'
+        data.on ? 'bg-gradient-to-br from-secondary/80 to-secondary' : 'bg-muted'
       )}>
-        <div className="absolute inset-0 flex items-center justify-center">
-          <Video size={32} className={cn('text-muted-foreground', data.on && 'text-primary/60')} />
-        </div>
+        {streamSource === 'snapshot' && snapshotUrl ? (
+          <img
+            src={snapshotUrl}
+            alt="Kamera"
+            className="absolute inset-0 w-full h-full object-cover"
+            onError={() => setImgError(true)}
+          />
+        ) : (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1">
+            <Video size={32} className={cn('text-muted-foreground', data.on && 'text-primary/60')} />
+            {imgError && data.streaming && (
+              <span className="text-[9px] text-destructive">Kunde inte ladda ström</span>
+            )}
+          </div>
+        )}
         {data.on && (
-          <div className="absolute top-2 left-2 flex items-center gap-1 bg-red-500/80 rounded px-1.5 py-0.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-            <span className="text-[9px] text-white font-bold">LIVE</span>
+          <div className="absolute top-2 left-2 flex items-center gap-1 bg-destructive/80 rounded px-1.5 py-0.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-destructive-foreground animate-pulse" />
+            <span className="text-[9px] text-destructive-foreground font-bold">LIVE</span>
           </div>
         )}
       </div>
