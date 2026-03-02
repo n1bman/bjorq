@@ -1,12 +1,14 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useAppStore } from '../../../store/useAppStore';
-import { useHomeAssistant } from '../../../hooks/useHomeAssistant';
+import { useHomeAssistant, haServiceCaller } from '../../../hooks/useHomeAssistant';
 import { Input } from '../../ui/input';
 import { Button } from '../../ui/button';
 import { ScrollArea } from '../../ui/scroll-area';
-import { Wifi, WifiOff, AlertCircle, RefreshCw } from 'lucide-react';
+import { Wifi, WifiOff, AlertCircle, RefreshCw, RotateCcw, ListRestart, Trash2 } from 'lucide-react';
 import { cn } from '../../../lib/utils';
-import { isHostedSync, saveConfig } from '../../../lib/apiClient';
+import { isHostedSync, saveConfig, fetchHAStates } from '../../../lib/apiClient';
+import { toast } from 'sonner';
+import type { HAEntity } from '../../../store/types';
 
 export default function HAConnectionPanel() {
   const status = useAppStore((s) => s.homeAssistant.status);
@@ -16,6 +18,7 @@ export default function HAConnectionPanel() {
 
   const [localUrl, setLocalUrl] = useState(wsUrl || '');
   const [localToken, setLocalToken] = useState(token);
+  const [reloading, setReloading] = useState(false);
 
   const { connect, disconnect } = useHomeAssistant();
 
@@ -30,7 +33,6 @@ export default function HAConnectionPanel() {
   const StatusIcon = cfg.icon;
 
   const handleConnect = async () => {
-    // In hosted mode, save HA config to server first
     if (isHostedSync()) {
       try {
         await saveConfig({ ha: { baseUrl: localUrl, token: localToken } });
@@ -45,6 +47,88 @@ export default function HAConnectionPanel() {
     disconnect();
   };
 
+  // B1: Reconnect — disconnect then reconnect with stored credentials
+  const handleReconnect = useCallback(() => {
+    const { wsUrl: url, token: tok } = useAppStore.getState().homeAssistant;
+    if (!url && !isHostedSync()) {
+      toast.error('Ingen HA-URL sparad');
+      return;
+    }
+    disconnect();
+    setTimeout(() => {
+      if (isHostedSync()) {
+        // In hosted mode, just reload page to re-trigger polling
+        window.location.reload();
+      } else {
+        connect(url, tok);
+      }
+    }, 500);
+    toast.info('Återansluter till Home Assistant…');
+  }, [connect, disconnect]);
+
+  // B1: Reload entities — re-fetch all states without full reconnect
+  const handleReloadEntities = useCallback(async () => {
+    setReloading(true);
+    try {
+      if (isHostedSync()) {
+        // Hosted: re-fetch via REST
+        const states = await fetchHAStates();
+        if (Array.isArray(states)) {
+          const s = useAppStore.getState();
+          const mapped: HAEntity[] = states.map((e: any) => ({
+            entityId: e.entity_id,
+            domain: e.entity_id.split('.')[0],
+            friendlyName: e.attributes?.friendly_name || e.entity_id,
+            state: e.state,
+            attributes: e.attributes || {},
+          }));
+          s.setHAEntities(mapped);
+          for (const e of states) {
+            s.updateHALiveState(e.entity_id, e.state, e.attributes || {});
+          }
+          toast.success(`${mapped.length} entiteter omladdade ✅`);
+        }
+      } else {
+        // WebSocket: send get_states command
+        // The easiest way is to disconnect and reconnect
+        handleReconnect();
+        return;
+      }
+    } catch (err) {
+      toast.error('Kunde inte ladda om entiteter');
+      console.error('[HA] Reload entities failed:', err);
+    } finally {
+      setReloading(false);
+    }
+  }, [handleReconnect]);
+
+  // B1: Reset HA config — clear stored credentials and disconnect
+  const handleResetConfig = useCallback(async () => {
+    disconnect();
+    useAppStore.setState((s) => ({
+      homeAssistant: {
+        ...s.homeAssistant,
+        wsUrl: '',
+        token: '',
+        status: 'disconnected',
+        entities: [],
+        liveStates: {},
+        vacuumSegmentMap: {},
+      },
+    }));
+    setLocalUrl('');
+    setLocalToken('');
+    haServiceCaller.current = null;
+
+    if (isHostedSync()) {
+      try {
+        await saveConfig({ ha: { baseUrl: '', token: '' } });
+      } catch { /* non-critical */ }
+    }
+
+    toast.success('HA-konfiguration återställd');
+  }, [disconnect]);
+
   return (
     <div className="glass-panel rounded-xl p-4 space-y-3">
       <div className="flex items-center justify-between">
@@ -52,6 +136,11 @@ export default function HAConnectionPanel() {
         <div className={cn('flex items-center gap-1 text-xs', cfg.color)}>
           <StatusIcon size={14} className={status === 'connecting' ? 'animate-spin' : ''} />
           {cfg.label}
+          {status === 'connected' && (
+            <span className="text-[10px] text-muted-foreground ml-1">
+              ({entities.length} entiteter)
+            </span>
+          )}
         </div>
       </div>
 
@@ -108,6 +197,43 @@ export default function HAConnectionPanel() {
         <Button onClick={handleDisconnect} variant="outline" size="sm" className="w-full text-xs">
           Koppla från
         </Button>
+      )}
+
+      {/* B1: Action buttons — Reconnect / Reload / Reset */}
+      {(status === 'connected' || status === 'error') && (
+        <div className="border-t border-border/50 pt-2 space-y-1.5">
+          <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Åtgärder</p>
+          <div className="grid grid-cols-3 gap-1.5">
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 text-[10px] gap-1 flex-col py-1"
+              onClick={handleReconnect}
+            >
+              <RotateCcw size={12} />
+              Reconnect
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 text-[10px] gap-1 flex-col py-1"
+              onClick={handleReloadEntities}
+              disabled={reloading}
+            >
+              <ListRestart size={12} className={reloading ? 'animate-spin' : ''} />
+              {reloading ? 'Laddar…' : 'Reload'}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 text-[10px] gap-1 flex-col py-1 border-destructive/30 text-destructive hover:bg-destructive/10"
+              onClick={handleResetConfig}
+            >
+              <Trash2 size={12} />
+              Reset
+            </Button>
+          </div>
+        </div>
       )}
 
       {status === 'connected' && (
