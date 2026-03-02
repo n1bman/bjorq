@@ -1,104 +1,52 @@
 
 
-## Plan: BJORQ Dashboard as Home Assistant Add-on — v0.2.3
+## Analysis: armv7 Build Failure
 
-No UI changes. Distribution and infrastructure only.
-
-### Phase 1: Add-on repo structure (4 new files)
-
-**`repository.yaml`** (repo root)
-```yaml
-name: "BJORQ Add-ons"
-url: "https://github.com/n1bman/bjorq"
-maintainer: "n1bman"
+The error from GitHub Actions is:
+```
+buildx failed with: ERROR: failed to build: failed to solve: process "/bin/sh -c npm run build" did not complete successfully: exit code: 1
 ```
 
-**`bjorq_dashboard/config.yaml`**
-- `name`, `slug`, `version: "0.2.3"`, `description`, `url`
-- `startup: services`, `boot: auto`, `init: false`
-- `arch: [amd64, aarch64, armv7]`
-- `ports: { "3000/tcp": 3000 }`, `ports_description`
-- `webui: "http://[HOST]:[PORT:3000]"`
-- `image: "ghcr.io/n1bman/bjorq-dashboard-{arch}"` (prebuilt images)
+**Root cause:** The `npm run build` (Vite build) runs during the Docker image build stage. On armv7 (32-bit ARM), this runs under QEMU emulation which is extremely slow and memory-constrained. The Vite/esbuild/SWC toolchain commonly fails on emulated armv7 due to:
+1. Memory limits (OOM during bundling)
+2. Missing native binaries for armv7 in esbuild/SWC
 
-**`bjorq_dashboard/Dockerfile`** (multi-stage)
-```text
-Stage 1 (build): node:20-alpine
-  - COPY package*.json → npm ci
-  - COPY src/, index.html, vite.config.ts, etc. → npm run build
-  - Result: dist/
+**The fix:** Since the frontend build output (`dist/`) is pure static HTML/JS/CSS and is architecture-independent, we should build it only once on amd64 and then copy the result into all arch-specific runtime images. This is both faster and avoids the emulation problem entirely.
 
-Stage 2 (runtime): node:20-alpine
-  - COPY dist/ from stage 1
-  - COPY server/ → cd server && npm install --omit=dev
-  - ENV PORT=3000 BJORQ_DATA_DIR=/data
-  - CMD ["node", "server/server.js"]
+### Plan: Split workflow into two jobs
+
+**`.github/workflows/ha-addon-build.yml`** — restructure:
+
+1. **Job 1: `build-frontend`** (runs on ubuntu-latest, native amd64)
+   - Checkout, `npm install`, `npm run build`
+   - Upload `dist/` as a workflow artifact
+
+2. **Job 2: `package`** (matrix: amd64, aarch64, armv7, depends on `build-frontend`)
+   - Download the `dist/` artifact
+   - Use a simplified Dockerfile that skips the frontend build stage — just copies pre-built `dist/` + `server/` into the runtime image
+   - Build + push to GHCR per arch
+
+**`bjorq_dashboard/Dockerfile.runtime`** (new, minimal — no build stage):
+```dockerfile
+FROM node:20-alpine
+WORKDIR /app
+COPY dist/ ./dist/
+COPY server/ ./server/
+RUN cd server && npm install --omit=dev
+ENV PORT=3000
+ENV BJORQ_DATA_DIR=/data
+EXPOSE 3000
+CMD ["node", "server/server.js"]
 ```
 
-**`bjorq_dashboard/run.sh`**
-```bash
-#!/usr/bin/with-contenv bashio
-export PORT=3000
-export BJORQ_DATA_DIR=/data
-bashio::log.info "Starting BJORQ Dashboard on :3000"
-bashio::log.info "Data dir: /data"
-exec node /app/server/server.js
-```
+The existing `bjorq_dashboard/Dockerfile` stays for local builds. The workflow uses the new runtime-only Dockerfile.
 
-**`bjorq_dashboard/README.md`** — short install instructions for the add-on store page.
-
-### Phase 2: Make data dir configurable (1 file change)
-
-**`server/storage/paths.js`** — line 7:
-```javascript
-// Before
-export const dataDir = () => path.join(ROOT, 'data');
-
-// After
-export const dataDir = () => process.env.BJORQ_DATA_DIR || path.join(ROOT, 'data');
-```
-
-This is the only server change. Everything else (config.json, profiles.json, projects/) derives from `dataDir()`, so it all follows automatically. Normal dev/zip installs are unaffected (env var not set = same behavior).
-
-### Phase 3: GHCR build workflow (1 new file)
-
-**`.github/workflows/ha-addon-build.yml`**
-- Triggers on `v*` tags and `workflow_dispatch`
-- Uses `ghcr.io/home-assistant/amd64-base-debian` or the official `home-assistant/builder` action
-- Builds multi-arch (amd64, aarch64, armv7) from `bjorq_dashboard/Dockerfile`
-- Pushes to `ghcr.io/n1bman/bjorq-dashboard-{arch}`
-- Requires `packages: write` permission
-
-### Phase 4: README + Changelog + Version bump (3 files)
-
-**`README.md`** — add a "Home Assistant Add-on" section after Quick Start:
-```markdown
-## Home Assistant Add-on
-
-1. Go to **Settings → Add-ons → Add-on Store → ⋮ → Repositories**
-2. Add: `https://github.com/n1bman/bjorq`
-3. Install **BJORQ Dashboard**
-4. Start → Open at `http://<HA-IP>:3000`
-
-Tablet/kiosk: point the browser to the same URL in fullscreen mode.
-```
-
-**`CHANGELOG.md`** — add v0.2.3 entry with add-on distribution additions.
-
-**`package.json`** — bump to `0.2.3`.
-
-### Files Summary (8 files)
+### Files changed
 
 | File | Action |
 |------|--------|
-| `repository.yaml` | Create |
-| `bjorq_dashboard/config.yaml` | Create |
-| `bjorq_dashboard/Dockerfile` | Create |
-| `bjorq_dashboard/run.sh` | Create |
-| `bjorq_dashboard/README.md` | Create |
-| `.github/workflows/ha-addon-build.yml` | Create |
-| `server/storage/paths.js` | Edit line 7 (env var fallback) |
-| `README.md` | Add HA section |
-| `CHANGELOG.md` | Add v0.2.3 |
-| `package.json` | Bump version |
+| `.github/workflows/ha-addon-build.yml` | Rewrite: 2-job pipeline |
+| `bjorq_dashboard/Dockerfile.runtime` | Create: runtime-only image |
+
+No version bump needed — this is a CI-only fix. Re-run the tag or use `workflow_dispatch` to test.
 
