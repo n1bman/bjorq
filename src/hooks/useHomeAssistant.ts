@@ -321,7 +321,71 @@ export function useHomeAssistant() {
     };
 
     // Initial fetch + poll every 2s
-    pollStates();
+    pollStates().then(() => {
+      // After first successful poll, discover vacuum segments via REST
+      const entities = useAppStore.getState().homeAssistant.entities;
+      const vacuumEntity = entities.find((e) => e.domain === 'vacuum');
+      if (vacuumEntity) {
+        callHAService('roborock', 'get_maps', {
+          entity_id: vacuumEntity.entityId,
+          return_response: true,
+        }).then(res => {
+          if (!res.ok) return;
+          return res.json();
+        }).then(data => {
+          if (!data) return;
+          try {
+            const response = data?.response ?? data;
+            const maps = response?.maps ?? response;
+            const firstMap = Array.isArray(maps) ? maps[0] : maps;
+            const rooms = firstMap?.rooms;
+            if (rooms && typeof rooms === 'object') {
+              const segmentMap: Record<string, number> = {};
+              if (Array.isArray(rooms)) {
+                for (const entry of rooms) {
+                  const name = entry?.name ?? entry?.label;
+                  const id = entry?.id ?? entry?.segment_id ?? entry?.segmentId;
+                  if (name && id !== undefined) {
+                    segmentMap[name] = typeof id === 'number' ? id : parseInt(id);
+                  }
+                }
+              } else {
+                for (const [segId, val] of Object.entries(rooms)) {
+                  const name = typeof val === 'string' ? val : (val as any)?.name ?? (val as any)?.label;
+                  if (name) segmentMap[name] = parseInt(segId);
+                }
+              }
+              console.log('[HA/Hosted] Vacuum segment map:', segmentMap);
+              useAppStore.getState().setVacuumSegmentMap(segmentMap);
+
+              // Auto-fill segmentId on vacuum zones
+              const floors = useAppStore.getState().layout.floors;
+              for (const floor of floors) {
+                const zones = floor.vacuumMapping?.zones;
+                if (!zones) continue;
+                const floorRooms = floor.rooms ?? [];
+                for (const [segName, segId] of Object.entries(segmentMap)) {
+                  const normalizedSeg = segName.toLowerCase().replace(/[-_\s]/g, '');
+                  const matchedZone = zones.find((z) => {
+                    const room = floorRooms.find((r) => r.id === z.roomId);
+                    const displayName = room?.name ?? z.roomId;
+                    const normalizedDisplay = displayName.toLowerCase().replace(/[-_\s]/g, '');
+                    return normalizedDisplay === normalizedSeg
+                      || normalizedSeg.includes(normalizedDisplay)
+                      || normalizedDisplay.includes(normalizedSeg);
+                  });
+                  if (matchedZone) {
+                    useAppStore.getState().updateVacuumZoneSegmentId(floor.id, matchedZone.roomId, segId);
+                  }
+                }
+              }
+            }
+          } catch (err) {
+            console.warn('[HA/Hosted] Failed to parse get_maps:', err);
+          }
+        }).catch(() => { /* roborock not available — fine */ });
+      }
+    });
     hostedPollTimer = setInterval(pollStates, 2000);
 
     return () => {

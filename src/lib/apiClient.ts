@@ -51,7 +51,8 @@ export async function resolveMode(): Promise<AppMode> {
       const timer = setTimeout(() => controller.abort(), 1000);
       const res = await fetch('/api/config', { signal: controller.signal });
       clearTimeout(timer);
-      _mode = res.ok ? 'HOSTED' : 'DEV';
+      const contentType = res.headers.get('content-type') || '';
+      _mode = (res.ok && contentType.includes('application/json')) ? 'HOSTED' : 'DEV';
     } catch {
       _mode = 'DEV';
     }

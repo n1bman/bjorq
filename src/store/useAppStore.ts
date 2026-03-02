@@ -96,8 +96,8 @@ function syncProjectToServer() {
   const s = useAppStore.getState();
   debouncedProjectSync(() => {
     const homeGeo = { ...s.homeGeometry };
-    // Strip large fileData from sync payload
-    if (homeGeo.imported?.fileData) {
+    // Strip large fileData from sync payload (not needed if URL is a server path)
+    if (homeGeo.imported?.fileData && !homeGeo.imported?.url?.startsWith('/projects/')) {
       homeGeo.imported = { ...homeGeo.imported, fileData: undefined };
     }
     saveProject(_activeProjectId, {

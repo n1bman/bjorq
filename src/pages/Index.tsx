@@ -11,36 +11,18 @@ import { useIdleTimer } from '../components/standby/useIdleTimer';
 import { callHAService } from '../lib/apiClient';
 import { haServiceCaller } from '../hooks/useHomeAssistant';
 
-const Index = () => {
+/** Inner component — only mounts after initHostedMode resolves so hooks see correct mode */
+const IndexInner = () => {
   const appMode = useAppStore((s) => s.appMode);
-  const [initDone, setInitDone] = useState(false);
-  
+
   useHomeAssistant();
   useHABridge();
   useVacuumRoomSync();
   useIdleTimer();
 
-  useEffect(() => {
-    initHostedMode().then((hosted) => {
-      if (hosted) {
-        // In hosted mode, route HA service calls through REST proxy
-        haServiceCaller.current = (domain, service, data) =>
-          callHAService(domain, service, data).catch(console.warn);
-      }
-    }).finally(() => setInitDone(true));
-  }, []);
-
-  if (appMode === 'standby') {
-    return <StandbyMode />;
-  }
-
-  if (appMode === 'home') {
-    return <HomeView />;
-  }
-
-  if (appMode === 'dashboard') {
-    return <DashboardView />;
-  }
+  if (appMode === 'standby') return <StandbyMode />;
+  if (appMode === 'home') return <HomeView />;
+  if (appMode === 'dashboard') return <DashboardView />;
 
   return (
     <div className="fixed inset-0 bg-background overflow-hidden">
@@ -50,6 +32,23 @@ const Index = () => {
       </div>
     </div>
   );
+};
+
+const Index = () => {
+  const [initDone, setInitDone] = useState(false);
+
+  useEffect(() => {
+    initHostedMode().then((hosted) => {
+      if (hosted) {
+        haServiceCaller.current = (domain, service, data) =>
+          callHAService(domain, service, data).catch(console.warn);
+      }
+    }).finally(() => setInitDone(true));
+  }, []);
+
+  if (!initDone) return null;
+
+  return <IndexInner />;
 };
 
 export default Index;

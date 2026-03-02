@@ -188,6 +188,12 @@ function useRestoredUrl() {
   const [validUrl, setValidUrl] = useState<string | null>(url);
 
   useEffect(() => {
+    // Server-relative URLs (hosted mode) are always valid
+    if (url && url.startsWith('/projects/')) {
+      setValidUrl(url);
+      return;
+    }
+
     if (url && url.startsWith('blob:')) {
       fetch(url).then(() => {
         setValidUrl(url);
