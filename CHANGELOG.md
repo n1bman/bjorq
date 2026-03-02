@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.2] - 2026-03-02
+
+### Added
+- "Sparad vy" option in Camera FAB to snap back to saved start position
+- Widgets tab in Dashboard (moved from Settings)
+- Enhanced Profile panel with connected accounts section (HA, Spotify, E-post placeholders)
+- ThemeCard, DataBackupCard, SystemStatusCard as separate focused components
+- PowerShell scripts (`start.ps1`, `install.ps1`) for Windows compatibility
+- `QUICK-START.txt` with step-by-step install instructions for all platforms
+
+### Fixed
+- Camera start view not applying when navigating between modes (remount bug)
+- Camera now applies saved position immediately on Scene3D mount
+
+### Changed
+- Settings reorganized: Profil, Utseende, Skärm (with Standby + Startvy), System (with SystemStatus), Anslutning, Data
+- ProfilePanel split into ProfilePanel + ThemeCard + DataBackupCard + SystemStatusCard
+- Release artifacts now include PS1 scripts and QUICK-START.txt
+
 ## [0.2.1] - 2026-03-02
 
 ### Fixed

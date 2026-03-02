@@ -67,42 +67,36 @@ function CameraController() {
   const customStartPos = useAppStore((s) => s.homeView.customStartPos);
   const customStartTarget = useAppStore((s) => s.homeView.customStartTarget);
   const controlsRef = useRef<any>(null);
-  const prevMode = useRef(appMode);
-  const prevStartPos = useRef(customStartPos);
-  const prevStartTarget = useRef(customStartTarget);
   const lerpingTo = useRef<{ pos: THREE.Vector3; target: THREE.Vector3 } | null>(null);
+  const initialApplied = useRef(false);
 
-  // Apply camera on mode change
+  // Apply saved camera on mount (fixes remount losing position)
   useEffect(() => {
-    if ((appMode === 'dashboard' || appMode === 'home') && prevMode.current !== appMode) {
+    if (!initialApplied.current && (appMode === 'dashboard' || appMode === 'home')) {
       const pos = customStartPos
         ? new THREE.Vector3(...customStartPos)
-        : presetPositions.topdown.clone();
+        : presetPositions.angle.clone();
       const target = customStartTarget
         ? new THREE.Vector3(...customStartTarget)
-        : presetTargets.topdown.clone();
+        : presetTargets.angle.clone();
       lerpingTo.current = { pos, target };
+      initialApplied.current = true;
     }
-    prevMode.current = appMode;
-  }, [appMode]);
+  }, []);
 
   // Apply camera when saved position changes (e.g. user saves new start view)
   useEffect(() => {
-    if (
-      (appMode === 'dashboard' || appMode === 'home') &&
-      (customStartPos !== prevStartPos.current || customStartTarget !== prevStartTarget.current)
-    ) {
+    if (!initialApplied.current) return; // skip first render, handled above
+    if (appMode === 'dashboard' || appMode === 'home') {
       const pos = customStartPos
         ? new THREE.Vector3(...customStartPos)
-        : presetPositions.topdown.clone();
+        : presetPositions.angle.clone();
       const target = customStartTarget
         ? new THREE.Vector3(...customStartTarget)
-        : presetTargets.topdown.clone();
+        : presetTargets.angle.clone();
       lerpingTo.current = { pos, target };
     }
-    prevStartPos.current = customStartPos;
-    prevStartTarget.current = customStartTarget;
-  }, [customStartPos, customStartTarget, appMode]);
+  }, [customStartPos, customStartTarget]);
 
   useEffect(() => {
     if (cameraPreset !== 'free') {

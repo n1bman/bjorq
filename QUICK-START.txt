@@ -1,0 +1,49 @@
+╔══════════════════════════════════════════════════╗
+║           bjorQ Dashboard — Quick Start          ║
+╚══════════════════════════════════════════════════╝
+
+REQUIREMENTS
+  • Node.js 18+ (download from https://nodejs.org)
+
+────────────────────────────────────────────────────
+
+WINDOWS — Command Prompt (CMD)
+
+  1. Double-click  start.bat
+     — or open CMD and run:  start.bat
+
+WINDOWS — PowerShell
+
+  1. Open PowerShell in this folder
+  2. Run:  .\start.ps1
+
+  If you get an execution policy error, run first:
+    Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
+
+LINUX / macOS / WSL
+
+  1. Open a terminal in this folder
+  2. Run:  chmod +x start.sh && ./start.sh
+
+────────────────────────────────────────────────────
+
+WHAT HAPPENS
+
+  • Server dependencies are auto-installed on first run
+  • Your browser opens to http://localhost:3000
+  • All data is stored in the  data/  folder
+
+MANUAL INSTALL (optional)
+
+  If you prefer to install dependencies separately:
+    Windows CMD:    install.bat
+    PowerShell:     .\install.ps1
+    Linux/macOS:    ./install.sh
+
+TROUBLESHOOTING
+
+  • "Node.js not found" → Install Node.js and restart terminal
+  • Port conflict → Set PORT environment variable:
+      CMD:         set PORT=8080 && start.bat
+      PowerShell:  $env:PORT="8080"; .\start.ps1
+      Linux:       PORT=8080 ./start.sh

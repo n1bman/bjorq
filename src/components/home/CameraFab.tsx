@@ -1,10 +1,10 @@
 import { useAppStore } from '../../store/useAppStore';
-import { Camera, ArrowDown, RotateCcw, Square, Maximize } from 'lucide-react';
+import { Camera, ArrowDown, RotateCcw, Square, Maximize, Save } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useState } from 'react';
 import type { CameraPreset } from '../../store/types';
 
-const presets: { key: CameraPreset; label: string; icon: typeof Camera }[] = [
+const presets: { key: CameraPreset | 'saved'; label: string; icon: typeof Camera }[] = [
   { key: 'free', label: 'Fri', icon: RotateCcw },
   { key: 'topdown', label: 'Ovanifrån', icon: ArrowDown },
   { key: 'angle', label: 'Vinkel', icon: Maximize },
@@ -14,22 +14,42 @@ const presets: { key: CameraPreset; label: string; icon: typeof Camera }[] = [
 export default function CameraFab() {
   const cameraPreset = useAppStore((s) => s.homeView.cameraPreset);
   const setCameraPreset = useAppStore((s) => s.setCameraPreset);
+  const customStartPos = useAppStore((s) => s.homeView.customStartPos);
+  const customStartTarget = useAppStore((s) => s.homeView.customStartTarget);
+  const saveHomeStartCamera = useAppStore((s) => s.saveHomeStartCamera);
   const [open, setOpen] = useState(false);
+
+  const hasSavedView = !!customStartPos;
+
+  const allPresets = hasSavedView
+    ? [...presets, { key: 'saved' as const, label: 'Sparad vy', icon: Save }]
+    : presets;
+
+  const handleSelect = (key: CameraPreset | 'saved') => {
+    if (key === 'saved' && customStartPos && customStartTarget) {
+      // Re-trigger the saved position by re-setting the same values
+      setCameraPreset('free');
+      // Slight delay to ensure preset change propagates, then re-apply saved coords
+      setTimeout(() => {
+        saveHomeStartCamera([...customStartPos], [...customStartTarget]);
+      }, 50);
+    } else if (key !== 'saved') {
+      setCameraPreset(key);
+    }
+    setOpen(false);
+  };
 
   return (
     <div className="fixed bottom-20 right-4 z-50 flex flex-col items-end gap-2">
       {open && (
         <div className="glass-panel rounded-xl p-1.5 flex flex-col gap-1 animate-in fade-in slide-in-from-bottom-2 duration-200">
-          {presets.map(({ key, label, icon: Icon }) => (
+          {allPresets.map(({ key, label, icon: Icon }) => (
             <button
               key={key}
-              onClick={() => {
-                setCameraPreset(key);
-                setOpen(false);
-              }}
+              onClick={() => handleSelect(key)}
               className={cn(
                 'flex items-center gap-2 px-4 py-3 rounded-lg text-xs font-medium transition-all min-w-[120px]',
-                cameraPreset === key
+                (key === 'saved' ? false : cameraPreset === key)
                   ? 'bg-primary/20 text-primary'
                   : 'text-muted-foreground hover:text-foreground hover:bg-secondary/30'
               )}
