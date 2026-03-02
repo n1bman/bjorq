@@ -217,7 +217,7 @@ function SceneContent() {
         shadow-mapSize-width={shadowMapSize} shadow-mapSize-height={shadowMapSize}
         shadow-camera-far={50} shadow-camera-left={-20} shadow-camera-right={20}
         shadow-camera-top={20} shadow-camera-bottom={-20} />
-      {!isNight && perf.quality !== 'low' && <pointLight position={[0, 8, 0]} intensity={0.15} color="#4a9eff" />}
+      {!isNight && perf.quality !== 'low' && (perf.maxLights === 0 || perf.maxLights > 2) && <pointLight position={[0, 8, 0]} intensity={0.15} color="#4a9eff" />}
 
       <GroundPlane onPointerDown={() => {}} onPointerMove={() => {}} />
 
@@ -254,10 +254,11 @@ export default function Scene3D() {
   const shadows = useAppStore((s) => s.performance.shadows);
   const quality = useAppStore((s) => s.performance.quality);
   const postprocessing = useAppStore((s) => s.performance.postprocessing);
-  const dpr = quality === 'low' ? 1 : quality === 'medium' ? 1.5 : undefined;
+  const tabletMode = useAppStore((s) => s.performance.tabletMode);
+  const dpr = tabletMode ? 0.75 : quality === 'low' ? 1 : quality === 'medium' ? 1.5 : undefined;
 
   // Key forces Canvas remount when renderer-critical settings change
-  const canvasKey = `${quality}-${shadows}-${postprocessing}`;
+  const canvasKey = `${quality}-${shadows}-${postprocessing}-${tabletMode}`;
 
   return (
     <Canvas
@@ -265,7 +266,7 @@ export default function Scene3D() {
       shadows={shadows}
       camera={{ position: [0, 25, 0.01], fov: 45 }}
       style={{ background: 'transparent' }}
-      gl={{ antialias: quality !== 'low', alpha: true }}
+      gl={{ antialias: quality !== 'low' && !tabletMode, alpha: true }}
       dpr={dpr}
     >
       <Suspense fallback={null}>

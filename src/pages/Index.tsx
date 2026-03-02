@@ -4,7 +4,8 @@ import HomeView from '../components/home/HomeView';
 import DashboardView from '../components/home/DashboardView';
 import StandbyMode from '../components/standby/StandbyMode';
 import ModeHeader from '../components/ModeHeader';
-import { useAppStore, initHostedMode } from '../store/useAppStore';
+import PerformanceHUD from '../components/home/PerformanceHUD';
+import { useAppStore, initHostedMode, autoDetectPerformance } from '../store/useAppStore';
 import { useHomeAssistant } from '../hooks/useHomeAssistant';
 import { useHABridge, useVacuumRoomSync } from '../hooks/useHABridge';
 import { useIdleTimer, useVioTimer } from '../components/standby/useIdleTimer';
@@ -23,8 +24,8 @@ const IndexInner = () => {
   useVioTimer();
 
   if (appMode === 'standby') return <StandbyMode />;
-  if (appMode === 'home') return <HomeView />;
-  if (appMode === 'dashboard') return <DashboardView />;
+  if (appMode === 'home') return <><HomeView /><PerformanceHUD /></>;
+  if (appMode === 'dashboard') return <><DashboardView /><PerformanceHUD /></>;
 
   return (
     <div className="fixed inset-0 bg-background overflow-hidden">
@@ -32,6 +33,7 @@ const IndexInner = () => {
       <div className="absolute inset-0 pt-14">
         <BuildModeV2 />
       </div>
+      <PerformanceHUD />
     </div>
   );
 };
@@ -47,7 +49,7 @@ const Index = () => {
           callHAService(domain, service, data).catch(console.warn);
         haServiceCaller.current = createThrottledCaller(rawCaller);
       }
-    }).finally(() => setInitDone(true));
+    }).finally(() => { autoDetectPerformance(); setInitDone(true); });
   }, []);
 
   if (!initDone) return null;
