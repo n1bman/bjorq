@@ -315,7 +315,7 @@ function SettingsCategory() {
       {/* Utseende */}
       <section className="space-y-1">
         <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1">Utseende</h2>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
           <ProfilePanel />
           <CameraStartSettings />
         </div>
@@ -324,7 +324,7 @@ function SettingsCategory() {
       {/* System */}
       <section className="space-y-1">
         <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1">System</h2>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
           <PerformanceSettings />
           <StandbySettingsPanel />
         </div>
@@ -333,7 +333,7 @@ function SettingsCategory() {
       {/* Skärm / Display */}
       <section className="space-y-1">
         <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1">Skärm</h2>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
           <DisplaySettings />
         </div>
       </section>
@@ -341,7 +341,7 @@ function SettingsCategory() {
       {/* Anslutning */}
       <section className="space-y-1">
         <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1">Anslutning</h2>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
           <HAConnectionPanel />
           <LocationSettings />
           <WifiPanel />
