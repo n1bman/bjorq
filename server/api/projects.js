@@ -61,6 +61,17 @@ router.get('/projects/:id/scenes', async (req, res) => {
   }
 });
 
+router.delete('/projects/:id', async (req, res) => {
+  try {
+    const dir = projectDir(req.params.id);
+    const fs = await import('fs/promises');
+    await fs.rm(dir, { recursive: true, force: true });
+    res.json({ deleted: req.params.id });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.put('/projects/:id/scenes/:sceneId', async (req, res) => {
   try {
     const project = (await readJSON(projectFilePath(req.params.id))) || {};

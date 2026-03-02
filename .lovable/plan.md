@@ -197,4 +197,3 @@ Since this is ~20 features across 9 epics, each implementation message will hand
 ### Implementation Order
 
 Each sprint will be implemented as 1-2 messages. Total: ~11-14 messages to complete everything. Ready to start with Sprint 1 (EPIC A) on approval.
-
