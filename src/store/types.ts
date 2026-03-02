@@ -558,12 +558,15 @@ export interface VisibleWidgets {
   calendar: boolean;
 }
 
+export type MarkerSize = 'small' | 'medium' | 'large';
+
 export interface HomeViewState {
   cameraPreset: CameraPreset;
   visibleWidgets: VisibleWidgets;
   homeScreenDevices: string[];
   showDeviceMarkers: boolean;
   hiddenMarkerIds: string[];
+  markerSize: MarkerSize;
   customStartPos?: [number, number, number];
   customStartTarget?: [number, number, number];
 }

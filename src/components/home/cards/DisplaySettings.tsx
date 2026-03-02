@@ -1,8 +1,10 @@
 import { useState, useCallback } from 'react';
-import { Monitor, Maximize, Minimize, Copy, Info, Shield } from 'lucide-react';
+import { Monitor, Maximize, Minimize, Copy, Info, Shield, Eye } from 'lucide-react';
 import { Button } from '../../ui/button';
 import { Switch } from '../../ui/switch';
 import { toast } from 'sonner';
+import { useAppStore } from '../../../store/useAppStore';
+import type { MarkerSize } from '../../../store/types';
 
 function copyText(text: string) {
   navigator.clipboard.writeText(text).then(() => toast.success('Kopierat!')).catch(() => {});
@@ -11,6 +13,14 @@ function copyText(text: string) {
 export default function DisplaySettings() {
   const [isFullscreen, setIsFullscreen] = useState(!!document.fullscreenElement);
   const [showKioskHelp, setShowKioskHelp] = useState(false);
+  const markerSize = useAppStore((s) => s.homeView.markerSize ?? 'medium');
+  const setMarkerSize = (size: MarkerSize) => useAppStore.setState((s) => ({ homeView: { ...s.homeView, markerSize: size } }));
+
+  const markerSizes: { key: MarkerSize; label: string }[] = [
+    { key: 'small', label: 'S' },
+    { key: 'medium', label: 'M' },
+    { key: 'large', label: 'L' },
+  ];
 
   const toggleFullscreen = useCallback(async () => {
     try {
@@ -81,6 +91,25 @@ export default function DisplaySettings() {
         <p className="text-[10px] text-muted-foreground text-center">
           Tryck <kbd className="bg-secondary px-1 rounded text-foreground">ESC</kbd> för att lämna fullscreen
         </p>
+      </div>
+
+      {/* Marker size */}
+      <div className="glass-panel rounded-2xl p-[var(--space-panel)] space-y-3">
+        <div className="flex items-center gap-2">
+          <Eye size={18} className="text-primary" />
+          <h3 className="text-sm font-semibold text-foreground">Enhetsmärken</h3>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-foreground">Storlek</span>
+          <div className="flex gap-1">
+            {markerSizes.map(({ key, label }) => (
+              <Button key={key} size="sm" variant={markerSize === key ? 'default' : 'outline'}
+                className="h-7 w-9 text-xs" onClick={() => setMarkerSize(key)}>
+                {label}
+              </Button>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* OS Kiosk */}

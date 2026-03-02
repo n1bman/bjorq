@@ -234,6 +234,11 @@ function GenericMarker({ position, id, onSelect, onDragStart, selected, color, e
         <sphereGeometry args={[selected ? 0.15 : 0.1, 16, 16]} />
         <meshStandardMaterial color={color} emissive={emissive ?? color} emissiveIntensity={0.6} transparent opacity={0.85} />
       </mesh>
+      {/* Glow ring for visibility */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.08, 0]}>
+        <ringGeometry args={[0.12, 0.18, 24]} />
+        <meshBasicMaterial color={color} transparent opacity={0.3} side={THREE.DoubleSide} />
+      </mesh>
       {selected && <SelectionRing radius={0.2} />}
     </group>
   );
@@ -1171,6 +1176,8 @@ export default function DeviceMarkers3D({ buildMode }: DeviceMarkers3DProps) {
   const floors = useAppStore((s) => s.layout.floors);
   const showDeviceMarkers = useAppStore((s) => s.homeView.showDeviceMarkers ?? true);
   const hiddenMarkerIds = useAppStore((s) => s.homeView.hiddenMarkerIds ?? []);
+  const markerSize = useAppStore((s) => s.homeView.markerSize ?? 'medium');
+  const markerScale = markerSize === 'small' ? 0.7 : markerSize === 'large' ? 1.4 : 1.0;
   const setSelection = useAppStore((s) => s.setSelection);
   const updateDevice = useAppStore((s) => s.updateDevice);
   const toggleDeviceState = useAppStore((s) => s.toggleDeviceState);
@@ -1295,7 +1302,7 @@ export default function DeviceMarkers3D({ buildMode }: DeviceMarkers3DProps) {
         // Vacuum manages its own world-space position internally via useFrame,
         // so we must NOT set position on the outer group (causes double-offset).
         return (
-          <group key={marker.id} position={isVacuum ? [0, 0, 0] : marker.position} rotation={isVacuum ? [0, 0, 0] : rot}>
+          <group key={marker.id} position={isVacuum ? [0, 0, 0] : marker.position} rotation={isVacuum ? [0, 0, 0] : rot} scale={[markerScale, markerScale, markerScale]}>
             <Component
               position={isVacuum ? marker.position : ([0, 0, 0] as [number, number, number])}
               id={marker.id}
