@@ -68,8 +68,11 @@ function CameraController() {
   const customStartTarget = useAppStore((s) => s.homeView.customStartTarget);
   const controlsRef = useRef<any>(null);
   const prevMode = useRef(appMode);
+  const prevStartPos = useRef(customStartPos);
+  const prevStartTarget = useRef(customStartTarget);
   const lerpingTo = useRef<{ pos: THREE.Vector3; target: THREE.Vector3 } | null>(null);
 
+  // Apply camera on mode change
   useEffect(() => {
     if ((appMode === 'dashboard' || appMode === 'home') && prevMode.current !== appMode) {
       const pos = customStartPos
@@ -81,7 +84,25 @@ function CameraController() {
       lerpingTo.current = { pos, target };
     }
     prevMode.current = appMode;
-  }, [appMode, customStartPos, customStartTarget]);
+  }, [appMode]);
+
+  // Apply camera when saved position changes (e.g. user saves new start view)
+  useEffect(() => {
+    if (
+      (appMode === 'dashboard' || appMode === 'home') &&
+      (customStartPos !== prevStartPos.current || customStartTarget !== prevStartTarget.current)
+    ) {
+      const pos = customStartPos
+        ? new THREE.Vector3(...customStartPos)
+        : presetPositions.topdown.clone();
+      const target = customStartTarget
+        ? new THREE.Vector3(...customStartTarget)
+        : presetTargets.topdown.clone();
+      lerpingTo.current = { pos, target };
+    }
+    prevStartPos.current = customStartPos;
+    prevStartTarget.current = customStartTarget;
+  }, [customStartPos, customStartTarget, appMode]);
 
   useEffect(() => {
     if (cameraPreset !== 'free') {

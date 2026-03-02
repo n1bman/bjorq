@@ -131,8 +131,11 @@ npm run build   # Outputs to dist/
 
 Releases are automated via GitHub Actions (`.github/workflows/release.yml`):
 
-1. Push a version tag: `git tag v0.1.8 && git push --tags`
-2. The workflow:
+1. Update `CHANGELOG.md` with all changes under a new version heading
+2. Bump `version` in `package.json` (the UI reads this automatically via `__APP_VERSION__`)
+3. Commit and push
+4. Push a version tag: `git tag v0.2.1 && git push --tags`
+5. The workflow:
    - Checks out code
    - Installs dependencies (`npm install`)
    - Builds the frontend (`npm run build`)
@@ -142,6 +145,8 @@ Releases are automated via GitHub Actions (`.github/workflows/release.yml`):
    - Creates a GitHub Release with the ZIPs and auto-generated release notes
 
 Each ZIP contains: `dist/`, `server/`, `start.bat`, `start.sh`, `install.bat`, `install.sh`, `README.md`, and an empty `data/` folder.
+
+> **Important:** Always bump `package.json` version and update `CHANGELOG.md` before tagging a release. The version shown in the UI is injected at build time from `package.json`.
 
 ### CI
 

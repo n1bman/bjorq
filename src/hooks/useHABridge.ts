@@ -251,9 +251,6 @@ function sendHACommand(entityId: string, state: DeviceState, prevState?: DeviceS
         const serviceData: Record<string, unknown> = { entity_id: entityId };
         if (typeof data.speed === 'number') serviceData.percentage = data.speed;
         callService('fan', 'turn_on', serviceData);
-        if (typeof data.speed === 'number') {
-          callService('fan', 'set_percentage', { entity_id: entityId, percentage: data.speed });
-        }
       }
       break;
     }
