@@ -12,21 +12,40 @@ export default function ImportTools() {
   const clearImportedModel = useAppStore((s) => s.clearImportedModel);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const url = URL.createObjectURL(file);
-    const reader = new FileReader();
-    reader.onload = () => {
-      const base64 = (reader.result as string).split(',')[1];
-      setImportedModel({ url, fileData: base64 });
-      setHomeGeometrySource('imported');
-    };
-    reader.onerror = () => {
-      setImportedModel({ url });
-      setHomeGeometrySource('imported');
-    };
-    reader.readAsDataURL(file);
+
+    // In hosted mode, upload to server for persistent storage
+    const { isHostedSync } = await import('../../../lib/apiClient');
+    if (isHostedSync()) {
+      try {
+        const { uploadAsset } = await import('../../../lib/apiClient');
+        const result = await uploadAsset('home', 'building', file.name.replace(/\.\w+$/, ''), 'balanced', file);
+        const serverUrl = `/projects/home/assets/building/${result.assetId}/files/balanced.glb`;
+        setImportedModel({ url: serverUrl, fileData: undefined });
+        setHomeGeometrySource('imported');
+      } catch (err) {
+        console.error('[Import] Server upload failed, falling back to blob:', err);
+        const url = URL.createObjectURL(file);
+        setImportedModel({ url });
+        setHomeGeometrySource('imported');
+      }
+    } else {
+      // DEV mode: blob URL + base64 for localStorage
+      const url = URL.createObjectURL(file);
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64 = (reader.result as string).split(',')[1];
+        setImportedModel({ url, fileData: base64 });
+        setHomeGeometrySource('imported');
+      };
+      reader.onerror = () => {
+        setImportedModel({ url });
+        setHomeGeometrySource('imported');
+      };
+      reader.readAsDataURL(file);
+    }
     e.target.value = '';
   };
 
