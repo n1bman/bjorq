@@ -96,28 +96,28 @@ export default function HomeView() {
         </div>
       )}
 
-      {/* Device visibility picker - bottom left to avoid camera FAB overlap */}
+      {/* Device visibility picker - top right */}
       {markers.length > 0 && (
-        <div className="fixed bottom-36 left-4 z-50 pointer-events-auto">
+        <div className="fixed top-5 right-5 z-50 pointer-events-auto">
           <button
             onClick={() => setPickerOpen(!pickerOpen)}
             className={cn(
-              'glass-panel rounded-full w-12 h-12 flex items-center justify-center transition-colors relative',
+              'glass-panel rounded-full w-10 h-10 flex items-center justify-center transition-colors relative',
               allHidden ? 'text-muted-foreground' : 'text-foreground'
             )}
             title={pickerOpen ? 'Stäng' : 'Visa/dölj enheter'}
           >
-            {allHidden ? <EyeOff size={18} /> : <Eye size={18} />}
+            {allHidden ? <EyeOff size={16} /> : <Eye size={16} />}
             {hiddenCount > 0 && !allHidden && (
-              <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center">
+              <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
                 {hiddenCount}
               </span>
             )}
           </button>
 
-          {/* Picker popup */}
+          {/* Picker popup - opens downward */}
           {pickerOpen && (
-            <div className="absolute bottom-14 left-0 glass-panel rounded-2xl p-3 w-72 max-h-80 overflow-y-auto space-y-2 shadow-xl">
+            <div className="absolute top-12 right-0 glass-panel rounded-2xl p-3 w-72 max-h-80 overflow-y-auto space-y-2 shadow-xl">
               <div className="flex items-center justify-between mb-1">
                 <span className="text-xs font-semibold text-foreground">Enhetsmarkörer</span>
                 <button onClick={() => setPickerOpen(false)} className="text-muted-foreground hover:text-foreground">
