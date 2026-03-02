@@ -4,7 +4,7 @@ import path from 'path';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '../..');
 
-export const dataDir = () => path.join(ROOT, 'data');
+export const dataDir = () => process.env.BJORQ_DATA_DIR || path.join(ROOT, 'data');
 export const configPath = () => path.join(dataDir(), 'config.json');
 export const profilesPath = () => path.join(dataDir(), 'profiles.json');
 export const projectsDir = () => path.join(dataDir(), 'projects');

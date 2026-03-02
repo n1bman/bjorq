@@ -1,0 +1,53 @@
+name: HA Add-on Build
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [amd64, aarch64, armv7]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Map arch to Docker platform
+        id: platform
+        run: |
+          case "${{ matrix.arch }}" in
+            amd64)    echo "platform=linux/amd64" >> $GITHUB_OUTPUT ;;
+            aarch64)  echo "platform=linux/arm64" >> $GITHUB_OUTPUT ;;
+            armv7)    echo "platform=linux/arm/v7" >> $GITHUB_OUTPUT ;;
+          esac
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: bjorq_dashboard/Dockerfile
+          platforms: ${{ steps.platform.outputs.platform }}
+          push: true
+          tags: ghcr.io/n1bman/bjorq-dashboard-${{ matrix.arch }}:${{ github.ref_name }},ghcr.io/n1bman/bjorq-dashboard-${{ matrix.arch }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
