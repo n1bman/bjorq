@@ -6,60 +6,62 @@ import { useMemo, useState } from 'react';
 import { domainToKind } from '../../../lib/haDomainMapping';
 import VacuumMappingTools from './VacuumMappingTools';
 
-const deviceTools: { key: BuildTool; kind: DeviceKind; label: string; icon: typeof Lightbulb; color: string }[] = [
-  { key: 'place-light', kind: 'light', label: 'Ljus', icon: Lightbulb, color: 'text-yellow-400' },
-  { key: 'place-switch', kind: 'switch', label: 'Knapp', icon: ToggleLeft, color: 'text-blue-400' },
-  { key: 'place-sensor', kind: 'sensor', label: 'Sensor', icon: Activity, color: 'text-green-400' },
-  { key: 'place-climate', kind: 'climate', label: 'Klimat', icon: Thermometer, color: 'text-cyan-400' },
-  { key: 'place-camera', kind: 'camera', label: 'Kamera', icon: Camera, color: 'text-red-400' },
-  { key: 'place-vacuum', kind: 'vacuum', label: 'Dammsugare', icon: Bot, color: 'text-purple-400' },
-  { key: 'place-fridge', kind: 'fridge', label: 'Kylskåp', icon: Refrigerator, color: 'text-slate-300' },
-  { key: 'place-oven', kind: 'oven', label: 'Ugn', icon: CookingPot, color: 'text-orange-400' },
-  { key: 'place-washer', kind: 'washer', label: 'Tvättmaskin', icon: WashingMachine, color: 'text-sky-300' },
-  { key: 'place-garage-door', kind: 'garage-door', label: 'Garageport', icon: DoorOpen, color: 'text-amber-500' },
-  { key: 'place-door-lock', kind: 'door-lock', label: 'Dörrlås', icon: Lock, color: 'text-amber-400' },
-  { key: 'place-power-outlet', kind: 'power-outlet', label: 'Eluttag', icon: Plug, color: 'text-yellow-300' },
-  { key: 'place-media-screen', kind: 'media_screen', label: 'Skärm', icon: Monitor, color: 'text-indigo-400' },
-  { key: 'place-fan', kind: 'fan', label: 'Fläkt', icon: Fan, color: 'text-cyan-400' },
-  { key: 'place-cover', kind: 'cover', label: 'Persienn/Port', icon: PanelTop, color: 'text-stone-400' },
-  { key: 'place-scene', kind: 'scene', label: 'Scen', icon: Clapperboard, color: 'text-violet-400' },
-  { key: 'place-alarm', kind: 'alarm', label: 'Larm', icon: ShieldAlert, color: 'text-red-500' },
-  { key: 'place-water-heater', kind: 'water-heater', label: 'Varmvatten', icon: Flame, color: 'text-orange-500' },
-  { key: 'place-humidifier', kind: 'humidifier', label: 'Luftfuktare', icon: Droplets, color: 'text-teal-400' },
-  { key: 'place-siren', kind: 'siren', label: 'Siren', icon: Bell, color: 'text-red-400' },
-  { key: 'place-valve', kind: 'valve', label: 'Ventil', icon: Grip, color: 'text-blue-500' },
-  { key: 'place-remote', kind: 'remote', label: 'Fjärr', icon: Wifi, color: 'text-gray-400' },
-  { key: 'place-lawn-mower', kind: 'lawn-mower', label: 'Gräsklippare', icon: Trees, color: 'text-green-500' },
-  { key: 'place-speaker', kind: 'speaker', label: 'Högtalare', icon: Speaker, color: 'text-emerald-400' },
-  { key: 'place-soundbar', kind: 'soundbar', label: 'Soundbar', icon: Music, color: 'text-pink-400' },
+interface DeviceToolDef {
+  key: BuildTool;
+  kind: DeviceKind;
+  label: string;
+  icon: typeof Lightbulb;
+  color: string;
+  category: string;
+}
+
+const deviceTools: DeviceToolDef[] = [
+  // Ljus
+  { key: 'place-light', kind: 'light', label: 'Ljus', icon: Lightbulb, color: 'text-yellow-400', category: 'Ljus' },
+  { key: 'place-switch', kind: 'switch', label: 'Knapp', icon: ToggleLeft, color: 'text-blue-400', category: 'Ljus' },
+  { key: 'place-power-outlet', kind: 'power-outlet', label: 'Eluttag', icon: Plug, color: 'text-yellow-300', category: 'Ljus' },
+  // Klimat
+  { key: 'place-climate', kind: 'climate', label: 'Klimat', icon: Thermometer, color: 'text-cyan-400', category: 'Klimat' },
+  { key: 'place-fan', kind: 'fan', label: 'Fläkt', icon: Fan, color: 'text-cyan-400', category: 'Klimat' },
+  { key: 'place-water-heater', kind: 'water-heater', label: 'Varmvatten', icon: Flame, color: 'text-orange-500', category: 'Klimat' },
+  { key: 'place-humidifier', kind: 'humidifier', label: 'Luftfuktare', icon: Droplets, color: 'text-teal-400', category: 'Klimat' },
+  // Sensorer
+  { key: 'place-sensor', kind: 'sensor', label: 'Sensor', icon: Activity, color: 'text-green-400', category: 'Sensorer' },
+  // Kameror
+  { key: 'place-camera', kind: 'camera', label: 'Kamera', icon: Camera, color: 'text-red-400', category: 'Kameror' },
+  // Media
+  { key: 'place-media-screen', kind: 'media_screen', label: 'Skärm', icon: Monitor, color: 'text-indigo-400', category: 'Media' },
+  { key: 'place-speaker', kind: 'speaker', label: 'Högtalare', icon: Speaker, color: 'text-emerald-400', category: 'Media' },
+  { key: 'place-soundbar', kind: 'soundbar', label: 'Soundbar', icon: Music, color: 'text-pink-400', category: 'Media' },
+  { key: 'place-remote', kind: 'remote', label: 'Fjärr', icon: Wifi, color: 'text-gray-400', category: 'Media' },
+  // Säkerhet
+  { key: 'place-door-lock', kind: 'door-lock', label: 'Dörrlås', icon: Lock, color: 'text-amber-400', category: 'Säkerhet' },
+  { key: 'place-alarm', kind: 'alarm', label: 'Larm', icon: ShieldAlert, color: 'text-red-500', category: 'Säkerhet' },
+  { key: 'place-siren', kind: 'siren', label: 'Siren', icon: Bell, color: 'text-red-400', category: 'Säkerhet' },
+  // Hem
+  { key: 'place-cover', kind: 'cover', label: 'Persienn/Port', icon: PanelTop, color: 'text-stone-400', category: 'Hem' },
+  { key: 'place-garage-door', kind: 'garage-door', label: 'Garageport', icon: DoorOpen, color: 'text-amber-500', category: 'Hem' },
+  { key: 'place-valve', kind: 'valve', label: 'Ventil', icon: Grip, color: 'text-blue-500', category: 'Hem' },
+  { key: 'place-scene', kind: 'scene', label: 'Scen', icon: Clapperboard, color: 'text-violet-400', category: 'Hem' },
+  // Robot
+  { key: 'place-vacuum', kind: 'vacuum', label: 'Dammsugare', icon: Bot, color: 'text-purple-400', category: 'Robot' },
+  { key: 'place-lawn-mower', kind: 'lawn-mower', label: 'Gräsklippare', icon: Trees, color: 'text-green-500', category: 'Robot' },
+  // Vitvaror
+  { key: 'place-fridge', kind: 'fridge', label: 'Kylskåp', icon: Refrigerator, color: 'text-slate-300', category: 'Vitvaror' },
+  { key: 'place-oven', kind: 'oven', label: 'Ugn', icon: CookingPot, color: 'text-orange-400', category: 'Vitvaror' },
+  { key: 'place-washer', kind: 'washer', label: 'Tvättmaskin', icon: WashingMachine, color: 'text-sky-300', category: 'Vitvaror' },
 ];
 
+const categoryOrder = ['Ljus', 'Klimat', 'Sensorer', 'Kameror', 'Media', 'Säkerhet', 'Hem', 'Robot', 'Vitvaror'];
+
 const kindLabels: Record<DeviceKind, string> = {
-  light: '💡 Ljus',
-  switch: '🔌 Knapp',
-  sensor: '🌡️ Sensor',
-  climate: '❄️ Klimat',
-  vacuum: '🤖 Dammsugare',
-  camera: '📷 Kamera',
-  fridge: '🧊 Kylskåp',
-  oven: '🍳 Ugn',
-  washer: '🫧 Tvättmaskin',
-  'garage-door': '🚗 Garageport',
-  'door-lock': '🔒 Dörrlås',
-  'power-outlet': '🔌 Eluttag',
-  media_screen: '📺 Skärm',
-  fan: '🌀 Fläkt',
-  cover: '🪟 Persienn',
-  scene: '🎬 Scen',
-  alarm: '🚨 Larm',
-  'water-heater': '🔥 Varmvatten',
-  humidifier: '💧 Luftfuktare',
-  siren: '🔔 Siren',
-  valve: '🔧 Ventil',
-  remote: '📡 Fjärr',
-  'lawn-mower': '🌿 Gräsklippare',
-  speaker: '🔊 Högtalare',
-  soundbar: '🎵 Soundbar',
+  light: '💡 Ljus', switch: '🔌 Knapp', sensor: '🌡️ Sensor', climate: '❄️ Klimat',
+  vacuum: '🤖 Dammsugare', camera: '📷 Kamera', fridge: '🧊 Kylskåp', oven: '🍳 Ugn',
+  washer: '🫧 Tvättmaskin', 'garage-door': '🚗 Garageport', 'door-lock': '🔒 Dörrlås',
+  'power-outlet': '🔌 Eluttag', media_screen: '📺 Skärm', fan: '🌀 Fläkt',
+  cover: '🪟 Persienn', scene: '🎬 Scen', alarm: '🚨 Larm', 'water-heater': '🔥 Varmvatten',
+  humidifier: '💧 Luftfuktare', siren: '🔔 Siren', valve: '🔧 Ventil',
+  remote: '📡 Fjärr', 'lawn-mower': '🌿 Gräsklippare', speaker: '🔊 Högtalare', soundbar: '🎵 Soundbar',
 };
 
 export default function DevicePlacementTools() {
@@ -70,8 +72,27 @@ export default function DevicePlacementTools() {
   const removeDevice = useAppStore((s) => s.removeDevice);
   const setSelection = useAppStore((s) => s.setSelection);
   const selectedId = useAppStore((s) => s.build.selection.type === 'device' ? s.build.selection.id : null);
+  const [openCategories, setOpenCategories] = useState<Set<string>>(new Set(['Ljus']));
 
   const floorMarkers = markers.filter((m) => m.floorId === activeFloorId);
+
+  const grouped = useMemo(() => {
+    const map = new Map<string, DeviceToolDef[]>();
+    for (const cat of categoryOrder) {
+      const tools = deviceTools.filter((t) => t.category === cat);
+      if (tools.length > 0) map.set(cat, tools);
+    }
+    return map;
+  }, []);
+
+  const toggleCategory = (cat: string) => {
+    setOpenCategories((prev) => {
+      const next = new Set(prev);
+      if (next.has(cat)) next.delete(cat);
+      else next.add(cat);
+      return next;
+    });
+  };
 
   return (
     <div className="flex flex-col gap-2">
@@ -82,23 +103,47 @@ export default function DevicePlacementTools() {
       </div>
 
       <div className="flex flex-col gap-0.5">
-        {deviceTools.map(({ key, label, icon: Icon, color }) => (
-          <button
-            key={key}
-            onClick={() => setBuildTool(key)}
-            title={label}
-            className={cn(
-              'flex items-center gap-2 px-3 py-2.5 mx-1 rounded-lg text-xs font-medium transition-all min-h-[44px]',
-              'lg:justify-start justify-center',
-              activeTool === key
-                ? 'bg-primary/20 text-primary'
-                : 'text-muted-foreground hover:text-foreground hover:bg-secondary/30'
-            )}
-          >
-            <Icon size={18} className={activeTool === key ? color : ''} />
-            <span className="hidden lg:inline">{label}</span>
-          </button>
-        ))}
+        {Array.from(grouped.entries()).map(([category, tools]) => {
+          const isOpen = openCategories.has(category);
+          const hasActive = tools.some((t) => t.key === activeTool);
+          return (
+            <div key={category}>
+              <button
+                onClick={() => toggleCategory(category)}
+                className={cn(
+                  'flex items-center gap-1.5 w-full px-3 py-2 text-[10px] font-semibold uppercase tracking-wider transition-colors',
+                  hasActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
+                )}
+              >
+                {isOpen ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
+                <span className="hidden lg:inline">{category}</span>
+                <span className="lg:hidden">{category.charAt(0)}</span>
+                <span className="ml-auto text-[9px] text-muted-foreground/60">{tools.length}</span>
+              </button>
+              {isOpen && (
+                <div className="flex flex-col gap-0.5 mb-1">
+                  {tools.map(({ key, label, icon: Icon, color }) => (
+                    <button
+                      key={key}
+                      onClick={() => setBuildTool(key)}
+                      title={label}
+                      className={cn(
+                        'flex items-center gap-2 px-3 py-2.5 mx-1 rounded-lg text-xs font-medium transition-all min-h-[44px]',
+                        'lg:justify-start justify-center',
+                        activeTool === key
+                          ? 'bg-primary/20 text-primary'
+                          : 'text-muted-foreground hover:text-foreground hover:bg-secondary/30'
+                      )}
+                    >
+                      <Icon size={18} className={activeTool === key ? color : ''} />
+                      <span className="hidden lg:inline">{label}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       {floorMarkers.length > 0 && (
@@ -152,7 +197,6 @@ function UnlinkedHAEntities() {
     [entities, linkedEntityIds]
   );
 
-  // Group by domain
   const grouped = useMemo(() => {
     const map = new Map<string, typeof unlinked>();
     for (const e of unlinked) {
@@ -179,28 +223,15 @@ function UnlinkedHAEntities() {
       ha: { entityId: entity.entityId },
     };
     addDevice(marker);
-    // Switch to the matching placement tool so user can reposition
     const toolMap: Partial<Record<DeviceKind, BuildTool>> = {
-      light: 'place-light',
-      switch: 'place-switch',
-      sensor: 'place-sensor',
-      climate: 'place-climate',
-      camera: 'place-camera',
-      vacuum: 'place-vacuum',
-      'door-lock': 'place-door-lock',
-      media_screen: 'place-media-screen',
-      fan: 'place-fan',
-      cover: 'place-cover',
-      scene: 'place-scene',
-      alarm: 'place-alarm',
-      'water-heater': 'place-water-heater',
-      humidifier: 'place-humidifier',
-      siren: 'place-siren',
-      valve: 'place-valve',
-      remote: 'place-remote',
-      'lawn-mower': 'place-lawn-mower',
-      speaker: 'place-speaker',
-      soundbar: 'place-soundbar',
+      light: 'place-light', switch: 'place-switch', sensor: 'place-sensor',
+      climate: 'place-climate', camera: 'place-camera', vacuum: 'place-vacuum',
+      'door-lock': 'place-door-lock', media_screen: 'place-media-screen',
+      fan: 'place-fan', cover: 'place-cover', scene: 'place-scene',
+      alarm: 'place-alarm', 'water-heater': 'place-water-heater',
+      humidifier: 'place-humidifier', siren: 'place-siren', valve: 'place-valve',
+      remote: 'place-remote', 'lawn-mower': 'place-lawn-mower',
+      speaker: 'place-speaker', soundbar: 'place-soundbar',
     };
     if (toolMap[kind]) setBuildTool('select');
   };

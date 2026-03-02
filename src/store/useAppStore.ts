@@ -122,6 +122,7 @@ const storeCreator = (set: any, get: any): AppState => ({
     homeScreenDevices: [],
     showDeviceMarkers: true,
     hiddenMarkerIds: [],
+    markerSize: 'medium' as const,
   },
   setCameraPreset: (preset) => { set((s: any) => ({ homeView: { ...s.homeView, cameraPreset: preset } })); syncProfileToServer(); },
   toggleHomeWidget: (widget) => { set((s: any) => ({

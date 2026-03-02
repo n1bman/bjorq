@@ -13,8 +13,10 @@ const modes: { key: AppMode; label: string; icon: typeof Home }[] = [
 export default function HomeNav() {
   const appMode = useAppStore((s) => s.appMode);
   const setAppMode = useAppStore((s) => s.setAppMode);
+  const [expanded, setExpanded] = useState(false);
   const [showAdminTips, setShowAdminTips] = useState(false);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const collapseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handlePointerDown = useCallback(() => {
     longPressTimer.current = setTimeout(() => {
@@ -28,6 +30,21 @@ export default function HomeNav() {
       longPressTimer.current = null;
     }
   }, []);
+
+  const handleToggle = useCallback(() => {
+    if (collapseTimer.current) clearTimeout(collapseTimer.current);
+    setExpanded((v) => !v);
+  }, []);
+
+  const handleSelect = useCallback((key: AppMode) => {
+    setAppMode(key);
+    // Auto-collapse after selection with slight delay
+    collapseTimer.current = setTimeout(() => setExpanded(false), 300);
+  }, [setAppMode]);
+
+  // Current mode icon
+  const currentMode = modes.find((m) => m.key === appMode) || modes[0];
+  const CurrentIcon = currentMode.icon;
 
   return (
     <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
@@ -45,30 +62,44 @@ export default function HomeNav() {
           </button>
         </div>
       )}
-      <nav
-        className="glass-panel rounded-2xl px-3 py-2 flex items-center gap-1"
-        onPointerDown={handlePointerDown}
-        onPointerUp={handlePointerUp}
-        onPointerLeave={handlePointerUp}
-      >
-        {modes.map(({ key, label, icon: Icon }, i) => (
-          <div key={key} className="flex items-center">
-            {i > 0 && <div className="w-px h-6 bg-border mx-0.5" />}
+
+      {/* Expanded mode buttons — radial-ish spring expand */}
+      {expanded && (
+        <div
+          className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 flex gap-2 animate-in fade-in zoom-in-90 duration-200"
+          onPointerDown={handlePointerDown}
+          onPointerUp={handlePointerUp}
+          onPointerLeave={handlePointerUp}
+        >
+          {modes.map(({ key, label, icon: Icon }) => (
             <button
-              onClick={() => setAppMode(key)}
+              key={key}
+              onClick={() => handleSelect(key)}
               className={cn(
-                'flex items-center gap-2 px-4 py-2.5 rounded-xl text-[13px] font-medium transition-all',
+                'flex flex-col items-center gap-1 px-4 py-3 rounded-2xl glass-panel text-[11px] font-medium transition-all min-w-[72px]',
                 appMode === key
-                  ? 'text-primary bg-primary/10 amber-glow'
-                  : 'text-muted-foreground hover:text-foreground'
+                  ? 'text-primary bg-primary/15 amber-glow'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-secondary/30'
               )}
             >
-              <Icon size={18} />
+              <Icon size={22} />
               <span>{label}</span>
             </button>
-          </div>
-        ))}
-      </nav>
+          ))}
+        </div>
+      )}
+
+      {/* Center FAB button */}
+      <button
+        onClick={handleToggle}
+        className={cn(
+          'w-14 h-14 rounded-full glass-panel flex items-center justify-center transition-all',
+          expanded ? 'text-primary amber-glow rotate-45' : 'text-muted-foreground hover:text-foreground'
+        )}
+      >
+        <CurrentIcon size={22} />
+      </button>
+
       <div className="h-[env(safe-area-inset-bottom)]" />
     </div>
   );
