@@ -34,7 +34,8 @@ Tap the category bar or swipe to browse:
 - **Automatiseringar** — Home Assistant automations, toggle on/off
 - **Scener** — Trigger HA scenes directly
 - **Övervakning** — Camera feeds (if configured)
-- **Robot** — Vacuum robot control (Roborock, etc.) with room-specific cleaning
+- **Robot** — Vacuum robot control (Roborock, etc.) with room-specific cleaning and debug overlay
+- **Klimat** — Climate rules and comfort engine with automatic device control based on sensor thresholds
 - **Aktivitet** — Recent events and state changes
 - **Inställningar** — All settings (see below)
 

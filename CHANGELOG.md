@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-03-02
+
+### Added
+- **Climate tab** with dedicated comfort engine — create rules that automatically control devices based on sensor thresholds (temperature, humidity, CO₂)
+- **Comfort Engine** (`useComfortEngine`) — client-side rule evaluator with hysteresis, time-of-day schedules, and 30-minute override
+- **Performance HUD** — floating overlay showing real-time FPS, quality level, and CPU core count
+- **Hardware auto-detection** — automatically enables tablet mode and low quality on devices with ≤4 cores or ≤4 GB RAM
+- **Max lights limiter** — cap the number of active pointLights in the 3D scene (0–16) for low-end GPUs
+- **Vacuum debug overlay** — real-time telemetry panel showing 3D position, target waypoint, active zone, and animation FPS for lawnmower/vacuum robots
+- **Vacuum debug telemetry** in `useFrame` loop — writes live position data to store at 2 Hz
+
+### Changed
+- DPR floor lowered to 0.75 in tablet mode (from 1.0) for better RPi performance
+- Antialiasing auto-disabled on weak hardware (≤4 cores)
+- Performance settings panel expanded with max lights slider and HUD toggle
+
 ## [0.2.8] - 2026-03-02
 
 ### Fixed
