@@ -4,8 +4,9 @@ import type { DeviceKind, DeviceState, DeviceMarker } from '../../../store/types
 import { Switch } from '../../ui/switch';
 import { Slider } from '../../ui/slider';
 import { cn } from '../../../lib/utils';
-import { ChevronDown, Wifi, Power } from 'lucide-react';
+import { ChevronDown, Wifi, Link2, Unlink } from 'lucide-react';
 import DeviceControlCard from './DeviceControlCard';
+import HAEntityPicker from '../../build/devices/HAEntityPicker';
 
 const kindInfo: Record<DeviceKind, { emoji: string; label: string; category: string }> = {
   light: { emoji: '💡', label: 'Ljus', category: 'Ljus' },
@@ -69,7 +70,9 @@ export default function DevicesSection({ filter, groupBy = 'room' }: DevicesSect
   const floors = useAppStore((s) => s.layout.floors);
   const deviceStates = useAppStore((s) => s.devices.deviceStates);
   const updateDeviceState = useAppStore((s) => s.updateDeviceState);
+  const updateDevice = useAppStore((s) => s.updateDevice);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [mappingId, setMappingId] = useState<string | null>(null);
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
 
   const filtered = filter ? markers.filter((m) => m.kind === filter) : markers;
@@ -219,8 +222,53 @@ export default function DevicesSection({ filter, groupBy = 'room' }: DevicesSect
                       </div>
 
                       {expanded && (
-                        <div className="px-3 pb-3 border-t border-border/30">
+                        <div className="px-3 pb-3 border-t border-border/30 space-y-2">
                           <DeviceControlCard marker={d} />
+                          
+                          {/* C1: Edit HA entity mapping */}
+                          <div className="border-t border-border/30 pt-2">
+                            {mappingId === d.id ? (
+                              <div className="space-y-1.5">
+                                <HAEntityPicker
+                                  deviceId={d.id}
+                                  kind={d.kind}
+                                  currentEntityId={d.ha?.entityId}
+                                  onSelect={(entityId) => {
+                                    updateDevice(d.id, { ha: { entityId } });
+                                    setMappingId(null);
+                                  }}
+                                  onClear={() => {
+                                    updateDevice(d.id, { ha: undefined } as any);
+                                    setMappingId(null);
+                                  }}
+                                />
+                                <button
+                                  className="text-[9px] text-muted-foreground hover:text-foreground transition-colors"
+                                  onClick={() => setMappingId(null)}
+                                >
+                                  Stäng
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                className="flex items-center gap-1.5 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+                                onClick={() => setMappingId(d.id)}
+                              >
+                                {d.ha?.entityId ? (
+                                  <>
+                                    <Link2 size={10} className="text-primary/60" />
+                                    <span className="truncate max-w-[150px]">{d.ha.entityId}</span>
+                                    <span className="text-muted-foreground/50">· Ändra</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Unlink size={10} />
+                                    Koppla HA-entitet
+                                  </>
+                                )}
+                              </button>
+                            )}
+                          </div>
                         </div>
                       )}
                     </div>
