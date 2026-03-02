@@ -3,6 +3,7 @@ import { useAppStore } from '../store/useAppStore';
 import type { HAEntity } from '../store/types';
 import { isSuppressed } from './useHABridge';
 import { isHostedSync, fetchHAStates, callHAService } from '../lib/apiClient';
+import { createThrottledCaller } from '../lib/serviceThrottle';
 
 // ── Module-level singleton state ──────────────────────────────────
 let msgId = 10;
@@ -78,10 +79,10 @@ function connect(url: string, token: string) {
         case 'auth_ok':
           console.log('[HA] Authenticated');
           s.setHAStatus('connected');
-          // Set global caller immediately
+          // Set global caller with throttle wrapper
           haServiceCaller.current = isHostedSync()
-            ? (domain, service, data) => callHAService(domain, service, data).catch(console.warn)
-            : callService;
+            ? createThrottledCaller((domain, service, data) => callHAService(domain, service, data).catch(console.warn))
+            : createThrottledCaller(callService);
           socket.send(JSON.stringify({ type: 'get_states', id: nextId() }));
           socket.send(JSON.stringify({ type: 'subscribe_events', event_type: 'state_changed', id: nextId() }));
           // Request Roborock room mapping (will be handled in result handler)

@@ -10,6 +10,7 @@ import { useHABridge, useVacuumRoomSync } from '../hooks/useHABridge';
 import { useIdleTimer } from '../components/standby/useIdleTimer';
 import { callHAService } from '../lib/apiClient';
 import { haServiceCaller } from '../hooks/useHomeAssistant';
+import { createThrottledCaller } from '../lib/serviceThrottle';
 
 /** Inner component — only mounts after initHostedMode resolves so hooks see correct mode */
 const IndexInner = () => {
@@ -40,8 +41,10 @@ const Index = () => {
   useEffect(() => {
     initHostedMode().then((hosted) => {
       if (hosted) {
-        haServiceCaller.current = (domain, service, data) =>
+        // Wrap hosted caller with throttle + circuit breaker
+        const rawCaller = (domain: string, service: string, data: Record<string, unknown>) =>
           callHAService(domain, service, data).catch(console.warn);
+        haServiceCaller.current = createThrottledCaller(rawCaller);
       }
     }).finally(() => setInitDone(true));
   }, []);
