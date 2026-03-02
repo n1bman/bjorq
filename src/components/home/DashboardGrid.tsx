@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Home, Cloud, Cpu, Zap, Bell, Video, Settings, Pencil, X, CalendarDays, Bot, Moon, Save, Workflow, Palette, LayoutGrid } from 'lucide-react';
+import { Home, Cloud, Cpu, Zap, Bell, Video, Settings, Pencil, X, CalendarDays, Bot, Moon, Save, Workflow, Palette, LayoutGrid, Thermometer } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Button } from '../ui/button';
 import { useAppStore } from '../../store/useAppStore';
@@ -31,10 +31,11 @@ import AutomationsPanel from './cards/AutomationsPanel';
 import ScenesPanel from './cards/ScenesPanel';
 import ScenesWidget from './cards/ScenesWidget';
 import AutomationsWidget from './cards/AutomationsWidget';
+import ClimateTab from './cards/ClimateTab';
 import type { DeviceKind, DeviceMarker, StandbyCameraView } from '../../store/types';
 import { cameraRef } from '../../lib/cameraRef';
 
-type DashCategory = 'home' | 'weather' | 'calendar' | 'devices' | 'energy' | 'automations' | 'scenes' | 'surveillance' | 'robot' | 'activity' | 'widgets' | 'settings';
+type DashCategory = 'home' | 'weather' | 'calendar' | 'devices' | 'energy' | 'climate' | 'automations' | 'scenes' | 'surveillance' | 'robot' | 'activity' | 'widgets' | 'settings';
 
 const categories: { key: DashCategory; label: string; icon: typeof Home }[] = [
   { key: 'home', label: 'Hem', icon: Home },
@@ -42,6 +43,7 @@ const categories: { key: DashCategory; label: string; icon: typeof Home }[] = [
   { key: 'calendar', label: 'Kalender', icon: CalendarDays },
   { key: 'devices', label: 'Enheter', icon: Cpu },
   { key: 'energy', label: 'Energi', icon: Zap },
+  { key: 'climate', label: 'Klimat', icon: Thermometer },
   { key: 'automations', label: 'Automation', icon: Workflow },
   { key: 'scenes', label: 'Scener', icon: Palette },
   { key: 'surveillance', label: 'Övervakning', icon: Video },
@@ -475,6 +477,7 @@ const categoryContent: Record<DashCategory, React.FC> = {
   calendar: CalendarCategory,
   devices: DevicesCategory,
   energy: EnergyCategory,
+  climate: ClimateTab,
   automations: AutomationsPanel,
   scenes: ScenesPanel,
   surveillance: SurveillancePanel,

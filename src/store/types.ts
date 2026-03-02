@@ -660,6 +660,37 @@ export interface Automation {
   lastTriggered?: string;
 }
 
+// ─── Comfort Rules ───
+export type ComfortCondition = 'above' | 'below';
+export type ComfortSchedule = 'always' | 'day' | 'night';
+
+export interface ComfortRule {
+  id: string;
+  enabled: boolean;
+  name: string;
+  sensorEntityId: string;    // temperature/humidity source entity
+  condition: ComfortCondition;
+  threshold: number;         // e.g. 24°C
+  hysteresis: number;        // default 0.5
+  targetDeviceId: string;    // fan/climate device marker id
+  targetAction: string;      // e.g. 'on', 'off', or percentage like '50'
+  schedule: ComfortSchedule;
+  dayStart: string;          // "07:00"
+  dayEnd: string;            // "22:00"
+  lastTriggered?: string;
+  lastState?: 'active' | 'inactive';
+}
+
+export interface ComfortOverride {
+  active: boolean;
+  until?: string;  // ISO timestamp
+}
+
+export interface ComfortState {
+  rules: ComfortRule[];
+  override: ComfortOverride;
+}
+
 // ─── Scenes ───
 export interface SceneSnapshot {
   deviceId: string;
@@ -723,6 +754,7 @@ export interface AppState {
   calendar: CalendarState;
   automations: Automation[];
   savedScenes: SavedScene[];
+  comfort: ComfortState;
 
   // Performance actions
   setPerformance: (changes: Partial<PerformanceSettings>) => void;
@@ -745,6 +777,13 @@ export interface AppState {
   removeAutomation: (id: string) => void;
   updateAutomation: (id: string, changes: Partial<Automation>) => void;
   toggleAutomation: (id: string) => void;
+
+  // Comfort actions
+  addComfortRule: (rule: ComfortRule) => void;
+  removeComfortRule: (id: string) => void;
+  updateComfortRule: (id: string, changes: Partial<ComfortRule>) => void;
+  toggleComfortRule: (id: string) => void;
+  setComfortOverride: (override: Partial<ComfortOverride>) => void;
 
   // Scene actions
   addScene: (scene: SavedScene) => void;

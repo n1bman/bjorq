@@ -12,6 +12,7 @@ import { useIdleTimer, useVioTimer } from '../components/standby/useIdleTimer';
 import { callHAService } from '../lib/apiClient';
 import { haServiceCaller } from '../hooks/useHomeAssistant';
 import { createThrottledCaller } from '../lib/serviceThrottle';
+import { useComfortEngine } from '../hooks/useComfortEngine';
 
 /** Inner component — only mounts after initHostedMode resolves so hooks see correct mode */
 const IndexInner = () => {
@@ -22,6 +23,7 @@ const IndexInner = () => {
   useVacuumRoomSync();
   useIdleTimer();
   useVioTimer();
+  useComfortEngine();
 
   if (appMode === 'standby') return <StandbyMode />;
   if (appMode === 'home') return <><HomeView /><PerformanceHUD /></>;
