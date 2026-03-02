@@ -24,7 +24,15 @@ Adds screen-space effects like bloom and ambient occlusion. Demanding on mobile 
 
 ### Surfplatteläge (Tablet Mode)
 
-One-click optimization that forces: Low quality, shadows off, postprocessing off. Ideal for wall-mounted tablets and Raspberry Pi kiosks.
+One-click optimization that forces: Low quality, shadows off, postprocessing off, DPR floor at 0.75. Ideal for wall-mounted tablets and Raspberry Pi kiosks. Auto-enabled on devices with ≤4 CPU cores or ≤4 GB RAM.
+
+### Max ljuskällor (Max Lights)
+
+Limits the number of active point lights rendered in the 3D scene (0–16). Lowering this reduces GPU draw calls on weaker hardware.
+
+### Performance HUD
+
+A floating overlay showing real-time FPS, quality level, and CPU core count. Toggle it on in **Inställningar → Prestanda**.
 
 ## Performance Score
 

@@ -99,6 +99,8 @@ The app uses a single Zustand store (`src/store/useAppStore.ts`) with the follow
 - **profile** — User name, theme, accent color
 - **standby** — Idle timeout, camera view
 - **homeView** — Camera preset, visible widgets, home screen devices
+- **comfort** — Climate rules, comfort engine state, override timer
+- **vacuumDebug** — Debug overlay toggle and live telemetry data
 
 ## Import Conventions
 

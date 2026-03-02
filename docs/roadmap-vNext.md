@@ -1,7 +1,7 @@
 # bjorQ Dashboard — Roadmap vNext
 
 > Living document tracking all planned features and improvements.
-> Updated: 2026-03-01
+> Updated: 2026-03-02
 
 ---
 
@@ -26,6 +26,9 @@
 | 5 | Build & Asset Improvements | ✅ Done | Phase 1 |
 | 6 | Monitoring & Activity System | ✅ Done | Phase 2 |
 | 7 | 3D & Lighting Engine Refinement | ✅ Done | Phase 2 |
+| 8 | Vacuum Debug & 3D Telemetry | ✅ Done | Phase 7 |
+| 9 | RPi Performance Optimization | ✅ Done | Phase 7 |
+| 10 | Climate & Comfort Engine | ✅ Done | Phase 4 |
 
 ---
 
@@ -261,3 +264,57 @@ Simplified to 4 clear light types: Tak, Strip, Vägg, Spot.
 - Enhanced `ProfilePanel` with version and location info
 - Regrouped Settings with section headers
 - Created this roadmap document
+
+---
+
+## 🟠 Phase 8 — Vacuum Debug & 3D Telemetry ✅
+
+### 8.1 Vacuum Debug Overlay
+
+- `showDebugOverlay` toggle in `VacuumState`
+- `VacuumDebugInfo` interface: 3D coords, target point, zone, animation state
+- Real-time telemetry written from `useFrame` at 2 Hz (throttled)
+- Debug UI in `RobotPanel` with live/stale indicator and raw telemetry
+
+**Files modified:** `src/store/types.ts`, `src/store/useAppStore.ts`, `src/components/devices/DeviceMarkers3D.tsx`, `src/components/home/cards/RobotPanel.tsx`, `src/components/home/cards/DataBackupCard.tsx`
+
+---
+
+## 🔵 Phase 9 — RPi Performance Optimization ✅
+
+### 9.1 Hardware Auto-Detection
+
+- `autoDetectPerformance()` checks `hardwareConcurrency ≤ 4` or `deviceMemory ≤ 4`
+- Auto-enables tablet mode, low quality, maxLights = 4
+- One-time detection flag `_autoDetectedPerformance`
+
+### 9.2 Performance HUD
+
+- Floating overlay: FPS, quality level, CPU cores
+- DPR floor lowered to 0.75 in tablet mode
+- maxLights cap (0–16) with slider in settings
+- Antialiasing auto-disabled on weak hardware
+
+**Files modified:** `src/store/types.ts`, `src/store/useAppStore.ts`, `src/pages/Index.tsx`, `src/components/home/cards/PerformanceSettings.tsx`, `src/components/Scene3D.tsx`, `src/components/build/BuildScene3D.tsx`
+**New file:** `src/components/home/PerformanceHUD.tsx`
+
+---
+
+## 🟢 Phase 10 — Climate & Comfort Engine ✅
+
+### 10.1 Comfort Engine
+
+- `useComfortEngine` hook: evaluates rules every 30 s against live HA sensor data
+- Supports `above`/`below` conditions with threshold + hysteresis
+- Device actions: on/off/percentage
+- Activity feed logging on rule triggers
+- 30-minute override button pauses all automation
+
+### 10.2 Climate Tab
+
+- Regeleditor: sensor selection, target device, time-of-day schedule
+- Live comfort status from active sensors
+- Category registered in `DashboardGrid`
+
+**Files modified:** `src/store/types.ts`, `src/store/useAppStore.ts`, `src/components/home/DashboardGrid.tsx`, `src/pages/Index.tsx`
+**New files:** `src/hooks/useComfortEngine.ts`, `src/components/home/cards/ClimateTab.tsx`
