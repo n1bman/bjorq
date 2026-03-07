@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Home, Cloud, Cpu, Zap, Bell, Video, Settings, Pencil, X, CalendarDays, Bot, Moon, Save, Workflow, Palette, LayoutGrid, Thermometer } from 'lucide-react';
+import { Home, Cloud, Cpu, Zap, Bell, Video, Settings, Pencil, X, CalendarDays, Bot, Moon, Save, Workflow, Palette, LayoutGrid, Thermometer, Trees } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Button } from '../ui/button';
 import { useAppStore } from '../../store/useAppStore';
@@ -38,7 +38,7 @@ import ClimateTab from './cards/ClimateTab';
 import type { DeviceKind, DeviceMarker, StandbyCameraView } from '../../store/types';
 import { cameraRef } from '../../lib/cameraRef';
 
-type DashCategory = 'home' | 'weather' | 'calendar' | 'devices' | 'energy' | 'climate' | 'automations' | 'scenes' | 'surveillance' | 'robot' | 'activity' | 'widgets' | 'settings';
+type DashCategory = 'home' | 'weather' | 'calendar' | 'devices' | 'energy' | 'climate' | 'automations' | 'scenes' | 'surveillance' | 'robot' | 'activity' | 'widgets' | 'graphics' | 'settings';
 
 const categories: { key: DashCategory; label: string; icon: typeof Home }[] = [
   { key: 'home', label: 'Hem', icon: Home },
@@ -53,6 +53,7 @@ const categories: { key: DashCategory; label: string; icon: typeof Home }[] = [
   { key: 'robot', label: 'Robot', icon: Bot },
   { key: 'activity', label: 'Aktivitet', icon: Bell },
   { key: 'widgets', label: 'Widgets', icon: LayoutGrid },
+  { key: 'graphics', label: 'Grafik & Miljö', icon: Trees },
   { key: 'settings', label: 'Inställningar', icon: Settings },
 ];
 
@@ -444,16 +445,6 @@ function SettingsCategory() {
         </div>
       </section>
 
-      {/* Grafik & Miljö */}
-      <section className="space-y-1">
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1">Grafik & Miljö</h2>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
-          <GraphicsSettings />
-          <SunCalibrationPanel />
-          <WeatherAtmospherePanel />
-          <EnvironmentPanel />
-        </div>
-      </section>
 
       {/* System */}
       <section className="space-y-1">
@@ -484,6 +475,19 @@ function SettingsCategory() {
   );
 }
 
+function GraphicsCategory() {
+  return (
+    <div className="max-w-[1100px] mx-auto space-y-[var(--space-section)]">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+        <GraphicsSettings />
+        <SunCalibrationPanel />
+        <WeatherAtmospherePanel />
+        <EnvironmentPanel />
+      </div>
+    </div>
+  );
+}
+
 const categoryContent: Record<DashCategory, React.FC> = {
   home: HomeCategory,
   weather: WeatherCategory,
@@ -497,6 +501,7 @@ const categoryContent: Record<DashCategory, React.FC> = {
   robot: RobotPanel,
   activity: ActivityFeed,
   widgets: WidgetsCategory,
+  graphics: GraphicsCategory,
   settings: SettingsCategory,
 };
 
