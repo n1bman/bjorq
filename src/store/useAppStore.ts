@@ -897,6 +897,12 @@ const storeCreator = (set: any, get: any): AppState => ({
   setLocation: (lat, lon) =>
     set((s: any) => ({ environment: { ...s.environment, location: { ...s.environment.location, lat, lon } } })),
 
+  setSunCalibration: (changes) => { set((s: any) => ({ environment: { ...s.environment, sunCalibration: { ...s.environment.sunCalibration, ...changes } } })); syncProfileToServer(); },
+
+  setAtmosphere: (changes) => { set((s: any) => ({ environment: { ...s.environment, atmosphere: { ...s.environment.atmosphere, ...changes } } })); syncProfileToServer(); },
+
+  setSkyStyle: (style) => { set((s: any) => ({ environment: { ...s.environment, skyStyle: style } })); syncProfileToServer(); },
+
   // Opening update
   updateOpening: (floorId, wallId, openingId, changes) =>
     set((s: any) => ({
