@@ -1243,6 +1243,57 @@ const storeCreator = (set: any, get: any): AppState => ({
   setVacuumSegmentMap: (map) => set((s: any) => ({
     homeAssistant: { ...s.homeAssistant, vacuumSegmentMap: map },
   })),
+
+  // Reference drawing actions
+  setReferenceDrawing: (floorId, drawing) => {
+    set((s: any) => ({
+      layout: {
+        ...s.layout,
+        floors: s.layout.floors.map((f: any) =>
+          f.id === floorId ? { ...f, referenceDrawing: drawing } : f
+        ),
+      },
+    }));
+    syncProjectToServer();
+  },
+  updateReferenceDrawing: (floorId, changes) => {
+    set((s: any) => ({
+      layout: {
+        ...s.layout,
+        floors: s.layout.floors.map((f: any) =>
+          f.id === floorId && f.referenceDrawing
+            ? { ...f, referenceDrawing: { ...f.referenceDrawing, ...changes } }
+            : f
+        ),
+      },
+    }));
+    syncProjectToServer();
+  },
+
+  // Terrain actions
+  setTerrain: (changes) => {
+    set((s: any) => ({ terrain: { ...s.terrain, ...changes } }));
+    syncProjectToServer();
+  },
+  addTree: (tree) => {
+    set((s: any) => ({ terrain: { ...s.terrain, trees: [...s.terrain.trees, tree] } }));
+    syncProjectToServer();
+  },
+  removeTree: (id) => {
+    set((s: any) => ({ terrain: { ...s.terrain, trees: s.terrain.trees.filter((t: any) => t.id !== id) } }));
+    syncProjectToServer();
+  },
+  updateTree: (id, changes) => {
+    set((s: any) => ({
+      terrain: { ...s.terrain, trees: s.terrain.trees.map((t: any) => t.id === id ? { ...t, ...changes } : t) },
+    }));
+    syncProjectToServer();
+  },
+
+  // Custom material actions
+  addCustomMaterial: () => {
+    // Materials are in-memory presets for now; this is a no-op placeholder
+  },
 });
 
 export const useAppStore = create<AppState>()(
