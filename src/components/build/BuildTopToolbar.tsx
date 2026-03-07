@@ -1,9 +1,10 @@
 import { useAppStore } from '../../store/useAppStore';
-import type { BuildTool, SnapMode } from '../../store/types';
+import type { BuildTool, SnapMode, WallViewMode } from '../../store/types';
 import {
   MousePointer2, Minus, Square, DoorOpen, SquareStack,
   Undo2, Redo2, Grid3X3, Ruler, Trash2, Copy, Paintbrush,
   Eye, Box, Layers, Ghost, XCircle, Sun, CloudRain,
+  ArrowUp, Scissors, ArrowDown, Focus,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Slider } from '../ui/slider';
