@@ -592,17 +592,7 @@ const storeCreator = (set: any, get: any): AppState => ({
       if (!floor) return s;
       const room = floor.rooms.find((r: any) => r.id === roomId);
       if (!room || !room.polygon || room.polygon.length < 3) {
-        // Fallback: just set wallMaterialId on the room
-        return {
-          layout: {
-            ...s.layout,
-            floors: s.layout.floors.map((f: any) =>
-              f.id === floorId
-                ? { ...f, rooms: f.rooms.map((r: any) => r.id === roomId ? { ...r, wallMaterialId: materialId } : r) }
-                : f
-            ),
-          },
-        };
+        return s;
       }
 
       // Determine which side of each wall faces into this room
@@ -634,11 +624,7 @@ const storeCreator = (set: any, get: any): AppState => ({
           ...s.layout,
           floors: s.layout.floors.map((f: any) =>
             f.id === floorId
-              ? {
-                  ...f,
-                  walls: updatedWalls,
-                  rooms: f.rooms.map((r: any) => r.id === roomId ? { ...r, wallMaterialId: materialId } : r),
-                }
+              ? { ...f, walls: updatedWalls }
               : f
           ),
         },

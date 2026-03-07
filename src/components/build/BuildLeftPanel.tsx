@@ -1,5 +1,6 @@
 import { useAppStore } from '../../store/useAppStore';
 import { detectRooms } from '../../lib/roomDetection';
+import RoomManager from './RoomManager';
 import type { BuildTool, BuildTab } from '../../store/types';
 import {
   Minus, Square, DoorOpen, SquareStack, Paintbrush,
@@ -108,6 +109,11 @@ export default function BuildLeftPanel() {
               <RefreshCw size={16} />
             </button>
           )}
+          {/* Room manager */}
+          <div className="w-7 h-px bg-border my-1" />
+          <div className="w-full px-0.5">
+            <RoomManager />
+          </div>
         </>
       )}
     </div>
