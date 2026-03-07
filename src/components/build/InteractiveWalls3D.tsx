@@ -69,16 +69,21 @@ export default function InteractiveWalls3D() {
     return walls.map((wall) => {
       const dx = wall.to[0] - wall.from[0];
       const dz = wall.to[1] - wall.from[1];
-      let length = Math.sqrt(dx * dx + dz * dz);
+      const origLength = Math.sqrt(dx * dx + dz * dz);
       const angle = Math.atan2(dz, dx);
-      let cx = (wall.from[0] + wall.to[0]) / 2;
-      let cz = (wall.from[1] + wall.to[1]) / 2;
+      const origCx = (wall.from[0] + wall.to[0]) / 2;
+      const origCz = (wall.from[1] + wall.to[1]) / 2;
 
       // ── Wall corner mitering ──
       const fromConn = getConnectedAtEndpoint(walls, wall.id, wall.from);
       const toConn = getConnectedAtEndpoint(walls, wall.id, wall.to);
-      const trimFrom = fromConn > 0 ? fromConn / 2 : 0;
-      const trimTo = toConn > 0 ? toConn / 2 : 0;
+      // Use the larger of connected thickness or own thickness for clean corners
+      const trimFrom = fromConn > 0 ? Math.max(fromConn, wall.thickness) / 2 : 0;
+      const trimTo = toConn > 0 ? Math.max(toConn, wall.thickness) / 2 : 0;
+
+      let length = origLength;
+      let cx = origCx;
+      let cz = origCz;
 
       if (trimFrom > 0 || trimTo > 0) {
         const totalTrim = trimFrom + trimTo;
@@ -86,7 +91,7 @@ export default function InteractiveWalls3D() {
           const dir = new THREE.Vector2(dx, dz).normalize();
           const newFrom: [number, number] = [wall.from[0] + dir.x * trimFrom, wall.from[1] + dir.y * trimFrom];
           const newTo: [number, number] = [wall.to[0] - dir.x * trimTo, wall.to[1] - dir.y * trimTo];
-          length = length - totalTrim;
+          length = origLength - totalTrim;
           cx = (newFrom[0] + newTo[0]) / 2;
           cz = (newFrom[1] + newTo[1]) / 2;
         }
@@ -95,7 +100,6 @@ export default function InteractiveWalls3D() {
       // Resolve dual materials (exterior / interior)
       const fallbackMatId = wallRoomMaterial[wall.id];
       const wallColors = resolveWallColors(wall, fallbackMatId);
-      const baseColor = wallColors.exteriorColor;
 
       const isSelected = wall.id === selectedWallId;
       const isHovered = wall.id === hoveredWallId;
@@ -121,9 +125,6 @@ export default function InteractiveWalls3D() {
       } else {
         const sortedOpenings = [...wall.openings].sort((a, b) => a.offset - b.offset);
         let cursor = 0;
-        const origLength = Math.sqrt(dx * dx + dz * dz);
-        const origCx = (wall.from[0] + wall.to[0]) / 2;
-        const origCz = (wall.from[1] + wall.to[1]) / 2;
 
         sortedOpenings.forEach((op, i) => {
           const opStart = op.offset * origLength - op.width / 2;
