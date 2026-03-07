@@ -20,6 +20,7 @@ function getConnectedThickness(
   return maxT;
 }
 
+export default function Walls3D() {
   const floors = useAppStore((s) => s.layout.floors);
   const activeFloorId = useAppStore((s) => s.layout.activeFloorId);
   const wallViewMode = useAppStore((s) => s.build.view.wallViewMode);
