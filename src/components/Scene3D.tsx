@@ -183,12 +183,12 @@ function SceneContent() {
   const sunElevation = useAppStore((s) => s.environment.sunElevation);
   const weatherCondition = useAppStore((s) => s.environment.weather.condition);
   const perf = useAppStore((s) => s.performance);
-  const sunCal = useAppStore((s) => s.environment.sunCalibration);
-  const atmosphere = useAppStore((s) => s.environment.atmosphere);
+  const sunCal = useAppStore((s) => s.environment.sunCalibration) ?? { northOffset: 0, azimuthCorrection: 0, elevationCorrection: 0, intensityMultiplier: 1, indoorBounce: 0 };
+  const atmosphere = useAppStore((s) => s.environment.atmosphere) ?? { fogEnabled: false, fogDensity: 0.3, cloudinessAffectsLight: true, dayNightTransition: 'smooth', atmosphereIntensity: 1 };
 
   // Apply calibration offsets
-  const finalAz = sunAzimuth + sunCal.northOffset + sunCal.azimuthCorrection;
-  const finalEl = sunElevation + sunCal.elevationCorrection;
+  const finalAz = sunAzimuth + (sunCal.northOffset || 0) + (sunCal.azimuthCorrection || 0);
+  const finalEl = sunElevation + (sunCal.elevationCorrection || 0);
 
   const sunPos = useMemo(() => {
     const azRad = (finalAz * Math.PI) / 180;
