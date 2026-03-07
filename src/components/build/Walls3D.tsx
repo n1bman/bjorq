@@ -380,7 +380,7 @@ export default function Walls3D() {
 
       return <group key={wall.id}>{segments}</group>;
     }).filter(Boolean);
-  }, [walls, floor?.elevation, effectiveMode, selectedRoomId, rooms]);
+  }, [walls, floor?.elevation]);
 
   return <group renderOrder={1}>{wallMeshes}</group>;
 }
