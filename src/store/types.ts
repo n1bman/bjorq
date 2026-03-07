@@ -977,4 +977,17 @@ export interface AppState {
   setHAStatus: (status: HAConnectionStatus) => void;
   setHAConnection: (wsUrl: string, token: string) => void;
   setVacuumSegmentMap: (map: Record<string, number>) => void;
+
+  // Reference drawing actions
+  setReferenceDrawing: (floorId: string, drawing: ReferenceDrawing | undefined) => void;
+  updateReferenceDrawing: (floorId: string, changes: Partial<ReferenceDrawing>) => void;
+
+  // Terrain actions
+  setTerrain: (changes: Partial<TerrainSettings>) => void;
+  addTree: (tree: TreeInstance) => void;
+  removeTree: (id: string) => void;
+  updateTree: (id: string, changes: Partial<TreeInstance>) => void;
+
+  // Custom material actions
+  addCustomMaterial: (material: Material) => void;
 }
