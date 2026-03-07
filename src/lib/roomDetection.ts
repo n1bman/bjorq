@@ -1,6 +1,6 @@
 import type { WallSegment, Room } from '../store/types';
 
-const EPSILON = 0.05; // 5cm tolerance for node matching
+const EPSILON = 0.15; // 15cm tolerance for node matching (increased to handle older imprecise walls)
 
 function keyFor(p: [number, number]): string {
   return `${Math.round(p[0] / EPSILON)},${Math.round(p[1] / EPSILON)}`;
