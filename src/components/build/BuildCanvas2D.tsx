@@ -1145,14 +1145,23 @@ export default function BuildCanvas2D({ overlayMode = false }: { overlayMode?: b
           const [dist, t] = pointToSegment(wx, wz, wall.from[0], wall.from[1], wall.to[0], wall.to[1]);
           if (dist < 0.5) {
             pushUndo();
+            // Check for selected preset from catalog strip
+            const presetId = (useAppStore.getState() as any)._selectedOpeningPreset;
+            const preset = presetId ? openingPresets.find((p: any) => p.id === presetId) : null;
+            const openingId = generateId();
             addOpening(activeFloorId, wall.id, {
-              id: generateId(),
+              id: openingId,
               type: activeTool,
               offset: Math.max(0.05, Math.min(0.95, t)),
-              width: activeTool === 'door' ? 0.9 : 1.2,
-              height: activeTool === 'door' ? 2.1 : 1.2,
-              sillHeight: activeTool === 'window' ? 0.9 : 0,
+              width: preset?.width ?? (activeTool === 'door' ? 0.9 : 1.2),
+              height: preset?.height ?? (activeTool === 'door' ? 2.1 : 1.2),
+              sillHeight: preset?.sillHeight ?? (activeTool === 'window' ? 0.9 : 0),
+              style: preset?.style,
             });
+            // Auto-select the new opening and reset tool to prevent spam
+            setSelection({ type: 'opening', id: openingId });
+            useAppStore.getState().setBuildTool('select');
+            useAppStore.setState({ _selectedOpeningPreset: null } as any);
           }
         }
         return;
