@@ -3,7 +3,7 @@ import type { SnapMode, WeatherCondition } from '../../store/types';
 import {
   Undo2, Redo2, Eye, Box, Layers, Settings2,
   ArrowLeft, Ghost,
-  Grid3X3, XCircle, Sun, Check, HelpCircle,
+  Grid3X3, XCircle, Sun, Check, HelpCircle, Sparkles,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Slider } from '../ui/slider';
@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import FloorPicker from './FloorPicker';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { detectRooms } from '../../lib/roomDetection';
 
 const viewModes = [
   { key: 'topdown' as const, label: '2D', icon: Eye },
