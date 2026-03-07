@@ -316,6 +316,28 @@ function WallInspector({ floorId, wallId, floor, close }: { floorId: string; wal
         <span>Tjocklek:</span><span className="text-foreground">{wall.thickness} m</span>
       </div>
 
+      {/* Wall thickness presets */}
+      <div className="space-y-1">
+        <label className="text-muted-foreground text-[10px]">Väggtjocklek</label>
+        <div className="flex gap-1">
+          {[
+            { label: 'Innervägg', value: 0.10 },
+            { label: 'Standard', value: 0.15 },
+            { label: 'Yttervägg', value: 0.20 },
+          ].map((preset) => (
+            <button key={preset.label}
+              onClick={() => { pushUndo(); updateWall(floorId, wall.id, { thickness: preset.value }); }}
+              className={`flex-1 py-1.5 rounded-md text-[10px] font-medium transition-colors ${
+                wall.thickness === preset.value
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-secondary/50 hover:bg-secondary text-foreground'
+              }`}>
+              {preset.label} ({preset.value}m)
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Wall height presets */}
       <div className="space-y-1">
         <label className="text-muted-foreground text-[10px]">Vägghöjd</label>
