@@ -459,7 +459,6 @@ function BuildCatalogRow() {
         {(activeTool === 'door' || activeTool === 'window' || activeTool === 'garage-door' || activeTool === 'passage') && <OpeningCatalog type={activeTool as any} />}
         {activeTool === ('furnish' as any) && <FurnishCatalog />}
         {activeTool === ('import' as any) && <ImportCatalog />}
-        {activeTool.startsWith('place-') && <DeviceCatalog />}
       </div>
     </div>
   );
