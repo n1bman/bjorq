@@ -102,6 +102,7 @@ export interface Floor {
   floorplanImage?: string;
   pixelsPerMeter?: number;
   vacuumMapping?: VacuumMapping;
+  referenceDrawing?: ReferenceDrawing;
 }
 
 export interface LayoutState {
