@@ -1,5 +1,22 @@
 
 
+## Build Mode Refactoring Plan (Active)
+
+### Sprint 1: Canvas2D Refaktorisering + Undo/Redo ✅ DONE
+- BuildCanvas2D split into canvas2d/ module (Canvas2DView, useCanvas2DCamera, useCanvas2DDraw, useCanvas2DDrag, constants)
+- Shared buildUtils.ts with snap/grid/hit-test utilities
+- UndoSnapshot expanded to cover layout + devices + props (30 levels)
+- pushUndo auto-called on addDevice, removeDevice, addProp, removeProp
+
+### Sprint 2: Väggsystem + Live Room Detection (NEXT)
+### Sprint 3: Dörrar, Fönster, Garageportar
+### Sprint 4: Referensritning + Material + Mark
+### Sprint 5: Multi-select, Copy/Paste
+### Sprint 6: HA-koppling openings + Dashboard-synk
+### Sprint 7: Polish och Stabilitet
+
+---
+
 ## Full Roadmap: EPIC A through I + Klimat-flik
 
 Since this is ~20 features across 9 epics, each implementation message will handle 2-3 tasks. Here is the complete plan split into implementation sprints.
