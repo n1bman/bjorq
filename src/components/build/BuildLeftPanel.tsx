@@ -129,6 +129,12 @@ export default function BuildLeftPanel() {
               <ScaleCalibration />
             </div>
           )}
+
+          {/* Reference drawing & terrain always visible in structure tab */}
+          <div className="border-t border-border mt-2 pt-2 px-2 space-y-3 overflow-y-auto">
+            <ReferenceDrawingTools />
+            <TerrainTools />
+          </div>
         </>
       )}
 
