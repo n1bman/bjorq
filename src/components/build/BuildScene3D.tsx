@@ -8,7 +8,7 @@ import GroundPlane from './GroundPlane';
 import WallDrawing3D from './WallDrawing3D';
 import InteractiveWalls3D from './InteractiveWalls3D';
 import Floors3D from './Floors3D';
-import Ceilings3D from './Ceilings3D';
+
 import Stairs3D from './Stairs3D';
 import ImportedHome3D from './ImportedHome3D';
 import Props3D from './Props3D';
@@ -243,7 +243,7 @@ function SceneContent() {
 
       <InteractiveWalls3D />
       <Floors3D />
-      <Ceilings3D />
+      
       <Stairs3D />
       <ImportedHome3D />
       <Props3D />
