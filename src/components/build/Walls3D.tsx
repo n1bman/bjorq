@@ -391,6 +391,8 @@ export default function Walls3D() {
               </mesh>
             );
           }
+
+          cursor = opEnd;
         });
 
         // Final segment after last opening
