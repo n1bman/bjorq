@@ -31,8 +31,7 @@ const IndexInner = () => {
 
   return (
     <div className="fixed inset-0 bg-background overflow-hidden">
-      <ModeHeader />
-      <div className="absolute inset-0 pt-14">
+      <div className="absolute inset-0">
         <BuildModeV2 />
       </div>
       <PerformanceHUD />
