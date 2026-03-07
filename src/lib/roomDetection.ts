@@ -3,7 +3,7 @@ import type { WallSegment, Room } from '../store/types';
 const EPSILON = 0.05; // 5cm tolerance for node matching
 
 function keyFor(p: [number, number]): string {
-  return `${Math.round(p[0] / EPSILON) * EPSILON},${Math.round(p[1] / EPSILON) * EPSILON}`;
+  return `${Math.round(p[0] / EPSILON)},${Math.round(p[1] / EPSILON)}`;
 }
 
 function snapPoint(p: [number, number]): [number, number] {
@@ -94,7 +94,41 @@ function findMinimalCycles(graph: Graph): string[][] {
     }
   }
 
-  return cycles;
+  // Filter out supercycles that contain other cycles
+  if (cycles.length <= 1) return cycles;
+
+  const centroids = cycles.map((cycle) => {
+    const pts = cycle.map((k) => graph[k].node);
+    const cx = pts.reduce((a, p) => a + p[0], 0) / pts.length;
+    const cy = pts.reduce((a, p) => a + p[1], 0) / pts.length;
+    return [cx, cy] as [number, number];
+  });
+
+  const polyForCycle = (cycle: string[]) => cycle.map((k) => graph[k].node);
+
+  const pip = (px: number, py: number, poly: [number, number][]) => {
+    let inside = false;
+    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+      const xi = poly[i][0], yi = poly[i][1];
+      const xj = poly[j][0], yj = poly[j][1];
+      if ((yi > py) !== (yj > py) && px < ((xj - xi) * (py - yi)) / (yj - yi) + xi) {
+        inside = !inside;
+      }
+    }
+    return inside;
+  };
+
+  // A cycle is a supercycle if another cycle's centroid is inside it
+  const filtered = cycles.filter((cycle, i) => {
+    const poly = polyForCycle(cycle);
+    for (let j = 0; j < cycles.length; j++) {
+      if (i === j) continue;
+      if (pip(centroids[j][0], centroids[j][1], poly)) return false;
+    }
+    return true;
+  });
+
+  return filtered;
 }
 
 function polygonArea(points: [number, number][]): number {
