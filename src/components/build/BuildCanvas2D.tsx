@@ -1588,8 +1588,8 @@ export default function BuildCanvas2D({ overlayMode = false }: { overlayMode?: b
         {activeTool === 'select' && (
           <span className="text-primary font-medium">Dra noder/väggar · Dubbelklicka vägg = dela</span>
         )}
-        {(activeTool === 'door' || activeTool === 'window' || activeTool === 'garage-door') && (
-          <span className="text-primary font-medium">Klicka på vägg för att placera {activeTool === 'door' ? 'dörr' : activeTool === 'garage-door' ? 'garageport' : 'fönster'}</span>
+        {(activeTool === 'door' || activeTool === 'window' || activeTool === 'garage-door' || activeTool === 'passage') && (
+          <span className="text-primary font-medium">Klicka på vägg för att placera {activeTool === 'door' ? 'dörr' : activeTool === 'garage-door' ? 'garageport' : activeTool === 'passage' ? 'passage' : 'fönster'}</span>
         )}
         {activeTool === 'measure' && !measureStart && (
           <span className="text-primary font-medium">Klicka för att börja mäta</span>
