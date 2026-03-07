@@ -179,7 +179,8 @@ export default function InteractiveWalls3D() {
             );
           }
 
-          // ─── 3D Door/Window/Garage models (clickable for selection) ───
+          // ─── 3D Door/Window/Garage/Passage models (clickable for selection) ───
+          const flipSign = op.flipped ? -1 : 1;
           const localX = op.offset * origLength - origLength / 2;
           const opCenterY = opBottom + op.height / 2;
           const opPos = new THREE.Vector3(localX, 0, 0)
