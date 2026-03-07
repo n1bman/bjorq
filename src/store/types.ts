@@ -38,7 +38,7 @@ export interface TreeInstance {
 // ─── Layout Layer ───
 export interface WallOpening {
   id: string;
-  type: 'door' | 'window' | 'garage-door';
+  type: 'door' | 'window' | 'garage-door' | 'passage';
   offset: number; // 0-1 along wall
   width: number;
   height: number;
