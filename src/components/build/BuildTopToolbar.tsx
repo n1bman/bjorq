@@ -3,7 +3,7 @@ import type { SnapMode, WeatherCondition } from '../../store/types';
 import {
   Undo2, Redo2, Eye, Box, Layers, Settings2,
   ArrowLeft, Ghost,
-  Grid3X3, XCircle, Sun, Check, HelpCircle, Sparkles, DoorOpen, Trash2, Edit3,
+  Grid3X3, XCircle, Sun, Check, HelpCircle, Sparkles, DoorOpen, Trash2, Edit3, Wrench,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Slider } from '../ui/slider';
@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import FloorPicker from './FloorPicker';
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { detectRooms } from '../../lib/roomDetection';
+import { detectRooms, healWalls } from '../../lib/roomDetection';
 
 /* ═══════════════════════════════════════════════
    RoomManager — inlined to avoid Vite resolve issues
@@ -243,6 +243,35 @@ export default function BuildTopToolbar() {
         <Sparkles size={16} />
       </button>
 
+      {/* Heal walls button */}
+      <button
+        onClick={() => {
+          const s = useAppStore.getState();
+          const floorId = s.layout.activeFloorId;
+          if (!floorId) return;
+          const floor = s.layout.floors.find((f) => f.id === floorId);
+          if (!floor || floor.walls.length === 0) return;
+
+          s.pushUndo();
+          const { walls: healed, healed: count } = healWalls(floor.walls);
+          const newRooms = detectRooms(healed, floor.rooms);
+
+          useAppStore.setState((prev: any) => ({
+            layout: {
+              ...prev.layout,
+              floors: prev.layout.floors.map((f: any) =>
+                f.id === floorId ? { ...f, walls: healed, rooms: newRooms } : f
+              ),
+            },
+          }));
+
+          toast.success(`Helat ${count} noder, ${newRooms.length} rum detekterade`);
+        }}
+        title="Hela väggar — fixar små glipor"
+        className="p-2.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary/40 transition-all min-w-[44px] min-h-[44px] flex items-center justify-center"
+      >
+        <Wrench size={16} />
+      </button>
       {/* Room manager popover */}
       <Popover>
         <PopoverTrigger asChild>
