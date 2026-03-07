@@ -116,10 +116,16 @@ function FurnishCatalog() {
         <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Sök möbler…" className="bg-transparent text-xs py-1 w-24 outline-none text-foreground placeholder:text-muted-foreground" />
       </div>
       {filtered.map((item) => (
-        <button key={item.id} onClick={() => handlePlace(item)} className="flex flex-col items-center gap-1 px-3 py-1.5 rounded-md border border-border hover:bg-muted text-xs text-foreground transition-colors">
-          <Box className="w-5 h-5 text-muted-foreground" />
-          <span className="text-[10px]">{item.name}</span>
-        </button>
+        <div key={item.id} className="relative group">
+          <button onClick={() => handlePlace(item)} className="flex flex-col items-center gap-1 px-3 py-1.5 rounded-md border border-border hover:bg-muted text-xs text-foreground transition-colors">
+            <Box className="w-5 h-5 text-muted-foreground" />
+            <span className="text-[10px]">{item.name}</span>
+          </button>
+          <button onClick={(e) => { e.stopPropagation(); removeFromCatalog(item.id); toast.success(`Borttagen: ${item.name}`); }}
+            className="absolute -top-1.5 -right-1.5 hidden group-hover:flex w-5 h-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground">
+            <Trash2 className="w-3 h-3" />
+          </button>
+        </div>
       ))}
       <button onClick={() => fileRef.current?.click()} className="flex flex-col items-center gap-1 px-3 py-1.5 rounded-md border border-dashed border-border hover:bg-muted text-xs text-muted-foreground transition-colors">
         <Upload className="w-5 h-5" />
