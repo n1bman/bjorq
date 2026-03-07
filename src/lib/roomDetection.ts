@@ -1,4 +1,5 @@
 import type { WallSegment, Room } from '../store/types';
+import { generateId } from './buildUtils';
 
 const EPSILON = 0.15; // 15cm tolerance for node matching (increased to handle older imprecise walls)
 
