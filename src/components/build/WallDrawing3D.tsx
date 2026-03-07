@@ -60,8 +60,14 @@ export default function WallDrawing3D({ cursorPos, cursorSnapped }: WallDrawing3
       {/* Cursor sphere */}
       {cursorPos && (
         <mesh position={[cursorPos[0], 0.1, cursorPos[1]]}>
-          <sphereGeometry args={[0.06, 16, 16]} />
-          <meshStandardMaterial color="#ffffff" emissive="#ffffff" emissiveIntensity={0.3} transparent opacity={0.6} />
+          <sphereGeometry args={[cursorSnapped ? 0.12 : 0.06, 16, 16]} />
+          <meshStandardMaterial
+            color={cursorSnapped ? '#4ade80' : '#ffffff'}
+            emissive={cursorSnapped ? '#4ade80' : '#ffffff'}
+            emissiveIntensity={cursorSnapped ? 0.8 : 0.3}
+            transparent
+            opacity={cursorSnapped ? 0.9 : 0.6}
+          />
         </mesh>
       )}
     </group>

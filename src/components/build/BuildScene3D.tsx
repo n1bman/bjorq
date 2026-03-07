@@ -259,7 +259,7 @@ function SceneContent() {
       <Stairs3D />
       <ImportedHome3D />
       <Props3D />
-      <WallDrawing3D cursorPos={cursorPos} />
+      <WallDrawing3D cursorPos={cursorPos} cursorSnapped={cursorSnapped} />
       <WeatherEffects3D />
       <InlineTerrain3D />
       <DeviceMarkers3D buildMode />
