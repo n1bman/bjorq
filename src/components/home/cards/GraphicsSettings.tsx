@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useAppStore } from '../../../store/useAppStore';
-import { Gauge, Monitor, Sun, Sparkles, RefreshCw, Cpu, AlertTriangle, CheckCircle, Activity, Lightbulb } from 'lucide-react';
+import { Gauge, Monitor, Sun, Sparkles, RefreshCw, Cpu, AlertTriangle, CheckCircle, Activity, Lightbulb, Eye, Contrast } from 'lucide-react';
 import { Switch } from '../../ui/switch';
 import { Slider } from '../../ui/slider';
 import { Progress } from '../../ui/progress';
@@ -27,9 +27,9 @@ function computeScore(quality: QualityLevel, shadows: boolean, postprocessing: b
 }
 
 function getScoreInfo(score: number) {
-  if (score <= 40) return { label: 'Lätt', color: 'hsl(142, 71%, 45%)', tier: 'light' as const };
-  if (score <= 75) return { label: 'Balanserad', color: 'hsl(45, 93%, 47%)', tier: 'balanced' as const };
-  return { label: 'Krävande', color: 'hsl(0, 84%, 60%)', tier: 'heavy' as const };
+  if (score <= 40) return { label: 'Lätt', color: 'hsl(142, 71%, 45%)' };
+  if (score <= 75) return { label: 'Balanserad', color: 'hsl(45, 93%, 47%)' };
+  return { label: 'Krävande', color: 'hsl(0, 84%, 60%)' };
 }
 
 function getDprForQuality(quality: QualityLevel, tabletMode: boolean) {
@@ -51,7 +51,6 @@ function getDeviceInfo() {
 function getRecommendation(score: number, cores: number, memGB: number | null) {
   const isWeak = cores > 0 && cores <= 4;
   const isLowMem = memGB !== null && memGB <= 4;
-  
   if (score > 75 && (isWeak || isLowMem)) {
     return 'Din enhet verkar ha begränsade resurser. Prova "Medium" eller "Låg" kvalitet för bättre prestanda.';
   }
@@ -61,7 +60,7 @@ function getRecommendation(score: number, cores: number, memGB: number | null) {
   return null;
 }
 
-export default function PerformanceSettings() {
+export default function GraphicsSettings() {
   const perf = useAppStore((s) => s.performance);
   const setPerformance = useAppStore((s) => s.setPerformance);
 
@@ -74,9 +73,9 @@ export default function PerformanceSettings() {
 
   const applyTabletMode = (on: boolean) => {
     if (on) {
-      setPerformance({ tabletMode: true, quality: 'low', shadows: false, postprocessing: false });
+      setPerformance({ tabletMode: true, quality: 'low', shadows: false, postprocessing: false, antialiasing: false });
     } else {
-      setPerformance({ tabletMode: false });
+      setPerformance({ tabletMode: false, antialiasing: true });
     }
     notify();
   };
@@ -86,7 +85,7 @@ export default function PerformanceSettings() {
       <div className="flex items-center gap-2">
         <Gauge size={18} className="text-primary" />
         <div>
-          <h3 className="text-sm font-semibold text-foreground">Prestanda</h3>
+          <h3 className="text-sm font-semibold text-foreground">Rendering</h3>
           <p className="text-[10px] text-muted-foreground flex items-center gap-1">
             <RefreshCw size={9} /> 3D-scenen laddas om automatiskt vid ändring
           </p>
@@ -191,7 +190,60 @@ export default function PerformanceSettings() {
         />
       </div>
 
-      {/* Max lights (tablet mode) */}
+      {/* Anti-aliasing */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Eye size={14} className="text-muted-foreground" />
+          <span className="text-sm text-foreground">Anti-aliasing</span>
+        </div>
+        <Switch
+          checked={perf.antialiasing}
+          onCheckedChange={(v) => { setPerformance({ antialiasing: v }); notify(); }}
+        />
+      </div>
+
+      {/* Tone Mapping + Exposure */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Contrast size={14} className="text-muted-foreground" />
+            <span className="text-sm text-foreground">Tone mapping</span>
+          </div>
+          <Switch
+            checked={perf.toneMapping}
+            onCheckedChange={(v) => { setPerformance({ toneMapping: v }); notify(); }}
+          />
+        </div>
+        {perf.toneMapping && (
+          <div className="pl-6 space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">Exponering</span>
+              <span className="text-xs font-mono text-muted-foreground">{perf.exposure.toFixed(1)}</span>
+            </div>
+            <Slider
+              value={[perf.exposure]}
+              min={0.5}
+              max={2.0}
+              step={0.1}
+              onValueChange={([v]) => { setPerformance({ exposure: v }); }}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Environment Light */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Sparkles size={14} className="text-muted-foreground" />
+          <span className="text-sm text-foreground">Miljöljus (HDR)</span>
+        </div>
+        <Switch
+          checked={perf.environmentLight}
+          onCheckedChange={(v) => { setPerformance({ environmentLight: v }); notify(); }}
+        />
+      </div>
+
+      {/* Max lights */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -227,7 +279,6 @@ export default function PerformanceSettings() {
         />
       </div>
 
-      {/* Auto-detection info */}
       {perf._autoDetectedPerformance && perf.tabletMode && (
         <div className="flex items-start gap-2 p-2 rounded-lg bg-primary/10 border border-primary/20">
           <Cpu size={14} className="text-primary shrink-0 mt-0.5" />

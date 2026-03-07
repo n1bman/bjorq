@@ -23,7 +23,10 @@ import CategoryManager from './cards/CategoryManager';
 import CalendarWidget from './cards/CalendarWidget';
 import RobotPanel from './cards/RobotPanel';
 import CameraStartSettings from './cards/CameraStartSettings';
-import PerformanceSettings from './cards/PerformanceSettings';
+import GraphicsSettings from './cards/GraphicsSettings';
+import SunCalibrationPanel from './cards/SunCalibrationPanel';
+import WeatherAtmospherePanel from './cards/WeatherAtmospherePanel';
+import EnvironmentPanel from './cards/EnvironmentPanel';
 import DisplaySettings from './cards/DisplaySettings';
 import WifiPanel from './cards/WifiPanel';
 import WifiWidget from './cards/WifiWidget';
@@ -441,11 +444,21 @@ function SettingsCategory() {
         </div>
       </section>
 
+      {/* Grafik & Miljö */}
+      <section className="space-y-1">
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1">Grafik & Miljö</h2>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+          <GraphicsSettings />
+          <SunCalibrationPanel />
+          <WeatherAtmospherePanel />
+          <EnvironmentPanel />
+        </div>
+      </section>
+
       {/* System */}
       <section className="space-y-1">
         <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1">System</h2>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
-          <PerformanceSettings />
           <SystemStatusCard />
         </div>
       </section>

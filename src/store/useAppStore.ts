@@ -255,7 +255,7 @@ const storeCreator = (set: any, get: any): AppState => ({
   standby: { enabled: false, idleMinutes: 2, vioMinutes: 5, cameraView: 'standard' as const, phase: 'standby' as const },
   _preStandbyMode: 'home' as AppMode,
   profile: { name: '', theme: 'dark', accentColor: '#f59e0b', dashboardBg: 'scene3d' },
-  performance: { quality: 'high', shadows: true, postprocessing: false, tabletMode: false, showHUD: false, maxLights: 0 },
+  performance: { quality: 'high', shadows: true, postprocessing: false, tabletMode: false, showHUD: false, maxLights: 0, antialiasing: true, toneMapping: true, exposure: 1.0, environmentLight: true },
   wifi: { ssid: '', password: '', visible: false },
   energyConfig: { pricePerKwh: 1.5, currency: 'kr' },
   calendar: {
@@ -333,6 +333,9 @@ const storeCreator = (set: any, get: any): AppState => ({
     sunAzimuth: 135,
     sunElevation: 45,
     precipitationOverride: 'auto',
+    sunCalibration: { northOffset: 0, azimuthCorrection: 0, elevationCorrection: 0, intensityMultiplier: 1.0, indoorBounce: 0 },
+    atmosphere: { fogEnabled: false, fogDensity: 0.3, cloudinessAffectsLight: true, dayNightTransition: 'smooth', atmosphereIntensity: 1.0 },
+    skyStyle: 'auto',
   },
 
   homeAssistant: {
@@ -893,6 +896,12 @@ const storeCreator = (set: any, get: any): AppState => ({
 
   setLocation: (lat, lon) =>
     set((s: any) => ({ environment: { ...s.environment, location: { ...s.environment.location, lat, lon } } })),
+
+  setSunCalibration: (changes) => { set((s: any) => ({ environment: { ...s.environment, sunCalibration: { ...s.environment.sunCalibration, ...changes } } })); syncProfileToServer(); },
+
+  setAtmosphere: (changes) => { set((s: any) => ({ environment: { ...s.environment, atmosphere: { ...s.environment.atmosphere, ...changes } } })); syncProfileToServer(); },
+
+  setSkyStyle: (style) => { set((s: any) => ({ environment: { ...s.environment, skyStyle: style } })); syncProfileToServer(); },
 
   // Opening update
   updateOpening: (floorId, wallId, openingId, changes) =>
