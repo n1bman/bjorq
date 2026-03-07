@@ -31,7 +31,7 @@ export default function BuildModeV2() {
                   <ImportPreview3D />
                 </Suspense>
               )}
-              <BuildCanvas2D overlayMode={showImportOverlay} />
+              <Canvas2DView overlayMode={showImportOverlay} />
             </>
           ) : (
             <BuildScene3D />
