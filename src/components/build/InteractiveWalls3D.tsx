@@ -479,23 +479,26 @@ export default function InteractiveWalls3D() {
   // ── Corner fill blocks ──
   const cornerBlocks = useMemo(() => {
     const eps = 0.05;
-    const nodeMap = new Map<string, { pos: [number, number]; maxThickness: number; maxHeight: number }>();
+    const nodeMap = new Map<string, { pos: [number, number]; maxThickness: number; maxHeight: number; wallColors: ReturnType<typeof resolveWallColors>[] }>();
     
     for (const wall of walls) {
+      const fallbackMatId = wallRoomMaterial[wall.id];
+      const wc = resolveWallColors(wall, fallbackMatId);
       for (const pt of [wall.from, wall.to]) {
         const key = `${Math.round(pt[0] / eps) * eps},${Math.round(pt[1] / eps) * eps}`;
         const existing = nodeMap.get(key);
         if (existing) {
           existing.maxThickness = Math.max(existing.maxThickness, wall.thickness);
           existing.maxHeight = Math.max(existing.maxHeight, wall.height);
+          existing.wallColors.push(wc);
         } else {
-          nodeMap.set(key, { pos: pt, maxThickness: wall.thickness, maxHeight: wall.height });
+          nodeMap.set(key, { pos: pt, maxThickness: wall.thickness, maxHeight: wall.height, wallColors: [wc] });
         }
       }
     }
 
     const blocks: JSX.Element[] = [];
-    for (const [key, { pos, maxThickness, maxHeight }] of nodeMap) {
+    for (const [key, { pos, maxThickness, maxHeight, wallColors }] of nodeMap) {
       let connectionCount = 0;
       for (const wall of walls) {
         const df = Math.abs(wall.from[0] - pos[0]) + Math.abs(wall.from[1] - pos[1]);
@@ -503,18 +506,19 @@ export default function InteractiveWalls3D() {
         if (df < eps || dt < eps) connectionCount++;
       }
       if (connectionCount >= 2) {
+        const dominantColor = wallColors[0]?.exteriorColor ?? '#e0e0e0';
         blocks.push(
           <mesh key={`corner-${key}`}
             position={[pos[0], maxHeight / 2 + elevation, pos[1]]}
             castShadow receiveShadow>
             <boxGeometry args={[maxThickness, maxHeight, maxThickness]} />
-            <meshStandardMaterial color="#e0e0e0" roughness={0.7} side={THREE.FrontSide} />
+            <meshStandardMaterial color={dominantColor} roughness={0.7} side={THREE.FrontSide} />
           </mesh>
         );
       }
     }
     return blocks;
-  }, [walls, elevation]);
+  }, [walls, elevation, wallRoomMaterial]);
 
   return <group renderOrder={1}>{wallMeshes}{cornerBlocks}</group>;
 }

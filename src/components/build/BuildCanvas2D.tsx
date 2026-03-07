@@ -1594,8 +1594,8 @@ export default function BuildCanvas2D({ overlayMode = false }: { overlayMode?: b
         )}
       </div>
 
-      {/* ─── Planritning (reference drawing) controls ─── */}
-      {referenceDrawing?.url && (
+      {/* ─── Planritning (reference drawing) controls — only in import mode ─── */}
+      {referenceDrawing?.url && (activeTool === 'import' || useAppStore.getState().build.tab === 'import') && (
         <ReferenceControls />
       )}
     </div>

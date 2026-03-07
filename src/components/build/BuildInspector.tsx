@@ -532,16 +532,34 @@ function PropInspector({ propId, close }: { propId: string; close: React.ReactNo
         </div>
       </div>
 
-      {/* HA Entity placeholder */}
-      <div className="space-y-1 opacity-50">
-        <label className="text-muted-foreground text-[10px]">HA Entity (kommande)</label>
+      {/* HA Entity mapping */}
+      <div className="space-y-1">
+        <label className="text-muted-foreground text-[10px]">Home Assistant-entitet</label>
         <Input
-          disabled
           value={prop.haEntityId || ''}
-          className="h-7 text-xs bg-secondary/30 border-none"
-          placeholder="entity_id"
+          onChange={(e) => updateProp(prop.id, { haEntityId: e.target.value })}
+          className="h-7 text-xs bg-secondary/50 border-none"
+          placeholder="light.vardagsrum, media_player.tv"
         />
       </div>
+
+      {/* Category selector */}
+      {catItem && (
+        <div className="space-y-1">
+          <label className="text-muted-foreground text-[10px]">Kategori</label>
+          <div className="flex flex-wrap gap-1">
+            {['sittmöbel', 'förvaring', 'belysning', 'bord', 'säng', 'dekoration', 'elektronik', 'övrigt'].map((cat) => (
+              <button key={cat}
+                onClick={() => updateCatalogItem(catItem.id, { category: cat })}
+                className={`px-2 py-0.5 rounded-md text-[10px] transition-colors ${
+                  catItem.category === cat ? 'bg-primary text-primary-foreground' : 'bg-secondary/50 hover:bg-secondary text-foreground'
+                }`}>
+                {cat.charAt(0).toUpperCase() + cat.slice(1)}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <button onClick={handleDelete}
         className="w-full py-2 rounded-lg bg-destructive/20 text-destructive text-xs font-medium hover:bg-destructive/30 transition-colors min-h-[44px] flex items-center justify-center gap-1">
