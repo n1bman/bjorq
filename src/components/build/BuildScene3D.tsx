@@ -2,6 +2,7 @@ import { Canvas, useThree } from '@react-three/fiber';
 import { OrbitControls, Grid, Environment } from '@react-three/drei';
 import { Suspense, useRef, useState, useCallback, useMemo, useEffect } from 'react';
 import * as THREE from 'three';
+import { findWallAtWorld, pointToSegment } from '../../lib/buildUtils';
 import GroundPlane from './GroundPlane';
 import WallDrawing3D from './WallDrawing3D';
 import InteractiveWalls3D from './InteractiveWalls3D';
