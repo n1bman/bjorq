@@ -192,11 +192,16 @@ function SceneContent() {
   const handleGroundPointerMove = useCallback(
     (point: THREE.Vector3) => {
       if (activeTool === 'wall') {
-        const snapped = snapToGrid(point.x, point.z);
+        let snapped = snapToGrid(point.x, point.z);
+        const fl = floors.find((f) => f.id === activeFloorId);
+        const floorWalls = fl?.walls ?? [];
+        const nodeSnap = snapToNode(snapped, floorWalls, 0.25);
+        snapped = nodeSnap.snapped;
         setCursorPos(snapped);
+        setCursorSnapped(nodeSnap.isSnapped);
       }
     },
-    [activeTool, snapToGrid]
+    [activeTool, snapToGrid, floors, activeFloorId]
   );
 
   const handleDoubleClick = useCallback(() => {
