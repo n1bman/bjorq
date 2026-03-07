@@ -46,6 +46,7 @@ export interface WallOpening {
   style?: string; // e.g. 'single','double','sliding','casement','fixed','french','sectional','roller'
   materialId?: string;
   haEntityId?: string; // HA entity for garage-doors
+  flipped?: boolean; // flip inside/outside orientation
 }
 
 export interface WallSegment {

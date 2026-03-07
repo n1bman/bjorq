@@ -168,6 +168,13 @@ function OpeningInspector({ floorId, openingId, floor, close }: { floorId: strin
             </div>
           </>
         )}
+
+        {/* Flip inside/outside */}
+        <div className="flex items-center justify-between pt-1">
+          <label className="text-muted-foreground text-[10px]">Vänd in/ut</label>
+          <Switch checked={foundOpening.flipped ?? false}
+            onCheckedChange={(v) => handleChange({ flipped: v })} />
+        </div>
       </div>
 
       {/* Material / color picker for opening */}
@@ -305,6 +312,34 @@ function WallInspector({ floorId, wallId, floor, close }: { floorId: string; wal
         <span>Längd:</span><span className="text-foreground">{length.toFixed(2)} m</span>
         <span>Höjd:</span><span className="text-foreground">{wall.height} m</span>
         <span>Tjocklek:</span><span className="text-foreground">{wall.thickness} m</span>
+      </div>
+
+      {/* Wall height presets */}
+      <div className="space-y-1">
+        <label className="text-muted-foreground text-[10px]">Vägghöjd</label>
+        <div className="flex gap-1">
+          {[
+            { label: 'Låg', value: 0.9 },
+            { label: 'Mellan', value: 1.2 },
+            { label: 'Hög', value: 2.5 },
+          ].map((preset) => (
+            <button key={preset.label}
+              onClick={() => { pushUndo(); updateWall(floorId, wall.id, { height: preset.value }); }}
+              className={`flex-1 py-1.5 rounded-md text-[10px] font-medium transition-colors ${
+                wall.height === preset.value
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-secondary/50 hover:bg-secondary text-foreground'
+              }`}>
+              {preset.label} ({preset.value}m)
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center gap-2 mt-1">
+          <Slider min={0.3} max={4} step={0.1} value={[wall.height]}
+            onValueChange={([v]) => { updateWall(floorId, wall.id, { height: v }); }}
+            className="flex-1" />
+          <span className="text-[10px] text-foreground w-10 text-right">{wall.height.toFixed(1)}m</span>
+        </div>
       </div>
 
       {/* Interior/Exterior material */}
