@@ -2,7 +2,7 @@ import { Canvas, useThree } from '@react-three/fiber';
 import { OrbitControls, Grid, Environment } from '@react-three/drei';
 import { Suspense, useRef, useState, useCallback, useMemo, useEffect } from 'react';
 import * as THREE from 'three';
-import { findWallAtWorld, pointToSegment, snapToNode } from '../../lib/buildUtils';
+import { findWallAtWorld, pointToSegment, snapToNode, generateId } from '../../lib/buildUtils';
 import { openingPresets } from '../../lib/openingPresets';
 import GroundPlane from './GroundPlane';
 import WallDrawing3D from './WallDrawing3D';
@@ -18,8 +18,6 @@ import Ceilings3D from './Ceilings3D';
 import DeviceMarkers3D from '../devices/DeviceMarkers3D';
 import { useAppStore } from '../../store/useAppStore';
 import type { WallSegment, DeviceKind } from '../../store/types';
-
-const generateId = () => Math.random().toString(36).slice(2, 10);
 
 /** Handles WebGL context loss/restore inside the Canvas */
 function ContextLossHandler() {
