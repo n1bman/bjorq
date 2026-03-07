@@ -23,7 +23,7 @@ const generateId = () => Math.random().toString(36).slice(2, 10);
    BuildCatalogRow — inlined to avoid Vite cache issues
    ═══════════════════════════════════════════════ */
 
-function OpeningCatalog({ type }: { type: 'door' | 'window' | 'garage-door' }) {
+function OpeningCatalog({ type }: { type: 'door' | 'window' | 'garage-door' | 'passage' }) {
   const presets = openingPresets.filter((p) => p.type === type);
   return (
     <>
