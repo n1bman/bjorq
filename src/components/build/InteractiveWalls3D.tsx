@@ -123,54 +123,207 @@ export default function InteractiveWalls3D() {
             );
           }
 
-          // ─── 3D Door/Window models ───
+          // ─── 3D Door/Window/Garage models ───
           const localX = op.offset * length - length / 2;
           const opCenterY = opBottom + op.height / 2;
           const opPos = new THREE.Vector3(localX, 0, 0)
             .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
             .add(new THREE.Vector3(cx, opCenterY + elevation, cz));
 
+          const frameW = 0.04; // frame bar width
+          const frameDepth = 0.06;
+          const frameColor = op.type === 'garage-door' ? '#6a6a6a' : '#c0c0c0';
+
           if (op.type === 'door') {
-            // Simple door panel
+            const isDouble = op.style === 'double';
+            const isSliding = op.style === 'sliding';
+            const panelW = isDouble ? (op.width - 0.04) / 2 : op.width - 0.04;
+
+            // Door frame – top
             segments.push(
-              <mesh key={`${wall.id}-door-panel-${i}`} position={[opPos.x, opBottom + op.height / 2 + elevation, opPos.z]}
+              <mesh key={`${wall.id}-door-ft-${i}`} position={[opPos.x, opBottom + op.height - frameW / 2 + elevation, opPos.z]}
                 rotation={[0, -angle, 0]}>
-                <boxGeometry args={[op.width - 0.02, op.height - 0.02, 0.04]} />
-                <meshStandardMaterial color="#7a5a35" roughness={0.5} />
+                <boxGeometry args={[op.width, frameW, frameDepth]} />
+                <meshStandardMaterial color={frameColor} roughness={0.3} />
               </mesh>
             );
-          } else {
-            // Glass panel only with thin frame
+            // Door frame – left
+            segments.push(
+              <mesh key={`${wall.id}-door-fl-${i}`} position={new THREE.Vector3(localX - op.width / 2 + frameW / 2, 0, 0)
+                .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
+                .add(new THREE.Vector3(cx, opBottom + op.height / 2 + elevation, cz)).toArray()}
+                rotation={[0, -angle, 0]}>
+                <boxGeometry args={[frameW, op.height, frameDepth]} />
+                <meshStandardMaterial color={frameColor} roughness={0.3} />
+              </mesh>
+            );
+            // Door frame – right
+            segments.push(
+              <mesh key={`${wall.id}-door-fr-${i}`} position={new THREE.Vector3(localX + op.width / 2 - frameW / 2, 0, 0)
+                .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
+                .add(new THREE.Vector3(cx, opBottom + op.height / 2 + elevation, cz)).toArray()}
+                rotation={[0, -angle, 0]}>
+                <boxGeometry args={[frameW, op.height, frameDepth]} />
+                <meshStandardMaterial color={frameColor} roughness={0.3} />
+              </mesh>
+            );
+
+            // Door panel(s)
+            if (isDouble) {
+              // Left panel
+              segments.push(
+                <mesh key={`${wall.id}-door-pl-${i}`} position={new THREE.Vector3(localX - panelW / 2 - 0.01, 0, 0)
+                  .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
+                  .add(new THREE.Vector3(cx, opBottom + op.height / 2 + elevation, cz)).toArray()}
+                  rotation={[0, -angle, 0]}>
+                  <boxGeometry args={[panelW, op.height - 0.06, 0.04]} />
+                  <meshStandardMaterial color="#7a5a35" roughness={0.5} />
+                </mesh>
+              );
+              // Right panel
+              segments.push(
+                <mesh key={`${wall.id}-door-pr-${i}`} position={new THREE.Vector3(localX + panelW / 2 + 0.01, 0, 0)
+                  .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
+                  .add(new THREE.Vector3(cx, opBottom + op.height / 2 + elevation, cz)).toArray()}
+                  rotation={[0, -angle, 0]}>
+                  <boxGeometry args={[panelW, op.height - 0.06, 0.04]} />
+                  <meshStandardMaterial color="#7a5a35" roughness={0.5} />
+                </mesh>
+              );
+            } else {
+              // Single panel (offset to one side for sliding)
+              const panelOffset = isSliding ? -0.15 : 0;
+              segments.push(
+                <mesh key={`${wall.id}-door-panel-${i}`} position={new THREE.Vector3(localX + panelOffset, 0, 0)
+                  .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
+                  .add(new THREE.Vector3(cx, opBottom + op.height / 2 + elevation, cz)).toArray()}
+                  rotation={[0, -angle, 0]}>
+                  <boxGeometry args={[panelW, op.height - 0.06, 0.04]} />
+                  <meshStandardMaterial color={isSliding ? '#5a4a3a' : '#7a5a35'} roughness={0.5} />
+                </mesh>
+              );
+              // Sliding door rail
+              if (isSliding) {
+                segments.push(
+                  <mesh key={`${wall.id}-door-rail-${i}`} position={[opPos.x, opBottom + op.height - 0.02 + elevation, opPos.z]}
+                    rotation={[0, -angle, 0]}>
+                    <boxGeometry args={[op.width + 0.1, 0.02, 0.03]} />
+                    <meshStandardMaterial color="#888" roughness={0.3} metalness={0.5} />
+                  </mesh>
+                );
+              }
+            }
+
+            // Door handle
+            segments.push(
+              <mesh key={`${wall.id}-door-handle-${i}`} position={new THREE.Vector3(localX + (isDouble ? 0 : panelW * 0.35), 0, 0)
+                .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
+                .add(new THREE.Vector3(cx, opBottom + 1.0 + elevation, cz)).toArray()}
+                rotation={[0, -angle, 0]}>
+                <boxGeometry args={[0.12, 0.03, 0.05]} />
+                <meshStandardMaterial color="#aaa" roughness={0.2} metalness={0.7} />
+              </mesh>
+            );
+          } else if (op.type === 'window') {
+            const isFrench = op.style === 'french';
+            const isFixed = op.style === 'fixed';
+            const hasMullion = !isFixed && op.width > 1.0;
+
+            // Glass panel
             segments.push(
               <mesh key={`${wall.id}-win-glass-${i}`} position={[opPos.x, opCenterY + elevation, opPos.z]}
                 rotation={[0, -angle, 0]}>
-                <boxGeometry args={[op.width - 0.02, op.height - 0.02, 0.01]} />
-                <meshStandardMaterial
-                  color="#88ccff"
-                  transparent
-                  opacity={0.3}
-                  roughness={0.05}
-                  metalness={0.1}
-                />
+                <boxGeometry args={[op.width - 0.06, op.height - 0.06, 0.008]} />
+                <meshStandardMaterial color="#88ccff" transparent opacity={isFrench ? 0.35 : 0.3}
+                  roughness={0.05} metalness={0.1} />
               </mesh>
             );
-            // Thin solid frame bars around glass
-            const fw = 0.03; // frame bar width
-            const frameColor = "#c0c0c0";
-            // Top bar
+
+            // Full frame (4 bars)
+            const bars: [string, number[], number[]][] = [
+              ['top', [opPos.x, opCenterY + op.height / 2 - frameW / 2 + elevation, opPos.z], [op.width, frameW, 0.03]],
+              ['bottom', [opPos.x, opCenterY - op.height / 2 + frameW / 2 + elevation, opPos.z], [op.width, frameW, 0.03]],
+            ];
+            // Left bar
+            const leftPos = new THREE.Vector3(localX - op.width / 2 + frameW / 2, 0, 0)
+              .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
+              .add(new THREE.Vector3(cx, opCenterY + elevation, cz));
+            bars.push(['left', leftPos.toArray(), [frameW, op.height, 0.03]]);
+            const rightPos = new THREE.Vector3(localX + op.width / 2 - frameW / 2, 0, 0)
+              .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
+              .add(new THREE.Vector3(cx, opCenterY + elevation, cz));
+            bars.push(['right', rightPos.toArray(), [frameW, op.height, 0.03]]);
+
+            // Vertical mullion for wide windows
+            if (hasMullion) {
+              bars.push(['mullion', [opPos.x, opCenterY + elevation, opPos.z], [frameW * 0.7, op.height - 0.06, 0.025]]);
+            }
+
+            for (const [key, pos, dims] of bars) {
+              segments.push(
+                <mesh key={`${wall.id}-win-f${key}-${i}`} position={pos as [number, number, number]}
+                  rotation={[0, -angle, 0]}>
+                  <boxGeometry args={dims as [number, number, number]} />
+                  <meshStandardMaterial color={frameColor} roughness={0.3} />
+                </mesh>
+              );
+            }
+
+            // Window sill
+            if (!isFrench) {
+              segments.push(
+                <mesh key={`${wall.id}-win-sill-${i}`} position={[opPos.x, opCenterY - op.height / 2 - 0.02 + elevation, opPos.z]}
+                  rotation={[0, -angle, 0]}>
+                  <boxGeometry args={[op.width + 0.08, 0.03, wall.thickness + 0.06]} />
+                  <meshStandardMaterial color="#e0e0e0" roughness={0.6} />
+                </mesh>
+              );
+            }
+          } else if (op.type === 'garage-door') {
+            // Garage door panel with horizontal sections
+            const sections = 4;
+            const sectionH = (op.height - 0.04) / sections;
+            for (let s = 0; s < sections; s++) {
+              const sy = opBottom + 0.02 + sectionH * s + sectionH / 2;
+              segments.push(
+                <mesh key={`${wall.id}-garage-sec-${i}-${s}`} position={new THREE.Vector3(localX, 0, 0)
+                  .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
+                  .add(new THREE.Vector3(cx, sy + elevation, cz)).toArray()}
+                  rotation={[0, -angle, 0]}>
+                  <boxGeometry args={[op.width - 0.06, sectionH - 0.02, 0.04]} />
+                  <meshStandardMaterial color="#b0b0b0" roughness={0.7} metalness={0.2} />
+                </mesh>
+              );
+            }
+
+            // Garage door frame
+            const gFrameW = 0.05;
+            // Top
             segments.push(
-              <mesh key={`${wall.id}-win-ft-${i}`} position={[opPos.x, opCenterY + op.height / 2 - fw / 2 + elevation, opPos.z]}
+              <mesh key={`${wall.id}-garage-ft-${i}`} position={[opPos.x, opBottom + op.height - gFrameW / 2 + elevation, opPos.z]}
                 rotation={[0, -angle, 0]}>
-                <boxGeometry args={[op.width, fw, 0.025]} />
-                <meshStandardMaterial color={frameColor} roughness={0.3} />
+                <boxGeometry args={[op.width, gFrameW, 0.07]} />
+                <meshStandardMaterial color="#555" roughness={0.4} metalness={0.3} />
               </mesh>
             );
-            // Bottom bar
+            // Left
             segments.push(
-              <mesh key={`${wall.id}-win-fb-${i}`} position={[opPos.x, opCenterY - op.height / 2 + fw / 2 + elevation, opPos.z]}
+              <mesh key={`${wall.id}-garage-fl-${i}`} position={new THREE.Vector3(localX - op.width / 2 + gFrameW / 2, 0, 0)
+                .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
+                .add(new THREE.Vector3(cx, opBottom + op.height / 2 + elevation, cz)).toArray()}
                 rotation={[0, -angle, 0]}>
-                <boxGeometry args={[op.width, fw, 0.025]} />
-                <meshStandardMaterial color={frameColor} roughness={0.3} />
+                <boxGeometry args={[gFrameW, op.height, 0.07]} />
+                <meshStandardMaterial color="#555" roughness={0.4} metalness={0.3} />
+              </mesh>
+            );
+            // Right
+            segments.push(
+              <mesh key={`${wall.id}-garage-fr-${i}`} position={new THREE.Vector3(localX + op.width / 2 - gFrameW / 2, 0, 0)
+                .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
+                .add(new THREE.Vector3(cx, opBottom + op.height / 2 + elevation, cz)).toArray()}
+                rotation={[0, -angle, 0]}>
+                <boxGeometry args={[gFrameW, op.height, 0.07]} />
+                <meshStandardMaterial color="#555" roughness={0.4} metalness={0.3} />
               </mesh>
             );
           }
