@@ -76,8 +76,8 @@ export default function Walls3D() {
           cz = (nfz + ntz) / 2;
         }
       }
-      const mat = wall.materialId ? getMaterialById(wall.materialId) : null;
-      const color = mat?.color ?? '#e8a845';
+      const wallColors = resolveWallColors(wall);
+      const dualMats = createWallMaterials(wallColors);
 
       const renderHeight = cutawayHeight ? Math.min(wall.height, cutawayHeight) : wall.height;
       const elevation = floor?.elevation ?? 0;
@@ -91,9 +91,9 @@ export default function Walls3D() {
             rotation={[0, -angle, 0]}
             castShadow
             receiveShadow
+            material={dualMats}
           >
             <boxGeometry args={[length, renderHeight, wall.thickness]} />
-            <meshStandardMaterial color={color} roughness={mat?.roughness ?? 0.8} />
           </mesh>
         );
       }
