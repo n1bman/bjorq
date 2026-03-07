@@ -258,6 +258,72 @@ function splitAtTJunctions(walls: WallSegment[]): WallSegment[] {
   return result;
 }
 
+const HEAL_THRESHOLD = 0.20; // 20cm — merge endpoints closer than this
+
+/**
+ * Heal walls by merging nearby endpoints that should be the same node.
+ * Groups endpoints within HEAL_THRESHOLD and snaps them to the group centroid.
+ */
+export function healWalls(walls: WallSegment[]): { walls: WallSegment[]; healed: number } {
+  // Collect all unique endpoints
+  const allPts: { wallIdx: number; end: 'from' | 'to'; pt: [number, number] }[] = [];
+  walls.forEach((w, i) => {
+    allPts.push({ wallIdx: i, end: 'from', pt: [...w.from] });
+    allPts.push({ wallIdx: i, end: 'to', pt: [...w.to] });
+  });
+
+  // Union-find to group nearby points
+  const parent = allPts.map((_, i) => i);
+  const find = (x: number): number => (parent[x] === x ? x : (parent[x] = find(parent[x])));
+  const union = (a: number, b: number) => { parent[find(a)] = find(b); };
+
+  for (let i = 0; i < allPts.length; i++) {
+    for (let j = i + 1; j < allPts.length; j++) {
+      const dx = allPts[i].pt[0] - allPts[j].pt[0];
+      const dy = allPts[i].pt[1] - allPts[j].pt[1];
+      if (Math.hypot(dx, dy) < HEAL_THRESHOLD) {
+        union(i, j);
+      }
+    }
+  }
+
+  // Build groups and compute centroids
+  const groups = new Map<number, number[]>();
+  for (let i = 0; i < allPts.length; i++) {
+    const root = find(i);
+    if (!groups.has(root)) groups.set(root, []);
+    groups.get(root)!.push(i);
+  }
+
+  let healed = 0;
+  const result = walls.map((w) => ({ ...w, from: [...w.from] as [number, number], to: [...w.to] as [number, number] }));
+
+  for (const members of groups.values()) {
+    if (members.length <= 1) continue;
+    // Centroid
+    let cx = 0, cy = 0;
+    for (const m of members) { cx += allPts[m].pt[0]; cy += allPts[m].pt[1]; }
+    cx /= members.length;
+    cy /= members.length;
+    // Snap to grid-friendly value
+    const snap: [number, number] = [
+      Math.round(cx / EPSILON) * EPSILON,
+      Math.round(cy / EPSILON) * EPSILON,
+    ];
+    for (const m of members) {
+      const entry = allPts[m];
+      const w = result[entry.wallIdx];
+      const old = entry.end === 'from' ? w.from : w.to;
+      if (Math.abs(old[0] - snap[0]) > 0.001 || Math.abs(old[1] - snap[1]) > 0.001) {
+        healed++;
+      }
+      if (entry.end === 'from') { w.from = snap; } else { w.to = snap; }
+    }
+  }
+
+  return { walls: result, healed };
+}
+
 /**
  * Detect rooms from walls. Preserves existing room metadata (name, materials)
  * by matching new polygons to existing rooms via polygon overlap.
@@ -265,7 +331,8 @@ function splitAtTJunctions(walls: WallSegment[]): WallSegment[] {
 export function detectRooms(walls: WallSegment[], existingRooms?: Room[]): Room[] {
   if (walls.length < 3) return [];
   
-  const splitWalls = splitAtTJunctions(walls);
+  const { walls: healedWalls } = healWalls(walls);
+  const splitWalls = splitAtTJunctions(healedWalls);
   const graph = buildGraph(splitWalls);
   const cycles = findMinimalCycles(graph);
 
