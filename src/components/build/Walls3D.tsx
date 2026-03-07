@@ -405,5 +405,5 @@ export default function Walls3D() {
     }).filter(Boolean);
   }, [walls, floor?.elevation, effectiveMode, selectedRoomId, rooms]);
 
-  return <group>{wallMeshes}</group>;
+  return <group renderOrder={1}>{wallMeshes}</group>;
 }
