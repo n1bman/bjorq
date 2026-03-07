@@ -2,7 +2,7 @@ import { useAppStore } from '../../store/useAppStore';
 import type { SnapMode, WallViewMode, WeatherCondition } from '../../store/types';
 import {
   Undo2, Redo2, Eye, Box, Layers, Settings2,
-  ArrowUp, Scissors, ArrowDown, Focus, Ghost,
+  ArrowLeft, ArrowUp, Scissors, ArrowDown, Focus, Ghost,
   Grid3X3, XCircle, Sun, Check,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
@@ -13,7 +13,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 
 const viewModes = [
-  { key: 'topdown' as const, label: 'Plan', icon: Eye },
+  { key: 'topdown' as const, label: '2D', icon: Eye },
   { key: '3d' as const, label: '3D', icon: Box },
   { key: 'floor-isolate' as const, label: 'Isolera', icon: Layers },
 ];
@@ -58,80 +58,71 @@ export default function BuildTopToolbar() {
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   return (
-    <div className="relative z-50 flex items-center gap-1.5 px-2 py-1 border-b border-border bg-card/90 backdrop-blur-sm h-11">
+    <div className="relative z-50 flex items-center gap-1.5 px-2 py-1 border-b border-border bg-card/90 backdrop-blur-sm h-12">
+      {/* Back */}
+      <button
+        onClick={() => { toast.success('Sparad!'); setAppMode('home'); }}
+        title="Tillbaka"
+        className="p-2.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary/40 transition-all min-w-[44px] min-h-[44px] flex items-center justify-center"
+      >
+        <ArrowLeft size={18} />
+      </button>
+
       {/* Undo / Redo */}
       <button onClick={undo} disabled={undoLen === 0} title="Ångra"
-        className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/40 disabled:opacity-30 transition-all min-w-[36px] min-h-[36px] flex items-center justify-center">
-        <Undo2 size={16} />
+        className="p-2.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary/40 disabled:opacity-30 transition-all min-w-[44px] min-h-[44px] flex items-center justify-center">
+        <Undo2 size={18} />
       </button>
       <button onClick={redo} disabled={redoLen === 0} title="Gör om"
-        className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/40 disabled:opacity-30 transition-all min-w-[36px] min-h-[36px] flex items-center justify-center">
-        <Redo2 size={16} />
+        className="p-2.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary/40 disabled:opacity-30 transition-all min-w-[44px] min-h-[44px] flex items-center justify-center">
+        <Redo2 size={18} />
       </button>
 
       <div className="w-px h-5 bg-border mx-0.5" />
 
       {/* View toggle */}
-      <div className="flex items-center bg-secondary/30 rounded-lg p-0.5">
+      <div className="flex items-center bg-secondary/30 rounded-xl p-0.5">
         {viewModes.map(({ key, label, icon: Icon }) => (
           <button
             key={key}
             onClick={() => setCameraMode(key)}
             title={label}
             className={cn(
-              'flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs transition-all min-h-[32px]',
+              'flex items-center gap-1 px-3 py-2 rounded-lg text-xs transition-all min-h-[36px]',
               cameraMode === key
                 ? 'bg-primary/20 text-primary font-medium'
                 : 'text-muted-foreground hover:text-foreground'
             )}
           >
-            <Icon size={14} />
+            <Icon size={16} />
             <span className="hidden sm:inline">{label}</span>
           </button>
         ))}
       </div>
 
-      {/* Wall view modes */}
-      <div className="flex items-center bg-secondary/30 rounded-lg p-0.5">
-        {wallModes.map(({ key, icon: Icon }) => (
-          <button
-            key={key}
-            onClick={() => setView({ wallViewMode: key })}
-            title={key}
-            className={cn(
-              'p-1.5 rounded-md transition-all min-h-[28px]',
-              wallViewMode === key
-                ? 'bg-primary/20 text-primary'
-                : 'text-muted-foreground hover:text-foreground'
-            )}
-          >
-            <Icon size={13} />
-          </button>
-        ))}
-      </div>
+      {/* Spacer */}
+      <div className="flex-1" />
 
       {/* Ghost toggle */}
       <button
         onClick={() => setView({ showOtherFloorsGhost: !showGhost })}
         title="Visa andra våningar"
         className={cn(
-          'p-2 rounded-lg transition-all min-w-[36px] min-h-[36px] flex items-center justify-center',
-          showGhost ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-foreground'
+          'p-2.5 rounded-xl transition-all min-w-[44px] min-h-[44px] flex items-center justify-center',
+          showGhost ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-foreground hover:bg-secondary/40'
         )}
       >
-        <Ghost size={15} />
+        <Ghost size={16} />
       </button>
 
-      <div className="w-px h-5 bg-border mx-0.5" />
-
-      {/* Settings popover (grid, snap, environment, clear) */}
+      {/* Settings popover */}
       <Popover>
         <PopoverTrigger asChild>
-          <button title="Inställningar" className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/40 transition-all min-w-[36px] min-h-[36px] flex items-center justify-center">
-            <Settings2 size={16} />
+          <button title="Inställningar" className="p-2.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary/40 transition-all min-w-[44px] min-h-[44px] flex items-center justify-center">
+            <Settings2 size={18} />
           </button>
         </PopoverTrigger>
-        <PopoverContent side="bottom" align="start" className="w-64 p-3 space-y-4 bg-card border-border">
+        <PopoverContent side="bottom" align="end" className="w-64 p-3 space-y-4 bg-card border-border">
           {/* Grid */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
@@ -149,6 +140,28 @@ export default function BuildTopToolbar() {
                 className="flex-1 h-7 px-1.5 rounded-md bg-secondary/50 text-xs border-none outline-none" style={{ colorScheme: 'dark' }}>
                 {snapModes.map((sm) => <option key={sm.key} value={sm.key}>{sm.label}</option>)}
               </select>
+            </div>
+          </div>
+
+          {/* Wall view modes */}
+          <div className="space-y-2 border-t border-border pt-3">
+            <span className="text-xs font-medium text-foreground">Väggvisning</span>
+            <div className="flex gap-1">
+              {wallModes.map(({ key, icon: Icon }) => (
+                <button
+                  key={key}
+                  onClick={() => setView({ wallViewMode: key })}
+                  title={key}
+                  className={cn(
+                    'flex-1 p-2 rounded-lg transition-all min-h-[36px] flex items-center justify-center',
+                    wallViewMode === key
+                      ? 'bg-primary/20 text-primary'
+                      : 'text-muted-foreground hover:text-foreground bg-secondary/30'
+                  )}
+                >
+                  <Icon size={14} />
+                </button>
+              ))}
             </div>
           </div>
 
@@ -174,13 +187,13 @@ export default function BuildTopToolbar() {
             <div className="flex gap-1">
               {(['clear', 'cloudy', 'rain', 'snow'] as WeatherCondition[]).map((w) => (
                 <button key={w} onClick={() => { setWeather(w); if (envSource === 'auto') setWeatherSource('manual'); }}
-                  className={cn('flex-1 py-1 rounded text-[10px]', weatherCondition === w && envSource !== 'auto' ? 'bg-primary/20 text-primary' : 'bg-secondary/30 text-muted-foreground hover:text-foreground')}>
+                  className={cn('flex-1 py-1.5 rounded-lg text-[10px]', weatherCondition === w && envSource !== 'auto' ? 'bg-primary/20 text-primary' : 'bg-secondary/30 text-muted-foreground hover:text-foreground')}>
                   {w === 'clear' ? '☀️' : w === 'cloudy' ? '☁️' : w === 'rain' ? '🌧️' : '❄️'}
                 </button>
               ))}
             </div>
             <button onClick={() => setWeatherSource(envSource === 'auto' ? 'manual' : 'auto')}
-              className={cn('w-full py-1 rounded text-[10px] font-medium', envSource === 'auto' ? 'bg-primary/20 text-primary' : 'bg-secondary/30 text-muted-foreground hover:text-foreground')}>
+              className={cn('w-full py-1.5 rounded-lg text-[10px] font-medium', envSource === 'auto' ? 'bg-primary/20 text-primary' : 'bg-secondary/30 text-muted-foreground hover:text-foreground')}>
               {envSource === 'auto' ? '🌍 Live (aktiv)' : '🌍 Live väder'}
             </button>
           </div>
@@ -205,18 +218,15 @@ export default function BuildTopToolbar() {
         </PopoverContent>
       </Popover>
 
-      {/* Spacer */}
-      <div className="flex-1" />
-
       {/* Floor picker */}
       <FloorPicker />
 
       {/* Done button */}
       <button
         onClick={() => { toast.success('Sparad!'); setAppMode('home'); }}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors ml-1"
+        className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors ml-1 min-h-[44px]"
       >
-        <Check size={14} />
+        <Check size={16} />
         <span className="hidden sm:inline">Klar</span>
       </button>
     </div>
