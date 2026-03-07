@@ -475,6 +475,19 @@ function SettingsCategory() {
   );
 }
 
+function GraphicsCategory() {
+  return (
+    <div className="max-w-[1100px] mx-auto space-y-[var(--space-section)]">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+        <GraphicsSettings />
+        <SunCalibrationPanel />
+        <WeatherAtmospherePanel />
+        <EnvironmentPanel />
+      </div>
+    </div>
+  );
+}
+
 const categoryContent: Record<DashCategory, React.FC> = {
   home: HomeCategory,
   weather: WeatherCategory,
@@ -488,6 +501,7 @@ const categoryContent: Record<DashCategory, React.FC> = {
   robot: RobotPanel,
   activity: ActivityFeed,
   widgets: WidgetsCategory,
+  graphics: GraphicsCategory,
   settings: SettingsCategory,
 };
 
