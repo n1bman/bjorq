@@ -24,7 +24,14 @@ export default function WeatherAtmospherePanel() {
   const haConnected = useAppStore((s) => s.homeAssistant.status === 'connected');
   const weather = useAppStore((s) => s.environment.weather);
   const precipOverride = useAppStore((s) => s.environment.precipitationOverride);
-  const atm = useAppStore((s) => s.environment.atmosphere) ?? { fogEnabled: false, fogDensity: 0.3, cloudinessAffectsLight: true, dayNightTransition: 'smooth' as const, atmosphereIntensity: 1.0 };
+  const rawAtm = useAppStore((s) => s.environment.atmosphere);
+  const atm = {
+    fogEnabled: rawAtm?.fogEnabled ?? false,
+    fogDensity: rawAtm?.fogDensity ?? 0.3,
+    cloudinessAffectsLight: rawAtm?.cloudinessAffectsLight ?? true,
+    dayNightTransition: rawAtm?.dayNightTransition ?? ('smooth' as const),
+    atmosphereIntensity: rawAtm?.atmosphereIntensity ?? 1.0,
+  };
   const setWeatherSource = useAppStore((s) => s.setWeatherSource);
   const setWeather = useAppStore((s) => s.setWeather);
   const setPrecipitationOverride = useAppStore((s) => s.setPrecipitationOverride);
