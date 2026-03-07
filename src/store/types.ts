@@ -247,7 +247,29 @@ export interface PerformanceSettings {
   tabletMode: boolean;
   showHUD: boolean;
   maxLights: number; // 0 = unlimited
+  antialiasing: boolean;
+  toneMapping: boolean;
+  exposure: number; // 0.5–2.0
+  environmentLight: boolean;
   _autoDetectedPerformance?: boolean; // prevents re-applying auto-detection
+}
+
+// ─── Sun Calibration ───
+export interface SunCalibration {
+  northOffset: number;       // degrees — rotates sun path to match house orientation
+  azimuthCorrection: number; // degrees — fine-tune azimuth
+  elevationCorrection: number; // degrees — fine-tune elevation
+  intensityMultiplier: number; // 0.0–2.0 (default 1.0)
+  indoorBounce: number;      // 0.0–1.0 — fill light intensity inside rooms
+}
+
+// ─── Atmosphere Settings ───
+export interface AtmosphereSettings {
+  fogEnabled: boolean;
+  fogDensity: number;       // 0.0–1.0
+  cloudinessAffectsLight: boolean;
+  dayNightTransition: 'smooth' | 'instant';
+  atmosphereIntensity: number; // 0.0–2.0
 }
 
 export interface ImportedHomeSettings {
