@@ -3,17 +3,69 @@ import type { SnapMode, WeatherCondition } from '../../store/types';
 import {
   Undo2, Redo2, Eye, Box, Layers, Settings2,
   ArrowLeft, Ghost,
-  Grid3X3, XCircle, Sun, Check, HelpCircle, Sparkles, DoorOpen,
+  Grid3X3, XCircle, Sun, Check, HelpCircle, Sparkles, DoorOpen, Trash2, Edit3,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Slider } from '../ui/slider';
 import { Popover, PopoverTrigger, PopoverContent } from '../ui/popover';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
 import FloorPicker from './FloorPicker';
-import RoomManager from './RoomManager';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { detectRooms } from '../../lib/roomDetection';
+
+/* ═══════════════════════════════════════════════
+   RoomManager — inlined to avoid Vite resolve issues
+   ═══════════════════════════════════════════════ */
+
+function polygonArea(pts: [number, number][]): number {
+  let area = 0;
+  for (let i = 0; i < pts.length; i++) {
+    const j = (i + 1) % pts.length;
+    area += pts[i][0] * pts[j][1];
+    area -= pts[j][0] * pts[i][1];
+  }
+  return Math.abs(area) / 2;
+}
+
+function RoomManager() {
+  const activeFloorId = useAppStore((s) => s.layout.activeFloorId);
+  const floors = useAppStore((s) => s.layout.floors);
+  const renameRoom = useAppStore((s) => s.renameRoom);
+  const removeRoom = useAppStore((s) => s.removeRoom);
+  const setSelection = useAppStore((s) => s.setSelection);
+  const selectedId = useAppStore((s) => s.build.selection.type === 'room' ? s.build.selection.id : null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState('');
+  const floor = floors.find((f) => f.id === activeFloorId);
+  const rooms = floor?.rooms ?? [];
+  const startEdit = (id: string, name: string) => { setEditingId(id); setEditValue(name); };
+  const commitEdit = (id: string) => { if (editValue.trim() && activeFloorId) renameRoom(activeFloorId, id, editValue.trim()); setEditingId(null); };
+  if (rooms.length === 0) return <p className="text-xs text-muted-foreground py-2 text-center">Inga rum. Rita väggar och klicka Optimera.</p>;
+  return (
+    <div className="flex flex-col gap-1">
+      <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Rum ({rooms.length})</h4>
+      {rooms.map((room) => {
+        const area = room.polygon ? polygonArea(room.polygon) : 0;
+        return (
+          <div key={room.id} onClick={() => setSelection({ type: 'room', id: room.id })} className={cn('flex items-center justify-between px-2 py-1.5 rounded text-xs cursor-pointer group', selectedId === room.id ? 'bg-primary/20 text-primary' : 'text-muted-foreground hover:bg-secondary/20')}>
+            <div className="flex items-center gap-1.5 flex-1 min-w-0">
+              {editingId === room.id ? (
+                <input autoFocus className="flex-1 min-w-0 bg-secondary/40 border border-border rounded px-1.5 py-0.5 text-xs text-foreground outline-none focus:ring-1 focus:ring-primary/50" value={editValue} onClick={(e) => e.stopPropagation()} onChange={(e) => setEditValue(e.target.value)} onBlur={() => commitEdit(room.id)} onKeyDown={(e) => { if (e.key === 'Enter') commitEdit(room.id); if (e.key === 'Escape') setEditingId(null); }} />
+              ) : (
+                <><span className="truncate font-medium">{room.name}</span>{area > 0 && <span className="text-[9px] text-muted-foreground/60 shrink-0">{area.toFixed(1)} m²</span>}</>
+              )}
+            </div>
+            <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+              {editingId !== room.id && <button onClick={(e) => { e.stopPropagation(); startEdit(room.id, room.name); }} className="p-0.5 text-muted-foreground hover:text-foreground"><Edit3 size={12} /></button>}
+              <button onClick={(e) => { e.stopPropagation(); if (activeFloorId) removeRoom(activeFloorId, room.id); }} className="p-0.5 text-destructive/60 hover:text-destructive"><Trash2 size={12} /></button>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 const viewModes = [
   { key: 'topdown' as const, label: '2D', icon: Eye },
