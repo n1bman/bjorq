@@ -1138,8 +1138,8 @@ export default function BuildCanvas2D({ overlayMode = false }: { overlayMode?: b
         return;
       }
 
-      // ─── Door/Window placement ───
-      if ((activeTool === 'door' || activeTool === 'window') && activeFloorId) {
+      // ─── Door/Window/Garage-door placement ───
+      if ((activeTool === 'door' || activeTool === 'window' || activeTool === 'garage-door') && activeFloorId) {
         const wall = findWallAt(sx, sy);
         if (wall) {
           const [wx, wz] = screenToWorld(sx, sy);
@@ -1150,12 +1150,13 @@ export default function BuildCanvas2D({ overlayMode = false }: { overlayMode?: b
             const presetId = (useAppStore.getState() as any)._selectedOpeningPreset;
             const preset = presetId ? openingPresets.find((p: any) => p.id === presetId) : null;
             const openingId = generateId();
+            const openingType = activeTool === 'garage-door' ? 'garage-door' : activeTool;
             addOpening(activeFloorId, wall.id, {
               id: openingId,
-              type: activeTool,
+              type: openingType as 'door' | 'window' | 'garage-door',
               offset: Math.max(0.05, Math.min(0.95, t)),
-              width: preset?.width ?? (activeTool === 'door' ? 0.9 : 1.2),
-              height: preset?.height ?? (activeTool === 'door' ? 2.1 : 1.2),
+              width: preset?.width ?? (activeTool === 'door' ? 0.9 : activeTool === 'garage-door' ? 2.5 : 1.2),
+              height: preset?.height ?? (activeTool === 'door' ? 2.1 : activeTool === 'garage-door' ? 2.2 : 1.2),
               sillHeight: preset?.sillHeight ?? (activeTool === 'window' ? 0.9 : 0),
               style: preset?.style,
             });
