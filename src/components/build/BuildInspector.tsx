@@ -205,15 +205,18 @@ function WallInspector({ floorId, wallId, floor, close }: { floorId: string; wal
   const dz = wall.to[1] - wall.from[1];
   const length = Math.sqrt(dx * dx + dz * dz);
 
-  const handleAddOpening = (type: 'door' | 'window') => {
+  const handleAddOpening = (type: 'door' | 'window' | 'garage-door') => {
     pushUndo();
+    const defaults = type === 'garage-door'
+      ? { width: 2.5, height: 2.2, sillHeight: 0, style: 'sectional' }
+      : type === 'door'
+        ? { width: 0.9, height: 2.1, sillHeight: 0, style: 'single' }
+        : { width: 1.2, height: 1.2, sillHeight: 0.9, style: 'casement' };
     addOpening(floorId, wall.id, {
       id: Math.random().toString(36).slice(2, 10),
       type,
       offset: 0.5,
-      width: type === 'door' ? 0.9 : 1.2,
-      height: type === 'door' ? 2.1 : 1.2,
-      sillHeight: type === 'window' ? 0.9 : 0,
+      ...defaults,
     });
   };
 
