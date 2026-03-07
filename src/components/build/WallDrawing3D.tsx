@@ -9,7 +9,7 @@ interface WallDrawing3DProps {
   cursorMidSnap?: boolean;
 }
 
-export default function WallDrawing3D({ cursorPos, cursorSnapped }: WallDrawing3DProps) {
+export default function WallDrawing3D({ cursorPos, cursorSnapped, cursorMidSnap }: WallDrawing3DProps) {
   const wallDrawing = useAppStore((s) => s.build.wallDrawing);
 
   const linePoints = useMemo(() => {
