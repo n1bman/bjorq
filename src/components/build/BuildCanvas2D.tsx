@@ -4,7 +4,11 @@ import { getMaterialById } from '../../lib/materials';
 import { angleLock } from '../../lib/buildUtils';
 import type { WallSegment } from '../../store/types';
 import { openingPresets } from '../../lib/openingPresets';
-
+import { Slider } from '../ui/slider';
+import { Switch } from '../ui/switch';
+import { Label } from '../ui/label';
+import { Button } from '../ui/button';
+import { Trash2, Lock, Unlock, RotateCw, Move, ZoomIn } from 'lucide-react';
 const generateId = () => Math.random().toString(36).slice(2, 10);
 
 const COLORS = {
@@ -1588,6 +1592,77 @@ export default function BuildCanvas2D({ overlayMode = false }: { overlayMode?: b
         {showGhost && (
           <span className="text-muted-foreground/60">Visar andra våningars väggar som skuggor</span>
         )}
+      </div>
+
+      {/* ─── Planritning (reference drawing) controls ─── */}
+      {referenceDrawing?.url && (
+        <ReferenceControls />
+      )}
+    </div>
+  );
+}
+
+function ReferenceControls() {
+  const activeFloorId = useAppStore((s) => s.layout.activeFloorId);
+  const floors = useAppStore((s) => s.layout.floors);
+  const updateReferenceDrawing = useAppStore((s) => s.updateReferenceDrawing);
+  const setReferenceDrawing = useAppStore((s) => s.setReferenceDrawing);
+
+  const floor = floors.find((f) => f.id === activeFloorId);
+  const ref = floor?.referenceDrawing;
+  if (!ref || !activeFloorId) return null;
+
+  const update = (changes: Partial<typeof ref>) => updateReferenceDrawing(activeFloorId, changes);
+
+  return (
+    <div className="absolute top-2 right-2 w-56 bg-background/95 backdrop-blur border border-border rounded-lg p-3 flex flex-col gap-3 shadow-lg z-20">
+      <span className="text-xs font-semibold text-foreground">Planritning</span>
+
+      {/* Opacity */}
+      <div className="flex flex-col gap-1">
+        <Label className="text-[10px] text-muted-foreground">Opacitet</Label>
+        <Slider min={0} max={1} step={0.05} value={[ref.opacity]} onValueChange={([v]) => update({ opacity: v })} />
+      </div>
+
+      {/* Scale */}
+      <div className="flex flex-col gap-1">
+        <Label className="text-[10px] text-muted-foreground flex items-center gap-1"><ZoomIn className="w-3 h-3" />Skala (px/m)</Label>
+        <div className="flex items-center gap-2">
+          <Slider min={10} max={500} step={1} value={[ref.scale]} onValueChange={([v]) => update({ scale: v })} className="flex-1" />
+          <input type="number" value={ref.scale} onChange={(e) => update({ scale: Number(e.target.value) || 100 })} className="w-14 text-xs bg-muted border border-border rounded px-1.5 py-0.5 text-foreground" />
+        </div>
+      </div>
+
+      {/* Rotation */}
+      <div className="flex flex-col gap-1">
+        <Label className="text-[10px] text-muted-foreground flex items-center gap-1"><RotateCw className="w-3 h-3" />Rotation (°)</Label>
+        <div className="flex items-center gap-2">
+          <Slider min={0} max={360} step={1} value={[ref.rotation]} onValueChange={([v]) => update({ rotation: v })} className="flex-1" />
+          <input type="number" value={ref.rotation} onChange={(e) => update({ rotation: Number(e.target.value) || 0 })} className="w-14 text-xs bg-muted border border-border rounded px-1.5 py-0.5 text-foreground" />
+        </div>
+      </div>
+
+      {/* Position */}
+      <div className="flex flex-col gap-1">
+        <Label className="text-[10px] text-muted-foreground flex items-center gap-1"><Move className="w-3 h-3" />Position</Label>
+        <div className="flex items-center gap-2">
+          <label className="text-[10px] text-muted-foreground">X</label>
+          <input type="number" step={0.1} value={ref.offsetX} onChange={(e) => update({ offsetX: Number(e.target.value) || 0 })} className="w-16 text-xs bg-muted border border-border rounded px-1.5 py-0.5 text-foreground" />
+          <label className="text-[10px] text-muted-foreground">Y</label>
+          <input type="number" step={0.1} value={ref.offsetY} onChange={(e) => update({ offsetY: Number(e.target.value) || 0 })} className="w-16 text-xs bg-muted border border-border rounded px-1.5 py-0.5 text-foreground" />
+        </div>
+      </div>
+
+      {/* Lock + Delete */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          {ref.locked ? <Lock className="w-3.5 h-3.5 text-muted-foreground" /> : <Unlock className="w-3.5 h-3.5 text-muted-foreground" />}
+          <Label className="text-[10px] text-muted-foreground">Lås</Label>
+          <Switch checked={ref.locked} onCheckedChange={(v) => update({ locked: v })} className="scale-75" />
+        </div>
+        <Button variant="ghost" size="sm" className="h-7 text-destructive hover:text-destructive" onClick={() => setReferenceDrawing(activeFloorId, undefined)}>
+          <Trash2 className="w-3.5 h-3.5" />
+        </Button>
       </div>
     </div>
   );
