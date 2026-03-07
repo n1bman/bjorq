@@ -13,6 +13,7 @@ import ImportedHome3D from './build/ImportedHome3D';
 import Props3D from './build/Props3D';
 import DeviceMarkers3D from './devices/DeviceMarkers3D';
 import WeatherEffects3D from './build/WeatherEffects3D';
+import Ceilings3D from './build/Ceilings3D';
 
 import GroundPlane from './build/GroundPlane';
 import type { CameraPreset, StandbyCameraView } from '../store/types';
