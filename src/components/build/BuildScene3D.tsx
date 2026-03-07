@@ -89,6 +89,7 @@ function SceneContent() {
   const floors = useAppStore((s) => s.layout.floors);
 
   const [cursorPos, setCursorPos] = useState<[number, number] | null>(null);
+  const [cursorSnapped, setCursorSnapped] = useState(false);
   const controlsRef = useRef<any>(null);
 
   const snapToGrid = useCallback(
