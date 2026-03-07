@@ -177,7 +177,7 @@ export interface BuildView {
   cameraMode: CameraMode;
   showOtherFloorsGhost: boolean;
   floorFilter: string | 'all';
-  wallViewMode: WallViewMode;
+  
 }
 
 export interface ImportOverlaySync {

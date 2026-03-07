@@ -61,7 +61,7 @@ export default function Walls3D() {
       const wallColors = resolveWallColors(wall);
       const dualMats = createWallMaterials(wallColors);
 
-      const renderHeight = cutawayHeight ? Math.min(wall.height, cutawayHeight) : wall.height;
+      const renderHeight = wall.height;
       const elevation = floor?.elevation ?? 0;
 
       const segments: JSX.Element[] = [];

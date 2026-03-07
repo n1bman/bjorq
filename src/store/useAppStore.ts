@@ -42,7 +42,7 @@ const initialBuild: BuildState = {
   activeTool: 'select',
   grid: { enabled: true, sizeMeters: 0.5, snapMode: 'strict' },
   selection: { type: null, id: null },
-  view: { cameraMode: 'topdown', showOtherFloorsGhost: false, floorFilter: 'all', wallViewMode: 'up' as const },
+  view: { cameraMode: 'topdown', showOtherFloorsGhost: false, floorFilter: 'all' },
   wallDrawing: { isDrawing: false, nodes: [] },
   roomDrawing: { isDrawing: false, startPoint: null, endPoint: null },
   calibration: { isCalibrating: false, point1: null, point2: null, realMeters: null },

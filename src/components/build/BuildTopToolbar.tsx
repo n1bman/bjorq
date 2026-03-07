@@ -174,28 +174,6 @@ export default function BuildTopToolbar() {
             </div>
           </div>
 
-          {/* Wall view modes */}
-          <div className="space-y-2 border-t border-border pt-3">
-            <span className="text-xs font-medium text-foreground">Väggvisning</span>
-            <div className="flex gap-1">
-              {wallModes.map(({ key, icon: Icon }) => (
-                <button
-                  key={key}
-                  onClick={() => setView({ wallViewMode: key })}
-                  title={key}
-                  className={cn(
-                    'flex-1 p-2 rounded-lg transition-all min-h-[36px] flex items-center justify-center',
-                    wallViewMode === key
-                      ? 'bg-primary/20 text-primary'
-                      : 'text-muted-foreground hover:text-foreground bg-secondary/30'
-                  )}
-                >
-                  <Icon size={14} />
-                </button>
-              ))}
-            </div>
-          </div>
-
           {/* Sun & Weather */}
           <div className="space-y-2 border-t border-border pt-3">
             <span className="text-xs font-medium text-foreground flex items-center gap-1.5"><Sun size={13} /> Sol & Väder</span>
