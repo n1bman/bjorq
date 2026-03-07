@@ -662,11 +662,15 @@ const storeCreator = (set: any, get: any): AppState => ({
       },
     })),
 
-  addProp: (prop) =>
-    set((s: any) => ({ props: { ...s.props, items: [...s.props.items, prop] } })),
+  addProp: (prop) => {
+    get().pushUndo();
+    set((s: any) => ({ props: { ...s.props, items: [...s.props.items, prop] } }));
+  },
 
-  removeProp: (id) =>
-    set((s: any) => ({ props: { ...s.props, items: s.props.items.filter((p: any) => p.id !== id) } })),
+  removeProp: (id) => {
+    get().pushUndo();
+    set((s: any) => ({ props: { ...s.props, items: s.props.items.filter((p: any) => p.id !== id) } }));
+  },
 
   updateProp: (id, changes) =>
     set((s: any) => ({
