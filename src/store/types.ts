@@ -2,9 +2,37 @@
 export interface Material {
   id: string;
   name: string;
-  type: 'paint' | 'concrete' | 'wood' | 'tile' | 'metal';
+  type: 'paint' | 'concrete' | 'wood' | 'tile' | 'metal' | 'custom';
   color: string; // hex
   roughness: number;
+  textureUrl?: string; // user-uploaded texture image
+  textureScale?: number; // UV repeat factor (default 1)
+}
+
+// ─── Reference Drawing ───
+export interface ReferenceDrawing {
+  url: string; // data URL or blob URL
+  opacity: number; // 0-1
+  scale: number; // pixels per meter
+  offsetX: number; // meters
+  offsetY: number; // meters
+  rotation: number; // degrees
+  locked: boolean;
+}
+
+// ─── Terrain / Ground Environment ───
+export interface TerrainSettings {
+  enabled: boolean;
+  grassColor: string; // hex
+  grassRadius: number; // meters
+  trees: TreeInstance[];
+}
+
+export interface TreeInstance {
+  id: string;
+  position: [number, number]; // x, z
+  type: 'deciduous' | 'conifer' | 'palm';
+  scale: number;
 }
 
 // ─── Layout Layer ───
@@ -74,6 +102,7 @@ export interface Floor {
   floorplanImage?: string;
   pixelsPerMeter?: number;
   vacuumMapping?: VacuumMapping;
+  referenceDrawing?: ReferenceDrawing;
 }
 
 export interface LayoutState {
@@ -766,6 +795,7 @@ export interface AppState {
   automations: Automation[];
   savedScenes: SavedScene[];
   comfort: ComfortState;
+  terrain: TerrainSettings;
 
   // Performance actions
   setPerformance: (changes: Partial<PerformanceSettings>) => void;
@@ -947,4 +977,17 @@ export interface AppState {
   setHAStatus: (status: HAConnectionStatus) => void;
   setHAConnection: (wsUrl: string, token: string) => void;
   setVacuumSegmentMap: (map: Record<string, number>) => void;
+
+  // Reference drawing actions
+  setReferenceDrawing: (floorId: string, drawing: ReferenceDrawing | undefined) => void;
+  updateReferenceDrawing: (floorId: string, changes: Partial<ReferenceDrawing>) => void;
+
+  // Terrain actions
+  setTerrain: (changes: Partial<TerrainSettings>) => void;
+  addTree: (tree: TreeInstance) => void;
+  removeTree: (id: string) => void;
+  updateTree: (id: string, changes: Partial<TreeInstance>) => void;
+
+  // Custom material actions
+  addCustomMaterial: (material: Material) => void;
 }

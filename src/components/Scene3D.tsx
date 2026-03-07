@@ -13,6 +13,7 @@ import ImportedHome3D from './build/ImportedHome3D';
 import Props3D from './build/Props3D';
 import DeviceMarkers3D from './devices/DeviceMarkers3D';
 import WeatherEffects3D from './build/WeatherEffects3D';
+import TerrainEnvironment3D from './build/TerrainEnvironment3D';
 import GroundPlane from './build/GroundPlane';
 import type { CameraPreset, StandbyCameraView } from '../store/types';
 
@@ -242,6 +243,7 @@ function SceneContent() {
       <ImportedHome3D />
       <Props3D />
       <WeatherEffects3D />
+      <TerrainEnvironment3D />
       <DeviceMarkers3D />
 
       <Environment preset="night" />

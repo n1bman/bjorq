@@ -4,10 +4,13 @@ import type { BuildTool } from '../../store/types';
 import {
   Minus, Square, DoorOpen, SquareStack, Paintbrush,
   Ruler, Upload, Layers, Move, Package, Plus, RefreshCw,
+  ImageIcon, Trees,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import TemplatesPicker from './structure/TemplatesPicker';
 import PaintTool from './structure/PaintTool';
+import ReferenceDrawingTools from './structure/ReferenceDrawingTools';
+import TerrainTools from './structure/TerrainTools';
 import ImportTools from './import/ImportTools';
 import FurnishTools from './furnish/FurnishTools';
 import DevicePlacementTools from './devices/DevicePlacementTools';
@@ -126,6 +129,12 @@ export default function BuildLeftPanel() {
               <ScaleCalibration />
             </div>
           )}
+
+          {/* Reference drawing & terrain always visible in structure tab */}
+          <div className="border-t border-border mt-2 pt-2 px-2 space-y-3 overflow-y-auto">
+            <ReferenceDrawingTools />
+            <TerrainTools />
+          </div>
         </>
       )}
 

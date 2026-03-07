@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback, useState } from 'react';
+import { useRef, useEffect, useCallback, useState, useMemo } from 'react';
 import { useAppStore } from '../../store/useAppStore';
 import { getMaterialById } from '../../lib/materials';
 import { angleLock } from '../../lib/buildUtils';
@@ -90,6 +90,10 @@ export default function BuildCanvas2D({ overlayMode = false }: { overlayMode?: b
   const [roomDrawStart, setRoomDrawStart] = useState<[number, number] | null>(null);
   const [roomDrawEnd, setRoomDrawEnd] = useState<[number, number] | null>(null);
 
+  // Reference drawing image
+  const refImgRef = useRef<HTMLImageElement | null>(null);
+  const [refImgLoaded, setRefImgLoaded] = useState(false);
+
   const activeTool = useAppStore((s) => s.build.activeTool);
   const vacuumZoneDrawing = useRef<[number, number][]>([]);
   const [vacZoneNodes, setVacZoneNodes] = useState<[number, number][]>([]);
@@ -128,6 +132,22 @@ export default function BuildCanvas2D({ overlayMode = false }: { overlayMode?: b
   const stairs = floor?.stairs ?? [];
   const floorProps = propItems.filter((p) => p.floorId === activeFloorId);
   const ghostFloors = showGhost ? floors.filter((f) => f.id !== activeFloorId) : [];
+  const referenceDrawing = floor?.referenceDrawing;
+
+  // Load reference image
+  useEffect(() => {
+    if (!referenceDrawing?.url) {
+      refImgRef.current = null;
+      setRefImgLoaded(false);
+      return;
+    }
+    const img = new Image();
+    img.onload = () => {
+      refImgRef.current = img;
+      setRefImgLoaded(true);
+    };
+    img.src = referenceDrawing.url;
+  }, [referenceDrawing?.url]);
 
   // World <-> Screen conversions
   const worldToScreen = useCallback(
@@ -313,6 +333,26 @@ export default function BuildCanvas2D({ overlayMode = false }: { overlayMode?: b
           ctx.stroke();
         }
       }
+    }
+
+    // ─── Reference drawing ───
+    if (referenceDrawing && refImgRef.current && refImgLoaded) {
+      const img = refImgRef.current;
+      const ppm = referenceDrawing.scale; // pixels per meter
+      const imgWMeters = img.width / ppm;
+      const imgHMeters = img.height / ppm;
+      const imgWPx = imgWMeters * zoom;
+      const imgHPx = imgHMeters * zoom;
+      const [cx, cy] = worldToScreen(referenceDrawing.offsetX, referenceDrawing.offsetY);
+
+      ctx.save();
+      ctx.globalAlpha = referenceDrawing.opacity;
+      ctx.translate(cx, cy);
+      if (referenceDrawing.rotation !== 0) {
+        ctx.rotate((referenceDrawing.rotation * Math.PI) / 180);
+      }
+      ctx.drawImage(img, -imgWPx / 2, -imgHPx / 2, imgWPx, imgHPx);
+      ctx.restore();
     }
 
     // ─── Ghost floors ───
