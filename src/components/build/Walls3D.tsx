@@ -140,7 +140,8 @@ export default function Walls3D() {
             );
           }
 
-          // ─── 3D Door/Window/Garage models for home view ───
+          // ─── 3D Door/Window/Garage/Passage models for home view ───
+          const flipSign = op.flipped ? -1 : 1;
           const localX = op.offset * origLength - origLength / 2;
           const opCenterY = opBottom + op.height / 2;
           const opPos = new THREE.Vector3(localX, 0, 0)
