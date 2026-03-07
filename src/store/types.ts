@@ -121,6 +121,7 @@ export type BuildTool =
   | 'door'
   | 'window'
   | 'garage-door'
+  | 'passage'
   | 'stairs'
   | 'paint'
   | 'template'
