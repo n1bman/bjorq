@@ -4,7 +4,7 @@ import BuildTopToolbar from './BuildTopToolbar';
 import BuildTabBar from './BuildTabBar';
 import BuildLeftPanel from './BuildLeftPanel';
 import BuildInspector from './BuildInspector';
-import Canvas2DView from './canvas2d/Canvas2DView';
+import BuildCanvas2D from './BuildCanvas2D';
 import BuildScene3D from './BuildScene3D';
 
 const ImportPreview3D = lazy(() => import('./ImportPreview3D'));
