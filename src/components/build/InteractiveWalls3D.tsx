@@ -476,5 +476,5 @@ export default function InteractiveWalls3D() {
     });
   }, [walls, rooms, elevation, selectedWallId, selectedOpeningId, hoveredWallId, activeTool, handleWallClick, handleOpeningClick, wallRoomMaterial]);
 
-  return <group>{wallMeshes}</group>;
+  return <group renderOrder={1}>{wallMeshes}</group>;
 }
