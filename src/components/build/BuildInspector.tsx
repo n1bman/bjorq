@@ -377,10 +377,14 @@ function WallInspector({ floorId, wallId, floor, close }: { floorId: string; wal
       <div className="border-t border-border pt-2">
         <div className="flex items-center justify-between mb-2">
           <span className="text-muted-foreground">Öppningar</span>
-          <div className="flex gap-1">
+          <div className="flex gap-1 flex-wrap">
             <button onClick={() => handleAddOpening('door')}
               className="flex items-center gap-1 px-2 py-1 rounded-md bg-secondary/50 hover:bg-secondary text-foreground transition-colors min-h-[32px]">
               <Plus size={12} /> Dörr
+            </button>
+            <button onClick={() => handleAddOpening('passage')}
+              className="flex items-center gap-1 px-2 py-1 rounded-md bg-secondary/50 hover:bg-secondary text-foreground transition-colors min-h-[32px]">
+              <Plus size={12} /> Passage
             </button>
             <button onClick={() => handleAddOpening('window')}
               className="flex items-center gap-1 px-2 py-1 rounded-md bg-secondary/50 hover:bg-secondary text-foreground transition-colors min-h-[32px]">
@@ -396,7 +400,7 @@ function WallInspector({ floorId, wallId, floor, close }: { floorId: string; wal
               className="flex items-center gap-1 text-foreground hover:text-primary transition-colors"
             >
               <DoorOpen size={12} />
-              {op.type === 'door' ? 'Dörr' : op.type === 'garage-door' ? 'Garageport' : 'Fönster'}
+              {op.type === 'door' ? 'Dörr' : op.type === 'garage-door' ? 'Garageport' : op.type === 'passage' ? 'Passage' : 'Fönster'}
             </button>
             <button
               onClick={() => { pushUndo(); removeOpening(floorId, wall.id, op.id); }}
