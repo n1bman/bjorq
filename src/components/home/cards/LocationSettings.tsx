@@ -1,18 +1,14 @@
 import { useAppStore } from '../../../store/useAppStore';
 import { Input } from '../../ui/input';
 import { Button } from '../../ui/button';
-import { Switch } from '../../ui/switch';
 import { MapPin, Navigation, Search } from 'lucide-react';
 import { useState } from 'react';
 
 export default function LocationSettings() {
-  const haConnected = useAppStore((s) => s.homeAssistant.status === 'connected');
   const lat = useAppStore((s) => s.environment.location.lat);
   const lon = useAppStore((s) => s.environment.location.lon);
   const timezone = useAppStore((s) => s.environment.location.timezone);
-  const source = useAppStore((s) => s.environment.source);
   const setLocation = useAppStore((s) => s.setLocation);
-  const setWeatherSource = useAppStore((s) => s.setWeatherSource);
   const [locating, setLocating] = useState(false);
   const [address, setAddress] = useState('');
   const [country, setCountry] = useState('');
@@ -67,27 +63,8 @@ export default function LocationSettings() {
         <h4 className="text-sm font-semibold text-foreground">Plats</h4>
       </div>
 
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <span className="text-xs text-foreground">Live väder</span>
-          <Switch
-            checked={source === 'auto' || source === 'ha'}
-            onCheckedChange={(v) => setWeatherSource(v ? 'auto' : 'manual')}
-          />
-        </div>
-        {(source === 'auto' || source === 'ha') && haConnected && (
-          <div className="flex items-center justify-between pl-2">
-            <span className="text-[10px] text-muted-foreground">Använd HA-väder</span>
-            <Switch
-              checked={source === 'ha'}
-              onCheckedChange={(v) => setWeatherSource(v ? 'ha' : 'auto')}
-            />
-          </div>
-        )}
-      </div>
-
       {/* Address search */}
-      <div className="space-y-2 border-t border-border/30 pt-3">
+      <div className="space-y-2">
         <p className="text-[10px] text-muted-foreground font-medium">Sök efter plats</p>
         <Input
           placeholder="Adress / Stad"
@@ -150,7 +127,7 @@ export default function LocationSettings() {
         </div>
       </div>
       <p className="text-[10px] text-muted-foreground">
-        Tidszon: {timezone} · Källa: {source === 'ha' ? 'Home Assistant' : source === 'auto' ? 'Open-Meteo' : 'Manuell'}
+        Tidszon: {timezone}
       </p>
     </div>
   );
