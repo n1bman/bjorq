@@ -197,6 +197,9 @@ function WallInspector({ floorId, wallId, floor, close }: { floorId: string; wal
   const pushUndo = useAppStore((s) => s.pushUndo);
   const deleteWall = useAppStore((s) => s.deleteWall);
   const setSelection = useAppStore((s) => s.setSelection);
+  const updateWall = useAppStore((s) => s.updateWall);
+  const textureInputRef = useRef<HTMLInputElement>(null);
+  const [materialTarget, setMaterialTarget] = useState<'exterior' | 'interior'>('exterior');
 
   const wall = floor.walls.find((w: any) => w.id === wallId);
   if (!wall) return null;
@@ -207,17 +210,20 @@ function WallInspector({ floorId, wallId, floor, close }: { floorId: string; wal
 
   const handleAddOpening = (type: 'door' | 'window' | 'garage-door') => {
     pushUndo();
+    const newId = generateId();
     const defaults = type === 'garage-door'
       ? { width: 2.5, height: 2.2, sillHeight: 0, style: 'sectional' }
       : type === 'door'
         ? { width: 0.9, height: 2.1, sillHeight: 0, style: 'single' }
         : { width: 1.2, height: 1.2, sillHeight: 0.9, style: 'casement' };
     addOpening(floorId, wall.id, {
-      id: Math.random().toString(36).slice(2, 10),
+      id: newId,
       type,
       offset: 0.5,
       ...defaults,
     });
+    // Auto-select the new opening to prevent spam
+    setSelection({ type: 'opening', id: newId });
   };
 
   const handleDelete = () => {
@@ -226,8 +232,42 @@ function WallInspector({ floorId, wallId, floor, close }: { floorId: string; wal
     setSelection({ type: null, id: null });
   };
 
+  const handleSetMaterial = (matId: string) => {
+    pushUndo();
+    if (materialTarget === 'exterior') {
+      updateWall(floorId, wall.id, { materialId: matId });
+    } else {
+      updateWall(floorId, wall.id, { interiorMaterialId: matId });
+    }
+  };
+
+  const handleTextureUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    const customId = `custom-${generateId()}`;
+    addCustomMaterial({
+      id: customId,
+      name: file.name.replace(/\.[^.]+$/, ''),
+      type: 'custom',
+      color: '#ffffff',
+      roughness: 0.7,
+      textureUrl: url,
+    });
+    pushUndo();
+    if (materialTarget === 'exterior') {
+      updateWall(floorId, wall.id, { materialId: customId });
+    } else {
+      updateWall(floorId, wall.id, { interiorMaterialId: customId });
+    }
+    e.target.value = '';
+  };
+
+  const wallMats = presetMaterials.filter((m) => m.type === 'paint' || m.type === 'wood' || m.type === 'tile' || m.type === 'concrete');
+  const currentMatId = materialTarget === 'exterior' ? wall.materialId : wall.interiorMaterialId;
+
   return (
-    <div className="absolute top-3 right-3 w-56 glass-panel rounded-xl p-3 space-y-3 text-xs z-10">
+    <div className="absolute top-3 right-3 w-60 glass-panel rounded-xl p-3 space-y-3 text-xs z-10 max-h-[80vh] overflow-y-auto">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-foreground font-display">Vägg</h3>
         {close}
@@ -237,6 +277,36 @@ function WallInspector({ floorId, wallId, floor, close }: { floorId: string; wal
         <span>Längd:</span><span className="text-foreground">{length.toFixed(2)} m</span>
         <span>Höjd:</span><span className="text-foreground">{wall.height} m</span>
         <span>Tjocklek:</span><span className="text-foreground">{wall.thickness} m</span>
+      </div>
+
+      {/* Interior/Exterior material */}
+      <div className="border-t border-border pt-2 space-y-2">
+        <div className="flex items-center gap-1">
+          <button onClick={() => setMaterialTarget('exterior')}
+            className={`flex-1 py-1 rounded-md text-[10px] font-medium transition-colors ${materialTarget === 'exterior' ? 'bg-primary/20 text-primary' : 'bg-secondary/30 text-muted-foreground hover:text-foreground'}`}>
+            Utsida
+          </button>
+          <button onClick={() => setMaterialTarget('interior')}
+            className={`flex-1 py-1 rounded-md text-[10px] font-medium transition-colors ${materialTarget === 'interior' ? 'bg-primary/20 text-primary' : 'bg-secondary/30 text-muted-foreground hover:text-foreground'}`}>
+            Insida
+          </button>
+        </div>
+        <div className="flex flex-wrap gap-1">
+          {wallMats.map((m) => (
+            <button
+              key={m.id}
+              onClick={() => handleSetMaterial(m.id)}
+              title={m.name}
+              className={`w-6 h-6 rounded border-2 transition-all ${currentMatId === m.id ? 'border-primary scale-110' : 'border-transparent hover:border-muted-foreground/30'}`}
+              style={{ backgroundColor: m.color }}
+            />
+          ))}
+        </div>
+        <input ref={textureInputRef} type="file" accept="image/*" className="hidden" onChange={handleTextureUpload} />
+        <button onClick={() => textureInputRef.current?.click()}
+          className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg bg-secondary/40 text-muted-foreground hover:text-foreground text-[10px] transition-colors">
+          <Upload size={12} /> Importera textur
+        </button>
       </div>
 
       <div className="border-t border-border pt-2">
@@ -250,10 +320,6 @@ function WallInspector({ floorId, wallId, floor, close }: { floorId: string; wal
             <button onClick={() => handleAddOpening('window')}
               className="flex items-center gap-1 px-2 py-1 rounded-md bg-secondary/50 hover:bg-secondary text-foreground transition-colors min-h-[32px]">
               <Plus size={12} /> Fönster
-            </button>
-            <button onClick={() => handleAddOpening('garage-door')}
-              className="flex items-center gap-1 px-2 py-1 rounded-md bg-secondary/50 hover:bg-secondary text-foreground transition-colors min-h-[32px]">
-              <Plus size={12} /> Garage
             </button>
           </div>
         </div>
