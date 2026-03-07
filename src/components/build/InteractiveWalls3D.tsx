@@ -1,6 +1,7 @@
 import { useMemo, useState, useCallback } from 'react';
 import { useAppStore } from '../../store/useAppStore';
 import { getMaterialById } from '../../lib/materials';
+import { createWallMaterials, resolveWallColors } from '../../lib/wallMaterials';
 import * as THREE from 'three';
 import { ThreeEvent } from '@react-three/fiber';
 
