@@ -301,7 +301,7 @@ export default function InteractiveWalls3D() {
             // Top
             segments.push(
               <mesh key={`${wall.id}-garage-ft-${i}`} position={[opPos.x, opBottom + op.height - gFrameW / 2 + elevation, opPos.z]}
-                rotation={[0, -angle, 0]}>
+                rotation={[0, -angle, 0]} castShadow>
                 <boxGeometry args={[op.width, gFrameW, 0.07]} />
                 <meshStandardMaterial color="#555" roughness={0.4} metalness={0.3} />
               </mesh>
