@@ -728,24 +728,38 @@ const storeCreator = (set: any, get: any): AppState => ({
     })),
 
   pushUndo: () =>
-    set((s: any) => ({
-      build: {
-        ...s.build,
-        undoStack: [...s.build.undoStack.slice(-19), { ...s.layout }],
-        redoStack: [],
-      },
-    })),
+    set((s: any) => {
+      const snapshot: UndoSnapshot = {
+        layout: JSON.parse(JSON.stringify(s.layout)),
+        devices: { markers: JSON.parse(JSON.stringify(s.devices.markers)), deviceStates: JSON.parse(JSON.stringify(s.devices.deviceStates)) },
+        props: { catalog: JSON.parse(JSON.stringify(s.props.catalog)), items: JSON.parse(JSON.stringify(s.props.items)) },
+      };
+      return {
+        build: {
+          ...s.build,
+          undoStack: [...s.build.undoStack.slice(-29), snapshot],
+          redoStack: [],
+        },
+      };
+    }),
 
   undo: () => {
     const s = get();
     if (s.build.undoStack.length === 0) return;
     const prev = s.build.undoStack[s.build.undoStack.length - 1];
+    const currentSnapshot: UndoSnapshot = {
+      layout: JSON.parse(JSON.stringify(s.layout)),
+      devices: { markers: JSON.parse(JSON.stringify(s.devices.markers)), deviceStates: JSON.parse(JSON.stringify(s.devices.deviceStates)) },
+      props: { catalog: JSON.parse(JSON.stringify(s.props.catalog)), items: JSON.parse(JSON.stringify(s.props.items)) },
+    };
     set({
-      layout: prev,
+      layout: prev.layout,
+      devices: { ...s.devices, markers: prev.devices.markers, deviceStates: prev.devices.deviceStates },
+      props: { catalog: prev.props.catalog, items: prev.props.items },
       build: {
         ...s.build,
         undoStack: s.build.undoStack.slice(0, -1),
-        redoStack: [...s.build.redoStack, { ...s.layout }],
+        redoStack: [...s.build.redoStack, currentSnapshot],
       },
     });
   },
@@ -754,12 +768,19 @@ const storeCreator = (set: any, get: any): AppState => ({
     const s = get();
     if (s.build.redoStack.length === 0) return;
     const next = s.build.redoStack[s.build.redoStack.length - 1];
+    const currentSnapshot: UndoSnapshot = {
+      layout: JSON.parse(JSON.stringify(s.layout)),
+      devices: { markers: JSON.parse(JSON.stringify(s.devices.markers)), deviceStates: JSON.parse(JSON.stringify(s.devices.deviceStates)) },
+      props: { catalog: JSON.parse(JSON.stringify(s.props.catalog)), items: JSON.parse(JSON.stringify(s.props.items)) },
+    };
     set({
-      layout: next,
+      layout: next.layout,
+      devices: { ...s.devices, markers: next.devices.markers, deviceStates: next.devices.deviceStates },
+      props: { catalog: next.props.catalog, items: next.props.items },
       build: {
         ...s.build,
         redoStack: s.build.redoStack.slice(0, -1),
-        undoStack: [...s.build.undoStack, { ...s.layout }],
+        undoStack: [...s.build.undoStack, currentSnapshot],
       },
     });
   },
