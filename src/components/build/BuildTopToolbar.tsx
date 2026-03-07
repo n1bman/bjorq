@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import FloorPicker from './FloorPicker';
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { detectRooms } from '../../lib/roomDetection';
+import { detectRooms, healWalls } from '../../lib/roomDetection';
 
 /* ═══════════════════════════════════════════════
    RoomManager — inlined to avoid Vite resolve issues
