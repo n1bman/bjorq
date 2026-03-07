@@ -252,6 +252,22 @@ function SceneContent() {
       <TerrainEnvironment3D />
       <DeviceMarkers3D buildMode />
 
+      {/* Origin crosshair */}
+      <group>
+        <mesh position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[0.15, 0.2, 32]} />
+          <meshBasicMaterial color="#ff4444" transparent opacity={0.6} />
+        </mesh>
+        <mesh position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <planeGeometry args={[1, 0.03]} />
+          <meshBasicMaterial color="#ff4444" transparent opacity={0.4} />
+        </mesh>
+        <mesh position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, Math.PI / 2]}>
+          <planeGeometry args={[1, 0.03]} />
+          <meshBasicMaterial color="#4444ff" transparent opacity={0.4} />
+        </mesh>
+      </group>
+
       <Environment preset="night" />
       <OrbitControls
         ref={controlsRef}
