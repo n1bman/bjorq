@@ -165,7 +165,6 @@ function polygonOverlap(a: [number, number][], b: [number, number][]): number {
   return overlapArea / Math.min(areaA, areaB);
 }
 
-import { generateId } from './buildUtils';
 
 /**
  * Split walls at T-junctions: if a wall endpoint lands on the middle
