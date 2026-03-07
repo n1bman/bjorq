@@ -1519,7 +1519,7 @@ export default function BuildCanvas2D({ overlayMode = false }: { overlayMode?: b
   const getCursor = () => {
     if (isDraggingProp || dragNode || dragWall || dragOpening || dragDeviceId) return 'grabbing';
     if (activeTool === 'wall' || activeTool === 'room') return 'crosshair';
-    if (activeTool === 'door' || activeTool === 'window') return 'crosshair';
+    if (activeTool === 'door' || activeTool === 'window' || activeTool === 'garage-door') return 'crosshair';
     if (activeTool === 'erase') return 'not-allowed';
     if (activeTool === 'measure') return 'crosshair';
     if (activeTool === 'stairs') return 'copy';
