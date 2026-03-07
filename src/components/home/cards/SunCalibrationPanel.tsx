@@ -6,12 +6,10 @@ import { Button } from '../../ui/button';
 
 export default function SunCalibrationPanel() {
   const source = useAppStore((s) => s.environment.source);
-  const timeMode = useAppStore((s) => s.environment.timeMode);
   const cal = useAppStore((s) => s.environment.sunCalibration);
   const sunAz = useAppStore((s) => s.environment.sunAzimuth);
   const sunEl = useAppStore((s) => s.environment.sunElevation);
   const setCal = useAppStore((s) => s.setSunCalibration);
-  const setTimeMode = useAppStore((s) => s.setTimeMode);
   const setWeatherSource = useAppStore((s) => s.setWeatherSource);
 
   const isLive = source === 'auto' || source === 'ha';
