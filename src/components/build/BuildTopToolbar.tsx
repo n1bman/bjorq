@@ -3,7 +3,7 @@ import type { SnapMode, WeatherCondition } from '../../store/types';
 import {
   Undo2, Redo2, Eye, Box, Layers, Settings2,
   ArrowLeft, Ghost,
-  Grid3X3, XCircle, Sun, Check, HelpCircle, Sparkles, DoorOpen, Trash2, Edit3,
+  Grid3X3, XCircle, Sun, Check, HelpCircle, Sparkles, DoorOpen, Trash2, Edit3, Wrench,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Slider } from '../ui/slider';
