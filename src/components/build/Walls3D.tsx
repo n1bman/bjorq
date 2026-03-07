@@ -30,9 +30,6 @@ export default function Walls3D() {
   const wallMeshes = useMemo(() => {
 
     return walls.map((wall) => {
-      // Room-focus: hide walls not in selected room
-      if (visibleWallIds && !visibleWallIds.has(wall.id)) return null;
-
       const dx = wall.to[0] - wall.from[0];
       const dz = wall.to[1] - wall.from[1];
       const origLength = Math.sqrt(dx * dx + dz * dz);
