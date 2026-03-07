@@ -13,8 +13,8 @@ export default function Walls3D() {
   const walls = floor?.walls ?? [];
   const rooms = floor?.rooms ?? [];
 
-  // In home/dashboard mode, default to cutaway
-  const effectiveMode = appMode === 'build' ? wallViewMode : 'cutaway';
+  // In home/dashboard mode, show full walls
+  const effectiveMode = appMode === 'build' ? wallViewMode : 'up';
 
   const wallMeshes = useMemo(() => {
     if (effectiveMode === 'down') return []; // No walls visible
