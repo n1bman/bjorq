@@ -1,216 +1,179 @@
 
 
-## Build Mode Refactoring Plan (Active)
+# Build Mode Functional Quality Pass — Implementation Plan
 
-### Sprint 1: Canvas2D Refaktorisering + Undo/Redo ✅ DONE
-- BuildCanvas2D split into canvas2d/ module (Canvas2DView, useCanvas2DCamera, useCanvas2DDraw, useCanvas2DDrag, constants)
-- Shared buildUtils.ts with snap/grid/hit-test utilities
-- UndoSnapshot expanded to cover layout + devices + props (30 levels)
-- pushUndo auto-called on addDevice, removeDevice, addProp, removeProp
+## 1. Current State Analysis
 
-### Sprint 2: Väggsystem + Live Room Detection (NEXT)
-### Sprint 3: Dörrar, Fönster, Garageportar
-### Sprint 4: Referensritning + Material + Mark
-### Sprint 5: Multi-select, Copy/Paste
-### Sprint 6: HA-koppling openings + Dashboard-synk
-### Sprint 7: Polish och Stabilitet
+### What Works
+- **2D canvas**: Wall drawing, node dragging, wall dragging, room rectangles, opening placement (door/window click-to-wall), device placement, prop placement, measure tool, vacuum zone drawing, grid snap, angle lock, reference drawing overlay — all functional
+- **3D scene**: Walls render with openings (doors/windows/garage), frames cast shadows, device markers are interactive, props load GLB models with drag support, floors render from room polygons
+- **Bottom dock + catalog row**: Touch-friendly tools, visual opening presets, device catalog, material swatches — all wired up
+- **Inspector**: Wall, opening, room, prop, stair, device inspectors — all functional
+- **Store**: Complete actions for walls, rooms, openings, devices, props, undo/redo, materials
 
----
+### What's Broken or Missing
 
-## Full Roadmap: EPIC A through I + Klimat-flik
+| # | Issue | Type |
+|---|-------|------|
+| 1 | **Build error**: `BuildBottomDock.tsx` not found by Vite | Build |
+| 2 | **3D selection incomplete**: Walls selectable via click, but openings/rooms/stairs not clickable in 3D. Props and devices ARE clickable. No visual highlight for openings in 3D. | Logic |
+| 3 | **Wall corner overlap**: Walls are simple boxes that z-fight at corners where endpoints share a position — no mitering or corner cleanup | Visual/Geometry |
+| 4 | **Import catalog row is a placeholder**: Import options show 3 cards but `onClick` is `() => {}` — not wired to any action | Logic |
+| 5 | **Furnish catalog row is a placeholder**: Shows only an upload button with text, no catalog browsing or placement | Logic |
+| 6 | **Garage door not in bottom dock**: Only door/window tools exist — no garage-door tool | UI gap |
+| 7 | **Opening material picker missing**: Inspector shows wall interior/exterior materials but not per-opening materials | Logic |
+| 8 | **Sunlight passes through doors/garage doors**: All openings are treated as transparent gaps — no light-blocking for solid panels | Visual |
+| 9 | **Window styling basic**: Missing exterior sill depth, deeper frame profiles, Scandinavian proportions | Visual |
+| 10 | **Robot vacuum features exist but catalog flow is incomplete**: VacuumMappingTools panel exists but only accessible via old left sidebar, not through new catalog row | UI wiring |
 
-Since this is ~20 features across 9 epics, each implementation message will handle 2-3 tasks. Here is the complete plan split into implementation sprints.
+### UI-only vs Logic/Data Issues
+- **UI-only**: #6 (add garage-door to dock), #10 (wire vacuum tools into catalog)
+- **Logic gaps**: #2 (3D selection), #4 (import wiring), #5 (furnish catalog wiring), #7 (opening material)
+- **Geometry/visual**: #3 (wall corners), #8 (light blocking), #9 (window styling)
+- **Build error**: #1 (file missing)
 
----
+## 2. Implementation Plan
 
-### Sprint 1: EPIC A -- Data, profiler & multi-device consistency
+### Phase 1: Fix Build + Critical Gaps (highest priority)
 
-**A1: "Ta bort demo-projekt"**
-- Add "Ta bort demo-projekt" button in `DataBackupCard.tsx`
-- If demo is the active project: reset to empty initial state (reuse existing `clearAllFloors` + clear devices)
-- Confirmation dialog with warning about what gets removed
-- In hosted mode: also delete project on server via `DELETE /api/projects/demo`
+**1a. Fix build error — create `BuildBottomDock.tsx`**
+The file exists on disk but Vite can't resolve it. Re-save with header comment.
 
-**A2: "localStorage enforcement i HOSTED"**
-- In `initHostedMode()` (useAppStore.ts): after bootstrap loads, run a one-time `localStorage.removeItem('hometwin-store')` cleanup
-- Add a "Storage Mode" indicator in Settings showing HOSTED/DEV + last sync time
-- Ensure `partialize` returns `{}` in hosted mode (already done, but verify edge cases)
+**1b. 3D object selection for all types**
+Currently `InteractiveWalls3D` handles wall selection via `onPointerDown`. Missing:
+- **Openings**: Each opening's frame/panel meshes need `onPointerDown` to call `setSelection({ type: 'opening', id: op.id })`. Add click handlers to door frames, window frames, garage door panels in `InteractiveWalls3D.tsx`.
+- **Rooms**: Floor meshes in `Floors3D.tsx` need `onPointerDown` to select room.
+- **Props**: Already selectable via `Props3D.tsx` (line 98: `isSelected` check).
+- **Devices**: Already selectable via `DeviceMarkers3D.tsx` (line 67: `handleClick`).
+- **Visual highlight**: Add emissive glow to selected opening frames (same pattern as wall highlight). Add outline ring to selected room floor.
 
-**Files:** `DataBackupCard.tsx`, `useAppStore.ts`, `DashboardGrid.tsx` (settings section)
+Files: `InteractiveWalls3D.tsx` (add click handlers per opening), `Floors3D.tsx` (add click handler per room mesh)
 
----
+**1c. Wire import catalog actions**
+The 3 import cards in `BuildCatalogRow.tsx` currently have `onClick: () => {}`. Wire them:
+- "Planritning": trigger a hidden file input for image/PDF, call store's `setReferenceDrawing` (already in store as `setFloorplanImage`)
+- "3D-modell": trigger file input for GLB/GLTF, reuse logic from `ImportTools.tsx` `handleUpload`
+- "Referens": trigger file input for image, store as reference drawing
 
-### Sprint 2: EPIC B -- HA connection stability
+Files: `BuildCatalogRow.tsx` (add file inputs and handlers)
 
-**B1: "Reconnect / Reload entities / Reset HA config"**
-- Enhance `HAConnectionPanel.tsx` with 3 action buttons:
-  - **Reconnect**: calls `disconnect()` then `connect()` with stored credentials
-  - **Reload entities**: re-sends `get_states` over existing WS (or re-polls in hosted)
-  - **Reset HA config**: clears wsUrl/token, disconnects, clears entities
-- Add auto-reconnect status indicator with retry count
+**1d. Wire furnish catalog to show existing catalog items**
+Replace the placeholder upload-only UI with:
+- Show existing `props.catalog` items as visual cards in the catalog row
+- Each card click calls `addProp()` (same as `FurnishTools.handlePlaceFromCatalog`)
+- Keep the upload button as the last card
+- Add search input at the start of the row
 
-**B2: "Rate-limit / debounce service calls"**
-- Create `src/lib/serviceThrottle.ts`:
-  - Per-entity throttle (max 10 calls/sec per entity, last-write-wins)
-  - Circuit breaker: if >5 errors in 10s, pause and show toast
-- Wrap `haServiceCaller.current` through throttle in `Index.tsx`
-- Apply throttle to slider `onValueChange` handlers in `DeviceControlCard.tsx` (lights, fans, volume)
+Files: `BuildCatalogRow.tsx` (read `props.catalog` from store, render cards)
 
-**Files:** `HAConnectionPanel.tsx`, new `serviceThrottle.ts`, `Index.tsx`, `useHABridge.ts`
+**1e. Add garage-door tool to bottom dock**
+Add `{ tool: 'garage-door' as BuildTool, tab: 'structure', label: 'Garage', icon: Warehouse, hasCatalog: true }` to `dockItems`.
+Add `'garage-door'` to `BuildTool` type.
+Handle in `BuildCatalogRow` (same pattern as door/window).
+Handle in `BuildCanvas2D` pointer handler (same as door/window placement).
 
----
+Files: `types.ts`, `BuildBottomDock.tsx`, `BuildCatalogRow.tsx`, `BuildCanvas2D.tsx`
 
-### Sprint 3: EPIC C1-C2 -- Entity remapping + RGB color picker
+### Phase 2: Visual Quality
 
-**C1: "Edit HA entity mapping from dashboard"**
-- Add "Edit mapping" button in expanded `DevicesSection.tsx` device cards
-- Show searchable entity dropdown (reuse `HAEntityPicker` from build mode)
-- On change: call `updateDevice(id, { ha: { entityId } })` + re-map state from liveStates
+**2a. Wall corner mitering**
+At shared endpoints, walls overlap as box geometries. Fix by shortening each wall box by half the connecting wall's thickness at shared nodes. Algorithm:
+- For each wall, check if `from` or `to` matches another wall's endpoint (within 5cm)
+- If connected, shorten the wall length by `connectedWall.thickness / 2` at that end
+- This prevents z-fighting and creates clean L-joints and T-joints
 
-**C2: "RGB color picker"**
-- Replace R/G/B sliders in `LightControl` with an HSV color wheel (canvas-based)
-- Keep brightness slider separate
-- Send `rgb_color` or `hs_color` based on entity's `supported_color_modes`
+Files: `InteractiveWalls3D.tsx` (adjust mesh length/position based on connected walls)
 
-**Files:** `DeviceControlCard.tsx`, `DevicesSection.tsx`, new `ColorPicker.tsx`
+**2b. Light blocking for doors and garage doors**
+Currently all openings leave a gap in the wall. For doors and garage doors, add an opaque panel that blocks the directional light shadow:
+- Door panels already exist as meshes but don't have `castShadow`. Add `castShadow={true}` to door panel meshes.
+- Garage door section panels (4 horizontal sections) — add `castShadow={true}`.
+- Window glass should NOT cast shadow (it's transparent — keep as-is).
 
----
+Files: `InteractiveWalls3D.tsx` (add `castShadow` to door/garage panel meshes)
 
-### Sprint 4: EPIC C3-C5 -- Energy sensors + Fan + Climate improvements
+**2c. Improved Scandinavian window styling**
+Add deeper frame profile by increasing `frameDepth` from 0.06 to 0.10. Add:
+- Exterior sill overhang: extend sill width by 0.12m and depth by 0.10m beyond wall face
+- Thicker outer frame (0.05 instead of 0.04)
+- Add an inner reveal/recess mesh (thin box at the opening edge, recessed into wall thickness)
 
-**C3: "Energy sensors"**
-- Extend `EnergyWidget` + `EnergyDeviceList` to pull from HA `sensor.*_power` / `sensor.*_energy` entities
-- Add entity picker in energy settings to select which sensors to track
-- Show "Nu", "Idag", "Manad" tabs in energy panel
+Files: `InteractiveWalls3D.tsx` (enhance window rendering)
 
-**C4: "Fan extended controls"**
-- Extend `FanState` with `oscillate`, `direction`, `preset_modes`, `available_preset_modes`
-- Update `FanControl` UI: preset mode buttons, oscillate toggle, direction toggle
-- Gate UI elements on entity attributes (`supported_features`)
+### Phase 3: Catalog & Device Completeness
 
-**C5: "Climate overhaul"**
-- Extend `ClimateState` with `hvac_modes`, `fan_mode`, `swing_mode`, `preset_mode`, `target_temp_low/high`
-- Add quick action buttons ("Heat 21", "Cool 23", "Auto")
-- Show `current_humidity` if available
-- Gate UI on entity's `supported_features`
+**3a. Opening material customization**
+Add `materialId` to `WallOpening` type (already exists in the interface at line 47). Wire it in `OpeningInspector`:
+- Show a material picker section (reuse pattern from wall inspector)
+- When material changes, update via `updateOpening()`
+- Apply material color to door panels and window frames in `InteractiveWalls3D`
 
-**Files:** `types.ts`, `DeviceControlCard.tsx`, `EnergyWidget.tsx`, `EnergyDeviceList.tsx`, `haMapping.ts`, `useHABridge.ts`
+Files: `BuildInspector.tsx` (add material section to `OpeningInspector`), `InteractiveWalls3D.tsx` (read `op.materialId`)
 
----
+**3b. Device subcategories in catalog row**
+Group the 12 device kinds into logical subcategories:
+- Ljus & El: light, switch, power-outlet
+- Klimat: climate, fan, cover
+- Säkerhet: camera, alarm, door-lock, sensor
+- Media: media_screen, speaker, soundbar
+- Robot: vacuum, lawn-mower
 
-### Sprint 5: EPIC D -- Camera & media
+Show category tabs at the top of the device catalog row, then items below. Each item card should show an icon and label.
 
-**D1: "Camera stream fallback chain"**
-- In `CameraControl`: attempt MJPEG stream URL from HA entity attributes (`entity_picture`)
-- In hosted mode: proxy through `/api/ha/camera_proxy/<entity_id>`
-- Fallback chain: stream -> snapshot polling (5s) -> static placeholder
-- Show clear error state with reason
+Files: `BuildCatalogRow.tsx` (add device subcategory grouping)
 
-**D2: "Camera freeze after refresh"**
-- Defer OrbitControls re-binding until scene is fully mounted (add `ready` state in `Scene3D.tsx`)
-- Ensure pointer event listeners are removed and re-added cleanly on HMR/reload
+**3c. Vacuum and robot flow in catalog**
+When vacuum device is selected in catalog, add sub-options:
+- "Placera dammsugare" (place-vacuum)
+- "Docka" (place-vacuum-dock)
+- "Rita zon" (vacuum-zone)
 
-**D3: "Media/screen widget with image entities + AndroidTV"**
-- New widget type in dashboard: `MediaScreenWidget`
-- Pull `entity_picture`, `media_image_url` from HA attributes
-- Display app artwork, media title, app_name from `media_player` attributes
+These tools already exist in `BuildTool` and work in `BuildCanvas2D`. Just need to be exposed in the catalog row when the vacuum card is tapped.
 
-**Files:** `DeviceControlCard.tsx`, `Scene3D.tsx`, `DeviceMarkers3D.tsx`, new `MediaScreenWidget.tsx`
+Files: `BuildCatalogRow.tsx` (add vacuum sub-tools)
 
----
+### Phase 4: Polish & Consistency
 
-### Sprint 6: EPIC E -- Weather override
+**4a. 3D opening placement**
+When door/window/garage-door tool is active in 3D mode, clicking near a wall should place the opening (same logic as 2D). In `BuildScene3D.handleGroundPointerDown`, add:
+- Find nearest wall to click point using `findWallAtWorld` from `buildUtils`
+- Calculate offset `t` along wall
+- Call `addOpening()`
 
-**E1: "Precipitation mode override"**
-- Add `precipitationOverride` to `EnvironmentState`: `'auto' | 'rain' | 'snow' | 'off'`
-- UI in settings under environment: 4 toggle buttons
-- `WeatherEffects3D.tsx` reads override; if not `auto`, forces that condition regardless of HA/API data
-- Location source remains separate (HA/manual)
+Files: `BuildScene3D.tsx` (add opening placement logic)
 
-**Files:** `types.ts`, `useAppStore.ts`, `WeatherEffects3D.tsx`, `DashboardGrid.tsx` (settings section)
+**4b. 3D room floor click selection**
+Already planned in Phase 1b via `Floors3D.tsx`.
 
----
+**4c. Undo stack cap**
+Add `undoStack.slice(-50)` in `pushUndo` to prevent unbounded growth.
 
-### Sprint 7: EPIC F -- Standby + Vio mode
-
-**F1: "Vio mode + motion sensor wake"**
-- Extend standby state machine: `Active -> Standby -> Vio`
-  - Standby: current behavior (dim camera, info overlay)
-  - Vio: near-black screen, minimal clock only, GPU paused (stop R3F render loop)
-- Add `vioTimeout` setting (minutes after standby -> vio)
-- Add `motionEntityId` setting: pick a `binary_sensor.*` from HA entities
-- In `useIdleTimer`: subscribe to motion entity state changes; if `on` -> exit standby/vio
-- Wake transition: vio -> active (skip standby on motion)
-
-**Files:** `types.ts`, `StandbyMode.tsx`, `useIdleTimer.ts`, `DashboardGrid.tsx` (standby settings)
-
----
-
-### Sprint 8: EPIC G -- Navigation & Home UI
-
-**G1: "Expanding FAB navigation"**
-- Replace `HomeNav` pill with a single center button that expands into 3 buttons on tap
-- Animation: radial expand with spring transition
-- Move camera FAB to consistent bottom-right position
-
-**G2: "Device marker visibility"**
-- Add outline/glow shader to markers in `DeviceMarkers3D.tsx` for better contrast
-- Add `markerSize` setting in preferences: S/M/L (scales marker geometry)
-
-**G3: "Build devices: better categorization"**
-- Group device placement tools by category in `DevicePlacementTools.tsx`
-- Categories: Lights, Switches, Climate, Fans, Sensors, Cameras, Vacuum, Media, Security, Other
-
-**Files:** `HomeNav.tsx`, `CameraFab.tsx`, `DeviceMarkers3D.tsx`, `DevicePlacementTools.tsx`, `types.ts`
+Files: `useAppStore.ts` (cap stack in `pushUndo`)
 
 ---
 
-### Sprint 9: EPIC H -- Vacuum 3D movement
+## File Change Summary
 
-**H1: "Vacuum movement in 3D"**
-- Debug current vacuum animation in `DeviceMarkers3D.tsx` (VacuumMarker section)
-- Verify position source: check if `lawnmower pattern` movement code is still running
-- Add debug overlay (toggle in vacuum control card) showing position/timestamp/status
-- Ensure `useFrame` animation loop only runs when `status === 'cleaning'`
+| File | Phase | Changes |
+|------|-------|---------|
+| `BuildBottomDock.tsx` | 1a | Re-save to fix Vite resolution; add garage-door tool |
+| `types.ts` | 1e | Add `'garage-door'` to `BuildTool` |
+| `InteractiveWalls3D.tsx` | 1b, 2a, 2b, 2c, 3a | Opening click handlers, wall mitering, door castShadow, window styling, opening materials |
+| `Floors3D.tsx` | 1b | Room floor click-to-select |
+| `BuildCatalogRow.tsx` | 1c, 1d, 1e, 3b, 3c | Import wiring, furnish catalog, garage-door presets, device subcategories, vacuum sub-tools |
+| `BuildCanvas2D.tsx` | 1e | Garage-door placement handler |
+| `BuildScene3D.tsx` | 4a | 3D opening placement |
+| `BuildInspector.tsx` | 3a | Opening material picker |
+| `useAppStore.ts` | 4c | Undo stack cap |
 
-**Files:** `DeviceMarkers3D.tsx`, `DeviceControlCard.tsx`
+## Priority Order
 
----
+1. Fix build error (Phase 1a) — **blocks everything**
+2. 3D selection (Phase 1b) — **highest user priority**
+3. Import + furnish wiring (Phase 1c, 1d) — **critical functional gaps**
+4. Garage-door tool (Phase 1e) — **missing feature**
+5. Wall corners + light blocking (Phase 2a, 2b) — **visual quality**
+6. Window styling (Phase 2c) — **visual quality**
+7. Opening materials + device subcategories (Phase 3) — **completeness**
+8. 3D opening placement + undo cap (Phase 4) — **polish**
 
-### Sprint 10: EPIC I -- Performance (RPi)
-
-**I1: "Default tablet mode for weak hardware"**
-- On first boot (no persisted state): run hardware detection
-- If `navigator.hardwareConcurrency <= 4` or `deviceMemory <= 4`: auto-set `tabletMode: true`
-- Store flag `_autoDetectedPerformance` to avoid re-applying on subsequent boots
-
-**I2: "RPi optimization package"**
-- Lower DPR floor to 0.75 in tablet mode
-- Add `maxLights` setting: in tablet mode, cap number of active pointLights in scene
-- Batch entity state updates (collect changes over 100ms, apply once)
-- Add "Performance HUD" toggle in settings: shows FPS, tri-count, material count overlay
-
-**Files:** `PerformanceSettings.tsx`, `useAppStore.ts`, `Scene3D.tsx`, `DeviceMarkers3D.tsx`
-
----
-
-### Sprint 11: Climate Tab (Extra)
-
-- New dashboard tab "Klimat" in `DashboardGrid.tsx`
-- "Comfort engine" UI:
-  - Select temperature sources (climate/sensor entities)
-  - Select controllable devices (fan/climate)
-  - Define rules: "If temp > X -> device Y at Z%"
-  - Hysteresis setting (default 0.5C)
-  - Schedule: day/night mode
-- Widgets: "Comfort status" card, "Next action", "Override 30 min" button
-- Client-side rule engine (runs in `useEffect` loop, checks every 30s)
-- Store rules in `automations` slice with type `comfort_rule`
-
-**Files:** `types.ts`, `DashboardGrid.tsx`, new `ClimateTab.tsx`, new `ComfortEngine.ts`
-
----
-
-### Implementation Order
-
-Each sprint will be implemented as 1-2 messages. Total: ~11-14 messages to complete everything. Ready to start with Sprint 1 (EPIC A) on approval.
