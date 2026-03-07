@@ -1,199 +1,312 @@
 
 
-## Full Roadmap: EPIC A through I + Klimat-flik
+# Build Mode -- Fullständig Analys och Implementationsplan
 
-Since this is ~20 features across 9 epics, each implementation message will handle 2-3 tasks. Here is the complete plan split into implementation sprints.
+## 1. Nuvarande Systemanalys
 
----
+### Vad som fungerar bra
+- Segment-baserat väggsystem med nod-koppling, grid-snapping, split, drag
+- Rumsystem med detektering, rektangelritning, namngivning, material
+- Dörrar/fönster som openings med offset, bredd, höjd, drag längs vägg
+- 3D-rendering: Walls3D, Floors3D, Ceilings3D, Stairs3D, Props3D
+- Undo/redo med 20-nivåers snapshotar
+- 2D planvy med full verktygslåda
+- Props-katalog med GLB-import, position/rotation/skala
+- 25+ enhetstyper med HA-koppling
+- Kontextuell inspektör per selektionstyp
 
-### Sprint 1: EPIC A -- Data, profiler & multi-device consistency
+### Kritiska svagheter
 
-**A1: "Ta bort demo-projekt"**
-- Add "Ta bort demo-projekt" button in `DataBackupCard.tsx`
-- If demo is the active project: reset to empty initial state (reuse existing `clearAllFloors` + clear devices)
-- Confirmation dialog with warning about what gets removed
-- In hosted mode: also delete project on server via `DELETE /api/projects/demo`
+**S1: Monolitisk BuildCanvas2D (1348 rader)**
+En enda fil hanterar rendering, alla verktyg, drag-and-drop, touch, zoom, panning. Omöjlig att underhålla eller utöka säkert.
 
-**A2: "localStorage enforcement i HOSTED"**
-- In `initHostedMode()` (useAppStore.ts): after bootstrap loads, run a one-time `localStorage.removeItem('hometwin-store')` cleanup
-- Add a "Storage Mode" indicator in Settings showing HOSTED/DEV + last sync time
-- Ensure `partialize` returns `{}` in hosted mode (already done, but verify edge cases)
+**S2: Undo/Redo täcker bara LayoutState**
+`pushUndo()` sparar bara `layout` (väggar/rum/trappor). Enheter, props och material inkluderas inte. Ångra efter möbelplacering gör ingenting.
 
-**Files:** `DataBackupCard.tsx`, `useAppStore.ts`, `DashboardGrid.tsx` (settings section)
+**S3: Ingen wall-view-mode**
+Inga "Walls Up/Cutaway/Down/Room Focus"-lägen. Väggar visas alltid fullt i 3D.
 
----
+**S4: Rum-detektering är manuell och fragil**
+Användaren måste klicka "Detektera rum". Algoritmen klarar inte T-korsningar. Rum-namn och material förloras vid omdetektering.
 
-### Sprint 2: EPIC B -- HA connection stability
+**S5: Dörrar/fönster saknar 3D-modeller**
+Openings renderas som gap i väggar utan karmar eller glas. Inget stöd för garageport-typ.
 
-**B1: "Reconnect / Reload entities / Reset HA config"**
-- Enhance `HAConnectionPanel.tsx` with 3 action buttons:
-  - **Reconnect**: calls `disconnect()` then `connect()` with stored credentials
-  - **Reload entities**: re-sends `get_states` over existing WS (or re-polls in hosted)
-  - **Reset HA config**: clears wsUrl/token, disconnects, clears entities
-- Add auto-reconnect status indicator with retry count
+**S6: Duplicerad logik 2D/3D**
+Wall-drawing, device-placement, snap-to-grid finns separat i Canvas2D och Scene3D.
 
-**B2: "Rate-limit / debounce service calls"**
-- Create `src/lib/serviceThrottle.ts`:
-  - Per-entity throttle (max 10 calls/sec per entity, last-write-wins)
-  - Circuit breaker: if >5 errors in 10s, pause and show toast
-- Wrap `haServiceCaller.current` through throttle in `Index.tsx`
-- Apply throttle to slider `onValueChange` handlers in `DeviceControlCard.tsx` (lights, fans, volume)
+**S7: Inget referensritning-stöd**
+Kan inte ladda upp planritningar/bilder att rita ovanpå.
 
-**Files:** `HAConnectionPanel.tsx`, new `serviceThrottle.ts`, `Index.tsx`, `useHABridge.ts`
+**S8: Ingen multi-select**
+Bara ett objekt i taget. Ingen box-select, Ctrl+klick eller gruppoperationer.
 
----
+**S9: Inget mark/omgivningssystem**
+Huset står på en oändlig mörk plan. Inget gräs, betong, träd.
 
-### Sprint 3: EPIC C1-C2 -- Entity remapping + RGB color picker
+**S10: Material-systemet är begränsat**
+Bara 13 förinställda material. Inga egna texturer. Ingen texture-mapping.
 
-**C1: "Edit HA entity mapping from dashboard"**
-- Add "Edit mapping" button in expanded `DevicesSection.tsx` device cards
-- Show searchable entity dropdown (reuse `HAEntityPicker` from build mode)
-- On change: call `updateDevice(id, { ha: { entityId } })` + re-map state from liveStates
-
-**C2: "RGB color picker"**
-- Replace R/G/B sliders in `LightControl` with an HSV color wheel (canvas-based)
-- Keep brightness slider separate
-- Send `rgb_color` or `hs_color` based on entity's `supported_color_modes`
-
-**Files:** `DeviceControlCard.tsx`, `DevicesSection.tsx`, new `ColorPicker.tsx`
+**S11: Dashboard-synk ofullständig**
+Scene3D i hemläget delar rendering men saknar wall-view-modes och visar inte alltid alla ändringar.
 
 ---
 
-### Sprint 4: EPIC C3-C5 -- Energy sensors + Fan + Climate improvements
+## 2. Föreslagen Arkitektur -- 7 Sprints
 
-**C3: "Energy sensors"**
-- Extend `EnergyWidget` + `EnergyDeviceList` to pull from HA `sensor.*_power` / `sensor.*_energy` entities
-- Add entity picker in energy settings to select which sensors to track
-- Show "Nu", "Idag", "Manad" tabs in energy panel
+### Sprint 1: Canvas2D Refaktorisering + Undo/Redo Fix
 
-**C4: "Fan extended controls"**
-- Extend `FanState` with `oscillate`, `direction`, `preset_modes`, `available_preset_modes`
-- Update `FanControl` UI: preset mode buttons, oscillate toggle, direction toggle
-- Gate UI elements on entity attributes (`supported_features`)
+**1A: Bryt upp BuildCanvas2D**
 
-**C5: "Climate overhaul"**
-- Extend `ClimateState` with `hvac_modes`, `fan_mode`, `swing_mode`, `preset_mode`, `target_temp_low/high`
-- Add quick action buttons ("Heat 21", "Cool 23", "Auto")
-- Show `current_humidity` if available
-- Gate UI on entity's `supported_features`
+```text
+src/components/build/canvas2d/
+├── Canvas2DView.tsx          -- Huvudkomponent, canvas-setup, orchestrator
+├── useCanvas2DCamera.ts      -- Pan, zoom, scroll, pinch-to-zoom
+├── useCanvas2DDraw.ts        -- Alla draw-funktioner (grid, walls, rooms, devices, props, measure)
+├── useCanvas2DInteraction.ts -- Pointer down/move/up/dblclick handlers per verktyg
+├── useCanvas2DDrag.ts        -- Drag-logik (noder, väggar, openings, props, devices)
+└── canvas2dConstants.ts      -- COLORS, hjälpfunktioner (pointToSegment, pointInPolygon, snapToGrid)
+```
 
-**Files:** `types.ts`, `DeviceControlCard.tsx`, `EnergyWidget.tsx`, `EnergyDeviceList.tsx`, `haMapping.ts`, `useHABridge.ts`
+Canvas2DView renderar bara `<canvas>` och kopplar ihop hooks. Varje hook är <300 rader.
 
----
+**1B: Unifiera snap/grid-logik**
 
-### Sprint 5: EPIC D -- Camera & media
+Skapa `src/lib/buildUtils.ts` med delade funktioner som används av båda vyerna:
+- `snapToGrid(point, grid)` 
+- `findNearestNode(point, walls, threshold)`
+- `findWallAt(point, walls, threshold)`
+- `pointToSegment()`
+- `pointInPolygon()`
 
-**D1: "Camera stream fallback chain"**
-- In `CameraControl`: attempt MJPEG stream URL from HA entity attributes (`entity_picture`)
-- In hosted mode: proxy through `/api/ha/camera_proxy/<entity_id>`
-- Fallback chain: stream -> snapshot polling (5s) -> static placeholder
-- Show clear error state with reason
+**1C: Utöka Undo/Redo**
 
-**D2: "Camera freeze after refresh"**
-- Defer OrbitControls re-binding until scene is fully mounted (add `ready` state in `Scene3D.tsx`)
-- Ensure pointer event listeners are removed and re-added cleanly on HMR/reload
+Ändra undo-stacken till:
+```typescript
+interface UndoSnapshot {
+  layout: LayoutState;
+  devices: { markers: DeviceMarker[]; deviceStates: Record<string, DeviceState> };
+  props: { catalog: PropCatalogItem[]; items: PropItem[] };
+}
+```
 
-**D3: "Media/screen widget with image entities + AndroidTV"**
-- New widget type in dashboard: `MediaScreenWidget`
-- Pull `entity_picture`, `media_image_url` from HA attributes
-- Display app artwork, media title, app_name from `media_player` attributes
-
-**Files:** `DeviceControlCard.tsx`, `Scene3D.tsx`, `DeviceMarkers3D.tsx`, new `MediaScreenWidget.tsx`
-
----
-
-### Sprint 6: EPIC E -- Weather override
-
-**E1: "Precipitation mode override"**
-- Add `precipitationOverride` to `EnvironmentState`: `'auto' | 'rain' | 'snow' | 'off'`
-- UI in settings under environment: 4 toggle buttons
-- `WeatherEffects3D.tsx` reads override; if not `auto`, forces that condition regardless of HA/API data
-- Location source remains separate (HA/manual)
-
-**Files:** `types.ts`, `useAppStore.ts`, `WeatherEffects3D.tsx`, `DashboardGrid.tsx` (settings section)
+Alla mutationer (addDevice, removeProp, addOpening, etc.) anropar `pushUndo()` innan ändring. Max 30 snapshots.
 
 ---
 
-### Sprint 7: EPIC F -- Standby + Vio mode
+### Sprint 2: Väggsystem + Live Room Detection
 
-**F1: "Vio mode + motion sensor wake"**
-- Extend standby state machine: `Active -> Standby -> Vio`
-  - Standby: current behavior (dim camera, info overlay)
-  - Vio: near-black screen, minimal clock only, GPU paused (stop R3F render loop)
-- Add `vioTimeout` setting (minutes after standby -> vio)
-- Add `motionEntityId` setting: pick a `binary_sensor.*` from HA entities
-- In `useIdleTimer`: subscribe to motion entity state changes; if `on` -> exit standby/vio
-- Wake transition: vio -> active (skip standby on motion)
+**2A: Live room-detection**
 
-**Files:** `types.ts`, `StandbyMode.tsx`, `useIdleTimer.ts`, `DashboardGrid.tsx` (standby settings)
+Kör `detectRooms()` automatiskt efter varje vägg-mutation (add, delete, move, split) via debounced callback (200ms). Ta bort "Detektera rum"-knappen.
 
----
+Förbättringar:
+- Hantera T-korsningar: automatisk vägg-split vid korsningspunkter
+- Bevara befintliga rum-namn och material vid omdetektering genom polygon-overlap-matchning
+- Minsta area-tröskel: 0.5 m²
 
-### Sprint 8: EPIC G -- Navigation & Home UI
+**2B: Förbättrad väggritning**
 
-**G1: "Expanding FAB navigation"**
-- Replace `HomeNav` pill with a single center button that expands into 3 buttons on tap
-- Animation: radial expand with spring transition
-- Move camera FAB to consistent bottom-right position
+- **Angle-lock**: Shift-tangent låser till 0°/45°/90°
+- **Längd-tooltip**: Visa meter-värde i realtid vid wall-draw (inte bara measure-verktyget)
+- **Auto-close**: Om sista noden är nära (<0.3m) första noden, stäng polygonen och skapa rum direkt
+- **Escape**: Avbryt pågående ritning
 
-**G2: "Device marker visibility"**
-- Add outline/glow shader to markers in `DeviceMarkers3D.tsx` for better contrast
-- Add `markerSize` setting in preferences: S/M/L (scales marker geometry)
+**2C: Wall View Modes**
 
-**G3: "Build devices: better categorization"**
-- Group device placement tools by category in `DevicePlacementTools.tsx`
-- Categories: Lights, Switches, Climate, Fans, Sensors, Cameras, Vacuum, Media, Security, Other
+Ny typ i `BuildView`:
+```typescript
+type WallViewMode = 'up' | 'cutaway' | 'down' | 'room-focus';
+```
 
-**Files:** `HomeNav.tsx`, `CameraFab.tsx`, `DeviceMarkers3D.tsx`, `DevicePlacementTools.tsx`, `types.ts`
+I Walls3D: `cutaway` klipper vägghöjd till 1.2m, `down` döljer väggar helt, `room-focus` visar bara väggar runt markerat rum. Fyra knappar i toolbar.
 
 ---
 
-### Sprint 9: EPIC H -- Vacuum 3D movement
+### Sprint 3: Dörrar, Fönster och Garageportar
 
-**H1: "Vacuum movement in 3D"**
-- Debug current vacuum animation in `DeviceMarkers3D.tsx` (VacuumMarker section)
-- Verify position source: check if `lawnmower pattern` movement code is still running
-- Add debug overlay (toggle in vacuum control card) showing position/timestamp/status
-- Ensure `useFrame` animation loop only runs when `status === 'cleaning'`
+**3A: Utöka WallOpening-typen**
 
-**Files:** `DeviceMarkers3D.tsx`, `DeviceControlCard.tsx`
+```typescript
+interface WallOpening {
+  id: string;
+  type: 'door' | 'window' | 'garage-door';
+  preset: OpeningPreset;
+  offset: number;
+  width: number;
+  height: number;
+  sillHeight: number;
+  materialId?: string;
+  haEntityId?: string;  // för garageport/dörr HA-koppling
+  openAngle?: number;   // 0-90, för animering
+}
 
----
+type OpeningPreset = 
+  | 'single-door' | 'double-door' | 'sliding-door' | 'french-door'
+  | 'single-window' | 'double-window' | 'panorama-window'
+  | 'garage-single' | 'garage-double';
+```
 
-### Sprint 10: EPIC I -- Performance (RPi)
+Varje preset sätter default-mått. Inspektören visar preset-dropdown.
 
-**I1: "Default tablet mode for weak hardware"**
-- On first boot (no persisted state): run hardware detection
-- If `navigator.hardwareConcurrency <= 4` or `deviceMemory <= 4`: auto-set `tabletMode: true`
-- Store flag `_autoDetectedPerformance` to avoid re-applying on subsequent boots
+**3B: 3D-modeller för openings**
 
-**I2: "RPi optimization package"**
-- Lower DPR floor to 0.75 in tablet mode
-- Add `maxLights` setting: in tablet mode, cap number of active pointLights in scene
-- Batch entity state updates (collect changes over 100ms, apply once)
-- Add "Performance HUD" toggle in settings: shows FPS, tri-count, material count overlay
+Ny komponent `Openings3D.tsx`:
+- **Dörrar**: Dörrblad (tunn box) + karm (4 tunna boxar). `openAngle` roterar bladet.
+- **Fönster**: Glas (`MeshPhysicalMaterial`, `transmission: 0.9`, `roughness: 0.05`) + karm.
+- **Garageportar**: Sektionsport-modell, position styrd av HA-entity (`cover` state 0-100).
 
-**Files:** `PerformanceSettings.tsx`, `useAppStore.ts`, `Scene3D.tsx`, `DeviceMarkers3D.tsx`
+**3C: 2D-arkitektursymboler**
 
----
-
-### Sprint 11: Climate Tab (Extra)
-
-- New dashboard tab "Klimat" in `DashboardGrid.tsx`
-- "Comfort engine" UI:
-  - Select temperature sources (climate/sensor entities)
-  - Select controllable devices (fan/climate)
-  - Define rules: "If temp > X -> device Y at Z%"
-  - Hysteresis setting (default 0.5C)
-  - Schedule: day/night mode
-- Widgets: "Comfort status" card, "Next action", "Override 30 min" button
-- Client-side rule engine (runs in `useEffect` loop, checks every 30s)
-- Store rules in `automations` slice with type `comfort_rule`
-
-**Files:** `types.ts`, `DashboardGrid.tsx`, new `ClimateTab.tsx`, new `ComfortEngine.ts`
+Rita dörrar som cirkelbågar (standard planritningssymbol) och fönster som dubbla parallella linjer i 2D-canvasen.
 
 ---
 
-### Implementation Order
+### Sprint 4: Referensritning + Material + Mark
 
-Each sprint will be implemented as 1-2 messages. Total: ~11-14 messages to complete everything. Ready to start with Sprint 1 (EPIC A) on approval.
+**4A: Referensritning i planvyn**
+
+Stöd för att ladda upp bild/PDF som referens:
+- Ny state i `Floor`: `referenceImage?: { url: string; opacity: number; scale: number; offset: [number, number]; locked: boolean }`
+- Renderas under grid men ovanpå bakgrund i Canvas2D
+- UI-kontroller: opacity-slider (0-1), skala-slider, drag för att flytta, lås-toggle
+- PDF: konvertera första sidan till bild via canvas
+
+**4B: Utökat materialsystem**
+
+Utöka `Material`-typen:
+```typescript
+interface Material {
+  id: string;
+  name: string;
+  type: 'paint' | 'concrete' | 'wood' | 'tile' | 'metal' | 'stone' | 'custom';
+  color: string;
+  roughness: number;
+  textureUrl?: string;      // för custom textures
+  textureRepeat?: [number, number]; // UV repeat
+  normalMapUrl?: string;
+}
+```
+
+Lägg till 15+ nya preset-material (sand, pastelltoner, sten, etc.). UI i PaintTool för att ladda upp egna texturer.
+
+**4C: Mark och omgivning**
+
+Ny state: `GroundState` med marktyp och omgivningsobjekt:
+```typescript
+interface GroundState {
+  material: 'grass' | 'concrete' | 'stone' | 'dirt' | 'road';
+  objects: GroundObject[];  // träd, buskar, kantsten
+}
+interface GroundObject {
+  id: string;
+  type: 'tree' | 'bush' | 'fence' | 'path';
+  position: [number, number];
+  rotation: number;
+  scale: number;
+}
+```
+
+GroundPlane uppdateras med material-val. Enkla procedurella 3D-objekt (koner för träd, sfärer för buskar).
+
+---
+
+### Sprint 5: Multi-select, Copy/Paste och UX
+
+**5A: Multi-select**
+
+Utöka `BuildSelection`:
+```typescript
+interface BuildSelection {
+  items: { type: SelectionType; id: string }[];
+}
+```
+
+- Ctrl+klick: lägg till/ta bort från selektion
+- Box-select: dra rektangel i select-verktyg
+- Gruppoperationer: flytta, ta bort, duplicera alla markerade
+
+**5B: Copy/Paste och Duplicate**
+
+- Ctrl+C: kopiera markerade objekt till clipboard-state
+- Ctrl+V: placera kopior vid cursor med offset
+- Ctrl+D: duplicera på plats med 0.5m offset
+- Fungerar för väggar, rum, props och enheter
+
+**5C: Keyboard shortcuts**
+
+- Delete: ta bort markerat
+- Escape: avbryt pågående operation / avmarkera
+- W: väggverktyg
+- R: rumverktyg
+- D: dörrverktyg
+- Ctrl+Z/Y: undo/redo (redan implementerat men formalisera)
+
+---
+
+### Sprint 6: 3D Openings, Dashboard-synk och Garageport-integration
+
+**6A: HA-koppling för openings**
+
+Garageportar, dörrar med lås, och fönster med covers kan kopplas till HA-entities:
+- `garage-door` opening → `cover.*` entity → animera öppning/stängning i 3D
+- `door` opening → `lock.*` entity → visa låst/olåst-ikon
+- Inspector visar entity-picker för openings med `haEntityId`
+
+**6B: Dashboard-synk**
+
+Säkerställ att `Scene3D.tsx` (hemläget) använder samma rendering:
+- Importera `Openings3D` i hemscenen
+- `wallViewMode` defaultar till `cutaway` i dashboard
+- Alla props, enheter, material synkas automatiskt
+- Ground material/objects visas i dashboard
+
+---
+
+### Sprint 7: Polish och Stabilitet
+
+**7A: Förbättrad inspektör**
+
+- Dörr/fönster-inspektör: preset-väljare, HA entity-koppling
+- Rum-inspektör: HA area-koppling, device-lista, golvyta i m²
+- Multi-select-inspektör: gemensamma operationer (flytta, ta bort, material)
+
+**7B: Prestanda**
+
+- Memoize alla draw-funktioner i Canvas2D
+- Throttle room-detection till max 1 per sekund
+- Virtualisera rendering: bara rita objekt inom viewport
+
+**7C: Projektsparning**
+
+- Validera att all data sparas korrekt: ground, referenceImage, openings med HA
+- Lägg till `projectVersion` för framtida migrering
+- Synka automatiskt vid väsentliga ändringar (inte vid varje muspekare-rörelse)
+
+---
+
+## 3. Prioritering och Implementation
+
+```text
+Sprint  Storlek   Beskrivning
+──────  ────────  ─────────────────────────────────────────
+  1     Stor      Canvas2D refaktorisering + undo/redo fix
+  2     Medel     Live rooms, wall views, angle-lock
+  3     Medel     Dörr/fönster/garageport 3D + presets
+  4     Medel     Referensritning + material + mark
+  5     Medel     Multi-select + copy/paste + shortcuts
+  6     Liten     HA-koppling openings + dashboard-synk
+  7     Liten     Polish, prestanda, sparning
+```
+
+Sprint 1 bör göras först -- den stabiliserar grunden. Sprint 2-5 kan göras i ordning. Sprint 6-7 avslutar.
+
+## 4. Vad som INTE ändras
+
+- Zustand-storen behåller sin struktur (vi utökar, inte ersätter)
+- Befintliga typer (`WallSegment`, `Room`, `Floor`, `DeviceMarker`) behålls
+- React Three Fiber v8 + Drei v9 behålls
+- Server-API ändras inte
+- Import-flödet (GLB/GLTF) behålls
+- Alla 25+ enhetstyper och deras HA-koppling behålls
+
