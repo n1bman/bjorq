@@ -1,11 +1,11 @@
 import { lazy, Suspense } from 'react';
 import { useAppStore } from '../../store/useAppStore';
 import BuildTopToolbar from './BuildTopToolbar';
-import BuildLeftPanel from './BuildLeftPanel';
+import BuildBottomDock from './BuildBottomDock';
+import BuildCatalogRow from './BuildCatalogRow';
 import BuildInspector from './BuildInspector';
 import BuildCanvas2D from './BuildCanvas2D';
 import BuildScene3D from './BuildScene3D';
-import BuildCatalogStrip from './BuildCatalogStrip';
 
 const ImportPreview3D = lazy(() => import('./ImportPreview3D'));
 
@@ -18,30 +18,33 @@ export default function BuildModeV2() {
 
   return (
     <div className="w-full h-full relative flex flex-col">
+      {/* Slim top toolbar */}
       <BuildTopToolbar />
 
-      <div className="flex-1 relative flex overflow-hidden">
-        <BuildLeftPanel />
+      {/* Canvas viewport */}
+      <div className="flex-1 relative overflow-hidden">
+        {cameraMode === 'topdown' ? (
+          <>
+            {showImportOverlay && (
+              <Suspense fallback={null}>
+                <ImportPreview3D />
+              </Suspense>
+            )}
+            <BuildCanvas2D overlayMode={showImportOverlay} />
+          </>
+        ) : (
+          <BuildScene3D />
+        )}
 
-        <div className="flex-1 relative">
-          {cameraMode === 'topdown' ? (
-            <>
-              {showImportOverlay && (
-                <Suspense fallback={null}>
-                  <ImportPreview3D />
-                </Suspense>
-              )}
-              <BuildCanvas2D overlayMode={showImportOverlay} />
-            </>
-          ) : (
-            <BuildScene3D />
-          )}
-
-          <BuildInspector />
-        </div>
+        {/* Floating inspector */}
+        <BuildInspector />
       </div>
 
-      <BuildCatalogStrip />
+      {/* Contextual catalog row (hidden when no catalog needed) */}
+      <BuildCatalogRow />
+
+      {/* Primary tool dock */}
+      <BuildBottomDock />
     </div>
   );
 }
