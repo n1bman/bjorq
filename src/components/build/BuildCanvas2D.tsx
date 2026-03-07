@@ -4,7 +4,11 @@ import { getMaterialById } from '../../lib/materials';
 import { angleLock } from '../../lib/buildUtils';
 import type { WallSegment } from '../../store/types';
 import { openingPresets } from '../../lib/openingPresets';
-
+import { Slider } from '../ui/slider';
+import { Switch } from '../ui/switch';
+import { Label } from '../ui/label';
+import { Button } from '../ui/button';
+import { Trash2, Lock, Unlock, RotateCw, Move, ZoomIn } from 'lucide-react';
 const generateId = () => Math.random().toString(36).slice(2, 10);
 
 const COLORS = {
