@@ -524,11 +524,19 @@ export default function BuildModeV2() {
   const isImported = useAppStore((s) => s.homeGeometry.source === 'imported');
   const hasImportedUrl = useAppStore((s) => !!s.homeGeometry.imported.url);
   const showImportOverlay = cameraMode === 'topdown' && isImported && hasImportedUrl;
+  const activeTool = useAppStore((s) => s.build.activeTool);
+  const showDevicePanel = activeTool.startsWith('place-') || activeTool === 'vacuum-zone' || activeTool === ('place-vacuum-dock' as any);
 
   return (
     <div className="w-full h-full relative flex flex-col">
       <BuildTopToolbar />
       <div className="flex-1 relative overflow-hidden">
+        {/* Device side panel */}
+        {showDevicePanel && (
+          <div className="absolute left-0 top-0 bottom-0 w-[220px] bg-card/95 backdrop-blur-sm border-r border-border z-20 overflow-y-auto py-3">
+            <InlinedDevicePlacementTools />
+          </div>
+        )}
         {cameraMode === 'topdown' ? (
           <>
             {showImportOverlay && (
