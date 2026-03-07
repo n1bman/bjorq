@@ -3,13 +3,14 @@ import type { SnapMode, WeatherCondition } from '../../store/types';
 import {
   Undo2, Redo2, Eye, Box, Layers, Settings2,
   ArrowLeft, Ghost,
-  Grid3X3, XCircle, Sun, Check, HelpCircle, Sparkles,
+  Grid3X3, XCircle, Sun, Check, HelpCircle, Sparkles, DoorOpen,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Slider } from '../ui/slider';
 import { Popover, PopoverTrigger, PopoverContent } from '../ui/popover';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
 import FloorPicker from './FloorPicker';
+import RoomManager from './RoomManager';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { detectRooms } from '../../lib/roomDetection';
@@ -189,6 +190,18 @@ export default function BuildTopToolbar() {
       >
         <Sparkles size={16} />
       </button>
+
+      {/* Room manager popover */}
+      <Popover>
+        <PopoverTrigger asChild>
+          <button title="Hantera rum" className="p-2.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary/40 transition-all min-w-[44px] min-h-[44px] flex items-center justify-center">
+            <DoorOpen size={16} />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent side="bottom" align="start" className="w-72 p-3 bg-card border-border max-h-96 overflow-y-auto">
+          <RoomManager />
+        </PopoverContent>
+      </Popover>
 
       {/* Spacer */}
       <div className="flex-1" />
