@@ -32,7 +32,7 @@ export default function GroundPlane({ onPointerDown, onPointerMove }: GroundPlan
       receiveShadow
     >
       <planeGeometry args={[100, 100]} />
-      <meshStandardMaterial color="#1a1d23" transparent opacity={0.6} />
+      <meshStandardMaterial color="#3a5a2a" />
     </mesh>
   );
 }

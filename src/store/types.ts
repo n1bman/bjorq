@@ -55,6 +55,7 @@ export interface WallSegment {
   height: number;
   thickness: number;
   materialId?: string;
+  interiorMaterialId?: string; // separate interior face material
   openings: WallOpening[];
 }
 
