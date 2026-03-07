@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useAppStore } from '../../store/useAppStore';
 import { getMaterialById } from '../../lib/materials';
+import { createWallMaterials, resolveWallColors } from '../../lib/wallMaterials';
 import * as THREE from 'three';
 
 /* Helper: find max thickness of walls connected at a point */
