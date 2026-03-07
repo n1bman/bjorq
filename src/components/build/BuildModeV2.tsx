@@ -80,6 +80,7 @@ function PaintCatalog() {
 function FurnishCatalog() {
   const catalog = useAppStore((s) => s.props.catalog);
   const addProp = useAppStore((s) => s.addProp);
+  const removeFromCatalog = useAppStore((s) => s.removeFromCatalog);
   const activeFloorId = useAppStore((s) => s.layout.activeFloorId);
   const setBuildTool = useAppStore((s) => s.setBuildTool);
   const fileRef = useRef<HTMLInputElement>(null);
