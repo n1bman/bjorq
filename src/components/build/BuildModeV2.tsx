@@ -261,6 +261,7 @@ const dockItems: DockItem[] = [
   { tool: 'window', tab: 'structure', label: 'Fönster', icon: PanelTop, hasCatalog: true },
   { tool: 'garage-door', tab: 'structure', label: 'Garage', icon: Warehouse, hasCatalog: true },
   { tool: 'stairs', tab: 'structure', label: 'Trappa', icon: Footprints },
+  { tool: 'measure', tab: 'structure', label: 'Mät', icon: Ruler },
   { tool: 'furnish' as BuildTool, tab: 'furnish', label: 'Möbler', icon: Sofa, hasCatalog: true },
   { tool: 'place-light', tab: 'devices', label: 'Enheter', icon: Cpu, hasCatalog: true },
   { tool: 'import' as BuildTool, tab: 'import', label: 'Import', icon: Import, hasCatalog: true },
