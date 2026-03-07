@@ -3,6 +3,7 @@ import { useAppStore } from '../../store/useAppStore';
 import { getMaterialById } from '../../lib/materials';
 import { angleLock } from '../../lib/buildUtils';
 import type { WallSegment } from '../../store/types';
+import { openingPresets } from '../../lib/openingPresets';
 
 const generateId = () => Math.random().toString(36).slice(2, 10);
 
