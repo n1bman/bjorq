@@ -624,11 +624,7 @@ const storeCreator = (set: any, get: any): AppState => ({
           ...s.layout,
           floors: s.layout.floors.map((f: any) =>
             f.id === floorId
-              ? {
-                  ...f,
-                  walls: updatedWalls,
-                  rooms: f.rooms.map((r: any) => r.id === roomId ? { ...r, wallMaterialId: materialId } : r),
-                }
+              ? { ...f, walls: updatedWalls }
               : f
           ),
         },

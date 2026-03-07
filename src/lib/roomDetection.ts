@@ -158,6 +158,8 @@ export function detectRooms(walls: WallSegment[], existingRooms?: Room[]): Room[
     return `Rum ${roomCounter}`;
   };
 
+  const usedExistingIds = new Set<string>();
+
   return cycles
     .map((cycle) => {
       const polygon: [number, number][] = cycle.map((k) => graph[k].node);
@@ -177,11 +179,12 @@ export function detectRooms(walls: WallSegment[], existingRooms?: Room[]): Room[
         if (wall) wallIds.push(wall.id);
       }
 
-      // Try to match with existing room by polygon overlap
+      // Try to match with existing room by polygon overlap (skip already matched)
       let matchedRoom: Room | undefined;
       if (existingRooms) {
         let bestOverlap = 0;
         for (const er of existingRooms) {
+          if (usedExistingIds.has(er.id)) continue;
           if (!er.polygon || er.polygon.length < 3) continue;
           const overlap = polygonOverlap(polygon, er.polygon);
           if (overlap > 0.6 && overlap > bestOverlap) {
@@ -192,6 +195,7 @@ export function detectRooms(walls: WallSegment[], existingRooms?: Room[]): Room[
       }
 
       if (matchedRoom) {
+        usedExistingIds.add(matchedRoom.id);
         return {
           ...matchedRoom,
           wallIds,

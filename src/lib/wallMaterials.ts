@@ -34,20 +34,25 @@ export function resolveWallColors(wall: {
   leftMaterialId?: string;
   rightMaterialId?: string;
 }, fallbackMatId?: string) {
+  const defaultColor = '#e8a845';
+  const defaultRoughness = 0.8;
+
+  // Left side (+z face / front / exterior)
+  const leftMat = wall.leftMaterialId ? getMaterialById(wall.leftMaterialId) : null;
+  // Right side (-z face / back / interior)
+  const rightMat = wall.rightMaterialId ? getMaterialById(wall.rightMaterialId) : null;
+
+  // Legacy fallback only when no per-side material is set
   const extMatId = wall.materialId || fallbackMatId;
   const intMatId = wall.interiorMaterialId || extMatId;
   const extMat = extMatId ? getMaterialById(extMatId) : null;
   const intMat = intMatId ? getMaterialById(intMatId) : null;
 
-  // Per-side overrides: left = +z face (front/exterior), right = -z face (back/interior)
-  const leftMat = wall.leftMaterialId ? getMaterialById(wall.leftMaterialId) : null;
-  const rightMat = wall.rightMaterialId ? getMaterialById(wall.rightMaterialId) : null;
-
   return {
-    exteriorColor: leftMat?.color ?? extMat?.color ?? '#e8a845',
-    interiorColor: rightMat?.color ?? intMat?.color ?? extMat?.color ?? '#e8a845',
-    edgeColor: extMat?.color ?? '#e8a845',
-    exteriorRoughness: leftMat?.roughness ?? extMat?.roughness ?? 0.8,
-    interiorRoughness: rightMat?.roughness ?? intMat?.roughness ?? extMat?.roughness ?? 0.8,
+    exteriorColor: leftMat?.color ?? extMat?.color ?? defaultColor,
+    interiorColor: rightMat?.color ?? intMat?.color ?? defaultColor,
+    edgeColor: extMat?.color ?? defaultColor,
+    exteriorRoughness: leftMat?.roughness ?? extMat?.roughness ?? defaultRoughness,
+    interiorRoughness: rightMat?.roughness ?? intMat?.roughness ?? defaultRoughness,
   };
 }
