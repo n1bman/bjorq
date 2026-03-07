@@ -158,10 +158,9 @@ export default function InteractiveWalls3D() {
               .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
               .add(new THREE.Vector3(origCx, opTop + aboveH / 2 + elevation, origCz));
             segments.push(
-              <mesh key={`${wall.id}-seg-${i}-above`} position={pos.toArray()} rotation={[0, -angle, 0]} castShadow>
+              <mesh key={`${wall.id}-seg-${i}-above`} position={pos.toArray()} rotation={[0, -angle, 0]} castShadow
+                material={dualMats}>
                 <boxGeometry args={[op.width, aboveH, wall.thickness]} />
-                <meshStandardMaterial color={color} roughness={mat?.roughness ?? 0.8}
-                  emissive={isSelected ? '#1a3a6a' : '#000000'} emissiveIntensity={isSelected ? 0.3 : 0} />
               </mesh>
             );
           }
