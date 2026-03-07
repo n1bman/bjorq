@@ -265,7 +265,7 @@ function WallInspector({ floorId, wallId, floor, close }: { floorId: string; wal
               className="flex items-center gap-1 text-foreground hover:text-primary transition-colors"
             >
               <DoorOpen size={12} />
-              {op.type === 'door' ? 'Dörr' : 'Fönster'}
+              {op.type === 'door' ? 'Dörr' : op.type === 'garage-door' ? 'Garageport' : 'Fönster'}
             </button>
             <button
               onClick={() => { pushUndo(); removeOpening(floorId, wall.id, op.id); }}
