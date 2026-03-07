@@ -171,8 +171,15 @@ export interface BuildState {
     realMeters: number | null;
   };
   importOverlaySync: ImportOverlaySync;
-  undoStack: LayoutState[];
-  redoStack: LayoutState[];
+  undoStack: UndoSnapshot[];
+  redoStack: UndoSnapshot[];
+}
+
+// ─── Undo Snapshot (covers layout + devices + props) ───
+export interface UndoSnapshot {
+  layout: LayoutState;
+  devices: { markers: DeviceMarker[]; deviceStates: Record<string, DeviceState> };
+  props: { catalog: PropCatalogItem[]; items: PropItem[] };
 }
 
 // ─── Home Geometry Layer ───

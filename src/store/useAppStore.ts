@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { AppState, AppMode, BuildState, LayoutState, WallSegment, Room, DeviceState, DeviceKind, ActivityEvent } from './types';
+import type { AppState, AppMode, BuildState, LayoutState, WallSegment, Room, DeviceState, DeviceKind, ActivityEvent, UndoSnapshot } from './types';
 import { mapHAEntityToDeviceState } from '../lib/haMapping';
 import { setFromHA } from '../hooks/useHABridge';
 import { isHostedSync, debouncedSync, debouncedProjectSync, saveProfiles, saveProject, fetchBootstrap } from '../lib/apiClient';
@@ -161,17 +161,23 @@ const storeCreator = (set: any, get: any): AppState => ({
   })); syncProfileToServer(); },
 
   // Device actions
-  addDevice: (marker) => set((s: any) => ({
-    devices: {
-      ...s.devices,
-      markers: [...s.devices.markers, marker],
-      deviceStates: { ...s.devices.deviceStates, [marker.id]: getDefaultState(marker.kind) },
-    },
-  })),
-  removeDevice: (id) => set((s: any) => {
-    const { [id]: _, ...rest } = s.devices.deviceStates;
-    return { devices: { markers: s.devices.markers.filter((m: any) => m.id !== id), deviceStates: rest } };
-  }),
+  addDevice: (marker) => {
+    get().pushUndo();
+    set((s: any) => ({
+      devices: {
+        ...s.devices,
+        markers: [...s.devices.markers, marker],
+        deviceStates: { ...s.devices.deviceStates, [marker.id]: getDefaultState(marker.kind) },
+      },
+    }));
+  },
+  removeDevice: (id) => {
+    get().pushUndo();
+    set((s: any) => {
+      const { [id]: _, ...rest } = s.devices.deviceStates;
+      return { devices: { markers: s.devices.markers.filter((m: any) => m.id !== id), deviceStates: rest } };
+    });
+  },
   updateDevice: (id, changes) => set((s: any) => {
     const newMarkers = s.devices.markers.map((m: any) => m.id === id ? { ...m, ...changes } : m);
     let newDeviceStates = s.devices.deviceStates;
@@ -657,11 +663,15 @@ const storeCreator = (set: any, get: any): AppState => ({
       },
     })),
 
-  addProp: (prop) =>
-    set((s: any) => ({ props: { ...s.props, items: [...s.props.items, prop] } })),
+  addProp: (prop) => {
+    get().pushUndo();
+    set((s: any) => ({ props: { ...s.props, items: [...s.props.items, prop] } }));
+  },
 
-  removeProp: (id) =>
-    set((s: any) => ({ props: { ...s.props, items: s.props.items.filter((p: any) => p.id !== id) } })),
+  removeProp: (id) => {
+    get().pushUndo();
+    set((s: any) => ({ props: { ...s.props, items: s.props.items.filter((p: any) => p.id !== id) } }));
+  },
 
   updateProp: (id, changes) =>
     set((s: any) => ({
@@ -728,24 +738,38 @@ const storeCreator = (set: any, get: any): AppState => ({
     })),
 
   pushUndo: () =>
-    set((s: any) => ({
-      build: {
-        ...s.build,
-        undoStack: [...s.build.undoStack.slice(-19), { ...s.layout }],
-        redoStack: [],
-      },
-    })),
+    set((s: any) => {
+      const snapshot: UndoSnapshot = {
+        layout: JSON.parse(JSON.stringify(s.layout)),
+        devices: { markers: JSON.parse(JSON.stringify(s.devices.markers)), deviceStates: JSON.parse(JSON.stringify(s.devices.deviceStates)) },
+        props: { catalog: JSON.parse(JSON.stringify(s.props.catalog)), items: JSON.parse(JSON.stringify(s.props.items)) },
+      };
+      return {
+        build: {
+          ...s.build,
+          undoStack: [...s.build.undoStack.slice(-29), snapshot],
+          redoStack: [],
+        },
+      };
+    }),
 
   undo: () => {
     const s = get();
     if (s.build.undoStack.length === 0) return;
     const prev = s.build.undoStack[s.build.undoStack.length - 1];
+    const currentSnapshot: UndoSnapshot = {
+      layout: JSON.parse(JSON.stringify(s.layout)),
+      devices: { markers: JSON.parse(JSON.stringify(s.devices.markers)), deviceStates: JSON.parse(JSON.stringify(s.devices.deviceStates)) },
+      props: { catalog: JSON.parse(JSON.stringify(s.props.catalog)), items: JSON.parse(JSON.stringify(s.props.items)) },
+    };
     set({
-      layout: prev,
+      layout: prev.layout,
+      devices: { ...s.devices, markers: prev.devices.markers, deviceStates: prev.devices.deviceStates },
+      props: { catalog: prev.props.catalog, items: prev.props.items },
       build: {
         ...s.build,
         undoStack: s.build.undoStack.slice(0, -1),
-        redoStack: [...s.build.redoStack, { ...s.layout }],
+        redoStack: [...s.build.redoStack, currentSnapshot],
       },
     });
   },
@@ -754,12 +778,19 @@ const storeCreator = (set: any, get: any): AppState => ({
     const s = get();
     if (s.build.redoStack.length === 0) return;
     const next = s.build.redoStack[s.build.redoStack.length - 1];
+    const currentSnapshot: UndoSnapshot = {
+      layout: JSON.parse(JSON.stringify(s.layout)),
+      devices: { markers: JSON.parse(JSON.stringify(s.devices.markers)), deviceStates: JSON.parse(JSON.stringify(s.devices.deviceStates)) },
+      props: { catalog: JSON.parse(JSON.stringify(s.props.catalog)), items: JSON.parse(JSON.stringify(s.props.items)) },
+    };
     set({
-      layout: next,
+      layout: next.layout,
+      devices: { ...s.devices, markers: next.devices.markers, deviceStates: next.devices.deviceStates },
+      props: { catalog: next.props.catalog, items: next.props.items },
       build: {
         ...s.build,
         redoStack: s.build.redoStack.slice(0, -1),
-        undoStack: [...s.build.undoStack, { ...s.layout }],
+        undoStack: [...s.build.undoStack, currentSnapshot],
       },
     });
   },
