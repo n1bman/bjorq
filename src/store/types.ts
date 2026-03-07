@@ -591,6 +591,9 @@ export interface EnvironmentState {
   sunAzimuth: number;
   sunElevation: number;
   precipitationOverride: PrecipitationOverride;
+  sunCalibration: SunCalibration;
+  atmosphere: AtmosphereSettings;
+  skyStyle: 'auto' | 'gradient' | 'solid';
 }
 
 // ─── Home Assistant Layer ───
