@@ -125,6 +125,7 @@ export type BuildTool =
 export type BuildTab = 'structure' | 'import' | 'furnish' | 'devices';
 export type SnapMode = 'strict' | 'soft' | 'off';
 export type CameraMode = 'topdown' | '3d' | 'floor-isolate';
+export type WallViewMode = 'up' | 'cutaway' | 'down' | 'room-focus';
 
 export interface BuildSelection {
   type: 'wall' | 'opening' | 'room' | 'prop' | 'stair' | 'device' | null;
@@ -141,6 +142,7 @@ export interface BuildView {
   cameraMode: CameraMode;
   showOtherFloorsGhost: boolean;
   floorFilter: string | 'all';
+  wallViewMode: WallViewMode;
 }
 
 export interface ImportOverlaySync {

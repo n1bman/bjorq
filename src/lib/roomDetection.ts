@@ -107,16 +107,45 @@ function polygonArea(points: [number, number][]): number {
   return Math.abs(area) / 2;
 }
 
+/** Compute overlap ratio between two polygons using bounding-box approximation */
+function polygonOverlap(a: [number, number][], b: [number, number][]): number {
+  const bbox = (p: [number, number][]) => {
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (const [x, y] of p) {
+      if (x < minX) minX = x;
+      if (x > maxX) maxX = x;
+      if (y < minY) minY = y;
+      if (y > maxY) maxY = y;
+    }
+    return { minX, maxX, minY, maxY };
+  };
+  const ba = bbox(a);
+  const bb = bbox(b);
+  const ox = Math.max(0, Math.min(ba.maxX, bb.maxX) - Math.max(ba.minX, bb.minX));
+  const oy = Math.max(0, Math.min(ba.maxY, bb.maxY) - Math.max(ba.minY, bb.minY));
+  const overlapArea = ox * oy;
+  const areaA = (ba.maxX - ba.minX) * (ba.maxY - ba.minY);
+  const areaB = (bb.maxX - bb.minX) * (bb.maxY - bb.minY);
+  if (areaA === 0 || areaB === 0) return 0;
+  return overlapArea / Math.min(areaA, areaB);
+}
+
 const generateId = () => Math.random().toString(36).slice(2, 10);
 
-export function detectRooms(walls: WallSegment[]): Room[] {
+/**
+ * Detect rooms from walls. Preserves existing room metadata (name, materials)
+ * by matching new polygons to existing rooms via polygon overlap.
+ */
+export function detectRooms(walls: WallSegment[], existingRooms?: Room[]): Room[] {
   if (walls.length < 3) return [];
   
   const graph = buildGraph(walls);
   const cycles = findMinimalCycles(graph);
 
+  let roomCounter = (existingRooms?.length ?? 0) + 1;
+
   return cycles
-    .map((cycle, idx) => {
+    .map((cycle) => {
       const polygon: [number, number][] = cycle.map((k) => graph[k].node);
       const area = polygonArea(polygon);
       if (area < 0.5) return null; // Skip tiny areas
@@ -134,9 +163,31 @@ export function detectRooms(walls: WallSegment[]): Room[] {
         if (wall) wallIds.push(wall.id);
       }
 
+      // Try to match with existing room by polygon overlap
+      let matchedRoom: Room | undefined;
+      if (existingRooms) {
+        let bestOverlap = 0;
+        for (const er of existingRooms) {
+          if (!er.polygon || er.polygon.length < 3) continue;
+          const overlap = polygonOverlap(polygon, er.polygon);
+          if (overlap > 0.6 && overlap > bestOverlap) {
+            bestOverlap = overlap;
+            matchedRoom = er;
+          }
+        }
+      }
+
+      if (matchedRoom) {
+        return {
+          ...matchedRoom,
+          wallIds,
+          polygon,
+        } as Room;
+      }
+
       return {
         id: generateId(),
-        name: `Rum ${idx + 1}`,
+        name: `Rum ${roomCounter++}`,
         wallIds,
         polygon,
       } as Room;
