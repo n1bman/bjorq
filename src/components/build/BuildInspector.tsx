@@ -67,7 +67,8 @@ function OpeningInspector({ floorId, openingId, floor, close }: { floorId: strin
 
   const isWindow = foundOpening.type === 'window';
   const isGarage = foundOpening.type === 'garage-door';
-  const typeLabel = isGarage ? 'Garageport' : isWindow ? 'Fönster' : 'Dörr';
+  const isPassage = foundOpening.type === 'passage';
+  const typeLabel = isGarage ? 'Garageport' : isWindow ? 'Fönster' : isPassage ? 'Passage' : 'Dörr';
   const presets = getPresetsByType(foundOpening.type);
 
   const handlePreset = (presetId: string) => {
