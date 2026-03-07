@@ -4,7 +4,7 @@ import BuildTopToolbar from './BuildTopToolbar';
 import BuildTabBar from './BuildTabBar';
 import BuildLeftPanel from './BuildLeftPanel';
 import BuildInspector from './BuildInspector';
-import Canvas2DView from './canvas2d/Canvas2DView';
+import BuildCanvas2D from './BuildCanvas2D';
 import BuildScene3D from './BuildScene3D';
 
 const ImportPreview3D = lazy(() => import('./ImportPreview3D'));
@@ -31,7 +31,7 @@ export default function BuildModeV2() {
                   <ImportPreview3D />
                 </Suspense>
               )}
-              <Canvas2DView overlayMode={showImportOverlay} />
+              <BuildCanvas2D overlayMode={showImportOverlay} />
             </>
           ) : (
             <BuildScene3D />
