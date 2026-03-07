@@ -174,9 +174,10 @@ const storeCreator = (set: any, get: any): AppState => ({
   removeDevice: (id) => {
     get().pushUndo();
     set((s: any) => {
-    const { [id]: _, ...rest } = s.devices.deviceStates;
-    return { devices: { markers: s.devices.markers.filter((m: any) => m.id !== id), deviceStates: rest } };
-  }),
+      const { [id]: _, ...rest } = s.devices.deviceStates;
+      return { devices: { markers: s.devices.markers.filter((m: any) => m.id !== id), deviceStates: rest } };
+    });
+  },
   updateDevice: (id, changes) => set((s: any) => {
     const newMarkers = s.devices.markers.map((m: any) => m.id === id ? { ...m, ...changes } : m);
     let newDeviceStates = s.devices.deviceStates;
