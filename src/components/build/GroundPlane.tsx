@@ -30,6 +30,7 @@ export default function GroundPlane({ onPointerDown, onPointerMove }: GroundPlan
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       receiveShadow
+      renderOrder={0}
     >
       <planeGeometry args={[100, 100]} />
       <meshStandardMaterial color="#3a5a2a" />
