@@ -118,9 +118,9 @@ export default function Walls3D() {
             .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
             .add(new THREE.Vector3(cx, renderHeight / 2 + elevation, cz));
           segments.push(
-            <mesh key={`${wall.id}-seg-${i}-pre`} position={pos.toArray()} rotation={[0, -angle, 0]} castShadow>
+            <mesh key={`${wall.id}-seg-${i}-pre`} position={pos.toArray()} rotation={[0, -angle, 0]} castShadow
+              material={dualMats}>
               <boxGeometry args={[segLen, renderHeight, wall.thickness]} />
-              <meshStandardMaterial color={color} roughness={mat?.roughness ?? 0.8} />
             </mesh>
           );
         }
@@ -133,9 +133,9 @@ export default function Walls3D() {
             .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
             .add(new THREE.Vector3(cx, opTop + aboveH / 2 + elevation, cz));
           segments.push(
-            <mesh key={`${wall.id}-seg-${i}-above`} position={pos.toArray()} rotation={[0, -angle, 0]} castShadow>
+            <mesh key={`${wall.id}-seg-${i}-above`} position={pos.toArray()} rotation={[0, -angle, 0]} castShadow
+              material={dualMats}>
               <boxGeometry args={[op.width, aboveH, wall.thickness]} />
-              <meshStandardMaterial color={color} roughness={mat?.roughness ?? 0.8} />
             </mesh>
           );
         }
@@ -148,9 +148,9 @@ export default function Walls3D() {
             .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
             .add(new THREE.Vector3(cx, belowH / 2 + elevation, cz));
           segments.push(
-            <mesh key={`${wall.id}-seg-${i}-below`} position={pos.toArray()} rotation={[0, -angle, 0]} castShadow>
+            <mesh key={`${wall.id}-seg-${i}-below`} position={pos.toArray()} rotation={[0, -angle, 0]} castShadow
+              material={dualMats}>
               <boxGeometry args={[op.width, belowH, wall.thickness]} />
-              <meshStandardMaterial color={color} roughness={mat?.roughness ?? 0.8} />
             </mesh>
           );
         }
@@ -167,9 +167,9 @@ export default function Walls3D() {
           .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
           .add(new THREE.Vector3(cx, renderHeight / 2 + elevation, cz));
         segments.push(
-          <mesh key={`${wall.id}-seg-last`} position={pos.toArray()} rotation={[0, -angle, 0]} castShadow>
+          <mesh key={`${wall.id}-seg-last`} position={pos.toArray()} rotation={[0, -angle, 0]} castShadow
+            material={dualMats}>
             <boxGeometry args={[segLen, renderHeight, wall.thickness]} />
-            <meshStandardMaterial color={color} roughness={mat?.roughness ?? 0.8} />
           </mesh>
         );
       }
