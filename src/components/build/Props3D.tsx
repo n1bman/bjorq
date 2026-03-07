@@ -56,6 +56,15 @@ function analyzeModel(scene: THREE.Group): PropModelStats {
   return { triangles: Math.round(triangles), meshCount, materialCount: materials.size, rating };
 }
 
+/** Reconstruct a blob URL from base64 fileData */
+function base64ToBlobUrl(base64: string): string {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  const blob = new Blob([bytes], { type: 'model/gltf-binary' });
+  return URL.createObjectURL(blob);
+}
+
 /** Load a GLB/GLTF via XHR for blob:/data: URLs (bypasses CDN proxy) */
 function loadGltf(url: string): Promise<THREE.Group> {
   return new Promise((resolve, reject) => {
@@ -80,13 +89,53 @@ function loadGltf(url: string): Promise<THREE.Group> {
   });
 }
 
-function PropModel({ id, url, position, rotation, scale }: {
+/** Hook to get a valid URL, reconstructing from catalog fileData if blob URL expired */
+function useValidPropUrl(propId: string, originalUrl: string): string {
+  const catalog = useAppStore((s) => s.props.catalog);
+  const items = useAppStore((s) => s.props.items);
+  const updateProp = useAppStore((s) => s.updateProp);
+  const [validUrl, setValidUrl] = useState(originalUrl);
+
+  useEffect(() => {
+    if (!originalUrl) { setValidUrl(''); return; }
+
+    // Non-blob URLs are always valid (server paths, data URLs)
+    if (!originalUrl.startsWith('blob:')) {
+      setValidUrl(originalUrl);
+      return;
+    }
+
+    // Test if blob URL is still alive
+    fetch(originalUrl, { method: 'HEAD' })
+      .then(() => setValidUrl(originalUrl))
+      .catch(() => {
+        // Blob expired — try to reconstruct from catalog fileData
+        const propItem = items.find((p) => p.id === propId);
+        const catItem = propItem ? catalog.find((c: any) => c.id === propItem.catalogId) : null;
+        const fileData = (catItem as any)?.fileData;
+        if (fileData) {
+          const newUrl = base64ToBlobUrl(fileData);
+          updateProp(propId, { url: newUrl });
+          setValidUrl(newUrl);
+          console.info(`[Props3D] Restored blob URL for "${propItem?.name}" from fileData`);
+        } else {
+          console.warn(`[Props3D] Blob URL expired and no fileData for prop ${propId}`);
+          setValidUrl(originalUrl); // Will fail gracefully in loader
+        }
+      });
+  }, [originalUrl, propId, catalog, items, updateProp]);
+
+  return validUrl;
+}
+
+function PropModel({ id, url: rawUrl, position, rotation, scale }: {
   id: string;
   url: string;
   position: [number, number, number];
   rotation: [number, number, number];
   scale: [number, number, number];
 }) {
+  const url = useValidPropUrl(id, rawUrl);
   const appMode = useAppStore((s) => s.appMode);
   const selection = useAppStore((s) => s.build.selection);
   const setSelection = useAppStore((s) => s.setSelection);
@@ -112,7 +161,6 @@ function PropModel({ id, url, position, rotation, scale }: {
   const propItem = items.find((p) => p.id === id);
   const catItem = propItem ? catalog.find((c) => c.id === propItem.catalogId) : null;
   const modelName = propItem?.name || catItem?.name || 'Modell';
-  const modelStats = propItem?.modelStats ?? null;
 
   useEffect(() => {
     if (!url) { setStatus('idle'); return; }
@@ -138,7 +186,6 @@ function PropModel({ id, url, position, rotation, scale }: {
         if (currentUrl.current !== url) { disposeScene(loadedScene); return; }
         const info = analyzeModel(loadedScene);
         console.info(`[Props3D] Loaded "${modelName}": ${info.triangles.toLocaleString()} △ · ${info.meshCount} mesh · ${info.materialCount} mat — ${info.rating}`);
-        // Persist stats to store
         updateProp(id, { modelStats: info });
         setScene(loadedScene);
         setStatus('ready');
