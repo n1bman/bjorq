@@ -244,21 +244,22 @@ function WallInspector({ floorId, wallId, floor, close }: { floorId: string; wal
   const dz = wall.to[1] - wall.from[1];
   const length = Math.sqrt(dx * dx + dz * dz);
 
-  const handleAddOpening = (type: 'door' | 'window' | 'garage-door') => {
+  const handleAddOpening = (type: 'door' | 'window' | 'garage-door' | 'passage') => {
     pushUndo();
     const newId = generateId();
     const defaults = type === 'garage-door'
       ? { width: 2.5, height: 2.2, sillHeight: 0, style: 'sectional' }
-      : type === 'door'
-        ? { width: 0.9, height: 2.1, sillHeight: 0, style: 'single' }
-        : { width: 1.2, height: 1.2, sillHeight: 0.9, style: 'casement' };
+      : type === 'passage'
+        ? { width: 0.9, height: 2.1, sillHeight: 0, style: 'open' }
+        : type === 'door'
+          ? { width: 0.9, height: 2.1, sillHeight: 0, style: 'single' }
+          : { width: 1.2, height: 1.2, sillHeight: 0.9, style: 'casement' };
     addOpening(floorId, wall.id, {
       id: newId,
       type,
       offset: 0.5,
       ...defaults,
     });
-    // Auto-select the new opening to prevent spam
     setSelection({ type: 'opening', id: newId });
   };
 
