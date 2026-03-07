@@ -112,7 +112,7 @@ function SceneContent() {
           if (dist < 0.5) {
             pushUndo();
             const presetId = (useAppStore.getState() as any)._selectedOpeningPreset;
-            const preset = presetId ? require('../../lib/openingPresets').openingPresets.find((p: any) => p.id === presetId) : null;
+            const preset = presetId ? openingPresets.find((p: any) => p.id === presetId) : null;
             const openingId = generateId();
             const openingType = activeTool === 'garage-door' ? 'garage-door' : activeTool;
             const addOpening = useAppStore.getState().addOpening;
