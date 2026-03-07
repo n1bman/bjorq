@@ -13,7 +13,7 @@ import Stairs3D from './Stairs3D';
 import ImportedHome3D from './ImportedHome3D';
 import Props3D from './Props3D';
 import WeatherEffects3D from './WeatherEffects3D';
-import TerrainEnvironment3D from './TerrainEnvironment3D';
+
 import DeviceMarkers3D from '../devices/DeviceMarkers3D';
 import { useAppStore } from '../../store/useAppStore';
 import type { WallSegment, DeviceKind } from '../../store/types';
