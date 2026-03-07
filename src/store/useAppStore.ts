@@ -42,7 +42,7 @@ const initialBuild: BuildState = {
   activeTool: 'select',
   grid: { enabled: true, sizeMeters: 0.5, snapMode: 'strict' },
   selection: { type: null, id: null },
-  view: { cameraMode: 'topdown', showOtherFloorsGhost: false, floorFilter: 'all' },
+  view: { cameraMode: 'topdown', showOtherFloorsGhost: false, floorFilter: 'all', wallViewMode: 'up' as const },
   wallDrawing: { isDrawing: false, nodes: [] },
   roomDrawing: { isDrawing: false, startPoint: null, endPoint: null },
   calibration: { isCalibrating: false, point1: null, point2: null, realMeters: null },
@@ -1426,3 +1426,31 @@ useAppStore.subscribe((state, prev) => {
 });
 // Mark init done after first bootstrap
 setTimeout(() => { _initDone = true; }, 3000);
+
+// ── Live room detection: auto-detect rooms when walls change ──
+let _roomDetectTimer: ReturnType<typeof setTimeout> | null = null;
+let _prevWallsJson = '';
+
+useAppStore.subscribe((state) => {
+  if (state.appMode !== 'build') return;
+  const floorId = state.layout.activeFloorId;
+  if (!floorId) return;
+  const floor = state.layout.floors.find((f) => f.id === floorId);
+  if (!floor) return;
+
+  const wallsJson = JSON.stringify(floor.walls.map((w) => [w.from, w.to]));
+  if (wallsJson === _prevWallsJson) return;
+  _prevWallsJson = wallsJson;
+
+  if (_roomDetectTimer) clearTimeout(_roomDetectTimer);
+  _roomDetectTimer = setTimeout(() => {
+    const { detectRooms } = require('../lib/roomDetection');
+    const s = useAppStore.getState();
+    const currentFloor = s.layout.floors.find((f) => f.id === floorId);
+    if (!currentFloor) return;
+    const newRooms = detectRooms(currentFloor.walls, currentFloor.rooms);
+    if (newRooms.length > 0 || currentFloor.rooms.length > 0) {
+      useAppStore.getState().setRooms(floorId, newRooms);
+    }
+  }, 300);
+});

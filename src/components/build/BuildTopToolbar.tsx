@@ -1,9 +1,10 @@
 import { useAppStore } from '../../store/useAppStore';
-import type { BuildTool, SnapMode } from '../../store/types';
+import type { BuildTool, SnapMode, WallViewMode } from '../../store/types';
 import {
   MousePointer2, Minus, Square, DoorOpen, SquareStack,
   Undo2, Redo2, Grid3X3, Ruler, Trash2, Copy, Paintbrush,
   Eye, Box, Layers, Ghost, XCircle, Sun, CloudRain,
+  ArrowUp, Scissors, ArrowDown, Focus,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Slider } from '../ui/slider';
@@ -40,6 +41,7 @@ export default function BuildTopToolbar() {
   const cameraMode = useAppStore((s) => s.build.view.cameraMode);
   const setCameraMode = useAppStore((s) => s.setCameraMode);
   const showGhost = useAppStore((s) => s.build.view.showOtherFloorsGhost);
+  const wallViewMode = useAppStore((s) => s.build.view.wallViewMode);
   const setView = useAppStore((s) => s.setView);
   const clearAllFloors = useAppStore((s) => s.clearAllFloors);
   const sunAzimuth = useAppStore((s) => s.environment.sunAzimuth);
@@ -162,6 +164,30 @@ export default function BuildTopToolbar() {
       >
         <Ghost size={18} />
       </button>
+
+      {/* Wall view modes */}
+      <div className="flex items-center gap-0.5 bg-secondary/30 rounded-lg p-0.5">
+        {([
+          { key: 'up' as WallViewMode, label: 'Väggar uppe', icon: ArrowUp },
+          { key: 'cutaway' as WallViewMode, label: 'Avskurna', icon: Scissors },
+          { key: 'down' as WallViewMode, label: 'Väggar nere', icon: ArrowDown },
+          { key: 'room-focus' as WallViewMode, label: 'Rumfokus', icon: Focus },
+        ]).map(({ key, label, icon: Icon }) => (
+          <button
+            key={key}
+            onClick={() => setView({ wallViewMode: key })}
+            title={label}
+            className={cn(
+              'flex items-center gap-1 px-1.5 py-1 rounded-md text-[10px] transition-all min-h-[30px]',
+              wallViewMode === key
+                ? 'bg-primary/20 text-primary'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+          >
+            <Icon size={14} />
+          </button>
+        ))}
+      </div>
 
       <div className="w-px h-6 bg-border mx-1" />
 

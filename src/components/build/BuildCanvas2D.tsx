@@ -1,6 +1,7 @@
 import { useRef, useEffect, useCallback, useState } from 'react';
 import { useAppStore } from '../../store/useAppStore';
 import { getMaterialById } from '../../lib/materials';
+import { angleLock } from '../../lib/buildUtils';
 import type { WallSegment } from '../../store/types';
 
 const generateId = () => Math.random().toString(36).slice(2, 10);
@@ -477,6 +478,43 @@ export default function BuildCanvas2D({ overlayMode = false }: { overlayMode?: b
         const snapped = snapToGrid(cursorWorld[0], cursorWorld[1]);
         const [cx, cy] = worldToScreen(snapped[0], snapped[1]);
         ctx.lineTo(cx, cy);
+
+        // Show wall length tooltip during drawing
+        const lastNode = wallDrawing.nodes[wallDrawing.nodes.length - 1];
+        const segLen = Math.sqrt((snapped[0] - lastNode[0]) ** 2 + (snapped[1] - lastNode[1]) ** 2);
+        if (segLen > 0.1) {
+          const midSx = (worldToScreen(lastNode[0], lastNode[1])[0] + cx) / 2;
+          const midSy = (worldToScreen(lastNode[0], lastNode[1])[1] + cy) / 2;
+          const label = `${segLen.toFixed(2)} m`;
+          ctx.save();
+          ctx.setLineDash([]);
+          ctx.font = 'bold 11px DM Sans, sans-serif';
+          const tw = ctx.measureText(label).width;
+          ctx.fillStyle = 'rgba(0,0,0,0.7)';
+          ctx.fillRect(midSx - tw / 2 - 3, midSy - 20, tw + 6, 16);
+          ctx.fillStyle = COLORS.wallDrawing;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(label, midSx, midSy - 12);
+          ctx.restore();
+        }
+
+        // Auto-close indicator: highlight first node if close
+        if (wallDrawing.nodes.length >= 3) {
+          const firstNode = wallDrawing.nodes[0];
+          const distToFirst = Math.sqrt((snapped[0] - firstNode[0]) ** 2 + (snapped[1] - firstNode[1]) ** 2);
+          if (distToFirst < 0.3) {
+            const [fx, fy] = worldToScreen(firstNode[0], firstNode[1]);
+            ctx.save();
+            ctx.setLineDash([]);
+            ctx.strokeStyle = '#4ade80';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(fx, fy, 8, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+          }
+        }
       }
       ctx.stroke();
       ctx.setLineDash([]);
@@ -965,11 +1003,41 @@ export default function BuildCanvas2D({ overlayMode = false }: { overlayMode?: b
       // ─── Wall drawing tool ───
       if (activeTool === 'wall' && activeFloorId) {
         const [wx, wz] = screenToWorld(sx, sy);
-        const snapped = snapToGrid(wx, wz);
+        let snapped = snapToGrid(wx, wz);
+        
+        // Angle-lock: Shift key locks to 0°/45°/90° increments
+        if (e.shiftKey && wallDrawing.isDrawing && wallDrawing.nodes.length > 0) {
+          const lastNode = wallDrawing.nodes[wallDrawing.nodes.length - 1];
+          snapped = angleLock(lastNode, snapped);
+          snapped = snapToGrid(snapped[0], snapped[1]);
+        }
+        
         if (!wallDrawing.isDrawing) {
           setWallDrawing({ isDrawing: true, nodes: [snapped] });
         } else {
-          setWallDrawing({ nodes: [...wallDrawing.nodes, snapped] });
+          // Auto-close: if close to first node, close the polygon
+          const firstNode = wallDrawing.nodes[0];
+          const distToFirst = Math.sqrt((snapped[0] - firstNode[0]) ** 2 + (snapped[1] - firstNode[1]) ** 2);
+          if (wallDrawing.nodes.length >= 3 && distToFirst < 0.3) {
+            // Close polygon: add walls and create room
+            pushUndo();
+            const nodes = [...wallDrawing.nodes, firstNode];
+            for (let i = 0; i < nodes.length - 1; i++) {
+              const wall: WallSegment = {
+                id: generateId(),
+                from: nodes[i],
+                to: nodes[i + 1],
+                height: floor?.heightMeters ?? 2.5,
+                thickness: 0.15,
+                openings: [],
+              };
+              addWall(activeFloorId, wall);
+            }
+            setWallDrawing({ isDrawing: false, nodes: [] });
+            setCursorWorld(null);
+          } else {
+            setWallDrawing({ nodes: [...wallDrawing.nodes, snapped] });
+          }
         }
         return;
       }
