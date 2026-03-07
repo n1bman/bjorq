@@ -107,7 +107,7 @@ export default function BuildLeftPanel() {
             >
               <RefreshCw size={16} />
             </button>
-        
+          )}
         </>
       )}
     </div>
