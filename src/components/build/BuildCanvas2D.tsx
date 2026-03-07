@@ -335,6 +335,26 @@ export default function BuildCanvas2D({ overlayMode = false }: { overlayMode?: b
       }
     }
 
+    // ─── Reference drawing ───
+    if (referenceDrawing && refImgRef.current && refImgLoaded) {
+      const img = refImgRef.current;
+      const ppm = referenceDrawing.scale; // pixels per meter
+      const imgWMeters = img.width / ppm;
+      const imgHMeters = img.height / ppm;
+      const imgWPx = imgWMeters * zoom;
+      const imgHPx = imgHMeters * zoom;
+      const [cx, cy] = worldToScreen(referenceDrawing.offsetX, referenceDrawing.offsetY);
+
+      ctx.save();
+      ctx.globalAlpha = referenceDrawing.opacity;
+      ctx.translate(cx, cy);
+      if (referenceDrawing.rotation !== 0) {
+        ctx.rotate((referenceDrawing.rotation * Math.PI) / 180);
+      }
+      ctx.drawImage(img, -imgWPx / 2, -imgHPx / 2, imgWPx, imgHPx);
+      ctx.restore();
+    }
+
     // ─── Ghost floors ───
     for (const gf of ghostFloors) {
       for (const gw of gf.walls) {
