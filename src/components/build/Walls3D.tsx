@@ -357,9 +357,40 @@ export default function Walls3D() {
                 <meshStandardMaterial color="#555" roughness={0.4} metalness={0.3} />
               </mesh>
             );
+          } else if (op.type === 'passage') {
+            // Passage: frame only, no panel or glass
+            const pFrameW = 0.04;
+            const pFrameDepth = 0.06;
+            const pFrameColor = opMat?.color ?? '#b0b0b0';
+            // Top frame
+            segments.push(
+              <mesh key={`${wall.id}-pass-ft-${i}`} position={[opPos.x, opBottom + op.height - pFrameW / 2 + elevation, opPos.z]}
+                rotation={[0, -angle, 0]} castShadow>
+                <boxGeometry args={[op.width, pFrameW, pFrameDepth]} />
+                <meshStandardMaterial color={pFrameColor} roughness={0.4} />
+              </mesh>
+            );
+            // Left frame
+            segments.push(
+              <mesh key={`${wall.id}-pass-fl-${i}`} position={new THREE.Vector3(localX - op.width / 2 + pFrameW / 2, 0, 0)
+                .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
+                .add(new THREE.Vector3(origCx, opBottom + op.height / 2 + elevation, origCz)).toArray()}
+                rotation={[0, -angle, 0]} castShadow>
+                <boxGeometry args={[pFrameW, op.height, pFrameDepth]} />
+                <meshStandardMaterial color={pFrameColor} roughness={0.4} />
+              </mesh>
+            );
+            // Right frame
+            segments.push(
+              <mesh key={`${wall.id}-pass-fr-${i}`} position={new THREE.Vector3(localX + op.width / 2 - pFrameW / 2, 0, 0)
+                .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
+                .add(new THREE.Vector3(origCx, opBottom + op.height / 2 + elevation, origCz)).toArray()}
+                rotation={[0, -angle, 0]} castShadow>
+                <boxGeometry args={[pFrameW, op.height, pFrameDepth]} />
+                <meshStandardMaterial color={pFrameColor} roughness={0.4} />
+              </mesh>
+            );
           }
-
-          cursor = opEnd;
         });
 
         // Final segment after last opening
