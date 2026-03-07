@@ -19,12 +19,6 @@ const viewModes = [
   { key: 'floor-isolate' as const, label: 'Isolera', icon: Layers },
 ];
 
-const wallModes: { key: WallViewMode; icon: typeof ArrowUp }[] = [
-  { key: 'up', icon: ArrowUp },
-  { key: 'cutaway', icon: Scissors },
-  { key: 'down', icon: ArrowDown },
-  { key: 'room-focus', icon: Focus },
-];
 
 const gridSizes = [0.1, 0.25, 0.5, 1.0];
 const snapModes: { key: SnapMode; label: string }[] = [
