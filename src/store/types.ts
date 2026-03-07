@@ -153,7 +153,9 @@ export type BuildTool =
   | 'place-speaker'
   | 'place-soundbar'
   | 'place-vacuum-dock'
-  | 'vacuum-zone';
+  | 'vacuum-zone'
+  | 'furnish'
+  | 'import';
 
 export type BuildTab = 'structure' | 'import' | 'furnish' | 'devices';
 export type SnapMode = 'strict' | 'soft' | 'off';
