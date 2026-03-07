@@ -53,7 +53,7 @@ function OpeningInspector({ floorId, openingId, floor, close }: { floorId: strin
 
   if (!foundWall || !foundOpening) return null;
 
-  const handleChange = (changes: Record<string, number>) => {
+  const handleChange = (changes: Record<string, any>) => {
     pushUndo();
     updateOpening(floorId, foundWall.id, openingId, changes);
   };
@@ -65,27 +65,58 @@ function OpeningInspector({ floorId, openingId, floor, close }: { floorId: strin
   };
 
   const isWindow = foundOpening.type === 'window';
+  const isGarage = foundOpening.type === 'garage-door';
+  const typeLabel = isGarage ? 'Garageport' : isWindow ? 'Fönster' : 'Dörr';
+  const presets = getPresetsByType(foundOpening.type);
+
+  const handlePreset = (presetId: string) => {
+    const preset = openingPresets.find((p) => p.id === presetId);
+    if (!preset) return;
+    pushUndo();
+    updateOpening(floorId, foundWall.id, openingId, {
+      width: preset.width,
+      height: preset.height,
+      sillHeight: preset.sillHeight,
+      style: preset.style,
+    });
+  };
 
   return (
     <div className="absolute top-3 right-3 w-56 glass-panel rounded-xl p-3 space-y-3 text-xs z-10">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-foreground font-display flex items-center gap-1">
-          <DoorOpen size={14} /> {isWindow ? 'Fönster' : 'Dörr'}
+          {isGarage ? <Warehouse size={14} /> : <DoorOpen size={14} />} {typeLabel}
         </h3>
         {close}
       </div>
 
+      {/* Preset picker */}
+      {presets.length > 0 && (
+        <div className="space-y-1">
+          <label className="text-muted-foreground text-[10px]">Förinställning</label>
+          <div className="flex flex-wrap gap-1">
+            {presets.map((p) => (
+              <button key={p.id} onClick={() => handlePreset(p.id)}
+                className="px-2 py-1 rounded-md bg-secondary/50 hover:bg-secondary text-foreground text-[10px] transition-colors"
+                title={p.description}>
+                {p.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="space-y-2">
         <label className="text-muted-foreground text-[10px]">Bredd (m)</label>
         <div className="flex items-center gap-2">
-          <Slider min={0.3} max={3} step={0.05} value={[foundOpening.width]}
+          <Slider min={0.3} max={isGarage ? 6 : 3} step={0.05} value={[foundOpening.width]}
             onValueChange={([v]) => handleChange({ width: v })} className="flex-1" />
           <span className="text-[10px] text-foreground w-8 text-right">{foundOpening.width.toFixed(2)}</span>
         </div>
 
         <label className="text-muted-foreground text-[10px]">Höjd (m)</label>
         <div className="flex items-center gap-2">
-          <Slider min={0.3} max={3} step={0.05} value={[foundOpening.height]}
+          <Slider min={0.3} max={isGarage ? 4 : 3} step={0.05} value={[foundOpening.height]}
             onValueChange={([v]) => handleChange({ height: v })} className="flex-1" />
           <span className="text-[10px] text-foreground w-8 text-right">{foundOpening.height.toFixed(2)}</span>
         </div>
@@ -107,7 +138,48 @@ function OpeningInspector({ floorId, openingId, floor, close }: { floorId: strin
             onValueChange={([v]) => handleChange({ offset: v })} className="flex-1" />
           <span className="text-[10px] text-foreground w-8 text-right">{(foundOpening.offset * 100).toFixed(0)}%</span>
         </div>
+
+        {/* Style selector */}
+        {foundOpening.type === 'door' && (
+          <>
+            <label className="text-muted-foreground text-[10px]">Stil</label>
+            <div className="flex gap-1">
+              {['single', 'double', 'sliding'].map((s) => (
+                <button key={s} onClick={() => handleChange({ style: s })}
+                  className={`px-2 py-1 rounded-md text-[10px] transition-colors ${foundOpening.style === s ? 'bg-primary text-primary-foreground' : 'bg-secondary/50 hover:bg-secondary text-foreground'}`}>
+                  {s === 'single' ? 'Enkel' : s === 'double' ? 'Par' : 'Skjut'}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+
+        {foundOpening.type === 'window' && (
+          <>
+            <label className="text-muted-foreground text-[10px]">Stil</label>
+            <div className="flex gap-1">
+              {['casement', 'fixed', 'french'].map((s) => (
+                <button key={s} onClick={() => handleChange({ style: s })}
+                  className={`px-2 py-1 rounded-md text-[10px] transition-colors ${foundOpening.style === s ? 'bg-primary text-primary-foreground' : 'bg-secondary/50 hover:bg-secondary text-foreground'}`}>
+                  {s === 'casement' ? 'Sido' : s === 'fixed' ? 'Fast' : 'Altan'}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
       </div>
+
+      {/* HA Entity linking for garage doors */}
+      {isGarage && (
+        <div className="border-t border-border pt-2 space-y-1">
+          <label className="text-muted-foreground text-[10px]">Home Assistant-entitet</label>
+          <HAEntityPicker
+            value={foundOpening.haEntityId || ''}
+            onChange={(entityId) => handleChange({ haEntityId: entityId })}
+            domainFilter={['cover']}
+          />
+        </div>
+      )}
 
       <button onClick={handleDelete}
         className="w-full py-2 rounded-lg bg-destructive/20 text-destructive text-xs font-medium hover:bg-destructive/30 transition-colors min-h-[44px] flex items-center justify-center gap-1">
