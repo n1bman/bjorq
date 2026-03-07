@@ -5,9 +5,10 @@ import { Line } from '@react-three/drei';
 
 interface WallDrawing3DProps {
   cursorPos: [number, number] | null;
+  cursorSnapped?: boolean;
 }
 
-export default function WallDrawing3D({ cursorPos }: WallDrawing3DProps) {
+export default function WallDrawing3D({ cursorPos, cursorSnapped }: WallDrawing3DProps) {
   const wallDrawing = useAppStore((s) => s.build.wallDrawing);
 
   const linePoints = useMemo(() => {
