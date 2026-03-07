@@ -1,4 +1,5 @@
 import { useAppStore } from '../../store/useAppStore';
+import { cn } from '../../lib/utils';
 import { X, Plus, DoorOpen, RotateCcw, Move, Trash2, Layers, Home, Lightbulb, ArrowRightLeft, Monitor, RectangleHorizontal, Warehouse, Upload } from 'lucide-react';
 import { Slider } from '../ui/slider';
 import { Input } from '../ui/input';
