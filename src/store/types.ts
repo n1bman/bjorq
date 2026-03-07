@@ -10,12 +10,14 @@ export interface Material {
 // ─── Layout Layer ───
 export interface WallOpening {
   id: string;
-  type: 'door' | 'window';
+  type: 'door' | 'window' | 'garage-door';
   offset: number; // 0-1 along wall
   width: number;
   height: number;
   sillHeight: number; // meters from floor (for windows)
+  style?: string; // e.g. 'single','double','sliding','casement','fixed','french','sectional','roller'
   materialId?: string;
+  haEntityId?: string; // HA entity for garage-doors
 }
 
 export interface WallSegment {
