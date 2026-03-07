@@ -140,7 +140,8 @@ export default function Walls3D() {
             );
           }
 
-          // ─── 3D Door/Window/Garage models for home view ───
+          // ─── 3D Door/Window/Garage/Passage models for home view ───
+          const flipSign = op.flipped ? -1 : 1;
           const localX = op.offset * origLength - origLength / 2;
           const opCenterY = opBottom + op.height / 2;
           const opPos = new THREE.Vector3(localX, 0, 0)
@@ -285,7 +286,7 @@ export default function Walls3D() {
 
             // Window sill
             if (!isFrench) {
-              const sillNormal = new THREE.Vector3(0, 0, 1)
+              const sillNormal = new THREE.Vector3(0, 0, flipSign)
                 .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle);
               segments.push(
                 <mesh key={`${wall.id}-win-sill-${i}`}
@@ -356,9 +357,40 @@ export default function Walls3D() {
                 <meshStandardMaterial color="#555" roughness={0.4} metalness={0.3} />
               </mesh>
             );
+          } else if (op.type === 'passage') {
+            // Passage: frame only, no panel or glass
+            const pFrameW = 0.04;
+            const pFrameDepth = 0.06;
+            const pFrameColor = opMat?.color ?? '#b0b0b0';
+            // Top frame
+            segments.push(
+              <mesh key={`${wall.id}-pass-ft-${i}`} position={[opPos.x, opBottom + op.height - pFrameW / 2 + elevation, opPos.z]}
+                rotation={[0, -angle, 0]} castShadow>
+                <boxGeometry args={[op.width, pFrameW, pFrameDepth]} />
+                <meshStandardMaterial color={pFrameColor} roughness={0.4} />
+              </mesh>
+            );
+            // Left frame
+            segments.push(
+              <mesh key={`${wall.id}-pass-fl-${i}`} position={new THREE.Vector3(localX - op.width / 2 + pFrameW / 2, 0, 0)
+                .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
+                .add(new THREE.Vector3(origCx, opBottom + op.height / 2 + elevation, origCz)).toArray()}
+                rotation={[0, -angle, 0]} castShadow>
+                <boxGeometry args={[pFrameW, op.height, pFrameDepth]} />
+                <meshStandardMaterial color={pFrameColor} roughness={0.4} />
+              </mesh>
+            );
+            // Right frame
+            segments.push(
+              <mesh key={`${wall.id}-pass-fr-${i}`} position={new THREE.Vector3(localX + op.width / 2 - pFrameW / 2, 0, 0)
+                .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
+                .add(new THREE.Vector3(origCx, opBottom + op.height / 2 + elevation, origCz)).toArray()}
+                rotation={[0, -angle, 0]} castShadow>
+                <boxGeometry args={[pFrameW, op.height, pFrameDepth]} />
+                <meshStandardMaterial color={pFrameColor} roughness={0.4} />
+              </mesh>
+            );
           }
-
-          cursor = opEnd;
         });
 
         // Final segment after last opening
@@ -385,24 +417,25 @@ export default function Walls3D() {
   // ── Corner fill blocks ──
   const cornerBlocks = useMemo(() => {
     const eps = 0.05;
-    const nodeMap = new Map<string, { pos: [number, number]; maxThickness: number; maxHeight: number }>();
+    const nodeMap = new Map<string, { pos: [number, number]; maxThickness: number; maxHeight: number; wallColors: ReturnType<typeof resolveWallColors>[] }>();
     
     for (const wall of walls) {
+      const wc = resolveWallColors(wall);
       for (const pt of [wall.from, wall.to]) {
         const key = `${Math.round(pt[0] / eps) * eps},${Math.round(pt[1] / eps) * eps}`;
         const existing = nodeMap.get(key);
         if (existing) {
           existing.maxThickness = Math.max(existing.maxThickness, wall.thickness);
           existing.maxHeight = Math.max(existing.maxHeight, wall.height);
+          existing.wallColors.push(wc);
         } else {
-          nodeMap.set(key, { pos: pt, maxThickness: wall.thickness, maxHeight: wall.height });
+          nodeMap.set(key, { pos: pt, maxThickness: wall.thickness, maxHeight: wall.height, wallColors: [wc] });
         }
       }
     }
 
-    // Only render corner blocks at nodes with 2+ walls
     const blocks: JSX.Element[] = [];
-    for (const [key, { pos, maxThickness, maxHeight }] of nodeMap) {
+    for (const [key, { pos, maxThickness, maxHeight, wallColors }] of nodeMap) {
       let connectionCount = 0;
       for (const wall of walls) {
         const df = Math.abs(wall.from[0] - pos[0]) + Math.abs(wall.from[1] - pos[1]);
@@ -411,12 +444,14 @@ export default function Walls3D() {
       }
       if (connectionCount >= 2) {
         const elevation = floor?.elevation ?? 0;
+        // Use the dominant wall color for the corner block
+        const dominantColor = wallColors[0]?.exteriorColor ?? '#e0e0e0';
         blocks.push(
           <mesh key={`corner-${key}`}
             position={[pos[0], maxHeight / 2 + elevation, pos[1]]}
             castShadow receiveShadow>
             <boxGeometry args={[maxThickness, maxHeight, maxThickness]} />
-            <meshStandardMaterial color="#e0e0e0" roughness={0.7} side={THREE.FrontSide} />
+            <meshStandardMaterial color={dominantColor} roughness={0.7} side={THREE.FrontSide} />
           </mesh>
         );
       }

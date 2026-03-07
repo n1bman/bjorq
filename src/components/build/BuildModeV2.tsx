@@ -23,7 +23,7 @@ const generateId = () => Math.random().toString(36).slice(2, 10);
    BuildCatalogRow — inlined to avoid Vite cache issues
    ═══════════════════════════════════════════════ */
 
-function OpeningCatalog({ type }: { type: 'door' | 'window' | 'garage-door' }) {
+function OpeningCatalog({ type }: { type: 'door' | 'window' | 'garage-door' | 'passage' }) {
   const presets = openingPresets.filter((p) => p.type === type);
   return (
     <>
@@ -219,13 +219,13 @@ function DeviceCatalog() {
 
 function BuildCatalogRow() {
   const activeTool = useAppStore((s) => s.build.activeTool);
-  const showCatalog = activeTool === 'door' || activeTool === 'window' || activeTool === 'garage-door' || activeTool === 'paint' || activeTool === ('furnish' as any) || activeTool === ('import' as any) || activeTool.startsWith('place-');
+  const showCatalog = activeTool === 'door' || activeTool === 'window' || activeTool === 'garage-door' || activeTool === 'passage' || activeTool === ('furnish' as any) || activeTool === ('import' as any) || activeTool.startsWith('place-');
   if (!showCatalog) return null;
   return (
     <div className="border-t border-border bg-background/95 backdrop-blur px-2 py-1.5 overflow-x-auto">
       <div className="flex items-center gap-2 min-w-max">
-        {(activeTool === 'door' || activeTool === 'window' || activeTool === 'garage-door') && <OpeningCatalog type={activeTool} />}
-        {activeTool === 'paint' && <PaintCatalog />}
+        {(activeTool === 'door' || activeTool === 'window' || activeTool === 'garage-door' || activeTool === 'passage') && <OpeningCatalog type={activeTool as any} />}
+        {activeTool === ('furnish' as any) && <FurnishCatalog />}
         {activeTool === ('furnish' as any) && <FurnishCatalog />}
         {activeTool === ('import' as any) && <ImportCatalog />}
         {activeTool.startsWith('place-') && <DeviceCatalog />}
@@ -251,10 +251,10 @@ const dockItems: DockItem[] = [
   { tool: 'wall', tab: 'structure', label: 'Vägg', icon: Minus },
   { tool: 'room', tab: 'structure', label: 'Rum', icon: Square },
   { tool: 'door', tab: 'structure', label: 'Dörr', icon: DoorOpen, hasCatalog: true },
+  { tool: 'passage', tab: 'structure', label: 'Passage', icon: DoorOpen, hasCatalog: true },
   { tool: 'window', tab: 'structure', label: 'Fönster', icon: PanelTop, hasCatalog: true },
   { tool: 'garage-door', tab: 'structure', label: 'Garage', icon: Warehouse, hasCatalog: true },
   { tool: 'stairs', tab: 'structure', label: 'Trappa', icon: Footprints },
-  { tool: 'paint', tab: 'structure', label: 'Måla', icon: Paintbrush, hasCatalog: true },
   { tool: 'furnish' as BuildTool, tab: 'furnish', label: 'Möbler', icon: Sofa, hasCatalog: true },
   { tool: 'place-light', tab: 'devices', label: 'Enheter', icon: Cpu, hasCatalog: true },
   { tool: 'import' as BuildTool, tab: 'import', label: 'Import', icon: Import, hasCatalog: true },

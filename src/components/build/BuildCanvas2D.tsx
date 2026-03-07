@@ -567,6 +567,29 @@ export default function BuildCanvas2D({ overlayMode = false }: { overlayMode?: b
           ctx.lineTo(opx - ux * halfW - nx * gOff, opy - uy * halfW - ny * gOff);
           ctx.stroke();
           ctx.setLineDash([]);
+        } else if (op.type === 'passage') {
+          // Passage: simple gap with dashed frame
+          ctx.strokeStyle = '#1a1d23';
+          ctx.lineWidth = Math.max(2, wall.thickness * zoom) + 2;
+          ctx.beginPath();
+          ctx.moveTo(opx - ux * halfW, opy - uy * halfW);
+          ctx.lineTo(opx + ux * halfW, opy + uy * halfW);
+          ctx.stroke();
+
+          ctx.strokeStyle = isOpSelected ? COLORS.openingSelected : '#aaa';
+          ctx.lineWidth = 1.5;
+          ctx.setLineDash([4, 3]);
+          const pOff = 3;
+          // Two end lines showing passage sides
+          ctx.beginPath();
+          ctx.moveTo(opx - ux * halfW + nx * pOff, opy - uy * halfW + ny * pOff);
+          ctx.lineTo(opx - ux * halfW - nx * pOff, opy - uy * halfW - ny * pOff);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(opx + ux * halfW + nx * pOff, opy + uy * halfW + ny * pOff);
+          ctx.lineTo(opx + ux * halfW - nx * pOff, opy + uy * halfW - ny * pOff);
+          ctx.stroke();
+          ctx.setLineDash([]);
         }
 
         // Opening drag dot
@@ -1142,29 +1165,29 @@ export default function BuildCanvas2D({ overlayMode = false }: { overlayMode?: b
         return;
       }
 
-      // ─── Door/Window/Garage-door placement ───
-      if ((activeTool === 'door' || activeTool === 'window' || activeTool === 'garage-door') && activeFloorId) {
+      // ─── Door/Window/Garage-door/Passage placement ───
+      if ((activeTool === 'door' || activeTool === 'window' || activeTool === 'garage-door' || activeTool === 'passage') && activeFloorId) {
         const wall = findWallAt(sx, sy);
         if (wall) {
           const [wx, wz] = screenToWorld(sx, sy);
           const [dist, t] = pointToSegment(wx, wz, wall.from[0], wall.from[1], wall.to[0], wall.to[1]);
           if (dist < 0.5) {
             pushUndo();
-            // Check for selected preset from catalog strip
             const presetId = (useAppStore.getState() as any)._selectedOpeningPreset;
             const preset = presetId ? openingPresets.find((p: any) => p.id === presetId) : null;
             const openingId = generateId();
-            const openingType = activeTool === 'garage-door' ? 'garage-door' : activeTool;
+            const openingType = activeTool as 'door' | 'window' | 'garage-door' | 'passage';
+            const defaultWidths: Record<string, number> = { door: 0.9, window: 1.2, 'garage-door': 2.5, passage: 0.9 };
+            const defaultHeights: Record<string, number> = { door: 2.1, window: 1.2, 'garage-door': 2.2, passage: 2.1 };
             addOpening(activeFloorId, wall.id, {
               id: openingId,
-              type: openingType as 'door' | 'window' | 'garage-door',
+              type: openingType,
               offset: Math.max(0.05, Math.min(0.95, t)),
-              width: preset?.width ?? (activeTool === 'door' ? 0.9 : activeTool === 'garage-door' ? 2.5 : 1.2),
-              height: preset?.height ?? (activeTool === 'door' ? 2.1 : activeTool === 'garage-door' ? 2.2 : 1.2),
+              width: preset?.width ?? (defaultWidths[activeTool] || 0.9),
+              height: preset?.height ?? (defaultHeights[activeTool] || 2.1),
               sillHeight: preset?.sillHeight ?? (activeTool === 'window' ? 0.9 : 0),
               style: preset?.style,
             });
-            // Auto-select the new opening and reset tool to prevent spam
             setSelection({ type: 'opening', id: openingId });
             useAppStore.getState().setBuildTool('select');
             useAppStore.setState({ _selectedOpeningPreset: null } as any);
@@ -1565,8 +1588,8 @@ export default function BuildCanvas2D({ overlayMode = false }: { overlayMode?: b
         {activeTool === 'select' && (
           <span className="text-primary font-medium">Dra noder/väggar · Dubbelklicka vägg = dela</span>
         )}
-        {(activeTool === 'door' || activeTool === 'window' || activeTool === 'garage-door') && (
-          <span className="text-primary font-medium">Klicka på vägg för att placera {activeTool === 'door' ? 'dörr' : activeTool === 'garage-door' ? 'garageport' : 'fönster'}</span>
+        {(activeTool === 'door' || activeTool === 'window' || activeTool === 'garage-door' || activeTool === 'passage') && (
+          <span className="text-primary font-medium">Klicka på vägg för att placera {activeTool === 'door' ? 'dörr' : activeTool === 'garage-door' ? 'garageport' : activeTool === 'passage' ? 'passage' : 'fönster'}</span>
         )}
         {activeTool === 'measure' && !measureStart && (
           <span className="text-primary font-medium">Klicka för att börja mäta</span>
@@ -1594,8 +1617,8 @@ export default function BuildCanvas2D({ overlayMode = false }: { overlayMode?: b
         )}
       </div>
 
-      {/* ─── Planritning (reference drawing) controls ─── */}
-      {referenceDrawing?.url && (
+      {/* ─── Planritning (reference drawing) controls — only in import mode ─── */}
+      {referenceDrawing?.url && (activeTool === 'import' || useAppStore.getState().build.tab === 'import') && (
         <ReferenceControls />
       )}
     </div>

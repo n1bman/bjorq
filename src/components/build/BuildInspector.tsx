@@ -67,7 +67,8 @@ function OpeningInspector({ floorId, openingId, floor, close }: { floorId: strin
 
   const isWindow = foundOpening.type === 'window';
   const isGarage = foundOpening.type === 'garage-door';
-  const typeLabel = isGarage ? 'Garageport' : isWindow ? 'Fönster' : 'Dörr';
+  const isPassage = foundOpening.type === 'passage';
+  const typeLabel = isGarage ? 'Garageport' : isWindow ? 'Fönster' : isPassage ? 'Passage' : 'Dörr';
   const presets = getPresetsByType(foundOpening.type);
 
   const handlePreset = (presetId: string) => {
@@ -243,21 +244,22 @@ function WallInspector({ floorId, wallId, floor, close }: { floorId: string; wal
   const dz = wall.to[1] - wall.from[1];
   const length = Math.sqrt(dx * dx + dz * dz);
 
-  const handleAddOpening = (type: 'door' | 'window' | 'garage-door') => {
+  const handleAddOpening = (type: 'door' | 'window' | 'garage-door' | 'passage') => {
     pushUndo();
     const newId = generateId();
     const defaults = type === 'garage-door'
       ? { width: 2.5, height: 2.2, sillHeight: 0, style: 'sectional' }
-      : type === 'door'
-        ? { width: 0.9, height: 2.1, sillHeight: 0, style: 'single' }
-        : { width: 1.2, height: 1.2, sillHeight: 0.9, style: 'casement' };
+      : type === 'passage'
+        ? { width: 0.9, height: 2.1, sillHeight: 0, style: 'open' }
+        : type === 'door'
+          ? { width: 0.9, height: 2.1, sillHeight: 0, style: 'single' }
+          : { width: 1.2, height: 1.2, sillHeight: 0.9, style: 'casement' };
     addOpening(floorId, wall.id, {
       id: newId,
       type,
       offset: 0.5,
       ...defaults,
     });
-    // Auto-select the new opening to prevent spam
     setSelection({ type: 'opening', id: newId });
   };
 
@@ -312,6 +314,28 @@ function WallInspector({ floorId, wallId, floor, close }: { floorId: string; wal
         <span>Längd:</span><span className="text-foreground">{length.toFixed(2)} m</span>
         <span>Höjd:</span><span className="text-foreground">{wall.height} m</span>
         <span>Tjocklek:</span><span className="text-foreground">{wall.thickness} m</span>
+      </div>
+
+      {/* Wall thickness presets */}
+      <div className="space-y-1">
+        <label className="text-muted-foreground text-[10px]">Väggtjocklek</label>
+        <div className="flex gap-1">
+          {[
+            { label: 'Innervägg', value: 0.10 },
+            { label: 'Standard', value: 0.15 },
+            { label: 'Yttervägg', value: 0.20 },
+          ].map((preset) => (
+            <button key={preset.label}
+              onClick={() => { pushUndo(); updateWall(floorId, wall.id, { thickness: preset.value }); }}
+              className={`flex-1 py-1.5 rounded-md text-[10px] font-medium transition-colors ${
+                wall.thickness === preset.value
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-secondary/50 hover:bg-secondary text-foreground'
+              }`}>
+              {preset.label} ({preset.value}m)
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Wall height presets */}
@@ -375,10 +399,14 @@ function WallInspector({ floorId, wallId, floor, close }: { floorId: string; wal
       <div className="border-t border-border pt-2">
         <div className="flex items-center justify-between mb-2">
           <span className="text-muted-foreground">Öppningar</span>
-          <div className="flex gap-1">
+          <div className="flex gap-1 flex-wrap">
             <button onClick={() => handleAddOpening('door')}
               className="flex items-center gap-1 px-2 py-1 rounded-md bg-secondary/50 hover:bg-secondary text-foreground transition-colors min-h-[32px]">
               <Plus size={12} /> Dörr
+            </button>
+            <button onClick={() => handleAddOpening('passage')}
+              className="flex items-center gap-1 px-2 py-1 rounded-md bg-secondary/50 hover:bg-secondary text-foreground transition-colors min-h-[32px]">
+              <Plus size={12} /> Passage
             </button>
             <button onClick={() => handleAddOpening('window')}
               className="flex items-center gap-1 px-2 py-1 rounded-md bg-secondary/50 hover:bg-secondary text-foreground transition-colors min-h-[32px]">
@@ -394,7 +422,7 @@ function WallInspector({ floorId, wallId, floor, close }: { floorId: string; wal
               className="flex items-center gap-1 text-foreground hover:text-primary transition-colors"
             >
               <DoorOpen size={12} />
-              {op.type === 'door' ? 'Dörr' : op.type === 'garage-door' ? 'Garageport' : 'Fönster'}
+              {op.type === 'door' ? 'Dörr' : op.type === 'garage-door' ? 'Garageport' : op.type === 'passage' ? 'Passage' : 'Fönster'}
             </button>
             <button
               onClick={() => { pushUndo(); removeOpening(floorId, wall.id, op.id); }}
@@ -532,16 +560,34 @@ function PropInspector({ propId, close }: { propId: string; close: React.ReactNo
         </div>
       </div>
 
-      {/* HA Entity placeholder */}
-      <div className="space-y-1 opacity-50">
-        <label className="text-muted-foreground text-[10px]">HA Entity (kommande)</label>
+      {/* HA Entity mapping */}
+      <div className="space-y-1">
+        <label className="text-muted-foreground text-[10px]">Home Assistant-entitet</label>
         <Input
-          disabled
           value={prop.haEntityId || ''}
-          className="h-7 text-xs bg-secondary/30 border-none"
-          placeholder="entity_id"
+          onChange={(e) => updateProp(prop.id, { haEntityId: e.target.value })}
+          className="h-7 text-xs bg-secondary/50 border-none"
+          placeholder="light.vardagsrum, media_player.tv"
         />
       </div>
+
+      {/* Category selector */}
+      {catItem && (
+        <div className="space-y-1">
+          <label className="text-muted-foreground text-[10px]">Kategori</label>
+          <div className="flex flex-wrap gap-1">
+            {['sittmöbel', 'förvaring', 'belysning', 'bord', 'säng', 'dekoration', 'elektronik', 'övrigt'].map((cat) => (
+              <button key={cat}
+                onClick={() => updateCatalogItem(catItem.id, { category: cat })}
+                className={`px-2 py-0.5 rounded-md text-[10px] transition-colors ${
+                  catItem.category === cat ? 'bg-primary text-primary-foreground' : 'bg-secondary/50 hover:bg-secondary text-foreground'
+                }`}>
+                {cat.charAt(0).toUpperCase() + cat.slice(1)}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <button onClick={handleDelete}
         className="w-full py-2 rounded-lg bg-destructive/20 text-destructive text-xs font-medium hover:bg-destructive/30 transition-colors min-h-[44px] flex items-center justify-center gap-1">

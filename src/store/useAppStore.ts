@@ -1507,8 +1507,8 @@ useAppStore.subscribe((state) => {
   _prevWallsJson = wallsJson;
 
   if (_roomDetectTimer) clearTimeout(_roomDetectTimer);
-  _roomDetectTimer = setTimeout(() => {
-    const { detectRooms } = require('../lib/roomDetection');
+  _roomDetectTimer = setTimeout(async () => {
+    const { detectRooms } = await import('../lib/roomDetection');
     const s = useAppStore.getState();
     const currentFloor = s.layout.floors.find((f) => f.id === floorId);
     if (!currentFloor) return;
