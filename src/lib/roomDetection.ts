@@ -173,7 +173,8 @@ const generateId = () => Math.random().toString(36).slice(2, 10);
 export function detectRooms(walls: WallSegment[], existingRooms?: Room[]): Room[] {
   if (walls.length < 3) return [];
   
-  const graph = buildGraph(walls);
+  const splitWalls = splitAtTJunctions(walls);
+  const graph = buildGraph(splitWalls);
   const cycles = findMinimalCycles(graph);
 
   // Collect existing "Rum N" numbers to avoid duplicates
