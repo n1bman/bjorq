@@ -238,7 +238,7 @@ function SceneContent() {
 
       <Walls3D />
       <Floors3D />
-      <Ceilings3D />
+      
       <Stairs3D />
       <ImportedHome3D />
       <Props3D />
