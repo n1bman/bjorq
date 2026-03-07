@@ -172,11 +172,12 @@ function OpeningInspector({ floorId, openingId, floor, close }: { floorId: strin
       {/* HA Entity linking for garage doors */}
       {isGarage && (
         <div className="border-t border-border pt-2 space-y-1">
-          <label className="text-muted-foreground text-[10px]">Home Assistant-entitet</label>
-          <HAEntityPicker
+          <label className="text-muted-foreground text-[10px]">Home Assistant-entitet (cover)</label>
+          <Input
             value={foundOpening.haEntityId || ''}
-            onChange={(entityId) => handleChange({ haEntityId: entityId })}
-            domainFilter={['cover']}
+            onChange={(e) => handleChange({ haEntityId: e.target.value })}
+            placeholder="cover.garage_door"
+            className="h-7 text-[10px]"
           />
         </div>
       )}
