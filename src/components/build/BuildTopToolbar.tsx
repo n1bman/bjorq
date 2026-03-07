@@ -1,5 +1,5 @@
 import { useAppStore } from '../../store/useAppStore';
-import type { SnapMode, WallViewMode, WeatherCondition } from '../../store/types';
+import type { SnapMode, WeatherCondition } from '../../store/types';
 import {
   Undo2, Redo2, Eye, Box, Layers, Settings2,
   ArrowLeft, ArrowUp, Scissors, ArrowDown, Focus, Ghost,
