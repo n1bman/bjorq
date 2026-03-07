@@ -599,15 +599,27 @@ export default function BuildCanvas2D({ overlayMode = false }: { overlayMode?: b
         ctx.fill();
       }
 
-      // Nodes (endpoints)
+      // Nodes (endpoints) with connection status
       const nodeSize = 4;
-      ctx.fillStyle = COLORS.node;
-      ctx.beginPath();
-      ctx.arc(x1, y1, nodeSize, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.arc(x2, y2, nodeSize, 0, Math.PI * 2);
-      ctx.fill();
+      for (const [nx, ny, wx, wz] of [[x1, y1, wall.from[0], wall.from[1]], [x2, y2, wall.to[0], wall.to[1]]] as [number, number, number, number][]) {
+        // Count how many walls share this node
+        const connCount = walls.filter((w) =>
+          (Math.abs(w.from[0] - wx) < 0.02 && Math.abs(w.from[1] - wz) < 0.02) ||
+          (Math.abs(w.to[0] - wx) < 0.02 && Math.abs(w.to[1] - wz) < 0.02)
+        ).length;
+        ctx.fillStyle = COLORS.node;
+        ctx.beginPath();
+        ctx.arc(nx, ny, nodeSize, 0, Math.PI * 2);
+        ctx.fill();
+        // Green ring = connected (2+ walls), orange ring = open end (1 wall)
+        if (activeTool === 'wall') {
+          ctx.strokeStyle = connCount >= 2 ? '#4ade80' : '#e8a845';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.arc(nx, ny, nodeSize + 3, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+      }
     }
 
     // ─── Draw stairs ───
