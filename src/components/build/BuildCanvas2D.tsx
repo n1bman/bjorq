@@ -1019,6 +1019,39 @@ export default function BuildCanvas2D({ overlayMode = false }: { overlayMode?: b
     }
   });
 
+  // ─── Keyboard shortcuts: Escape & Ctrl+Z during wall drawing ───
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const tool = useAppStore.getState().build.activeTool;
+      const drawing = useAppStore.getState().build.wallDrawing;
+
+      // Escape: cancel wall drawing or deselect
+      if (e.key === 'Escape') {
+        if (drawing.isDrawing) {
+          setWallDrawing({ isDrawing: false, nodes: [] });
+          e.preventDefault();
+        } else {
+          setSelection({ type: null, id: null });
+        }
+        return;
+      }
+
+      // Ctrl+Z during wall drawing: undo last node
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey && drawing.isDrawing) {
+        e.preventDefault();
+        if (drawing.nodes.length <= 1) {
+          setWallDrawing({ isDrawing: false, nodes: [] });
+        } else {
+          setWallDrawing({ nodes: drawing.nodes.slice(0, -1) });
+        }
+        return;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [setWallDrawing, setSelection]);
+
   // Resize observer
   useEffect(() => {
     const container = containerRef.current;
