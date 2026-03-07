@@ -33,7 +33,7 @@ export default function GroundPlane({ onPointerDown, onPointerMove }: GroundPlan
       renderOrder={0}
     >
       <planeGeometry args={[100, 100]} />
-      <meshStandardMaterial color="#3a5a2a" />
+      <meshStandardMaterial color="#3a5a2a" polygonOffset polygonOffsetFactor={1} polygonOffsetUnits={1} />
     </mesh>
   );
 }

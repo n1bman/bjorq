@@ -44,7 +44,7 @@ export default function Floors3D() {
           <mesh
             key={room.id}
             rotation={[-Math.PI / 2, 0, 0]}
-            position={[0, (floor?.elevation ?? 0) + 0.01, 0]}
+            position={[0, (floor?.elevation ?? 0) + 0.02, 0]}
             receiveShadow
             onPointerDown={(e) => handleRoomClick(e, room.id)}
           >
@@ -52,7 +52,10 @@ export default function Floors3D() {
             <meshStandardMaterial
               color={isSelected ? '#4a9eff' : color}
               roughness={mat?.roughness ?? 0.9}
-              side={THREE.DoubleSide}
+              side={THREE.FrontSide}
+              polygonOffset
+              polygonOffsetFactor={-1}
+              polygonOffsetUnits={-1}
               emissive={isSelected ? '#1a3a6a' : '#000000'}
               emissiveIntensity={isSelected ? 0.4 : 0}
             />
