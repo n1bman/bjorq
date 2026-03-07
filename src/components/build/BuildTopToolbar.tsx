@@ -12,21 +12,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import FloorPicker from './FloorPicker';
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { detectRooms, healWalls } from '../../lib/roomDetection';
+import { detectRooms, healWalls, polygonArea } from '../../lib/roomDetection';
 
 /* ═══════════════════════════════════════════════
    RoomManager — inlined to avoid Vite resolve issues
    ═══════════════════════════════════════════════ */
-
-function polygonArea(pts: [number, number][]): number {
-  let area = 0;
-  for (let i = 0; i < pts.length; i++) {
-    const j = (i + 1) % pts.length;
-    area += pts[i][0] * pts[j][1];
-    area -= pts[j][0] * pts[i][1];
-  }
-  return Math.abs(area) / 2;
-}
 
 function RoomManager() {
   const activeFloorId = useAppStore((s) => s.layout.activeFloorId);

@@ -9,8 +9,7 @@ import { openingPresets, getPresetsByType } from '../../lib/openingPresets';
 import { useState, useRef } from 'react';
 import type { DeviceKind, DeviceSurface, ScreenConfig, LightType, WallOpening } from '../../store/types';
 import HAEntityPicker from './devices/HAEntityPicker';
-
-const generateId = () => Math.random().toString(36).slice(2, 10);
+import { generateId } from '../../lib/buildUtils';
 
 export default function BuildInspector() {
   const selection = useAppStore((s) => s.build.selection);

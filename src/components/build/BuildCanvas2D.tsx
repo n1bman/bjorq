@@ -1,7 +1,7 @@
 import { useRef, useEffect, useCallback, useState, useMemo } from 'react';
 import { useAppStore } from '../../store/useAppStore';
 import { getMaterialById } from '../../lib/materials';
-import { angleLock, snapToNode } from '../../lib/buildUtils';
+import { angleLock, snapToNode, generateId, pointInPolygon, pointToSegment } from '../../lib/buildUtils';
 import type { WallSegment } from '../../store/types';
 import { openingPresets } from '../../lib/openingPresets';
 import { Slider } from '../ui/slider';
@@ -9,7 +9,6 @@ import { Switch } from '../ui/switch';
 import { Label } from '../ui/label';
 import { Button } from '../ui/button';
 import { Trash2, Lock, Unlock, RotateCw, Move, ZoomIn } from 'lucide-react';
-const generateId = () => Math.random().toString(36).slice(2, 10);
 
 const COLORS = {
   grid: '#2a2d35',
@@ -35,30 +34,6 @@ const COLORS = {
   roomDrawPreview: 'rgba(74, 158, 255, 0.15)',
   roomDrawStroke: '#4a9eff',
 };
-
-// Point-in-polygon test
-function pointInPolygon(px: number, py: number, polygon: [number, number][]): boolean {
-  let inside = false;
-  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-    const xi = polygon[i][0], yi = polygon[i][1];
-    const xj = polygon[j][0], yj = polygon[j][1];
-    if ((yi > py) !== (yj > py) && px < ((xj - xi) * (py - yi)) / (yj - yi) + xi) {
-      inside = !inside;
-    }
-  }
-  return inside;
-}
-
-// Distance from point to line segment, returns [distance, t parameter 0-1]
-function pointToSegment(px: number, py: number, ax: number, ay: number, bx: number, by: number): [number, number] {
-  const dx = bx - ax, dy = by - ay;
-  const len2 = dx * dx + dy * dy;
-  if (len2 === 0) return [Math.sqrt((px - ax) ** 2 + (py - ay) ** 2), 0];
-  let t = ((px - ax) * dx + (py - ay) * dy) / len2;
-  t = Math.max(0, Math.min(1, t));
-  const cx = ax + t * dx, cy = ay + t * dy;
-  return [Math.sqrt((px - cx) ** 2 + (py - cy) ** 2), t];
-}
 
 type DragNode = { wallId: string; endpoint: 'from' | 'to'; connectedWalls: { wallId: string; endpoint: 'from' | 'to' }[] } | null;
 type DragWall = { wallId: string; startFrom: [number, number]; startTo: [number, number]; mouseStart: [number, number] } | null;
@@ -604,8 +579,8 @@ export default function BuildCanvas2D({ overlayMode = false }: { overlayMode?: b
       for (const [nx, ny, wx, wz] of [[x1, y1, wall.from[0], wall.from[1]], [x2, y2, wall.to[0], wall.to[1]]] as [number, number, number, number][]) {
         // Count how many walls share this node
         const connCount = walls.filter((w) =>
-          (Math.abs(w.from[0] - wx) < 0.02 && Math.abs(w.from[1] - wz) < 0.02) ||
-          (Math.abs(w.to[0] - wx) < 0.02 && Math.abs(w.to[1] - wz) < 0.02)
+          (Math.abs(w.from[0] - wx) < 0.15 && Math.abs(w.from[1] - wz) < 0.15) ||
+          (Math.abs(w.to[0] - wx) < 0.15 && Math.abs(w.to[1] - wz) < 0.15)
         ).length;
         ctx.fillStyle = COLORS.node;
         ctx.beginPath();

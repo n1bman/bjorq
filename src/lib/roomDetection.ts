@@ -1,4 +1,5 @@
 import type { WallSegment, Room } from '../store/types';
+import { generateId } from './buildUtils';
 
 const EPSILON = 0.15; // 15cm tolerance for node matching (increased to handle older imprecise walls)
 
@@ -131,7 +132,7 @@ function findMinimalCycles(graph: Graph): string[][] {
   return filtered;
 }
 
-function polygonArea(points: [number, number][]): number {
+export function polygonArea(points: [number, number][]): number {
   let area = 0;
   for (let i = 0; i < points.length; i++) {
     const j = (i + 1) % points.length;
@@ -164,7 +165,6 @@ function polygonOverlap(a: [number, number][], b: [number, number][]): number {
   return overlapArea / Math.min(areaA, areaB);
 }
 
-const generateId = () => Math.random().toString(36).slice(2, 10);
 
 /**
  * Split walls at T-junctions: if a wall endpoint lands on the middle

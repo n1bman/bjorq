@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-03-07
+
+### Added
+- Wall node-snapping — new walls snap to existing endpoints (0.25m threshold)
+- Mid-wall snapping — snap to any point along an existing wall segment (T-junction support)
+- Visual snap indicators: green ring (endpoint), yellow ring with cross (mid-wall)
+- Node connection status: green rings for connected nodes (2+ walls), orange for open ends
+- T-junction auto-splitting in room detection — inner walls connecting mid-segment now form rooms
+- Wall healing system — automatically merges endpoints within 20cm to fix old imprecise walls
+- "Heal walls" toolbar button (wrench icon) for manual wall repair with toast feedback
+
+### Fixed
+- Room detection failing when walls had microscopic gaps (EPSILON increased from 5cm to 15cm)
+- Room detection wall ID lookup searching wrong array after T-junction split
+- Duplicated utility functions across multiple files consolidated to single sources
+
+### Changed
+- Node connectivity tolerance aligned with EPSILON (0.15m) for accurate visual feedback
+
 ## [0.3.0] - 2026-03-02
 
 ### Added
