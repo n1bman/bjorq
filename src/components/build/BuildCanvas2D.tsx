@@ -90,6 +90,10 @@ export default function BuildCanvas2D({ overlayMode = false }: { overlayMode?: b
   const [roomDrawStart, setRoomDrawStart] = useState<[number, number] | null>(null);
   const [roomDrawEnd, setRoomDrawEnd] = useState<[number, number] | null>(null);
 
+  // Reference drawing image
+  const refImgRef = useRef<HTMLImageElement | null>(null);
+  const [refImgLoaded, setRefImgLoaded] = useState(false);
+
   const activeTool = useAppStore((s) => s.build.activeTool);
   const vacuumZoneDrawing = useRef<[number, number][]>([]);
   const [vacZoneNodes, setVacZoneNodes] = useState<[number, number][]>([]);
