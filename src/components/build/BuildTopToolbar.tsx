@@ -41,6 +41,7 @@ export default function BuildTopToolbar() {
   const cameraMode = useAppStore((s) => s.build.view.cameraMode);
   const setCameraMode = useAppStore((s) => s.setCameraMode);
   const showGhost = useAppStore((s) => s.build.view.showOtherFloorsGhost);
+  const wallViewMode = useAppStore((s) => s.build.view.wallViewMode);
   const setView = useAppStore((s) => s.setView);
   const clearAllFloors = useAppStore((s) => s.clearAllFloors);
   const sunAzimuth = useAppStore((s) => s.environment.sunAzimuth);
