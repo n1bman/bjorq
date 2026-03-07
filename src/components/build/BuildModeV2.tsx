@@ -1,11 +1,11 @@
 import { lazy, Suspense } from 'react';
 import { useAppStore } from '../../store/useAppStore';
 import BuildTopToolbar from './BuildTopToolbar';
-import BuildTabBar from './BuildTabBar';
 import BuildLeftPanel from './BuildLeftPanel';
 import BuildInspector from './BuildInspector';
 import BuildCanvas2D from './BuildCanvas2D';
 import BuildScene3D from './BuildScene3D';
+import BuildCatalogStrip from './BuildCatalogStrip';
 
 const ImportPreview3D = lazy(() => import('./ImportPreview3D'));
 
@@ -41,7 +41,7 @@ export default function BuildModeV2() {
         </div>
       </div>
 
-      <BuildTabBar />
+      <BuildCatalogStrip />
     </div>
   );
 }

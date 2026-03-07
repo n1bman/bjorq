@@ -107,4 +107,20 @@
     gap: 1.5rem;
     height: 100%;
   }
+
+  /* Catalog strip horizontal scroll */
+  .catalog-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--border)) transparent;
+  }
+  .catalog-scroll::-webkit-scrollbar {
+    height: 4px;
+  }
+  .catalog-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .catalog-scroll::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 2px;
+  }
 }
