@@ -152,7 +152,7 @@ export default function InteractiveWalls3D() {
               <mesh key={`${wall.id}-door-fl-${i}`} position={new THREE.Vector3(localX - op.width / 2 + frameW / 2, 0, 0)
                 .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
                 .add(new THREE.Vector3(cx, opBottom + op.height / 2 + elevation, cz)).toArray()}
-                rotation={[0, -angle, 0]}>
+                rotation={[0, -angle, 0]} castShadow>
                 <boxGeometry args={[frameW, op.height, frameDepth]} />
                 <meshStandardMaterial color={frameColor} roughness={0.3} />
               </mesh>
