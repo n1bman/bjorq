@@ -249,7 +249,7 @@ function SceneContent() {
       <Props3D />
       <WallDrawing3D cursorPos={cursorPos} />
       <WeatherEffects3D />
-      <TerrainEnvironment3D />
+      <InlineTerrain3D />
       <DeviceMarkers3D buildMode />
 
       {/* Origin crosshair */}
