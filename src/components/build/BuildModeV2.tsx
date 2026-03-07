@@ -11,7 +11,10 @@ import {
   MousePointer2, Minus, Square, DoorOpen, PanelTop,
   Warehouse, Footprints, Paintbrush, Sofa, Cpu,
   Import, Eraser, Upload, Search, FileImage, Box, Ruler, Trash2,
+  Lightbulb, ToggleLeft, Activity, Thermometer, Camera, Bot, CookingPot, WashingMachine, Lock, Plug, Refrigerator, Monitor, ChevronDown, ChevronRight, Link2, Fan, ShieldAlert, Droplets, Flame, Bell, Grip, Wifi, Trees, Speaker, Music,
 } from 'lucide-react';
+import { domainToKind } from '../../lib/haDomainMapping';
+import VacuumMappingTools from './devices/VacuumMappingTools';
 import { cn } from '../../lib/utils';
 import { toast } from 'sonner';
 
