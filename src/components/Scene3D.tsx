@@ -224,7 +224,7 @@ function SceneContent() {
       <directionalLight position={sunPos} intensity={sunIntensity} color="#ffd699" castShadow={enableShadows}
         shadow-mapSize-width={shadowMapSize} shadow-mapSize-height={shadowMapSize}
         shadow-camera-far={50} shadow-camera-left={-20} shadow-camera-right={20}
-        shadow-camera-top={20} shadow-camera-bottom={-20} />
+        shadow-camera-top={20} shadow-camera-bottom={-20} shadow-bias={-0.002} />
       {!isNight && perf.quality !== 'low' && (perf.maxLights === 0 || perf.maxLights > 2) && <pointLight position={[0, 8, 0]} intensity={0.15} color="#4a9eff" />}
 
       {/* Indoor bounce fill light */}
@@ -272,9 +272,9 @@ function InlineTerrainEnvironment3D() {
   if (!terrain?.enabled) return null;
   return (
     <group>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.015, 0]} receiveShadow>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]} receiveShadow>
         <circleGeometry args={[terrain.grassRadius || 20, 64]} />
-        <meshStandardMaterial color={terrain.grassColor || '#4a7a3a'} roughness={0.95} />
+        <meshStandardMaterial color={terrain.grassColor || '#4a7a3a'} roughness={0.95} polygonOffset polygonOffsetFactor={-0.5} polygonOffsetUnits={-0.5} />
       </mesh>
       {terrain.trees?.map((tree) => (
         <group key={tree.id} position={[tree.position[0], 0, tree.position[1]]} scale={tree.scale}>
