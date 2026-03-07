@@ -161,14 +161,19 @@ const storeCreator = (set: any, get: any): AppState => ({
   })); syncProfileToServer(); },
 
   // Device actions
-  addDevice: (marker) => set((s: any) => ({
-    devices: {
-      ...s.devices,
-      markers: [...s.devices.markers, marker],
-      deviceStates: { ...s.devices.deviceStates, [marker.id]: getDefaultState(marker.kind) },
-    },
-  })),
-  removeDevice: (id) => set((s: any) => {
+  addDevice: (marker) => {
+    get().pushUndo();
+    set((s: any) => ({
+      devices: {
+        ...s.devices,
+        markers: [...s.devices.markers, marker],
+        deviceStates: { ...s.devices.deviceStates, [marker.id]: getDefaultState(marker.kind) },
+      },
+    }));
+  },
+  removeDevice: (id) => {
+    get().pushUndo();
+    set((s: any) => {
     const { [id]: _, ...rest } = s.devices.deviceStates;
     return { devices: { markers: s.devices.markers.filter((m: any) => m.id !== id), deviceStates: rest } };
   }),
