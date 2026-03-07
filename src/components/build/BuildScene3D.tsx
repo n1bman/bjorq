@@ -2,7 +2,7 @@ import { Canvas, useThree } from '@react-three/fiber';
 import { OrbitControls, Grid, Environment } from '@react-three/drei';
 import { Suspense, useRef, useState, useCallback, useMemo, useEffect } from 'react';
 import * as THREE from 'three';
-import { findWallAtWorld, pointToSegment } from '../../lib/buildUtils';
+import { findWallAtWorld, pointToSegment, snapToNode } from '../../lib/buildUtils';
 import { openingPresets } from '../../lib/openingPresets';
 import GroundPlane from './GroundPlane';
 import WallDrawing3D from './WallDrawing3D';
@@ -89,6 +89,7 @@ function SceneContent() {
   const floors = useAppStore((s) => s.layout.floors);
 
   const [cursorPos, setCursorPos] = useState<[number, number] | null>(null);
+  const [cursorSnapped, setCursorSnapped] = useState(false);
   const controlsRef = useRef<any>(null);
 
   const snapToGrid = useCallback(
@@ -168,7 +169,12 @@ function SceneContent() {
       }
       if (activeTool === 'wall') {
         e.stopPropagation();
-        const snapped = snapToGrid(point.x, point.z);
+        let snapped = snapToGrid(point.x, point.z);
+        // Node-snap to existing wall endpoints
+        const fl = floors.find((f) => f.id === activeFloorId);
+        const floorWalls = fl?.walls ?? [];
+        const nodeSnap = snapToNode(snapped, floorWalls, 0.25);
+        snapped = nodeSnap.snapped;
         if (!wallDrawing.isDrawing) {
           setWallDrawing({ isDrawing: true, nodes: [snapped] });
         } else {
@@ -187,11 +193,16 @@ function SceneContent() {
   const handleGroundPointerMove = useCallback(
     (point: THREE.Vector3) => {
       if (activeTool === 'wall') {
-        const snapped = snapToGrid(point.x, point.z);
+        let snapped = snapToGrid(point.x, point.z);
+        const fl = floors.find((f) => f.id === activeFloorId);
+        const floorWalls = fl?.walls ?? [];
+        const nodeSnap = snapToNode(snapped, floorWalls, 0.25);
+        snapped = nodeSnap.snapped;
         setCursorPos(snapped);
+        setCursorSnapped(nodeSnap.isSnapped);
       }
     },
-    [activeTool, snapToGrid]
+    [activeTool, snapToGrid, floors, activeFloorId]
   );
 
   const handleDoubleClick = useCallback(() => {
@@ -248,7 +259,7 @@ function SceneContent() {
       <Stairs3D />
       <ImportedHome3D />
       <Props3D />
-      <WallDrawing3D cursorPos={cursorPos} />
+      <WallDrawing3D cursorPos={cursorPos} cursorSnapped={cursorSnapped} />
       <WeatherEffects3D />
       <InlineTerrain3D />
       <DeviceMarkers3D buildMode />
