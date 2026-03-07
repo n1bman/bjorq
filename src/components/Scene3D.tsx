@@ -243,6 +243,7 @@ function SceneContent() {
       <ImportedHome3D />
       <Props3D />
       <WeatherEffects3D />
+      <TerrainEnvironment3D />
       <DeviceMarkers3D />
 
       <Environment preset="night" />
