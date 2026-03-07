@@ -286,7 +286,7 @@ export default function Walls3D() {
 
             // Window sill
             if (!isFrench) {
-              const sillNormal = new THREE.Vector3(0, 0, 1)
+              const sillNormal = new THREE.Vector3(0, 0, flipSign)
                 .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle);
               segments.push(
                 <mesh key={`${wall.id}-win-sill-${i}`}
