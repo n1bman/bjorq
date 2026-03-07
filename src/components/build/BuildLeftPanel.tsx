@@ -1,6 +1,5 @@
 import { useAppStore } from '../../store/useAppStore';
 import { detectRooms } from '../../lib/roomDetection';
-import RoomManager from './RoomManager';
 import type { BuildTool, BuildTab } from '../../store/types';
 import {
   Minus, Square, DoorOpen, SquareStack, Paintbrush,
