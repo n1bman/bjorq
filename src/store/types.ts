@@ -2,9 +2,37 @@
 export interface Material {
   id: string;
   name: string;
-  type: 'paint' | 'concrete' | 'wood' | 'tile' | 'metal';
+  type: 'paint' | 'concrete' | 'wood' | 'tile' | 'metal' | 'custom';
   color: string; // hex
   roughness: number;
+  textureUrl?: string; // user-uploaded texture image
+  textureScale?: number; // UV repeat factor (default 1)
+}
+
+// ─── Reference Drawing ───
+export interface ReferenceDrawing {
+  url: string; // data URL or blob URL
+  opacity: number; // 0-1
+  scale: number; // pixels per meter
+  offsetX: number; // meters
+  offsetY: number; // meters
+  rotation: number; // degrees
+  locked: boolean;
+}
+
+// ─── Terrain / Ground Environment ───
+export interface TerrainSettings {
+  enabled: boolean;
+  grassColor: string; // hex
+  grassRadius: number; // meters
+  trees: TreeInstance[];
+}
+
+export interface TreeInstance {
+  id: string;
+  position: [number, number]; // x, z
+  type: 'deciduous' | 'conifer' | 'palm';
+  scale: number;
 }
 
 // ─── Layout Layer ───
