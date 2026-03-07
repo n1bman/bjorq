@@ -273,7 +273,7 @@ export default function InteractiveWalls3D() {
             if (!isFrench) {
               segments.push(
                 <mesh key={`${wall.id}-win-sill-${i}`} position={[opPos.x, opCenterY - op.height / 2 - 0.02 + elevation, opPos.z]}
-                  rotation={[0, -angle, 0]}>
+                  rotation={[0, -angle, 0]} castShadow>
                   <boxGeometry args={[op.width + 0.08, 0.03, wall.thickness + 0.06]} />
                   <meshStandardMaterial color="#e0e0e0" roughness={0.6} />
                 </mesh>
