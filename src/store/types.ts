@@ -795,6 +795,7 @@ export interface AppState {
   automations: Automation[];
   savedScenes: SavedScene[];
   comfort: ComfortState;
+  terrain: TerrainSettings;
 
   // Performance actions
   setPerformance: (changes: Partial<PerformanceSettings>) => void;
