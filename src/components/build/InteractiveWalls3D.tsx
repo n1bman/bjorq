@@ -351,7 +351,7 @@ export default function InteractiveWalls3D() {
             // Window sill with exterior overhang
             if (!isFrench) {
               // Exterior sill (deeper, wider overhang)
-              const sillNormal = new THREE.Vector3(0, 0, 1)
+              const sillNormal = new THREE.Vector3(0, 0, flipSign)
                 .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle);
               segments.push(
                 <mesh key={`${wall.id}-win-sill-${i}`}
