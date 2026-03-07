@@ -132,7 +132,6 @@ function FurnishCatalog() {
 function ImportCatalog() {
   const floorplanRef = useRef<HTMLInputElement>(null);
   const modelRef = useRef<HTMLInputElement>(null);
-  const refRef = useRef<HTMLInputElement>(null);
   const handleFloorplan = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -146,7 +145,7 @@ function ImportCatalog() {
       const dataUrl = reader.result as string;
       const store = useAppStore.getState();
       const floorId = store.layout.activeFloorId;
-      if (floorId && store.setFloorplanImage) store.setFloorplanImage(floorId, dataUrl);
+      if (floorId && store.setReferenceDrawing) store.setReferenceDrawing(floorId, { url: dataUrl, opacity: 0.5, scale: 100, offsetX: 0, offsetY: 0, rotation: 0, locked: false });
       toast.success('Planritning importerad');
     };
     reader.readAsDataURL(file);
@@ -165,24 +164,9 @@ function ImportCatalog() {
     reader.readAsDataURL(file);
     e.target.value = '';
   };
-  const handleReference = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = reader.result as string;
-      const store = useAppStore.getState();
-      const floorId = store.layout.activeFloorId;
-      if (floorId && store.setReferenceDrawing) store.setReferenceDrawing(floorId, { url: dataUrl, opacity: 0.5, scale: 100, offsetX: 0, offsetY: 0, rotation: 0, locked: false });
-      toast.success('Referensbild importerad');
-    };
-    reader.readAsDataURL(file);
-    e.target.value = '';
-  };
   const cards = [
     { label: 'Planritning', icon: FileImage, accept: '.png,.jpg,.jpeg', ref: floorplanRef, handler: handleFloorplan },
     { label: '3D-modell', icon: Box, accept: '.glb,.gltf', ref: modelRef, handler: handleModel },
-    { label: 'Referens', icon: Image, accept: '.png,.jpg,.jpeg', ref: refRef, handler: handleReference },
   ];
   return (
     <>
