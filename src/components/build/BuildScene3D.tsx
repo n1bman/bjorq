@@ -201,6 +201,7 @@ function SceneContent() {
         snapped = nodeSnap.snapped;
         setCursorPos(snapped);
         setCursorSnapped(nodeSnap.isSnapped);
+        setCursorMidSnap(!!nodeSnap.isMidSnap);
       }
     },
     [activeTool, snapToGrid, floors, activeFloorId]
