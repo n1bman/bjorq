@@ -272,6 +272,7 @@ const storeCreator = (set: any, get: any): AppState => ({
   automations: [],
   savedScenes: [],
   comfort: { rules: [], override: { active: false } },
+  terrain: { enabled: false, grassColor: '#4a7c3f', grassRadius: 30, trees: [] },
   addComfortRule: (rule) => { set((s: any) => ({ comfort: { ...s.comfort, rules: [...s.comfort.rules, rule] } })); syncProfileToServer(); },
   removeComfortRule: (id) => { set((s: any) => ({ comfort: { ...s.comfort, rules: s.comfort.rules.filter((r: any) => r.id !== id) } })); syncProfileToServer(); },
   updateComfortRule: (id, changes) => { set((s: any) => ({ comfort: { ...s.comfort, rules: s.comfort.rules.map((r: any) => r.id === id ? { ...r, ...changes } : r) } })); syncProfileToServer(); },
