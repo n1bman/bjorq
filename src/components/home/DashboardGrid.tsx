@@ -53,6 +53,7 @@ const categories: { key: DashCategory; label: string; icon: typeof Home }[] = [
   { key: 'robot', label: 'Robot', icon: Bot },
   { key: 'activity', label: 'Aktivitet', icon: Bell },
   { key: 'widgets', label: 'Widgets', icon: LayoutGrid },
+  { key: 'graphics', label: 'Grafik & Miljö', icon: Trees },
   { key: 'settings', label: 'Inställningar', icon: Settings },
 ];
 
