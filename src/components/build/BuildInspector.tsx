@@ -1,11 +1,11 @@
 import { useAppStore } from '../../store/useAppStore';
-import { X, Plus, DoorOpen, RotateCcw, Move, Trash2, Layers, Home, Lightbulb, ArrowRightLeft, Monitor, RectangleHorizontal, Warehouse } from 'lucide-react';
+import { X, Plus, DoorOpen, RotateCcw, Move, Trash2, Layers, Home, Lightbulb, ArrowRightLeft, Monitor, RectangleHorizontal, Warehouse, Upload } from 'lucide-react';
 import { Slider } from '../ui/slider';
 import { Input } from '../ui/input';
 import { Switch } from '../ui/switch';
-import { presetMaterials } from '../../lib/materials';
+import { presetMaterials, addCustomMaterial } from '../../lib/materials';
 import { openingPresets, getPresetsByType } from '../../lib/openingPresets';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import type { DeviceKind, DeviceSurface, ScreenConfig, LightType, WallOpening } from '../../store/types';
 import HAEntityPicker from './devices/HAEntityPicker';
 
