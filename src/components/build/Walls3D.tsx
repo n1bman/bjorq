@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useAppStore } from '../../store/useAppStore';
 import { getMaterialById } from '../../lib/materials';
+import { createWallMaterials, resolveWallColors } from '../../lib/wallMaterials';
 import * as THREE from 'three';
 
 /* Helper: find max thickness of walls connected at a point */
@@ -75,8 +76,8 @@ export default function Walls3D() {
           cz = (nfz + ntz) / 2;
         }
       }
-      const mat = wall.materialId ? getMaterialById(wall.materialId) : null;
-      const color = mat?.color ?? '#e8a845';
+      const wallColors = resolveWallColors(wall);
+      const dualMats = createWallMaterials(wallColors);
 
       const renderHeight = cutawayHeight ? Math.min(wall.height, cutawayHeight) : wall.height;
       const elevation = floor?.elevation ?? 0;
@@ -90,9 +91,9 @@ export default function Walls3D() {
             rotation={[0, -angle, 0]}
             castShadow
             receiveShadow
+            material={dualMats}
           >
             <boxGeometry args={[length, renderHeight, wall.thickness]} />
-            <meshStandardMaterial color={color} roughness={mat?.roughness ?? 0.8} />
           </mesh>
         );
       }
@@ -117,9 +118,9 @@ export default function Walls3D() {
             .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
             .add(new THREE.Vector3(cx, renderHeight / 2 + elevation, cz));
           segments.push(
-            <mesh key={`${wall.id}-seg-${i}-pre`} position={pos.toArray()} rotation={[0, -angle, 0]} castShadow>
+            <mesh key={`${wall.id}-seg-${i}-pre`} position={pos.toArray()} rotation={[0, -angle, 0]} castShadow
+              material={dualMats}>
               <boxGeometry args={[segLen, renderHeight, wall.thickness]} />
-              <meshStandardMaterial color={color} roughness={mat?.roughness ?? 0.8} />
             </mesh>
           );
         }
@@ -132,9 +133,9 @@ export default function Walls3D() {
             .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
             .add(new THREE.Vector3(cx, opTop + aboveH / 2 + elevation, cz));
           segments.push(
-            <mesh key={`${wall.id}-seg-${i}-above`} position={pos.toArray()} rotation={[0, -angle, 0]} castShadow>
+            <mesh key={`${wall.id}-seg-${i}-above`} position={pos.toArray()} rotation={[0, -angle, 0]} castShadow
+              material={dualMats}>
               <boxGeometry args={[op.width, aboveH, wall.thickness]} />
-              <meshStandardMaterial color={color} roughness={mat?.roughness ?? 0.8} />
             </mesh>
           );
         }
@@ -147,9 +148,9 @@ export default function Walls3D() {
             .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
             .add(new THREE.Vector3(cx, belowH / 2 + elevation, cz));
           segments.push(
-            <mesh key={`${wall.id}-seg-${i}-below`} position={pos.toArray()} rotation={[0, -angle, 0]} castShadow>
+            <mesh key={`${wall.id}-seg-${i}-below`} position={pos.toArray()} rotation={[0, -angle, 0]} castShadow
+              material={dualMats}>
               <boxGeometry args={[op.width, belowH, wall.thickness]} />
-              <meshStandardMaterial color={color} roughness={mat?.roughness ?? 0.8} />
             </mesh>
           );
         }
@@ -166,9 +167,9 @@ export default function Walls3D() {
           .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
           .add(new THREE.Vector3(cx, renderHeight / 2 + elevation, cz));
         segments.push(
-          <mesh key={`${wall.id}-seg-last`} position={pos.toArray()} rotation={[0, -angle, 0]} castShadow>
+          <mesh key={`${wall.id}-seg-last`} position={pos.toArray()} rotation={[0, -angle, 0]} castShadow
+            material={dualMats}>
             <boxGeometry args={[segLen, renderHeight, wall.thickness]} />
-            <meshStandardMaterial color={color} roughness={mat?.roughness ?? 0.8} />
           </mesh>
         );
       }
