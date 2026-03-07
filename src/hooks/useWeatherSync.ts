@@ -142,7 +142,7 @@ export function useWeatherSync() {
 
       const updateSun = () => {
         const { azimuth, elevation } = calculateSunPosition(lat, lon, new Date());
-        const cal = useAppStore.getState().environment.sunCalibration;
+        const cal = useAppStore.getState().environment.sunCalibration ?? { northOffset: 0, azimuthCorrection: 0, elevationCorrection: 0, intensityMultiplier: 1, indoorBounce: 0 };
         setSunPosition(
           azimuth + cal.northOffset + cal.azimuthCorrection,
           elevation + cal.elevationCorrection
