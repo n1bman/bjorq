@@ -224,8 +224,8 @@ function BuildCatalogRow() {
   return (
     <div className="border-t border-border bg-background/95 backdrop-blur px-2 py-1.5 overflow-x-auto">
       <div className="flex items-center gap-2 min-w-max">
-        {(activeTool === 'door' || activeTool === 'window' || activeTool === 'garage-door') && <OpeningCatalog type={activeTool} />}
-        {activeTool === 'paint' && <PaintCatalog />}
+        {(activeTool === 'door' || activeTool === 'window' || activeTool === 'garage-door' || activeTool === 'passage') && <OpeningCatalog type={activeTool as any} />}
+        {activeTool === ('furnish' as any) && <FurnishCatalog />}
         {activeTool === ('furnish' as any) && <FurnishCatalog />}
         {activeTool === ('import' as any) && <ImportCatalog />}
         {activeTool.startsWith('place-') && <DeviceCatalog />}
