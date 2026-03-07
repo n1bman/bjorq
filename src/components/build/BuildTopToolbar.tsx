@@ -132,6 +132,64 @@ export default function BuildTopToolbar() {
         </DialogContent>
       </Dialog>
 
+      {/* Optimize button */}
+      <button
+        onClick={() => {
+          const s = useAppStore.getState();
+          const floorId = s.layout.activeFloorId;
+          if (!floorId) return;
+          const floor = s.layout.floors.find((f) => f.id === floorId);
+          if (!floor) return;
+
+          s.pushUndo();
+          let removedWalls = 0;
+          let mergedWalls = 0;
+
+          // Remove very short walls (<5cm)
+          const longWalls = floor.walls.filter((w) => {
+            const len = Math.sqrt((w.to[0] - w.from[0]) ** 2 + (w.to[1] - w.from[1]) ** 2);
+            if (len < 0.05) { removedWalls++; return false; }
+            return true;
+          });
+
+          // Remove duplicate walls (same from/to within tolerance)
+          const eps = 0.05;
+          const unique = longWalls.filter((w, i) => {
+            for (let j = 0; j < i; j++) {
+              const other = longWalls[j];
+              const sameDir = Math.abs(w.from[0] - other.from[0]) < eps && Math.abs(w.from[1] - other.from[1]) < eps &&
+                              Math.abs(w.to[0] - other.to[0]) < eps && Math.abs(w.to[1] - other.to[1]) < eps;
+              const revDir = Math.abs(w.from[0] - other.to[0]) < eps && Math.abs(w.from[1] - other.to[1]) < eps &&
+                             Math.abs(w.to[0] - other.from[0]) < eps && Math.abs(w.to[1] - other.from[1]) < eps;
+              if (sameDir || revDir) { mergedWalls++; return false; }
+            }
+            return true;
+          });
+
+          // Re-detect rooms
+          const newRooms = detectRooms(unique, floor.rooms);
+
+          useAppStore.setState((prev: any) => ({
+            layout: {
+              ...prev.layout,
+              floors: prev.layout.floors.map((f: any) =>
+                f.id === floorId ? { ...f, walls: unique, rooms: newRooms } : f
+              ),
+            },
+          }));
+
+          const parts: string[] = [];
+          if (removedWalls > 0) parts.push(`${removedWalls} korta segment borttagna`);
+          if (mergedWalls > 0) parts.push(`${mergedWalls} dubbelväggar borttagna`);
+          parts.push(`${newRooms.length} rum detekterade`);
+          toast.success(`Optimerat: ${parts.join(', ')}`);
+        }}
+        title="Optimera & synka rum"
+        className="p-2.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary/40 transition-all min-w-[44px] min-h-[44px] flex items-center justify-center"
+      >
+        <Sparkles size={16} />
+      </button>
+
       {/* Spacer */}
       <div className="flex-1" />
 
