@@ -224,7 +224,7 @@ function SceneContent() {
       <directionalLight position={sunPos} intensity={sunIntensity} color="#ffd699" castShadow={enableShadows}
         shadow-mapSize-width={shadowMapSize} shadow-mapSize-height={shadowMapSize}
         shadow-camera-far={50} shadow-camera-left={-20} shadow-camera-right={20}
-        shadow-camera-top={20} shadow-camera-bottom={-20} />
+        shadow-camera-top={20} shadow-camera-bottom={-20} shadow-bias={-0.002} />
       {!isNight && perf.quality !== 'low' && (perf.maxLights === 0 || perf.maxLights > 2) && <pointLight position={[0, 8, 0]} intensity={0.15} color="#4a9eff" />}
 
       {/* Indoor bounce fill light */}
