@@ -10,8 +10,8 @@ export default function GroundPlane({ onPointerDown, onPointerMove }: GroundPlan
   const meshRef = useRef<THREE.Mesh>(null);
 
   const handlePointerDown = (e: any) => {
-    e.stopPropagation();
     if (onPointerDown) {
+      e.stopPropagation();
       onPointerDown(e.point, e);
     }
   };

@@ -3,11 +3,12 @@ import type { SnapMode, WallViewMode, WeatherCondition } from '../../store/types
 import {
   Undo2, Redo2, Eye, Box, Layers, Settings2,
   ArrowLeft, ArrowUp, Scissors, ArrowDown, Focus, Ghost,
-  Grid3X3, XCircle, Sun, Check,
+  Grid3X3, XCircle, Sun, Check, HelpCircle,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Slider } from '../ui/slider';
 import { Popover, PopoverTrigger, PopoverContent } from '../ui/popover';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
 import FloorPicker from './FloorPicker';
 import { useState } from 'react';
 import { toast } from 'sonner';
@@ -99,6 +100,42 @@ export default function BuildTopToolbar() {
           </button>
         ))}
       </div>
+
+      {/* Keyboard shortcuts */}
+      <Dialog>
+        <DialogTrigger asChild>
+          <button title="Tangentbordsgenvägar" className="p-2.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary/40 transition-all min-w-[44px] min-h-[44px] flex items-center justify-center">
+            <HelpCircle size={16} />
+          </button>
+        </DialogTrigger>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Tangentbordsgenvägar</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2 text-sm">
+            {[
+              ['Ctrl/⌘ + Z', 'Ångra'],
+              ['Ctrl/⌘ + Shift + Z', 'Gör om'],
+              ['Ctrl/⌘ + C', 'Kopiera'],
+              ['Ctrl/⌘ + V', 'Klistra in'],
+              ['Delete / Backspace', 'Radera markerat'],
+              ['Escape', 'Avmarkera / Avbryt'],
+              ['W', 'Väggverktyg'],
+              ['S', 'Välj-verktyg'],
+              ['D', 'Dörrverktyg'],
+              ['G', 'Rutnät av/på'],
+              ['Scroll', 'Zooma'],
+              ['Högerklick + dra', 'Rotera kamera'],
+              ['Mittenklick + dra', 'Panorera kamera'],
+            ].map(([key, desc]) => (
+              <div key={key} className="flex justify-between">
+                <kbd className="px-1.5 py-0.5 bg-muted rounded text-xs font-mono">{key}</kbd>
+                <span className="text-muted-foreground">{desc}</span>
+              </div>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Spacer */}
       <div className="flex-1" />

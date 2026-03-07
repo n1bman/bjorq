@@ -3,6 +3,23 @@ import { useAppStore } from '../../store/useAppStore';
 import { getMaterialById } from '../../lib/materials';
 import * as THREE from 'three';
 
+/* Helper: find max thickness of walls connected at a point */
+function getConnectedThickness(
+  walls: { from: [number, number]; to: [number, number]; thickness: number; id: string }[],
+  wallId: string,
+  point: [number, number],
+  eps = 0.05,
+): number {
+  let maxT = 0;
+  for (const w of walls) {
+    if (w.id === wallId) continue;
+    const df = Math.abs(w.from[0] - point[0]) + Math.abs(w.from[1] - point[1]);
+    const dt = Math.abs(w.to[0] - point[0]) + Math.abs(w.to[1] - point[1]);
+    if (df < eps || dt < eps) maxT = Math.max(maxT, w.thickness);
+  }
+  return maxT;
+}
+
 export default function Walls3D() {
   const floors = useAppStore((s) => s.layout.floors);
   const activeFloorId = useAppStore((s) => s.layout.activeFloorId);
@@ -13,8 +30,8 @@ export default function Walls3D() {
   const walls = floor?.walls ?? [];
   const rooms = floor?.rooms ?? [];
 
-  // In home/dashboard mode, default to cutaway
-  const effectiveMode = appMode === 'build' ? wallViewMode : 'cutaway';
+  // In home/dashboard mode, show full walls
+  const effectiveMode = appMode === 'build' ? wallViewMode : 'up';
 
   const wallMeshes = useMemo(() => {
     if (effectiveMode === 'down') return []; // No walls visible
@@ -37,10 +54,27 @@ export default function Walls3D() {
 
       const dx = wall.to[0] - wall.from[0];
       const dz = wall.to[1] - wall.from[1];
-      const length = Math.sqrt(dx * dx + dz * dz);
+      let length = Math.sqrt(dx * dx + dz * dz);
       const angle = Math.atan2(dz, dx);
-      const cx = (wall.from[0] + wall.to[0]) / 2;
-      const cz = (wall.from[1] + wall.to[1]) / 2;
+      let cx = (wall.from[0] + wall.to[0]) / 2;
+      let cz = (wall.from[1] + wall.to[1]) / 2;
+
+      // ── Wall corner mitering ──
+      const trimFrom = getConnectedThickness(walls, wall.id, wall.from);
+      const trimTo = getConnectedThickness(walls, wall.id, wall.to);
+      if (trimFrom > 0 || trimTo > 0) {
+        const totalTrim = trimFrom / 2 + trimTo / 2;
+        if (totalTrim < length) {
+          const dir = new THREE.Vector2(dx, dz).normalize();
+          const nfx = wall.from[0] + dir.x * trimFrom / 2;
+          const nfz = wall.from[1] + dir.y * trimFrom / 2;
+          const ntx = wall.to[0] - dir.x * trimTo / 2;
+          const ntz = wall.to[1] - dir.y * trimTo / 2;
+          length -= totalTrim;
+          cx = (nfx + ntx) / 2;
+          cz = (nfz + ntz) / 2;
+        }
+      }
       const mat = wall.materialId ? getMaterialById(wall.materialId) : null;
       const color = mat?.color ?? '#e8a845';
 

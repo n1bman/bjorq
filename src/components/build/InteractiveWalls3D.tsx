@@ -53,7 +53,7 @@ export default function InteractiveWalls3D() {
   }, [rooms]);
 
   const handleWallClick = useCallback((e: ThreeEvent<PointerEvent>, wallId: string) => {
-    if (activeTool !== 'select') return;
+    if (activeTool !== 'select' && activeTool !== 'paint') return;
     e.stopPropagation();
     setSelection({ type: 'wall', id: wallId });
   }, [activeTool, setSelection]);

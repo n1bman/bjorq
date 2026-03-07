@@ -9,17 +9,20 @@ export default function Floors3D() {
   const activeFloorId = useAppStore((s) => s.layout.activeFloorId);
   const floor = floors.find((f) => f.id === activeFloorId);
   const rooms = floor?.rooms ?? [];
+  const appMode = useAppStore((s) => s.appMode);
   const selection = useAppStore((s) => s.build.selection);
   const activeTool = useAppStore((s) => s.build.activeTool);
   const setSelection = useAppStore((s) => s.setSelection);
 
   const selectedRoomId = selection.type === 'room' ? selection.id : null;
+  const isBuildMode = appMode === 'build';
 
   const handleRoomClick = useCallback((e: ThreeEvent<PointerEvent>, roomId: string) => {
-    if (activeTool !== 'select') return;
+    if (!isBuildMode) return;
+    if (activeTool !== 'select' && activeTool !== 'paint') return;
     e.stopPropagation();
     setSelection({ type: 'room', id: roomId });
-  }, [activeTool, setSelection]);
+  }, [isBuildMode, activeTool, setSelection]);
 
   const roomMeshes = useMemo(() => {
     return rooms
