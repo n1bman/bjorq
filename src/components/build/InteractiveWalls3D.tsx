@@ -92,25 +92,30 @@ export default function InteractiveWalls3D() {
         }
       }
       
-      // Use wall's own material, or room's wall material, or default
-      const matId = wall.materialId || wallRoomMaterial[wall.id];
-      const mat = matId ? getMaterialById(matId) : null;
-      const baseColor = mat?.color ?? '#e8a845';
+      // Resolve dual materials (exterior / interior)
+      const fallbackMatId = wallRoomMaterial[wall.id];
+      const wallColors = resolveWallColors(wall, fallbackMatId);
+      const baseColor = wallColors.exteriorColor;
 
       const isSelected = wall.id === selectedWallId;
       const isHovered = wall.id === hoveredWallId;
-      const color = isSelected ? '#4a9eff' : isHovered ? '#f0c060' : baseColor;
+      const highlightColor = isSelected ? '#4a9eff' : isHovered ? '#f0c060' : null;
+      const emissive = isSelected ? '#1a3a6a' : isHovered ? '#3a2a10' : '#000000';
+      const emissiveIntensity = isSelected || isHovered ? 0.3 : 0;
 
       const segments: JSX.Element[] = [];
+
+      // Create dual-sided material array for solid wall segments
+      const dualMats = highlightColor
+        ? createWallMaterials({ ...wallColors, exteriorColor: highlightColor, interiorColor: highlightColor, edgeColor: highlightColor, emissive, emissiveIntensity })
+        : createWallMaterials({ ...wallColors, emissive, emissiveIntensity });
 
       if (wall.openings.length === 0) {
         segments.push(
           <mesh key={`${wall.id}-solid`} position={[cx, wall.height / 2 + elevation, cz]}
-            rotation={[0, -angle, 0]} castShadow receiveShadow>
+            rotation={[0, -angle, 0]} castShadow receiveShadow
+            material={dualMats}>
             <boxGeometry args={[length, wall.height, wall.thickness]} />
-            <meshStandardMaterial color={color} roughness={mat?.roughness ?? 0.8}
-              emissive={isSelected ? '#1a3a6a' : isHovered ? '#3a2a10' : '#000000'}
-              emissiveIntensity={isSelected || isHovered ? 0.3 : 0} />
           </mesh>
         );
       } else {
