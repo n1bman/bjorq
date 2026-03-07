@@ -2,7 +2,7 @@ import { useAppStore } from '../../store/useAppStore';
 import type { SnapMode, WeatherCondition } from '../../store/types';
 import {
   Undo2, Redo2, Eye, Box, Layers, Settings2,
-  ArrowLeft, ArrowUp, Scissors, ArrowDown, Focus, Ghost,
+  ArrowLeft, Ghost,
   Grid3X3, XCircle, Sun, Check, HelpCircle,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
