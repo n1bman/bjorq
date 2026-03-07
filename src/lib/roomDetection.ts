@@ -131,7 +131,7 @@ function findMinimalCycles(graph: Graph): string[][] {
   return filtered;
 }
 
-function polygonArea(points: [number, number][]): number {
+export function polygonArea(points: [number, number][]): number {
   let area = 0;
   for (let i = 0; i < points.length; i++) {
     const j = (i + 1) % points.length;
