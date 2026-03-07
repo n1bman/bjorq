@@ -1,7 +1,7 @@
 import { useRef, useEffect, useCallback, useState, useMemo } from 'react';
 import { useAppStore } from '../../store/useAppStore';
 import { getMaterialById } from '../../lib/materials';
-import { angleLock } from '../../lib/buildUtils';
+import { angleLock, snapToNode } from '../../lib/buildUtils';
 import type { WallSegment } from '../../store/types';
 import { openingPresets } from '../../lib/openingPresets';
 import { Slider } from '../ui/slider';

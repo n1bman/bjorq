@@ -3,6 +3,23 @@ import type { WallSegment, BuildGrid } from '../store/types';
 const generateId = () => Math.random().toString(36).slice(2, 10);
 export { generateId };
 
+// ─── Snap to nearest existing wall node ───
+export function snapToNode(
+  pos: [number, number],
+  walls: WallSegment[],
+  threshold = 0.25,
+): { snapped: [number, number]; isSnapped: boolean } {
+  let best: [number, number] | null = null;
+  let bestDist = threshold;
+  for (const w of walls) {
+    const df = Math.hypot(pos[0] - w.from[0], pos[1] - w.from[1]);
+    if (df < bestDist) { bestDist = df; best = w.from; }
+    const dt = Math.hypot(pos[0] - w.to[0], pos[1] - w.to[1]);
+    if (dt < bestDist) { bestDist = dt; best = w.to; }
+  }
+  return best ? { snapped: best, isSnapped: true } : { snapped: pos, isSnapped: false };
+}
+
 // ─── Snap to grid ───
 export function snapToGrid(x: number, z: number, grid: BuildGrid): [number, number] {
   if (!grid.enabled || grid.snapMode === 'off') return [x, z];
