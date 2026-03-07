@@ -293,7 +293,7 @@ function InlineTerrain3D() {
   if (!terrain?.enabled) return null;
   return (
     <group>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]} receiveShadow>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.015, 0]} receiveShadow>
         <circleGeometry args={[terrain.grassRadius || 20, 64]} />
         <meshStandardMaterial color={terrain.grassColor || '#4a7a3a'} roughness={0.95} />
       </mesh>
