@@ -445,16 +445,6 @@ function SettingsCategory() {
         </div>
       </section>
 
-      {/* Grafik & Miljö */}
-      <section className="space-y-1">
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1">Grafik & Miljö</h2>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
-          <GraphicsSettings />
-          <SunCalibrationPanel />
-          <WeatherAtmospherePanel />
-          <EnvironmentPanel />
-        </div>
-      </section>
 
       {/* System */}
       <section className="space-y-1">
