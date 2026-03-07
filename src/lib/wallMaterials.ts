@@ -19,9 +19,9 @@ export function createWallMaterials(opts: {
   const em = opts.emissive ?? '#000000';
   const ei = opts.emissiveIntensity ?? 0;
 
-  const edge = new THREE.MeshStandardMaterial({ color: opts.edgeColor, roughness: 0.9, emissive: em, emissiveIntensity: ei, side: THREE.DoubleSide });
-  const exterior = new THREE.MeshStandardMaterial({ color: opts.exteriorColor, roughness: opts.exteriorRoughness, emissive: em, emissiveIntensity: ei, side: THREE.DoubleSide });
-  const interior = new THREE.MeshStandardMaterial({ color: opts.interiorColor, roughness: opts.interiorRoughness, emissive: em, emissiveIntensity: ei, side: THREE.DoubleSide });
+  const edge = new THREE.MeshStandardMaterial({ color: opts.edgeColor, roughness: 0.9, emissive: em, emissiveIntensity: ei });
+  const exterior = new THREE.MeshStandardMaterial({ color: opts.exteriorColor, roughness: opts.exteriorRoughness, emissive: em, emissiveIntensity: ei });
+  const interior = new THREE.MeshStandardMaterial({ color: opts.interiorColor, roughness: opts.interiorRoughness, emissive: em, emissiveIntensity: ei });
 
   // +x, -x, +y, -y, +z (front=exterior), -z (back=interior)
   return [edge, edge, edge, edge, exterior, interior];
