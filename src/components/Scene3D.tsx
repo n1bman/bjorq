@@ -220,7 +220,7 @@ function SceneContent() {
         shadow-camera-top={20} shadow-camera-bottom={-20} />
       {!isNight && perf.quality !== 'low' && (perf.maxLights === 0 || perf.maxLights > 2) && <pointLight position={[0, 8, 0]} intensity={0.15} color="#4a9eff" />}
 
-      <GroundPlane onPointerDown={() => {}} onPointerMove={() => {}} />
+      <GroundPlane />
 
       {showGrid && (
         <Grid
