@@ -142,7 +142,21 @@ export function detectRooms(walls: WallSegment[], existingRooms?: Room[]): Room[
   const graph = buildGraph(walls);
   const cycles = findMinimalCycles(graph);
 
-  let roomCounter = (existingRooms?.length ?? 0) + 1;
+  // Collect existing "Rum N" numbers to avoid duplicates
+  const usedNumbers = new Set<number>();
+  if (existingRooms) {
+    for (const er of existingRooms) {
+      const m = er.name.match(/^Rum (\d+)$/);
+      if (m) usedNumbers.add(parseInt(m[1], 10));
+    }
+  }
+
+  let roomCounter = 1;
+  const getNextName = () => {
+    while (usedNumbers.has(roomCounter)) roomCounter++;
+    usedNumbers.add(roomCounter);
+    return `Rum ${roomCounter}`;
+  };
 
   return cycles
     .map((cycle) => {
@@ -187,7 +201,7 @@ export function detectRooms(walls: WallSegment[], existingRooms?: Room[]): Room[
 
       return {
         id: generateId(),
-        name: `Rum ${roomCounter++}`,
+        name: getNextName(),
         wallIds,
         polygon,
       } as Room;

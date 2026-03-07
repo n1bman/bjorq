@@ -573,23 +573,77 @@ const storeCreator = (set: any, get: any): AppState => ({
     })),
 
   setRoomMaterial: (floorId, roomId, target, materialId) =>
-    set((s: any) => ({
-      layout: {
-        ...s.layout,
-        floors: s.layout.floors.map((f: any) =>
-          f.id === floorId
-            ? {
-                ...f,
-                rooms: f.rooms.map((r: any) =>
-                  r.id === roomId
-                    ? { ...r, [target === 'floor' ? 'floorMaterialId' : 'wallMaterialId']: materialId }
-                    : r
-                ),
-              }
-            : f
-        ),
-      },
-    })),
+    set((s: any) => {
+      if (target === 'floor') {
+        return {
+          layout: {
+            ...s.layout,
+            floors: s.layout.floors.map((f: any) =>
+              f.id === floorId
+                ? { ...f, rooms: f.rooms.map((r: any) => r.id === roomId ? { ...r, floorMaterialId: materialId } : r) }
+                : f
+            ),
+          },
+        };
+      }
+
+      // For wall material: set per-side material on each wall of the room
+      const floor = s.layout.floors.find((f: any) => f.id === floorId);
+      if (!floor) return s;
+      const room = floor.rooms.find((r: any) => r.id === roomId);
+      if (!room || !room.polygon || room.polygon.length < 3) {
+        // Fallback: just set wallMaterialId on the room
+        return {
+          layout: {
+            ...s.layout,
+            floors: s.layout.floors.map((f: any) =>
+              f.id === floorId
+                ? { ...f, rooms: f.rooms.map((r: any) => r.id === roomId ? { ...r, wallMaterialId: materialId } : r) }
+                : f
+            ),
+          },
+        };
+      }
+
+      // Determine which side of each wall faces into this room
+      const roomCx = room.polygon.reduce((a: number, p: [number, number]) => a + p[0], 0) / room.polygon.length;
+      const roomCz = room.polygon.reduce((a: number, p: [number, number]) => a + p[1], 0) / room.polygon.length;
+
+      const updatedWalls = floor.walls.map((w: any) => {
+        if (!room.wallIds.includes(w.id)) return w;
+        // Wall normal (perpendicular to from→to, pointing left)
+        const dx = w.to[0] - w.from[0];
+        const dz = w.to[1] - w.from[1];
+        const nx = -dz; // left normal
+        const nz = dx;
+        const wallMidX = (w.from[0] + w.to[0]) / 2;
+        const wallMidZ = (w.from[1] + w.to[1]) / 2;
+        // Check if room center is on the left or right side
+        const toRoom = (roomCx - wallMidX) * nx + (roomCz - wallMidZ) * nz;
+        if (toRoom >= 0) {
+          // Room is on the left side
+          return { ...w, leftMaterialId: materialId };
+        } else {
+          // Room is on the right side
+          return { ...w, rightMaterialId: materialId };
+        }
+      });
+
+      return {
+        layout: {
+          ...s.layout,
+          floors: s.layout.floors.map((f: any) =>
+            f.id === floorId
+              ? {
+                  ...f,
+                  walls: updatedWalls,
+                  rooms: f.rooms.map((r: any) => r.id === roomId ? { ...r, wallMaterialId: materialId } : r),
+                }
+              : f
+          ),
+        },
+      };
+    }),
 
   addRoomFromRect: (floorId, x, z, w, d, name) => {
     const s = get();
