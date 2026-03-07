@@ -1,8 +1,8 @@
 import { useAppStore } from '../../store/useAppStore';
-import type { SnapMode, WallViewMode, WeatherCondition } from '../../store/types';
+import type { SnapMode, WeatherCondition } from '../../store/types';
 import {
   Undo2, Redo2, Eye, Box, Layers, Settings2,
-  ArrowLeft, ArrowUp, Scissors, ArrowDown, Focus, Ghost,
+  ArrowLeft, Ghost,
   Grid3X3, XCircle, Sun, Check, HelpCircle,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
@@ -19,12 +19,6 @@ const viewModes = [
   { key: 'floor-isolate' as const, label: 'Isolera', icon: Layers },
 ];
 
-const wallModes: { key: WallViewMode; icon: typeof ArrowUp }[] = [
-  { key: 'up', icon: ArrowUp },
-  { key: 'cutaway', icon: Scissors },
-  { key: 'down', icon: ArrowDown },
-  { key: 'room-focus', icon: Focus },
-];
 
 const gridSizes = [0.1, 0.25, 0.5, 1.0];
 const snapModes: { key: SnapMode; label: string }[] = [
@@ -45,7 +39,7 @@ export default function BuildTopToolbar() {
   const cameraMode = useAppStore((s) => s.build.view.cameraMode);
   const setCameraMode = useAppStore((s) => s.setCameraMode);
   const showGhost = useAppStore((s) => s.build.view.showOtherFloorsGhost);
-  const wallViewMode = useAppStore((s) => s.build.view.wallViewMode);
+  
   const setView = useAppStore((s) => s.setView);
   const clearAllFloors = useAppStore((s) => s.clearAllFloors);
   const sunAzimuth = useAppStore((s) => s.environment.sunAzimuth);
@@ -177,28 +171,6 @@ export default function BuildTopToolbar() {
                 className="flex-1 h-7 px-1.5 rounded-md bg-secondary/50 text-xs border-none outline-none" style={{ colorScheme: 'dark' }}>
                 {snapModes.map((sm) => <option key={sm.key} value={sm.key}>{sm.label}</option>)}
               </select>
-            </div>
-          </div>
-
-          {/* Wall view modes */}
-          <div className="space-y-2 border-t border-border pt-3">
-            <span className="text-xs font-medium text-foreground">Väggvisning</span>
-            <div className="flex gap-1">
-              {wallModes.map(({ key, icon: Icon }) => (
-                <button
-                  key={key}
-                  onClick={() => setView({ wallViewMode: key })}
-                  title={key}
-                  className={cn(
-                    'flex-1 p-2 rounded-lg transition-all min-h-[36px] flex items-center justify-center',
-                    wallViewMode === key
-                      ? 'bg-primary/20 text-primary'
-                      : 'text-muted-foreground hover:text-foreground bg-secondary/30'
-                  )}
-                >
-                  <Icon size={14} />
-                </button>
-              ))}
             </div>
           </div>
 

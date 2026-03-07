@@ -13,7 +13,7 @@ import Stairs3D from './Stairs3D';
 import ImportedHome3D from './ImportedHome3D';
 import Props3D from './Props3D';
 import WeatherEffects3D from './WeatherEffects3D';
-import TerrainEnvironment3D from './TerrainEnvironment3D';
+
 import DeviceMarkers3D from '../devices/DeviceMarkers3D';
 import { useAppStore } from '../../store/useAppStore';
 import type { WallSegment, DeviceKind } from '../../store/types';
@@ -249,7 +249,7 @@ function SceneContent() {
       <Props3D />
       <WallDrawing3D cursorPos={cursorPos} />
       <WeatherEffects3D />
-      <TerrainEnvironment3D />
+      <InlineTerrain3D />
       <DeviceMarkers3D buildMode />
 
       {/* Origin crosshair */}
@@ -285,6 +285,31 @@ function SceneContent() {
         }}
       />
     </>
+  );
+}
+
+function InlineTerrain3D() {
+  const terrain = useAppStore((s) => s.terrain);
+  if (!terrain?.enabled) return null;
+  return (
+    <group>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]} receiveShadow>
+        <circleGeometry args={[terrain.grassRadius || 20, 64]} />
+        <meshStandardMaterial color={terrain.grassColor || '#4a7a3a'} roughness={0.95} />
+      </mesh>
+      {terrain.trees?.map((tree) => (
+        <group key={tree.id} position={[tree.position[0], 0, tree.position[1]]} scale={tree.scale}>
+          <mesh position={[0, 1, 0]} castShadow>
+            <cylinderGeometry args={[0.1, 0.15, 2, 8]} />
+            <meshStandardMaterial color="#6b4226" roughness={0.9} />
+          </mesh>
+          <mesh position={[0, 2.8, 0]} castShadow>
+            <sphereGeometry args={[1.2, 12, 12]} />
+            <meshStandardMaterial color="#3a6b2a" roughness={0.85} />
+          </mesh>
+        </group>
+      ))}
+    </group>
   );
 }
 

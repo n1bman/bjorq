@@ -24,35 +24,12 @@ function getConnectedThickness(
 export default function Walls3D() {
   const floors = useAppStore((s) => s.layout.floors);
   const activeFloorId = useAppStore((s) => s.layout.activeFloorId);
-  const wallViewMode = useAppStore((s) => s.build.view.wallViewMode);
-  const selectedRoomId = useAppStore((s) => s.build.selection.type === 'room' ? s.build.selection.id : null);
-  const appMode = useAppStore((s) => s.appMode);
   const floor = floors.find((f) => f.id === activeFloorId);
   const walls = floor?.walls ?? [];
-  const rooms = floor?.rooms ?? [];
-
-  // In home/dashboard mode, show full walls
-  const effectiveMode = appMode === 'build' ? wallViewMode : 'up';
 
   const wallMeshes = useMemo(() => {
-    if (effectiveMode === 'down') return []; // No walls visible
-
-    // For room-focus, find wallIds belonging to selected room
-    let visibleWallIds: Set<string> | null = null;
-    if (effectiveMode === 'room-focus' && selectedRoomId) {
-      const room = rooms.find((r) => r.id === selectedRoomId);
-      if (room) {
-        visibleWallIds = new Set(room.wallIds);
-      }
-    }
-
-    // Cutaway height
-    const cutawayHeight = effectiveMode === 'cutaway' ? 1.2 : undefined;
 
     return walls.map((wall) => {
-      // Room-focus: hide walls not in selected room
-      if (visibleWallIds && !visibleWallIds.has(wall.id)) return null;
-
       const dx = wall.to[0] - wall.from[0];
       const dz = wall.to[1] - wall.from[1];
       const origLength = Math.sqrt(dx * dx + dz * dz);
@@ -84,7 +61,7 @@ export default function Walls3D() {
       const wallColors = resolveWallColors(wall);
       const dualMats = createWallMaterials(wallColors);
 
-      const renderHeight = cutawayHeight ? Math.min(wall.height, cutawayHeight) : wall.height;
+      const renderHeight = wall.height;
       const elevation = floor?.elevation ?? 0;
 
       const segments: JSX.Element[] = [];
@@ -403,7 +380,7 @@ export default function Walls3D() {
 
       return <group key={wall.id}>{segments}</group>;
     }).filter(Boolean);
-  }, [walls, floor?.elevation, effectiveMode, selectedRoomId, rooms]);
+  }, [walls, floor?.elevation]);
 
   return <group renderOrder={1}>{wallMeshes}</group>;
 }

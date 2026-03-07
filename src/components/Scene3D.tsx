@@ -13,7 +13,7 @@ import ImportedHome3D from './build/ImportedHome3D';
 import Props3D from './build/Props3D';
 import DeviceMarkers3D from './devices/DeviceMarkers3D';
 import WeatherEffects3D from './build/WeatherEffects3D';
-import TerrainEnvironment3D from './build/TerrainEnvironment3D';
+
 import GroundPlane from './build/GroundPlane';
 import type { CameraPreset, StandbyCameraView } from '../store/types';
 
@@ -243,12 +243,37 @@ function SceneContent() {
       <ImportedHome3D />
       <Props3D />
       <WeatherEffects3D />
-      <TerrainEnvironment3D />
+      <InlineTerrainEnvironment3D />
       <DeviceMarkers3D />
 
       <Environment preset="night" />
       <CameraController />
     </>
+  );
+}
+
+function InlineTerrainEnvironment3D() {
+  const terrain = useAppStore((s) => s.terrain);
+  if (!terrain?.enabled) return null;
+  return (
+    <group>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]} receiveShadow>
+        <circleGeometry args={[terrain.grassRadius || 20, 64]} />
+        <meshStandardMaterial color={terrain.grassColor || '#4a7a3a'} roughness={0.95} />
+      </mesh>
+      {terrain.trees?.map((tree) => (
+        <group key={tree.id} position={[tree.position[0], 0, tree.position[1]]} scale={tree.scale}>
+          <mesh position={[0, 1, 0]} castShadow>
+            <cylinderGeometry args={[0.1, 0.15, 2, 8]} />
+            <meshStandardMaterial color="#6b4226" roughness={0.9} />
+          </mesh>
+          <mesh position={[0, 2.8, 0]} castShadow>
+            <sphereGeometry args={[1.2, 12, 12]} />
+            <meshStandardMaterial color="#3a6b2a" roughness={0.85} />
+          </mesh>
+        </group>
+      ))}
+    </group>
   );
 }
 
