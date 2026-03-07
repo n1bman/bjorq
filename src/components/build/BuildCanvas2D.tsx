@@ -1249,6 +1249,11 @@ export default function BuildCanvas2D({ overlayMode = false }: { overlayMode?: b
           snapped = angleLock(lastNode, snapped);
           snapped = snapToGrid(snapped[0], snapped[1]);
         }
+
+        // Node-snap: snap to existing wall endpoints
+        const floorWalls = floor?.walls ?? [];
+        const nodeSnap = snapToNode(snapped, floorWalls, 0.25);
+        snapped = nodeSnap.snapped;
         
         if (!wallDrawing.isDrawing) {
           setWallDrawing({ isDrawing: true, nodes: [snapped] });
