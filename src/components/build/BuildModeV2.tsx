@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { useAppStore } from '../../store/useAppStore';
 import BuildTopToolbar from './BuildTopToolbar';
+// Force re-resolve
 import BuildBottomDock from './BuildBottomDock';
 import BuildCatalogRow from './BuildCatalogRow';
 import BuildInspector from './BuildInspector';
