@@ -251,6 +251,10 @@ function WallInspector({ floorId, wallId, floor, close }: { floorId: string; wal
               className="flex items-center gap-1 px-2 py-1 rounded-md bg-secondary/50 hover:bg-secondary text-foreground transition-colors min-h-[32px]">
               <Plus size={12} /> Fönster
             </button>
+            <button onClick={() => handleAddOpening('garage-door')}
+              className="flex items-center gap-1 px-2 py-1 rounded-md bg-secondary/50 hover:bg-secondary text-foreground transition-colors min-h-[32px]">
+              <Plus size={12} /> Garage
+            </button>
           </div>
         </div>
 
