@@ -1,11 +1,12 @@
 import { useAppStore } from '../../store/useAppStore';
-import { X, Plus, DoorOpen, RotateCcw, Move, Trash2, Layers, Home, Lightbulb, ArrowRightLeft, Monitor, RectangleHorizontal } from 'lucide-react';
+import { X, Plus, DoorOpen, RotateCcw, Move, Trash2, Layers, Home, Lightbulb, ArrowRightLeft, Monitor, RectangleHorizontal, Warehouse } from 'lucide-react';
 import { Slider } from '../ui/slider';
 import { Input } from '../ui/input';
 import { Switch } from '../ui/switch';
 import { presetMaterials } from '../../lib/materials';
+import { openingPresets, getPresetsByType } from '../../lib/openingPresets';
 import { useState } from 'react';
-import type { DeviceKind, DeviceSurface, ScreenConfig, LightType } from '../../store/types';
+import type { DeviceKind, DeviceSurface, ScreenConfig, LightType, WallOpening } from '../../store/types';
 import HAEntityPicker from './devices/HAEntityPicker';
 
 const generateId = () => Math.random().toString(36).slice(2, 10);

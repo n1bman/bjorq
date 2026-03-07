@@ -378,7 +378,7 @@ export default function BuildCanvas2D({ overlayMode = false }: { overlayMode?: b
       ctx.lineTo(x2, y2);
       ctx.stroke();
 
-      // Openings
+      // Openings with architectural symbols
       for (const op of wall.openings) {
         const dx = x2 - x1;
         const dy = y2 - y1;
@@ -387,17 +387,144 @@ export default function BuildCanvas2D({ overlayMode = false }: { overlayMode?: b
         const len = Math.sqrt(dx * dx + dy * dy);
         const nx = -dy / len;
         const ny = dx / len;
+        const ux = dx / len;
+        const uy = dy / len;
         const halfW = (op.width * zoom) / 2;
 
         const isOpSelected = selection.type === 'opening' && selection.id === op.id;
-        ctx.strokeStyle = isOpSelected ? COLORS.openingSelected : (op.type === 'door' ? COLORS.opening : COLORS.openingWindow);
-        ctx.lineWidth = isOpSelected ? 4 : 3;
-        ctx.beginPath();
-        ctx.moveTo(opx + nx * halfW, opy + ny * halfW);
-        ctx.lineTo(opx - nx * halfW, opy - ny * halfW);
-        ctx.stroke();
 
-        // Opening dot for dragging
+        if (op.type === 'door') {
+          const isDouble = op.style === 'double';
+          const isSliding = op.style === 'sliding';
+
+          // Clear wall line behind opening
+          ctx.strokeStyle = '#1a1d23';
+          ctx.lineWidth = Math.max(2, wall.thickness * zoom) + 2;
+          ctx.beginPath();
+          ctx.moveTo(opx - ux * halfW, opy - uy * halfW);
+          ctx.lineTo(opx + ux * halfW, opy + uy * halfW);
+          ctx.stroke();
+
+          if (isSliding) {
+            // Sliding door: two parallel lines offset
+            ctx.strokeStyle = isOpSelected ? COLORS.openingSelected : COLORS.opening;
+            ctx.lineWidth = 2;
+            const off1 = 3, off2 = -3;
+            ctx.beginPath();
+            ctx.moveTo(opx - ux * halfW + nx * off1, opy - uy * halfW + ny * off1);
+            ctx.lineTo(opx + ux * halfW * 0.6 + nx * off1, opy + uy * halfW * 0.6 + ny * off1);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(opx + ux * halfW + nx * off2, opy + uy * halfW + ny * off2);
+            ctx.lineTo(opx - ux * halfW * 0.6 + nx * off2, opy - uy * halfW * 0.6 + ny * off2);
+            ctx.stroke();
+          } else {
+            // Standard door arc(s)
+            ctx.strokeStyle = isOpSelected ? COLORS.openingSelected : COLORS.opening;
+            ctx.lineWidth = 1.5;
+
+            if (isDouble) {
+              // Two quarter arcs from each side
+              const hingeAngle = Math.atan2(dy, dx);
+              // Left leaf
+              ctx.beginPath();
+              ctx.arc(opx - ux * halfW, opy - uy * halfW, halfW, hingeAngle + Math.PI * 1.5, hingeAngle + Math.PI * 2);
+              ctx.stroke();
+              // Left panel line
+              ctx.beginPath();
+              ctx.moveTo(opx - ux * halfW, opy - uy * halfW);
+              ctx.lineTo(opx - ux * halfW + nx * halfW, opy - uy * halfW + ny * halfW);
+              ctx.stroke();
+              // Right leaf
+              ctx.beginPath();
+              ctx.arc(opx + ux * halfW, opy + uy * halfW, halfW, hingeAngle + Math.PI, hingeAngle + Math.PI * 1.5);
+              ctx.stroke();
+              // Right panel line
+              ctx.beginPath();
+              ctx.moveTo(opx + ux * halfW, opy + uy * halfW);
+              ctx.lineTo(opx + ux * halfW + nx * halfW, opy + uy * halfW + ny * halfW);
+              ctx.stroke();
+            } else {
+              // Single door: arc from hinge point
+              const hingeAngle = Math.atan2(dy, dx);
+              ctx.beginPath();
+              ctx.arc(opx - ux * halfW, opy - uy * halfW, halfW * 2, hingeAngle + Math.PI * 1.5, hingeAngle + Math.PI * 2);
+              ctx.stroke();
+              // Panel line (open position)
+              ctx.beginPath();
+              ctx.moveTo(opx - ux * halfW, opy - uy * halfW);
+              ctx.lineTo(opx - ux * halfW + nx * halfW * 2, opy - uy * halfW + ny * halfW * 2);
+              ctx.stroke();
+            }
+          }
+        } else if (op.type === 'window') {
+          // Window: double parallel lines
+          ctx.strokeStyle = '#1a1d23';
+          ctx.lineWidth = Math.max(2, wall.thickness * zoom) + 2;
+          ctx.beginPath();
+          ctx.moveTo(opx - ux * halfW, opy - uy * halfW);
+          ctx.lineTo(opx + ux * halfW, opy + uy * halfW);
+          ctx.stroke();
+
+          ctx.strokeStyle = isOpSelected ? COLORS.openingSelected : COLORS.openingWindow;
+          ctx.lineWidth = 1.5;
+          const off = 2.5;
+          // Outer line
+          ctx.beginPath();
+          ctx.moveTo(opx - ux * halfW + nx * off, opy - uy * halfW + ny * off);
+          ctx.lineTo(opx + ux * halfW + nx * off, opy + uy * halfW + ny * off);
+          ctx.stroke();
+          // Inner line
+          ctx.beginPath();
+          ctx.moveTo(opx - ux * halfW - nx * off, opy - uy * halfW - ny * off);
+          ctx.lineTo(opx + ux * halfW - nx * off, opy + uy * halfW - ny * off);
+          ctx.stroke();
+
+          // End caps
+          ctx.beginPath();
+          ctx.moveTo(opx - ux * halfW + nx * off, opy - uy * halfW + ny * off);
+          ctx.lineTo(opx - ux * halfW - nx * off, opy - uy * halfW - ny * off);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(opx + ux * halfW + nx * off, opy + uy * halfW + ny * off);
+          ctx.lineTo(opx + ux * halfW - nx * off, opy + uy * halfW - ny * off);
+          ctx.stroke();
+        } else if (op.type === 'garage-door') {
+          // Garage door: hatched rectangle
+          ctx.strokeStyle = '#1a1d23';
+          ctx.lineWidth = Math.max(2, wall.thickness * zoom) + 2;
+          ctx.beginPath();
+          ctx.moveTo(opx - ux * halfW, opy - uy * halfW);
+          ctx.lineTo(opx + ux * halfW, opy + uy * halfW);
+          ctx.stroke();
+
+          ctx.strokeStyle = isOpSelected ? COLORS.openingSelected : '#8a8a8a';
+          ctx.lineWidth = 2;
+          const gOff = 6;
+          // Rectangle
+          ctx.beginPath();
+          ctx.moveTo(opx - ux * halfW + nx * gOff, opy - uy * halfW + ny * gOff);
+          ctx.lineTo(opx + ux * halfW + nx * gOff, opy + uy * halfW + ny * gOff);
+          ctx.lineTo(opx + ux * halfW - nx * gOff, opy + uy * halfW - ny * gOff);
+          ctx.lineTo(opx - ux * halfW - nx * gOff, opy - uy * halfW - ny * gOff);
+          ctx.closePath();
+          ctx.stroke();
+
+          // Cross-hatch lines inside
+          ctx.lineWidth = 0.8;
+          ctx.setLineDash([3, 3]);
+          ctx.beginPath();
+          ctx.moveTo(opx - ux * halfW + nx * gOff, opy - uy * halfW + ny * gOff);
+          ctx.lineTo(opx + ux * halfW - nx * gOff, opy + uy * halfW - ny * gOff);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(opx + ux * halfW + nx * gOff, opy + uy * halfW + ny * gOff);
+          ctx.lineTo(opx - ux * halfW - nx * gOff, opy - uy * halfW - ny * gOff);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+
+        // Opening drag dot
         ctx.fillStyle = isOpSelected ? COLORS.openingSelected : '#fff';
         ctx.beginPath();
         ctx.arc(opx, opy, 4, 0, Math.PI * 2);
