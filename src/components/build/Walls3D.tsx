@@ -3,7 +3,23 @@ import { useAppStore } from '../../store/useAppStore';
 import { getMaterialById } from '../../lib/materials';
 import * as THREE from 'three';
 
-export default function Walls3D() {
+/* Helper: find max thickness of walls connected at a point */
+function getConnectedThickness(
+  walls: { from: [number, number]; to: [number, number]; thickness: number; id: string }[],
+  wallId: string,
+  point: [number, number],
+  eps = 0.05,
+): number {
+  let maxT = 0;
+  for (const w of walls) {
+    if (w.id === wallId) continue;
+    const df = Math.abs(w.from[0] - point[0]) + Math.abs(w.from[1] - point[1]);
+    const dt = Math.abs(w.to[0] - point[0]) + Math.abs(w.to[1] - point[1]);
+    if (df < eps || dt < eps) maxT = Math.max(maxT, w.thickness);
+  }
+  return maxT;
+}
+
   const floors = useAppStore((s) => s.layout.floors);
   const activeFloorId = useAppStore((s) => s.layout.activeFloorId);
   const wallViewMode = useAppStore((s) => s.build.view.wallViewMode);
