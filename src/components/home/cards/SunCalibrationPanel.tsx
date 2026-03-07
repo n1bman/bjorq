@@ -6,7 +6,7 @@ import { Button } from '../../ui/button';
 
 export default function SunCalibrationPanel() {
   const source = useAppStore((s) => s.environment.source);
-  const cal = useAppStore((s) => s.environment.sunCalibration);
+  const cal = useAppStore((s) => s.environment.sunCalibration) ?? { northOffset: 0, azimuthCorrection: 0, elevationCorrection: 0, intensityMultiplier: 1, indoorBounce: 0 };
   const sunAz = useAppStore((s) => s.environment.sunAzimuth);
   const sunEl = useAppStore((s) => s.environment.sunElevation);
   const setCal = useAppStore((s) => s.setSunCalibration);

@@ -7,7 +7,7 @@ import { Input } from '../../ui/input';
 
 export default function EnvironmentPanel() {
   const terrain = useAppStore((s) => s.terrain);
-  const skyStyle = useAppStore((s) => s.environment.skyStyle);
+  const skyStyle = useAppStore((s) => s.environment.skyStyle) ?? 'auto';
   const setTerrain = useAppStore((s) => s.setTerrain);
   const setSkyStyle = useAppStore((s) => s.setSkyStyle);
 
