@@ -430,6 +430,18 @@ const storeCreator = (set: any, get: any): AppState => ({
       },
     })),
 
+  updateWall: (floorId: string, wallId: string, changes: Record<string, any>) =>
+    set((s: any) => ({
+      layout: {
+        ...s.layout,
+        floors: s.layout.floors.map((f: any) =>
+          f.id === floorId
+            ? { ...f, walls: f.walls.map((w: any) => w.id === wallId ? { ...w, ...changes } : w) }
+            : f
+        ),
+      },
+    })),
+
   updateWallNode: (floorId, wallId, endpoint, pos) =>
     set((s: any) => ({
       layout: {

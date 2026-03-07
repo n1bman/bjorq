@@ -55,6 +55,7 @@ export interface WallSegment {
   height: number;
   thickness: number;
   materialId?: string;
+  interiorMaterialId?: string; // separate interior face material
   openings: WallOpening[];
 }
 
@@ -868,6 +869,7 @@ export interface AppState {
   updateWallNode: (floorId: string, wallId: string, endpoint: 'from' | 'to', pos: [number, number]) => void;
   deleteWall: (floorId: string, wallId: string) => void;
   splitWall: (floorId: string, wallId: string, point: [number, number]) => void;
+  updateWall: (floorId: string, wallId: string, changes: Partial<WallSegment>) => void;
 
   // Opening actions
   addOpening: (floorId: string, wallId: string, opening: WallOpening) => void;

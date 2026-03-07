@@ -15,7 +15,7 @@ export default function Floors3D() {
       .map((room) => {
         const polygon = room.polygon!;
         const mat = room.floorMaterialId ? getMaterialById(room.floorMaterialId) : null;
-        const color = mat?.color ?? '#2a2d35';
+        const color = mat?.color ?? '#d4c5a9';
 
         const shape = new THREE.Shape();
         shape.moveTo(polygon[0][0], -polygon[0][1]);
