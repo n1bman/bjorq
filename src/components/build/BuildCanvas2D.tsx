@@ -670,9 +670,26 @@ export default function BuildCanvas2D({ overlayMode = false }: { overlayMode?: b
         ctx.lineTo(sx2, sy2);
       }
       if (cursorWorld) {
-        const snapped = snapToGrid(cursorWorld[0], cursorWorld[1]);
+        let snapped = snapToGrid(cursorWorld[0], cursorWorld[1]);
+        const floorWalls = floor?.walls ?? [];
+        const nodeSnap = snapToNode(snapped, floorWalls, 0.25);
+        snapped = nodeSnap.snapped;
         const [cx, cy] = worldToScreen(snapped[0], snapped[1]);
         ctx.lineTo(cx, cy);
+
+        // Node-snap indicator: green ring when snapping to existing node
+        if (nodeSnap.isSnapped) {
+          ctx.save();
+          ctx.setLineDash([]);
+          ctx.strokeStyle = '#4ade80';
+          ctx.lineWidth = 2.5;
+          ctx.beginPath();
+          ctx.arc(cx, cy, 10, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.fillStyle = 'rgba(74, 222, 128, 0.15)';
+          ctx.fill();
+          ctx.restore();
+        }
 
         // Show wall length tooltip during drawing
         const lastNode = wallDrawing.nodes[wallDrawing.nodes.length - 1];
