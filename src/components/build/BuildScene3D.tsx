@@ -212,6 +212,7 @@ function SceneContent() {
       <Props3D />
       <WallDrawing3D cursorPos={cursorPos} />
       <WeatherEffects3D />
+      <TerrainEnvironment3D />
       <DeviceMarkers3D buildMode />
 
       <Environment preset="night" />
