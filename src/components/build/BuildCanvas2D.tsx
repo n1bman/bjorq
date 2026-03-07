@@ -567,6 +567,29 @@ export default function BuildCanvas2D({ overlayMode = false }: { overlayMode?: b
           ctx.lineTo(opx - ux * halfW - nx * gOff, opy - uy * halfW - ny * gOff);
           ctx.stroke();
           ctx.setLineDash([]);
+        } else if (op.type === 'passage') {
+          // Passage: simple gap with dashed frame
+          ctx.strokeStyle = '#1a1d23';
+          ctx.lineWidth = Math.max(2, wall.thickness * zoom) + 2;
+          ctx.beginPath();
+          ctx.moveTo(opx - ux * halfW, opy - uy * halfW);
+          ctx.lineTo(opx + ux * halfW, opy + uy * halfW);
+          ctx.stroke();
+
+          ctx.strokeStyle = isOpSelected ? COLORS.openingSelected : '#aaa';
+          ctx.lineWidth = 1.5;
+          ctx.setLineDash([4, 3]);
+          const pOff = 3;
+          // Two end lines showing passage sides
+          ctx.beginPath();
+          ctx.moveTo(opx - ux * halfW + nx * pOff, opy - uy * halfW + ny * pOff);
+          ctx.lineTo(opx - ux * halfW - nx * pOff, opy - uy * halfW - ny * pOff);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(opx + ux * halfW + nx * pOff, opy + uy * halfW + ny * pOff);
+          ctx.lineTo(opx + ux * halfW - nx * pOff, opy + uy * halfW - ny * pOff);
+          ctx.stroke();
+          ctx.setLineDash([]);
         }
 
         // Opening drag dot
