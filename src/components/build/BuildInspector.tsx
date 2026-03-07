@@ -168,6 +168,13 @@ function OpeningInspector({ floorId, openingId, floor, close }: { floorId: strin
             </div>
           </>
         )}
+
+        {/* Flip inside/outside */}
+        <div className="flex items-center justify-between pt-1">
+          <label className="text-muted-foreground text-[10px]">Vänd in/ut</label>
+          <Switch checked={foundOpening.flipped ?? false}
+            onCheckedChange={(v) => handleChange({ flipped: v })} />
+        </div>
       </div>
 
       {/* Material / color picker for opening */}
