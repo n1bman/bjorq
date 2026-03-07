@@ -132,6 +132,22 @@ export default function BuildCanvas2D({ overlayMode = false }: { overlayMode?: b
   const stairs = floor?.stairs ?? [];
   const floorProps = propItems.filter((p) => p.floorId === activeFloorId);
   const ghostFloors = showGhost ? floors.filter((f) => f.id !== activeFloorId) : [];
+  const referenceDrawing = floor?.referenceDrawing;
+
+  // Load reference image
+  useEffect(() => {
+    if (!referenceDrawing?.url) {
+      refImgRef.current = null;
+      setRefImgLoaded(false);
+      return;
+    }
+    const img = new Image();
+    img.onload = () => {
+      refImgRef.current = img;
+      setRefImgLoaded(true);
+    };
+    img.src = referenceDrawing.url;
+  }, [referenceDrawing?.url]);
 
   // World <-> Screen conversions
   const worldToScreen = useCallback(
