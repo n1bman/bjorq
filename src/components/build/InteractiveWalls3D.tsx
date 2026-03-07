@@ -4,6 +4,25 @@ import { getMaterialById } from '../../lib/materials';
 import * as THREE from 'three';
 import { ThreeEvent } from '@react-three/fiber';
 
+/* ── Helper: check if a wall endpoint connects to another wall ── */
+function getConnectedAtEndpoint(
+  walls: { from: [number, number]; to: [number, number]; thickness: number; id: string }[],
+  wallId: string,
+  point: [number, number],
+  eps = 0.05,
+): number {
+  let maxThickness = 0;
+  for (const w of walls) {
+    if (w.id === wallId) continue;
+    const df = Math.abs(w.from[0] - point[0]) + Math.abs(w.from[1] - point[1]);
+    const dt = Math.abs(w.to[0] - point[0]) + Math.abs(w.to[1] - point[1]);
+    if (df < eps || dt < eps) {
+      maxThickness = Math.max(maxThickness, w.thickness);
+    }
+  }
+  return maxThickness;
+}
+
 export default function InteractiveWalls3D() {
   const floors = useAppStore((s) => s.layout.floors);
   const activeFloorId = useAppStore((s) => s.layout.activeFloorId);
@@ -13,6 +32,7 @@ export default function InteractiveWalls3D() {
   const [hoveredWallId, setHoveredWallId] = useState<string | null>(null);
 
   const selectedWallId = selection.type === 'wall' ? selection.id : null;
+  const selectedOpeningId = selection.type === 'opening' ? selection.id : null;
 
   const floor = floors.find((f) => f.id === activeFloorId);
   const walls = floor?.walls ?? [];
@@ -38,14 +58,38 @@ export default function InteractiveWalls3D() {
     setSelection({ type: 'wall', id: wallId });
   }, [activeTool, setSelection]);
 
+  const handleOpeningClick = useCallback((e: ThreeEvent<PointerEvent>, openingId: string) => {
+    if (activeTool !== 'select') return;
+    e.stopPropagation();
+    setSelection({ type: 'opening', id: openingId });
+  }, [activeTool, setSelection]);
+
   const wallMeshes = useMemo(() => {
     return walls.map((wall) => {
       const dx = wall.to[0] - wall.from[0];
       const dz = wall.to[1] - wall.from[1];
-      const length = Math.sqrt(dx * dx + dz * dz);
+      let length = Math.sqrt(dx * dx + dz * dz);
       const angle = Math.atan2(dz, dx);
-      const cx = (wall.from[0] + wall.to[0]) / 2;
-      const cz = (wall.from[1] + wall.to[1]) / 2;
+      let cx = (wall.from[0] + wall.to[0]) / 2;
+      let cz = (wall.from[1] + wall.to[1]) / 2;
+
+      // ── Wall corner mitering ──
+      const fromConn = getConnectedAtEndpoint(walls, wall.id, wall.from);
+      const toConn = getConnectedAtEndpoint(walls, wall.id, wall.to);
+      const trimFrom = fromConn > 0 ? fromConn / 2 : 0;
+      const trimTo = toConn > 0 ? toConn / 2 : 0;
+
+      if (trimFrom > 0 || trimTo > 0) {
+        const totalTrim = trimFrom + trimTo;
+        if (totalTrim < length) {
+          const dir = new THREE.Vector2(dx, dz).normalize();
+          const newFrom: [number, number] = [wall.from[0] + dir.x * trimFrom, wall.from[1] + dir.y * trimFrom];
+          const newTo: [number, number] = [wall.to[0] - dir.x * trimTo, wall.to[1] - dir.y * trimTo];
+          length = length - totalTrim;
+          cx = (newFrom[0] + newTo[0]) / 2;
+          cz = (newFrom[1] + newTo[1]) / 2;
+        }
+      }
       
       // Use wall's own material, or room's wall material, or default
       const matId = wall.materialId || wallRoomMaterial[wall.id];
@@ -71,20 +115,28 @@ export default function InteractiveWalls3D() {
       } else {
         const sortedOpenings = [...wall.openings].sort((a, b) => a.offset - b.offset);
         let cursor = 0;
+        const origLength = Math.sqrt(dx * dx + dz * dz);
+        const origCx = (wall.from[0] + wall.to[0]) / 2;
+        const origCz = (wall.from[1] + wall.to[1]) / 2;
 
         sortedOpenings.forEach((op, i) => {
-          const opStart = op.offset * length - op.width / 2;
-          const opEnd = op.offset * length + op.width / 2;
+          const opStart = op.offset * origLength - op.width / 2;
+          const opEnd = op.offset * origLength + op.width / 2;
           const opBottom = op.type === 'window' ? (op.sillHeight ?? (wall.height - op.height) / 2) : 0;
           const opTop = opBottom + op.height;
+          const isOpSelected = op.id === selectedOpeningId;
+
+          // Get opening material
+          const opMatId = op.materialId;
+          const opMat = opMatId ? getMaterialById(opMatId) : null;
 
           if (opStart > cursor) {
             const segLen = opStart - cursor;
             const segCenter = cursor + segLen / 2;
-            const localX = segCenter - length / 2;
+            const localX = segCenter - origLength / 2;
             const pos = new THREE.Vector3(localX, 0, 0)
               .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
-              .add(new THREE.Vector3(cx, wall.height / 2 + elevation, cz));
+              .add(new THREE.Vector3(origCx, wall.height / 2 + elevation, origCz));
             segments.push(
               <mesh key={`${wall.id}-seg-${i}-pre`} position={pos.toArray()} rotation={[0, -angle, 0]} castShadow>
                 <boxGeometry args={[segLen, wall.height, wall.thickness]} />
@@ -96,10 +148,10 @@ export default function InteractiveWalls3D() {
 
           if (opTop < wall.height) {
             const aboveH = wall.height - opTop;
-            const localX = op.offset * length - length / 2;
+            const localX = op.offset * origLength - origLength / 2;
             const pos = new THREE.Vector3(localX, 0, 0)
               .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
-              .add(new THREE.Vector3(cx, opTop + aboveH / 2 + elevation, cz));
+              .add(new THREE.Vector3(origCx, opTop + aboveH / 2 + elevation, origCz));
             segments.push(
               <mesh key={`${wall.id}-seg-${i}-above`} position={pos.toArray()} rotation={[0, -angle, 0]} castShadow>
                 <boxGeometry args={[op.width, aboveH, wall.thickness]} />
@@ -110,10 +162,10 @@ export default function InteractiveWalls3D() {
           }
 
           if (opBottom > 0) {
-            const localX = op.offset * length - length / 2;
+            const localX = op.offset * origLength - origLength / 2;
             const pos = new THREE.Vector3(localX, 0, 0)
               .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
-              .add(new THREE.Vector3(cx, opBottom / 2 + elevation, cz));
+              .add(new THREE.Vector3(origCx, opBottom / 2 + elevation, origCz));
             segments.push(
               <mesh key={`${wall.id}-seg-${i}-below`} position={pos.toArray()} rotation={[0, -angle, 0]} castShadow>
                 <boxGeometry args={[op.width, opBottom, wall.thickness]} />
@@ -123,86 +175,94 @@ export default function InteractiveWalls3D() {
             );
           }
 
-          // ─── 3D Door/Window/Garage models ───
-          const localX = op.offset * length - length / 2;
+          // ─── 3D Door/Window/Garage models (clickable for selection) ───
+          const localX = op.offset * origLength - origLength / 2;
           const opCenterY = opBottom + op.height / 2;
           const opPos = new THREE.Vector3(localX, 0, 0)
             .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
-            .add(new THREE.Vector3(cx, opCenterY + elevation, cz));
+            .add(new THREE.Vector3(origCx, opCenterY + elevation, origCz));
 
-          const frameW = 0.04; // frame bar width
-          const frameDepth = 0.06;
-          const frameColor = op.type === 'garage-door' ? '#6a6a6a' : '#c0c0c0';
+          const frameW = 0.04;
+          const frameDepth = op.type === 'window' ? 0.10 : 0.06; // deeper window frames (Scandinavian)
+          const defaultFrameColor = op.type === 'garage-door' ? '#6a6a6a' : '#c0c0c0';
+          const frameColor = opMat?.color ?? defaultFrameColor;
+
+          // Selection highlight
+          const opEmissive = isOpSelected ? '#4a6aff' : '#000000';
+          const opEmissiveIntensity = isOpSelected ? 0.5 : 0;
 
           if (op.type === 'door') {
             const isDouble = op.style === 'double';
             const isSliding = op.style === 'sliding';
             const panelW = isDouble ? (op.width - 0.04) / 2 : op.width - 0.04;
+            const doorColor = opMat?.color ?? '#7a5a35';
 
             // Door frame – top
             segments.push(
               <mesh key={`${wall.id}-door-ft-${i}`} position={[opPos.x, opBottom + op.height - frameW / 2 + elevation, opPos.z]}
-                rotation={[0, -angle, 0]} castShadow>
+                rotation={[0, -angle, 0]} castShadow
+                onPointerDown={(e) => handleOpeningClick(e, op.id)}>
                 <boxGeometry args={[op.width, frameW, frameDepth]} />
-                <meshStandardMaterial color={frameColor} roughness={0.3} />
+                <meshStandardMaterial color={frameColor} roughness={0.3} emissive={opEmissive} emissiveIntensity={opEmissiveIntensity} />
               </mesh>
             );
             // Door frame – left
             segments.push(
               <mesh key={`${wall.id}-door-fl-${i}`} position={new THREE.Vector3(localX - op.width / 2 + frameW / 2, 0, 0)
                 .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
-                .add(new THREE.Vector3(cx, opBottom + op.height / 2 + elevation, cz)).toArray()}
-                rotation={[0, -angle, 0]} castShadow>
+                .add(new THREE.Vector3(origCx, opBottom + op.height / 2 + elevation, origCz)).toArray()}
+                rotation={[0, -angle, 0]} castShadow
+                onPointerDown={(e) => handleOpeningClick(e, op.id)}>
                 <boxGeometry args={[frameW, op.height, frameDepth]} />
-                <meshStandardMaterial color={frameColor} roughness={0.3} />
+                <meshStandardMaterial color={frameColor} roughness={0.3} emissive={opEmissive} emissiveIntensity={opEmissiveIntensity} />
               </mesh>
             );
             // Door frame – right
             segments.push(
               <mesh key={`${wall.id}-door-fr-${i}`} position={new THREE.Vector3(localX + op.width / 2 - frameW / 2, 0, 0)
                 .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
-                .add(new THREE.Vector3(cx, opBottom + op.height / 2 + elevation, cz)).toArray()}
-                rotation={[0, -angle, 0]} castShadow>
+                .add(new THREE.Vector3(origCx, opBottom + op.height / 2 + elevation, origCz)).toArray()}
+                rotation={[0, -angle, 0]} castShadow
+                onPointerDown={(e) => handleOpeningClick(e, op.id)}>
                 <boxGeometry args={[frameW, op.height, frameDepth]} />
-                <meshStandardMaterial color={frameColor} roughness={0.3} />
+                <meshStandardMaterial color={frameColor} roughness={0.3} emissive={opEmissive} emissiveIntensity={opEmissiveIntensity} />
               </mesh>
             );
 
-            // Door panel(s)
+            // Door panel(s) – castShadow to block light
             if (isDouble) {
-              // Left panel
               segments.push(
                 <mesh key={`${wall.id}-door-pl-${i}`} position={new THREE.Vector3(localX - panelW / 2 - 0.01, 0, 0)
                   .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
-                  .add(new THREE.Vector3(cx, opBottom + op.height / 2 + elevation, cz)).toArray()}
-                  rotation={[0, -angle, 0]}>
+                  .add(new THREE.Vector3(origCx, opBottom + op.height / 2 + elevation, origCz)).toArray()}
+                  rotation={[0, -angle, 0]} castShadow
+                  onPointerDown={(e) => handleOpeningClick(e, op.id)}>
                   <boxGeometry args={[panelW, op.height - 0.06, 0.04]} />
-                  <meshStandardMaterial color="#7a5a35" roughness={0.5} />
+                  <meshStandardMaterial color={doorColor} roughness={0.5} emissive={opEmissive} emissiveIntensity={opEmissiveIntensity} />
                 </mesh>
               );
-              // Right panel
               segments.push(
                 <mesh key={`${wall.id}-door-pr-${i}`} position={new THREE.Vector3(localX + panelW / 2 + 0.01, 0, 0)
                   .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
-                  .add(new THREE.Vector3(cx, opBottom + op.height / 2 + elevation, cz)).toArray()}
-                  rotation={[0, -angle, 0]}>
+                  .add(new THREE.Vector3(origCx, opBottom + op.height / 2 + elevation, origCz)).toArray()}
+                  rotation={[0, -angle, 0]} castShadow
+                  onPointerDown={(e) => handleOpeningClick(e, op.id)}>
                   <boxGeometry args={[panelW, op.height - 0.06, 0.04]} />
-                  <meshStandardMaterial color="#7a5a35" roughness={0.5} />
+                  <meshStandardMaterial color={doorColor} roughness={0.5} emissive={opEmissive} emissiveIntensity={opEmissiveIntensity} />
                 </mesh>
               );
             } else {
-              // Single panel (offset to one side for sliding)
               const panelOffset = isSliding ? -0.15 : 0;
               segments.push(
                 <mesh key={`${wall.id}-door-panel-${i}`} position={new THREE.Vector3(localX + panelOffset, 0, 0)
                   .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
-                  .add(new THREE.Vector3(cx, opBottom + op.height / 2 + elevation, cz)).toArray()}
-                  rotation={[0, -angle, 0]}>
+                  .add(new THREE.Vector3(origCx, opBottom + op.height / 2 + elevation, origCz)).toArray()}
+                  rotation={[0, -angle, 0]} castShadow
+                  onPointerDown={(e) => handleOpeningClick(e, op.id)}>
                   <boxGeometry args={[panelW, op.height - 0.06, 0.04]} />
-                  <meshStandardMaterial color={isSliding ? '#5a4a3a' : '#7a5a35'} roughness={0.5} />
+                  <meshStandardMaterial color={isSliding ? '#5a4a3a' : doorColor} roughness={0.5} emissive={opEmissive} emissiveIntensity={opEmissiveIntensity} />
                 </mesh>
               );
-              // Sliding door rail
               if (isSliding) {
                 segments.push(
                   <mesh key={`${wall.id}-door-rail-${i}`} position={[opPos.x, opBottom + op.height - 0.02 + elevation, opPos.z]}
@@ -218,7 +278,7 @@ export default function InteractiveWalls3D() {
             segments.push(
               <mesh key={`${wall.id}-door-handle-${i}`} position={new THREE.Vector3(localX + (isDouble ? 0 : panelW * 0.35), 0, 0)
                 .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
-                .add(new THREE.Vector3(cx, opBottom + 1.0 + elevation, cz)).toArray()}
+                .add(new THREE.Vector3(origCx, opBottom + 1.0 + elevation, origCz)).toArray()}
                 rotation={[0, -angle, 0]}>
                 <boxGeometry args={[0.12, 0.03, 0.05]} />
                 <meshStandardMaterial color="#aaa" roughness={0.2} metalness={0.7} />
@@ -228,102 +288,140 @@ export default function InteractiveWalls3D() {
             const isFrench = op.style === 'french';
             const isFixed = op.style === 'fixed';
             const hasMullion = !isFixed && op.width > 1.0;
+            const outerFrameW = 0.05; // thicker Scandinavian outer frame
 
-            // Glass panel
+            // Glass panel (no castShadow - transparent)
             segments.push(
               <mesh key={`${wall.id}-win-glass-${i}`} position={[opPos.x, opCenterY + elevation, opPos.z]}
-                rotation={[0, -angle, 0]}>
+                rotation={[0, -angle, 0]}
+                onPointerDown={(e) => handleOpeningClick(e, op.id)}>
                 <boxGeometry args={[op.width - 0.06, op.height - 0.06, 0.008]} />
                 <meshStandardMaterial color="#88ccff" transparent opacity={isFrench ? 0.35 : 0.3}
-                  roughness={0.05} metalness={0.1} />
+                  roughness={0.05} metalness={0.1} emissive={isOpSelected ? '#2244aa' : '#000000'} emissiveIntensity={isOpSelected ? 0.3 : 0} />
               </mesh>
             );
 
-            // Full frame (4 bars)
+            // Full frame (4 bars) – deeper profile
             const bars: [string, number[], number[]][] = [
-              ['top', [opPos.x, opCenterY + op.height / 2 - frameW / 2 + elevation, opPos.z], [op.width, frameW, 0.03]],
-              ['bottom', [opPos.x, opCenterY - op.height / 2 + frameW / 2 + elevation, opPos.z], [op.width, frameW, 0.03]],
+              ['top', [opPos.x, opCenterY + op.height / 2 - outerFrameW / 2 + elevation, opPos.z], [op.width, outerFrameW, frameDepth]],
+              ['bottom', [opPos.x, opCenterY - op.height / 2 + outerFrameW / 2 + elevation, opPos.z], [op.width, outerFrameW, frameDepth]],
             ];
-            // Left bar
-            const leftPos = new THREE.Vector3(localX - op.width / 2 + frameW / 2, 0, 0)
+            const leftPos = new THREE.Vector3(localX - op.width / 2 + outerFrameW / 2, 0, 0)
               .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
-              .add(new THREE.Vector3(cx, opCenterY + elevation, cz));
-            bars.push(['left', leftPos.toArray(), [frameW, op.height, 0.03]]);
-            const rightPos = new THREE.Vector3(localX + op.width / 2 - frameW / 2, 0, 0)
+              .add(new THREE.Vector3(origCx, opCenterY + elevation, origCz));
+            bars.push(['left', leftPos.toArray(), [outerFrameW, op.height, frameDepth]]);
+            const rightPos = new THREE.Vector3(localX + op.width / 2 - outerFrameW / 2, 0, 0)
               .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
-              .add(new THREE.Vector3(cx, opCenterY + elevation, cz));
-            bars.push(['right', rightPos.toArray(), [frameW, op.height, 0.03]]);
+              .add(new THREE.Vector3(origCx, opCenterY + elevation, origCz));
+            bars.push(['right', rightPos.toArray(), [outerFrameW, op.height, frameDepth]]);
 
             // Vertical mullion for wide windows
             if (hasMullion) {
-              bars.push(['mullion', [opPos.x, opCenterY + elevation, opPos.z], [frameW * 0.7, op.height - 0.06, 0.025]]);
+              bars.push(['mullion', [opPos.x, opCenterY + elevation, opPos.z], [outerFrameW * 0.7, op.height - 0.06, frameDepth * 0.8]]);
             }
 
             for (const [key, pos, dims] of bars) {
               segments.push(
                 <mesh key={`${wall.id}-win-f${key}-${i}`} position={pos as [number, number, number]}
-                  rotation={[0, -angle, 0]} castShadow>
+                  rotation={[0, -angle, 0]} castShadow
+                  onPointerDown={(e) => handleOpeningClick(e, op.id)}>
                   <boxGeometry args={dims as [number, number, number]} />
-                  <meshStandardMaterial color={frameColor} roughness={0.3} />
+                  <meshStandardMaterial color={frameColor} roughness={0.3} emissive={opEmissive} emissiveIntensity={opEmissiveIntensity} />
                 </mesh>
               );
             }
 
-            // Window sill
+            // Inner reveal/recess (recessed into wall)
+            const revealDepth = wall.thickness * 0.3;
+            const revealColor = '#d0d0d0';
+            // Top reveal
+            segments.push(
+              <mesh key={`${wall.id}-win-reveal-top-${i}`} position={[opPos.x, opCenterY + op.height / 2 - 0.01 + elevation, opPos.z]}
+                rotation={[0, -angle, 0]}>
+                <boxGeometry args={[op.width - 0.02, 0.02, revealDepth]} />
+                <meshStandardMaterial color={revealColor} roughness={0.8} />
+              </mesh>
+            );
+
+            // Window sill with exterior overhang
             if (!isFrench) {
+              // Exterior sill (deeper, wider overhang)
+              const sillNormal = new THREE.Vector3(0, 0, 1)
+                .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle);
               segments.push(
-                <mesh key={`${wall.id}-win-sill-${i}`} position={[opPos.x, opCenterY - op.height / 2 - 0.02 + elevation, opPos.z]}
+                <mesh key={`${wall.id}-win-sill-${i}`}
+                  position={[
+                    opPos.x + sillNormal.x * 0.05,
+                    opCenterY - op.height / 2 - 0.02 + elevation,
+                    opPos.z + sillNormal.z * 0.05,
+                  ]}
                   rotation={[0, -angle, 0]} castShadow>
-                  <boxGeometry args={[op.width + 0.08, 0.03, wall.thickness + 0.06]} />
+                  <boxGeometry args={[op.width + 0.12, 0.03, wall.thickness + 0.10]} />
                   <meshStandardMaterial color="#e0e0e0" roughness={0.6} />
+                </mesh>
+              );
+              // Interior sill (thinner)
+              segments.push(
+                <mesh key={`${wall.id}-win-sill-int-${i}`}
+                  position={[
+                    opPos.x - sillNormal.x * 0.04,
+                    opCenterY - op.height / 2 - 0.01 + elevation,
+                    opPos.z - sillNormal.z * 0.04,
+                  ]}
+                  rotation={[0, -angle, 0]}>
+                  <boxGeometry args={[op.width + 0.04, 0.025, wall.thickness * 0.4]} />
+                  <meshStandardMaterial color="#f0f0f0" roughness={0.7} />
                 </mesh>
               );
             }
           } else if (op.type === 'garage-door') {
-            // Garage door panel with horizontal sections
+            // Garage door panel with horizontal sections – castShadow to block light
             const sections = 4;
             const sectionH = (op.height - 0.04) / sections;
+            const garageColor = opMat?.color ?? '#b0b0b0';
             for (let s = 0; s < sections; s++) {
               const sy = opBottom + 0.02 + sectionH * s + sectionH / 2;
               segments.push(
                 <mesh key={`${wall.id}-garage-sec-${i}-${s}`} position={new THREE.Vector3(localX, 0, 0)
                   .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
-                  .add(new THREE.Vector3(cx, sy + elevation, cz)).toArray()}
-                  rotation={[0, -angle, 0]}>
+                  .add(new THREE.Vector3(origCx, sy + elevation, origCz)).toArray()}
+                  rotation={[0, -angle, 0]} castShadow
+                  onPointerDown={(e) => handleOpeningClick(e, op.id)}>
                   <boxGeometry args={[op.width - 0.06, sectionH - 0.02, 0.04]} />
-                  <meshStandardMaterial color="#b0b0b0" roughness={0.7} metalness={0.2} />
+                  <meshStandardMaterial color={garageColor} roughness={0.7} metalness={0.2}
+                    emissive={opEmissive} emissiveIntensity={opEmissiveIntensity} />
                 </mesh>
               );
             }
 
             // Garage door frame
             const gFrameW = 0.05;
-            // Top
             segments.push(
               <mesh key={`${wall.id}-garage-ft-${i}`} position={[opPos.x, opBottom + op.height - gFrameW / 2 + elevation, opPos.z]}
-                rotation={[0, -angle, 0]} castShadow>
+                rotation={[0, -angle, 0]} castShadow
+                onPointerDown={(e) => handleOpeningClick(e, op.id)}>
                 <boxGeometry args={[op.width, gFrameW, 0.07]} />
-                <meshStandardMaterial color="#555" roughness={0.4} metalness={0.3} />
+                <meshStandardMaterial color="#555" roughness={0.4} metalness={0.3} emissive={opEmissive} emissiveIntensity={opEmissiveIntensity} />
               </mesh>
             );
-            // Left
             segments.push(
               <mesh key={`${wall.id}-garage-fl-${i}`} position={new THREE.Vector3(localX - op.width / 2 + gFrameW / 2, 0, 0)
                 .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
-                .add(new THREE.Vector3(cx, opBottom + op.height / 2 + elevation, cz)).toArray()}
-                rotation={[0, -angle, 0]} castShadow>
+                .add(new THREE.Vector3(origCx, opBottom + op.height / 2 + elevation, origCz)).toArray()}
+                rotation={[0, -angle, 0]} castShadow
+                onPointerDown={(e) => handleOpeningClick(e, op.id)}>
                 <boxGeometry args={[gFrameW, op.height, 0.07]} />
-                <meshStandardMaterial color="#555" roughness={0.4} metalness={0.3} />
+                <meshStandardMaterial color="#555" roughness={0.4} metalness={0.3} emissive={opEmissive} emissiveIntensity={opEmissiveIntensity} />
               </mesh>
             );
-            // Right
             segments.push(
               <mesh key={`${wall.id}-garage-fr-${i}`} position={new THREE.Vector3(localX + op.width / 2 - gFrameW / 2, 0, 0)
                 .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
-                .add(new THREE.Vector3(cx, opBottom + op.height / 2 + elevation, cz)).toArray()}
-                rotation={[0, -angle, 0]} castShadow>
+                .add(new THREE.Vector3(origCx, opBottom + op.height / 2 + elevation, origCz)).toArray()}
+                rotation={[0, -angle, 0]} castShadow
+                onPointerDown={(e) => handleOpeningClick(e, op.id)}>
                 <boxGeometry args={[gFrameW, op.height, 0.07]} />
-                <meshStandardMaterial color="#555" roughness={0.4} metalness={0.3} />
+                <meshStandardMaterial color="#555" roughness={0.4} metalness={0.3} emissive={opEmissive} emissiveIntensity={opEmissiveIntensity} />
               </mesh>
             );
           }
@@ -331,13 +429,13 @@ export default function InteractiveWalls3D() {
           cursor = opEnd;
         });
 
-        if (cursor < length) {
-          const segLen = length - cursor;
+        if (cursor < origLength) {
+          const segLen = origLength - cursor;
           const segCenter = cursor + segLen / 2;
-          const localX = segCenter - length / 2;
-          const pos = new THREE.Vector3(localX, 0, 0)
+          const localX2 = segCenter - origLength / 2;
+          const pos = new THREE.Vector3(localX2, 0, 0)
             .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
-            .add(new THREE.Vector3(cx, wall.height / 2 + elevation, cz));
+            .add(new THREE.Vector3(origCx, wall.height / 2 + elevation, origCz));
           segments.push(
             <mesh key={`${wall.id}-seg-last`} position={pos.toArray()} rotation={[0, -angle, 0]} castShadow>
               <boxGeometry args={[segLen, wall.height, wall.thickness]} />
@@ -373,7 +471,7 @@ export default function InteractiveWalls3D() {
         </group>
       );
     });
-  }, [walls, rooms, elevation, selectedWallId, hoveredWallId, activeTool, handleWallClick, wallRoomMaterial]);
+  }, [walls, rooms, elevation, selectedWallId, selectedOpeningId, hoveredWallId, activeTool, handleWallClick, handleOpeningClick, wallRoomMaterial]);
 
   return <group>{wallMeshes}</group>;
 }

@@ -760,7 +760,7 @@ const storeCreator = (set: any, get: any): AppState => ({
       return {
         build: {
           ...s.build,
-          undoStack: [...s.build.undoStack.slice(-29), snapshot],
+          undoStack: [...s.build.undoStack.slice(-49), snapshot],
           redoStack: [],
         },
       };

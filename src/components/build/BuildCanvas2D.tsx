@@ -1138,8 +1138,8 @@ export default function BuildCanvas2D({ overlayMode = false }: { overlayMode?: b
         return;
       }
 
-      // ─── Door/Window placement ───
-      if ((activeTool === 'door' || activeTool === 'window') && activeFloorId) {
+      // ─── Door/Window/Garage-door placement ───
+      if ((activeTool === 'door' || activeTool === 'window' || activeTool === 'garage-door') && activeFloorId) {
         const wall = findWallAt(sx, sy);
         if (wall) {
           const [wx, wz] = screenToWorld(sx, sy);
@@ -1150,12 +1150,13 @@ export default function BuildCanvas2D({ overlayMode = false }: { overlayMode?: b
             const presetId = (useAppStore.getState() as any)._selectedOpeningPreset;
             const preset = presetId ? openingPresets.find((p: any) => p.id === presetId) : null;
             const openingId = generateId();
+            const openingType = activeTool === 'garage-door' ? 'garage-door' : activeTool;
             addOpening(activeFloorId, wall.id, {
               id: openingId,
-              type: activeTool,
+              type: openingType as 'door' | 'window' | 'garage-door',
               offset: Math.max(0.05, Math.min(0.95, t)),
-              width: preset?.width ?? (activeTool === 'door' ? 0.9 : 1.2),
-              height: preset?.height ?? (activeTool === 'door' ? 2.1 : 1.2),
+              width: preset?.width ?? (activeTool === 'door' ? 0.9 : activeTool === 'garage-door' ? 2.5 : 1.2),
+              height: preset?.height ?? (activeTool === 'door' ? 2.1 : activeTool === 'garage-door' ? 2.2 : 1.2),
               sillHeight: preset?.sillHeight ?? (activeTool === 'window' ? 0.9 : 0),
               style: preset?.style,
             });
@@ -1518,7 +1519,7 @@ export default function BuildCanvas2D({ overlayMode = false }: { overlayMode?: b
   const getCursor = () => {
     if (isDraggingProp || dragNode || dragWall || dragOpening || dragDeviceId) return 'grabbing';
     if (activeTool === 'wall' || activeTool === 'room') return 'crosshair';
-    if (activeTool === 'door' || activeTool === 'window') return 'crosshair';
+    if (activeTool === 'door' || activeTool === 'window' || activeTool === 'garage-door') return 'crosshair';
     if (activeTool === 'erase') return 'not-allowed';
     if (activeTool === 'measure') return 'crosshair';
     if (activeTool === 'stairs') return 'copy';
@@ -1560,8 +1561,8 @@ export default function BuildCanvas2D({ overlayMode = false }: { overlayMode?: b
         {activeTool === 'select' && (
           <span className="text-primary font-medium">Dra noder/väggar · Dubbelklicka vägg = dela</span>
         )}
-        {(activeTool === 'door' || activeTool === 'window') && (
-          <span className="text-primary font-medium">Klicka på vägg för att placera {activeTool === 'door' ? 'dörr' : 'fönster'}</span>
+        {(activeTool === 'door' || activeTool === 'window' || activeTool === 'garage-door') && (
+          <span className="text-primary font-medium">Klicka på vägg för att placera {activeTool === 'door' ? 'dörr' : activeTool === 'garage-door' ? 'garageport' : 'fönster'}</span>
         )}
         {activeTool === 'measure' && !measureStart && (
           <span className="text-primary font-medium">Klicka för att börja mäta</span>

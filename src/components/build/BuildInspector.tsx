@@ -1,4 +1,5 @@
 import { useAppStore } from '../../store/useAppStore';
+import { cn } from '../../lib/utils';
 import { X, Plus, DoorOpen, RotateCcw, Move, Trash2, Layers, Home, Lightbulb, ArrowRightLeft, Monitor, RectangleHorizontal, Warehouse, Upload } from 'lucide-react';
 import { Slider } from '../ui/slider';
 import { Input } from '../ui/input';
@@ -167,6 +168,33 @@ function OpeningInspector({ floorId, openingId, floor, close }: { floorId: strin
             </div>
           </>
         )}
+      </div>
+
+      {/* Material / color picker for opening */}
+      <div className="border-t border-border pt-2 space-y-1">
+        <label className="text-muted-foreground text-[10px]">Material / Färg</label>
+        <div className="flex flex-wrap gap-1">
+          {presetMaterials.filter((m) => m.type === 'paint' || m.type === 'wood' || m.type === 'metal').slice(0, 8).map((m) => (
+            <button
+              key={m.id}
+              onClick={() => handleChange({ materialId: m.id })}
+              className={cn(
+                'w-7 h-7 rounded-md border-2 transition-all',
+                foundOpening.materialId === m.id ? 'border-primary scale-110' : 'border-border hover:border-primary/50'
+              )}
+              style={{ backgroundColor: m.color }}
+              title={m.name}
+            />
+          ))}
+          {foundOpening.materialId && (
+            <button
+              onClick={() => handleChange({ materialId: undefined })}
+              className="px-1.5 py-0.5 rounded-md bg-secondary/50 hover:bg-secondary text-foreground text-[9px]"
+            >
+              Återställ
+            </button>
+          )}
+        </div>
       </div>
 
       {/* HA Entity linking for garage doors */}

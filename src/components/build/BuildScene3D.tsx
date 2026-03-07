@@ -2,6 +2,8 @@ import { Canvas, useThree } from '@react-three/fiber';
 import { OrbitControls, Grid, Environment } from '@react-three/drei';
 import { Suspense, useRef, useState, useCallback, useMemo, useEffect } from 'react';
 import * as THREE from 'three';
+import { findWallAtWorld, pointToSegment } from '../../lib/buildUtils';
+import { openingPresets } from '../../lib/openingPresets';
 import GroundPlane from './GroundPlane';
 import WallDrawing3D from './WallDrawing3D';
 import InteractiveWalls3D from './InteractiveWalls3D';
@@ -99,6 +101,38 @@ function SceneContent() {
 
   const handleGroundPointerDown = useCallback(
     (point: THREE.Vector3, e: any) => {
+      // ─── 3D opening placement (door/window/garage-door) ───
+      if ((activeTool === 'door' || activeTool === 'window' || activeTool === 'garage-door') && activeFloorId) {
+        e.stopPropagation();
+        const fl = floors.find((f) => f.id === activeFloorId);
+        const floorWalls = fl?.walls ?? [];
+        const wall = findWallAtWorld(point.x, point.z, floorWalls, 0.5);
+        if (wall) {
+          const [dist, t] = pointToSegment(point.x, point.z, wall.from[0], wall.from[1], wall.to[0], wall.to[1]);
+          if (dist < 0.5) {
+            pushUndo();
+            const presetId = (useAppStore.getState() as any)._selectedOpeningPreset;
+            const preset = presetId ? openingPresets.find((p: any) => p.id === presetId) : null;
+            const openingId = generateId();
+            const openingType = activeTool === 'garage-door' ? 'garage-door' : activeTool;
+            const addOpening = useAppStore.getState().addOpening;
+            addOpening(activeFloorId, wall.id, {
+              id: openingId,
+              type: openingType as 'door' | 'window' | 'garage-door',
+              offset: Math.max(0.05, Math.min(0.95, t)),
+              width: preset?.width ?? (activeTool === 'door' ? 0.9 : activeTool === 'garage-door' ? 2.5 : 1.2),
+              height: preset?.height ?? (activeTool === 'door' ? 2.1 : activeTool === 'garage-door' ? 2.2 : 1.2),
+              sillHeight: preset?.sillHeight ?? (activeTool === 'window' ? 0.9 : 0),
+              style: preset?.style,
+            });
+            setSelection({ type: 'opening', id: openingId });
+            setBuildTool('select');
+            useAppStore.setState({ _selectedOpeningPreset: null } as any);
+          }
+        }
+        return;
+      }
+
       if (activeTool.startsWith('place-') && activeFloorId) {
         e.stopPropagation();
         const kind = activeTool.replace('place-', '') as DeviceKind;
