@@ -191,6 +191,18 @@ export default function BuildTopToolbar() {
         <Sparkles size={16} />
       </button>
 
+      {/* Room manager popover */}
+      <Popover>
+        <PopoverTrigger asChild>
+          <button title="Hantera rum" className="p-2.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary/40 transition-all min-w-[44px] min-h-[44px] flex items-center justify-center">
+            <DoorOpen size={16} />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent side="bottom" align="start" className="w-72 p-3 bg-card border-border max-h-96 overflow-y-auto">
+          <RoomManager />
+        </PopoverContent>
+      </Popover>
+
       {/* Spacer */}
       <div className="flex-1" />
 
