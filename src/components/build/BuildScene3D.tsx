@@ -90,6 +90,7 @@ function SceneContent() {
 
   const [cursorPos, setCursorPos] = useState<[number, number] | null>(null);
   const [cursorSnapped, setCursorSnapped] = useState(false);
+  const [cursorMidSnap, setCursorMidSnap] = useState(false);
   const controlsRef = useRef<any>(null);
 
   const snapToGrid = useCallback(
@@ -200,6 +201,7 @@ function SceneContent() {
         snapped = nodeSnap.snapped;
         setCursorPos(snapped);
         setCursorSnapped(nodeSnap.isSnapped);
+        setCursorMidSnap(!!nodeSnap.isMidSnap);
       }
     },
     [activeTool, snapToGrid, floors, activeFloorId]
@@ -259,7 +261,7 @@ function SceneContent() {
       <Stairs3D />
       <ImportedHome3D />
       <Props3D />
-      <WallDrawing3D cursorPos={cursorPos} cursorSnapped={cursorSnapped} />
+      <WallDrawing3D cursorPos={cursorPos} cursorSnapped={cursorSnapped} cursorMidSnap={cursorMidSnap} />
       <WeatherEffects3D />
       <InlineTerrain3D />
       <DeviceMarkers3D buildMode />

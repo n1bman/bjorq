@@ -8,7 +8,8 @@ export function snapToNode(
   pos: [number, number],
   walls: WallSegment[],
   threshold = 0.25,
-): { snapped: [number, number]; isSnapped: boolean } {
+): { snapped: [number, number]; isSnapped: boolean; isMidSnap?: boolean } {
+  // First try endpoint snap
   let best: [number, number] | null = null;
   let bestDist = threshold;
   for (const w of walls) {
@@ -17,7 +18,24 @@ export function snapToNode(
     const dt = Math.hypot(pos[0] - w.to[0], pos[1] - w.to[1]);
     if (dt < bestDist) { bestDist = dt; best = w.to; }
   }
-  return best ? { snapped: best, isSnapped: true } : { snapped: pos, isSnapped: false };
+  if (best) return { snapped: best, isSnapped: true, isMidSnap: false };
+
+  // Then try midpoint snap (closest point on wall segment)
+  let bestMid: [number, number] | null = null;
+  let bestMidDist = threshold;
+  for (const w of walls) {
+    const [dist, t] = pointToSegment(pos[0], pos[1], w.from[0], w.from[1], w.to[0], w.to[1]);
+    if (t > 0.02 && t < 0.98 && dist < bestMidDist) {
+      bestMidDist = dist;
+      bestMid = [
+        w.from[0] + (w.to[0] - w.from[0]) * t,
+        w.from[1] + (w.to[1] - w.from[1]) * t,
+      ];
+    }
+  }
+  if (bestMid) return { snapped: bestMid, isSnapped: true, isMidSnap: true };
+
+  return { snapped: pos, isSnapped: false };
 }
 
 // ─── Snap to grid ───
