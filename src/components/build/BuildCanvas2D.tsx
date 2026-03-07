@@ -966,11 +966,41 @@ export default function BuildCanvas2D({ overlayMode = false }: { overlayMode?: b
       // ─── Wall drawing tool ───
       if (activeTool === 'wall' && activeFloorId) {
         const [wx, wz] = screenToWorld(sx, sy);
-        const snapped = snapToGrid(wx, wz);
+        let snapped = snapToGrid(wx, wz);
+        
+        // Angle-lock: Shift key locks to 0°/45°/90° increments
+        if (e.shiftKey && wallDrawing.isDrawing && wallDrawing.nodes.length > 0) {
+          const lastNode = wallDrawing.nodes[wallDrawing.nodes.length - 1];
+          snapped = angleLock(lastNode, snapped);
+          snapped = snapToGrid(snapped[0], snapped[1]);
+        }
+        
         if (!wallDrawing.isDrawing) {
           setWallDrawing({ isDrawing: true, nodes: [snapped] });
         } else {
-          setWallDrawing({ nodes: [...wallDrawing.nodes, snapped] });
+          // Auto-close: if close to first node, close the polygon
+          const firstNode = wallDrawing.nodes[0];
+          const distToFirst = Math.sqrt((snapped[0] - firstNode[0]) ** 2 + (snapped[1] - firstNode[1]) ** 2);
+          if (wallDrawing.nodes.length >= 3 && distToFirst < 0.3) {
+            // Close polygon: add walls and create room
+            pushUndo();
+            const nodes = [...wallDrawing.nodes, firstNode];
+            for (let i = 0; i < nodes.length - 1; i++) {
+              const wall: WallSegment = {
+                id: generateId(),
+                from: nodes[i],
+                to: nodes[i + 1],
+                height: floor?.heightMeters ?? 2.5,
+                thickness: 0.15,
+                openings: [],
+              };
+              addWall(activeFloorId, wall);
+            }
+            setWallDrawing({ isDrawing: false, nodes: [] });
+            setCursorWorld(null);
+          } else {
+            setWallDrawing({ nodes: [...wallDrawing.nodes, snapped] });
+          }
         }
         return;
       }
