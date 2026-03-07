@@ -168,7 +168,12 @@ function SceneContent() {
       }
       if (activeTool === 'wall') {
         e.stopPropagation();
-        const snapped = snapToGrid(point.x, point.z);
+        let snapped = snapToGrid(point.x, point.z);
+        // Node-snap to existing wall endpoints
+        const fl = floors.find((f) => f.id === activeFloorId);
+        const floorWalls = fl?.walls ?? [];
+        const nodeSnap = snapToNode(snapped, floorWalls, 0.25);
+        snapped = nodeSnap.snapped;
         if (!wallDrawing.isDrawing) {
           setWallDrawing({ isDrawing: true, nodes: [snapped] });
         } else {
