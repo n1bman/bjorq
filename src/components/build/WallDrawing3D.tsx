@@ -6,6 +6,7 @@ import { Line } from '@react-three/drei';
 interface WallDrawing3DProps {
   cursorPos: [number, number] | null;
   cursorSnapped?: boolean;
+  cursorMidSnap?: boolean;
 }
 
 export default function WallDrawing3D({ cursorPos, cursorSnapped }: WallDrawing3DProps) {
