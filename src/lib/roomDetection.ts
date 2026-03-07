@@ -167,6 +167,98 @@ function polygonOverlap(a: [number, number][], b: [number, number][]): number {
 const generateId = () => Math.random().toString(36).slice(2, 10);
 
 /**
+ * Split walls at T-junctions: if a wall endpoint lands on the middle
+ * of another wall segment, split that segment into two so the graph
+ * recognizes the connection.
+ */
+function splitAtTJunctions(walls: WallSegment[]): WallSegment[] {
+  // Collect all unique endpoints
+  const endpoints: [number, number][] = [];
+  for (const w of walls) {
+    endpoints.push(w.from, w.to);
+  }
+
+  let result = [...walls];
+  let changed = true;
+  let iterations = 0;
+
+  while (changed && iterations < 5) {
+    changed = false;
+    iterations++;
+    const nextResult: WallSegment[] = [];
+
+    for (const wall of result) {
+      // Collect split points on this wall
+      const splits: number[] = [];
+
+      for (const ep of endpoints) {
+        // Skip if ep is near either endpoint of this wall
+        const dFrom = Math.hypot(ep[0] - wall.from[0], ep[1] - wall.from[1]);
+        const dTo = Math.hypot(ep[0] - wall.to[0], ep[1] - wall.to[1]);
+        if (dFrom < EPSILON || dTo < EPSILON) continue;
+
+        // Project ep onto wall segment
+        const dx = wall.to[0] - wall.from[0];
+        const dy = wall.to[1] - wall.from[1];
+        const len2 = dx * dx + dy * dy;
+        if (len2 === 0) continue;
+        const t = ((ep[0] - wall.from[0]) * dx + (ep[1] - wall.from[1]) * dy) / len2;
+        if (t <= EPSILON || t >= 1 - EPSILON) continue;
+
+        // Check distance from ep to projected point
+        const px = wall.from[0] + t * dx;
+        const py = wall.from[1] + t * dy;
+        const dist = Math.hypot(ep[0] - px, ep[1] - py);
+        if (dist < EPSILON) {
+          splits.push(t);
+        }
+      }
+
+      if (splits.length === 0) {
+        nextResult.push(wall);
+      } else {
+        changed = true;
+        // Sort splits and create sub-segments
+        splits.sort((a, b) => a - b);
+        // Deduplicate
+        const unique = [splits[0]];
+        for (let i = 1; i < splits.length; i++) {
+          if (splits[i] - unique[unique.length - 1] > EPSILON) unique.push(splits[i]);
+        }
+
+        const points: [number, number][] = [wall.from];
+        for (const t of unique) {
+          points.push([
+            wall.from[0] + (wall.to[0] - wall.from[0]) * t,
+            wall.from[1] + (wall.to[1] - wall.from[1]) * t,
+          ]);
+        }
+        points.push(wall.to);
+
+        for (let i = 0; i < points.length - 1; i++) {
+          nextResult.push({
+            ...wall,
+            id: i === 0 ? wall.id : generateId(),
+            from: points[i],
+            to: points[i + 1],
+            openings: i === 0 ? wall.openings : [],
+          });
+        }
+      }
+    }
+
+    result = nextResult;
+    // Re-collect endpoints after splits
+    endpoints.length = 0;
+    for (const w of result) {
+      endpoints.push(w.from, w.to);
+    }
+  }
+
+  return result;
+}
+
+/**
  * Detect rooms from walls. Preserves existing room metadata (name, materials)
  * by matching new polygons to existing rooms via polygon overlap.
  */
