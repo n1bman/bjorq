@@ -360,12 +360,17 @@ export function detectRooms(walls: WallSegment[], existingRooms?: Room[]): Room[
       const area = polygonArea(polygon);
       if (area < 0.5) return null; // Skip tiny areas
 
-      // Find wall IDs that form this room
+      // Find wall IDs that form this room — search in splitWalls (post T-junction)
       const wallIds: string[] = [];
       for (let i = 0; i < cycle.length; i++) {
         const a = cycle[i];
         const b = cycle[(i + 1) % cycle.length];
-        const wall = walls.find((w) => {
+        // First try splitWalls, then fall back to original walls
+        const wall = splitWalls.find((w) => {
+          const fk = keyFor(w.from);
+          const tk = keyFor(w.to);
+          return (fk === a && tk === b) || (fk === b && tk === a);
+        }) || healedWalls.find((w) => {
           const fk = keyFor(w.from);
           const tk = keyFor(w.to);
           return (fk === a && tk === b) || (fk === b && tk === a);
