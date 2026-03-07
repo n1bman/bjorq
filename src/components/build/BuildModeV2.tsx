@@ -10,7 +10,7 @@ import { getAllMaterials } from '../../lib/materials';
 import {
   MousePointer2, Minus, Square, DoorOpen, PanelTop,
   Warehouse, Footprints, Paintbrush, Sofa, Cpu,
-  Import, Eraser, Upload, Search, FileImage, Box,
+  Import, Eraser, Upload, Search, FileImage, Box, Ruler, Trash2,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { toast } from 'sonner';
