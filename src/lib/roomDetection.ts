@@ -3,7 +3,7 @@ import type { WallSegment, Room } from '../store/types';
 const EPSILON = 0.05; // 5cm tolerance for node matching
 
 function keyFor(p: [number, number]): string {
-  return `${Math.round(p[0] / EPSILON) * EPSILON},${Math.round(p[1] / EPSILON) * EPSILON}`;
+  return `${Math.round(p[0] / EPSILON)},${Math.round(p[1] / EPSILON)}`;
 }
 
 function snapPoint(p: [number, number]): [number, number] {
