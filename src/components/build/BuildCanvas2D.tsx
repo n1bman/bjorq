@@ -1610,7 +1610,7 @@ export default function BuildCanvas2D({ overlayMode = false }: { overlayMode?: b
         <span>Mittenklick: panorera</span>
         <span>Scroll: zooma</span>
         {activeTool === 'wall' && wallDrawing.isDrawing && (
-          <span className="text-primary font-medium">Dubbelklicka för att avsluta</span>
+          <span className="text-primary font-medium">Dubbelklicka: avsluta · Esc: avbryt · Ctrl+Z: ångra punkt</span>
         )}
         {activeTool === 'wall' && !wallDrawing.isDrawing && (
           <span className="text-primary font-medium">Klicka för att börja rita vägg</span>
