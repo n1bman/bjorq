@@ -689,17 +689,25 @@ export default function BuildCanvas2D({ overlayMode = false }: { overlayMode?: b
         const [cx, cy] = worldToScreen(snapped[0], snapped[1]);
         ctx.lineTo(cx, cy);
 
-        // Node-snap indicator: green ring when snapping to existing node
+        // Node-snap indicator
         if (nodeSnap.isSnapped) {
           ctx.save();
           ctx.setLineDash([]);
-          ctx.strokeStyle = '#4ade80';
+          const isMid = !!nodeSnap.isMidSnap;
+          ctx.strokeStyle = isMid ? '#facc15' : '#4ade80';
           ctx.lineWidth = 2.5;
           ctx.beginPath();
-          ctx.arc(cx, cy, 10, 0, Math.PI * 2);
+          ctx.arc(cx, cy, isMid ? 8 : 10, 0, Math.PI * 2);
           ctx.stroke();
-          ctx.fillStyle = 'rgba(74, 222, 128, 0.15)';
+          ctx.fillStyle = isMid ? 'rgba(250, 204, 21, 0.15)' : 'rgba(74, 222, 128, 0.15)';
           ctx.fill();
+          // Cross indicator for mid-wall snap
+          if (isMid) {
+            ctx.beginPath();
+            ctx.moveTo(cx - 5, cy - 5); ctx.lineTo(cx + 5, cy + 5);
+            ctx.moveTo(cx + 5, cy - 5); ctx.lineTo(cx - 5, cy + 5);
+            ctx.stroke();
+          }
           ctx.restore();
         }
 
