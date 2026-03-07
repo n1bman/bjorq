@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Home, Cloud, Cpu, Zap, Bell, Video, Settings, Pencil, X, CalendarDays, Bot, Moon, Save, Workflow, Palette, LayoutGrid, Thermometer } from 'lucide-react';
+import { Home, Cloud, Cpu, Zap, Bell, Video, Settings, Pencil, X, CalendarDays, Bot, Moon, Save, Workflow, Palette, LayoutGrid, Thermometer, Trees } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Button } from '../ui/button';
 import { useAppStore } from '../../store/useAppStore';
