@@ -271,7 +271,7 @@ export default function BuildTopToolbar() {
         className="p-2.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary/40 transition-all min-w-[44px] min-h-[44px] flex items-center justify-center"
       >
         <Wrench size={16} />
-
+      </button>
       {/* Room manager popover */}
       <Popover>
         <PopoverTrigger asChild>
