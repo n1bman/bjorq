@@ -7,7 +7,7 @@ import { useAppStore } from '../store/useAppStore';
 import { cameraRef } from '../lib/cameraRef';
 import Walls3D from './build/Walls3D';
 import Floors3D from './build/Floors3D';
-import Ceilings3D from './build/Ceilings3D';
+
 import Stairs3D from './build/Stairs3D';
 import ImportedHome3D from './build/ImportedHome3D';
 import Props3D from './build/Props3D';
