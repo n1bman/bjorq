@@ -957,6 +957,9 @@ export interface AppState {
   setWeatherSource: (source: 'manual' | 'auto' | 'ha') => void;
   setPrecipitationOverride: (override: PrecipitationOverride) => void;
   setLocation: (lat: number, lon: number) => void;
+  setSunCalibration: (changes: Partial<SunCalibration>) => void;
+  setAtmosphere: (changes: Partial<AtmosphereSettings>) => void;
+  setSkyStyle: (style: 'auto' | 'gradient' | 'solid') => void;
 
   // Opening/Stair update actions
   updateOpening: (floorId: string, wallId: string, openingId: string, changes: Partial<WallOpening>) => void;
