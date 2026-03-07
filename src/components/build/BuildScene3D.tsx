@@ -175,6 +175,9 @@ function SceneContent() {
         }
       } else if (activeTool === 'select') {
         setSelection({ type: null, id: null });
+      } else {
+        // Auto-switch to select for non-placement tools clicking ground
+        setBuildTool('select');
       }
     },
     [activeTool, wallDrawing, snapToGrid, setWallDrawing, setSelection, activeFloorId, addDevice, setBuildTool, floors]
