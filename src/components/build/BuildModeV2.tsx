@@ -213,9 +213,9 @@ function AssetCatalog() {
   const placePropFn = useCallback((catalogId: string, url: string) => {
     if (!activeFloorId) return;
     // Smart placement: use camera target as placement point instead of origin
-    const { cameraRef } = require('../../lib/cameraRef');
-    const tx = Math.round(cameraRef.target.x * 10) / 10;
-    const tz = Math.round(cameraRef.target.z * 10) / 10;
+    const camRef = await import('../../lib/cameraRef');
+    const tx = Math.round(camRef.cameraRef.target.x * 10) / 10;
+    const tz = Math.round(camRef.cameraRef.target.z * 10) / 10;
     // Offset slightly if there's already a prop at the same spot
     const existing = floorProps.filter((p: any) => p.catalogId === catalogId);
     const offset = existing.length * 0.5;
