@@ -9,6 +9,7 @@ import { cn } from '../../lib/utils';
 import { Slider } from '../ui/slider';
 import { Popover, PopoverTrigger, PopoverContent } from '../ui/popover';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../ui/alert-dialog';
 import FloorPicker from './FloorPicker';
 import { useState } from 'react';
 import { toast } from 'sonner';
@@ -94,7 +95,7 @@ export default function BuildTopToolbar() {
   const envSource = useAppStore((s) => s.environment.source);
   const setWeatherSource = useAppStore((s) => s.setWeatherSource);
 
-  const [showClearConfirm, setShowClearConfirm] = useState(false);
+  
 
   return (
     <div className="relative z-50 flex items-center gap-1.5 px-2 py-1 border-b border-border bg-card/90 backdrop-blur-sm h-12">
@@ -289,6 +290,25 @@ export default function BuildTopToolbar() {
         <Ghost size={16} />
       </button>
 
+      {/* Clear all */}
+      <AlertDialog>
+        <AlertDialogTrigger asChild>
+          <button title="Rensa allt" className="p-2.5 rounded-xl text-destructive/70 hover:text-destructive hover:bg-destructive/10 transition-all min-w-[44px] min-h-[44px] flex items-center justify-center">
+            <Trash2 size={16} />
+          </button>
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Är du säker?</AlertDialogTitle>
+            <AlertDialogDescription>Alla väggar, rum och möbler tas bort permanent.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Nej</AlertDialogCancel>
+            <AlertDialogAction onClick={() => clearAllFloors()} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Ja, rensa</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Settings popover */}
       <Popover>
         <PopoverTrigger asChild>
@@ -350,23 +370,6 @@ export default function BuildTopToolbar() {
             </button>
           </div>
 
-          {/* Clear */}
-          <div className="border-t border-border pt-3">
-            {!showClearConfirm ? (
-              <button onClick={() => setShowClearConfirm(true)}
-                className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs text-destructive hover:bg-destructive/10 transition-colors">
-                <XCircle size={13} /> Rensa allt
-              </button>
-            ) : (
-              <div className="space-y-2">
-                <p className="text-[10px] text-muted-foreground text-center">Alla väggar, rum och möbler tas bort permanent.</p>
-                <div className="flex gap-2">
-                  <button onClick={() => setShowClearConfirm(false)} className="flex-1 py-1.5 rounded-lg bg-secondary/50 text-xs">Avbryt</button>
-                  <button onClick={() => { clearAllFloors(); setShowClearConfirm(false); }} className="flex-1 py-1.5 rounded-lg bg-destructive text-destructive-foreground text-xs">Rensa</button>
-                </div>
-              </div>
-            )}
-          </div>
         </PopoverContent>
       </Popover>
 
