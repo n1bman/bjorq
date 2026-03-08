@@ -603,10 +603,12 @@ export interface EnvironmentState {
   forecast?: ForecastDay[];
   sunAzimuth: number;
   sunElevation: number;
+  cloudCoverage: number; // 0-1, from HA or estimated from condition
   precipitationOverride: PrecipitationOverride;
   sunCalibration: SunCalibration;
   atmosphere: AtmosphereSettings;
   skyStyle: 'auto' | 'gradient' | 'solid';
+  profile: import('../lib/environmentEngine').EnvironmentProfile;
 }
 
 // ─── Home Assistant Layer ───
