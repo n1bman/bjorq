@@ -163,7 +163,13 @@ export default function ScenesPanel() {
                     <span className="text-lg">{scene.icon}</span>
                     <div className="min-w-0">
                       <p className="text-xs font-medium text-foreground truncate">{scene.name}</p>
-                      <p className="text-[9px] text-muted-foreground">{scene.snapshots.length} enheter</p>
+                      <p className="text-[9px] text-muted-foreground">
+                        {scene.snapshots.length} enheter
+                        {scene.linkedRoomIds && scene.linkedRoomIds.length > 0 && (
+                          <> · {scene.linkedRoomIds.map((rid) => allRooms.find((r) => r.id === rid)?.name).filter(Boolean).join(', ')}</>
+                        )}
+                        {(!scene.linkedRoomIds || scene.linkedRoomIds.length === 0) && ' · Global'}
+                      </p>
                     </div>
                   </div>
                 </button>
