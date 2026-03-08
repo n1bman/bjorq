@@ -555,6 +555,7 @@ export default function BuildModeV2() {
   const activeTab = useAppStore((s) => s.build.tab);
   const showDevicePanel = activeTool.startsWith('place-') || activeTool === 'vacuum-zone' || activeTool === ('place-vacuum-dock' as any);
   const showImportPanel = activeTab === 'import' && isImported;
+  const showFurnishPanel = activeTool === ('furnish' as any);
 
   return (
     <div className="w-full h-full relative flex flex-col">
