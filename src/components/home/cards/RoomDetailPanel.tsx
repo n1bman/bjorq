@@ -1,18 +1,22 @@
 import { useAppStore } from '../../../store/useAppStore';
 import { X, Lightbulb, Play, Zap, DoorOpen } from 'lucide-react';
 import { cn } from '../../../lib/utils';
-import { flyTo, cameraForPolygon } from '../../../lib/cameraRef';
 
 interface Props {
   roomId: string;
   onClose: () => void;
 }
 
+function getDeviceOn(state: any): boolean {
+  if (!state) return false;
+  return state.data?.on ?? false;
+}
+
 export default function RoomDetailPanel({ roomId, onClose }: Props) {
   const floors = useAppStore((s) => s.layout.floors);
   const markers = useAppStore((s) => s.devices.markers);
   const deviceStates = useAppStore((s) => s.devices.deviceStates);
-  const updateDeviceState = useAppStore((s) => s.updateDeviceState);
+  const toggleDeviceState = useAppStore((s) => s.toggleDeviceState);
   const savedScenes = useAppStore((s) => s.savedScenes);
   const activateScene = useAppStore((s) => s.activateScene);
   const automations = useAppStore((s) => s.automations);
@@ -24,13 +28,6 @@ export default function RoomDetailPanel({ roomId, onClose }: Props) {
   const roomDevices = markers.filter((m) => m.roomId === roomId);
   const roomScenes = savedScenes.filter((sc) => sc.linkedRoomIds?.includes(roomId));
   const roomAutomations = automations.filter((a) => a.linkedRoomIds?.includes(roomId));
-
-  const toggleDevice = (deviceId: string) => {
-    const state = deviceStates[deviceId];
-    if (!state) return;
-    const isOn = state.on ?? state.state === 'on';
-    updateDeviceState(deviceId, { on: !isOn, state: !isOn ? 'on' : 'off' });
-  };
 
   return (
     <div className="glass-panel rounded-xl p-3 w-72 max-h-96 overflow-y-auto animate-in fade-in slide-in-from-bottom-2 duration-200 space-y-3">
@@ -50,18 +47,18 @@ export default function RoomDetailPanel({ roomId, onClose }: Props) {
           <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Enheter</span>
           {roomDevices.map((dev) => {
             const state = deviceStates[dev.id];
-            const isOn = state?.on ?? state?.state === 'on';
+            const isOn = getDeviceOn(state);
             return (
               <button
                 key={dev.id}
-                onClick={() => toggleDevice(dev.id)}
+                onClick={() => toggleDeviceState(dev.id)}
                 className={cn(
                   'w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left transition-colors',
                   isOn ? 'bg-primary/10 text-primary' : 'hover:bg-secondary/30 text-muted-foreground'
                 )}
               >
                 <Lightbulb size={12} className={isOn ? 'text-primary' : ''} />
-                <span className="text-[11px] flex-1 truncate">{dev.label || dev.kind}</span>
+                <span className="text-[11px] flex-1 truncate">{dev.name || dev.kind}</span>
                 <span className="text-[9px]">{isOn ? 'PÅ' : 'AV'}</span>
               </button>
             );
@@ -97,7 +94,7 @@ export default function RoomDetailPanel({ roomId, onClose }: Props) {
             >
               <Zap size={12} />
               <span className="text-[11px] flex-1 truncate">{a.name}</span>
-              <span className={cn('text-[9px]', a.enabled ? 'text-green-400' : 'text-muted-foreground/50')}>
+              <span className={cn('text-[9px]', a.enabled ? 'text-primary' : 'text-muted-foreground/50')}>
                 {a.enabled ? 'aktiv' : 'av'}
               </span>
             </div>

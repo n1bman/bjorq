@@ -735,10 +735,11 @@ function RoomInspector({ floorId, roomId, floor, close }: { floorId: string; roo
   };
 
   const handleSaveCamera = () => {
-    const camRef = (await import('../../lib/cameraRef')).cameraRef;
-    setRoomCameraPreset(floorId, room.id, {
-      position: [camRef.position.x, camRef.position.y, camRef.position.z],
-      target: [camRef.target.x, camRef.target.y, camRef.target.z],
+    import('../../lib/cameraRef').then(({ cameraRef: camRef }) => {
+      setRoomCameraPreset(floorId, room.id, {
+        position: [camRef.position.x, camRef.position.y, camRef.position.z],
+        target: [camRef.target.x, camRef.target.y, camRef.target.z],
+      });
     });
   };
 

@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { useAppStore } from '../../store/useAppStore';
-import { DoorOpen, Lightbulb, X } from 'lucide-react';
+import { DoorOpen, X } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { flyTo, cameraForPolygon } from '../../lib/cameraRef';
+import RoomDetailPanel from './cards/RoomDetailPanel';
 
 export default function RoomNavigator() {
   const floors = useAppStore((s) => s.layout.floors);
   const markers = useAppStore((s) => s.devices.markers);
   const [open, setOpen] = useState(false);
+  const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
 
   const allRooms = floors.flatMap((f) =>
     (f.rooms ?? []).map((r) => ({ ...r, floorId: f.id, floorName: f.name }))
@@ -22,7 +24,7 @@ export default function RoomNavigator() {
       const auto = cameraForPolygon(room.polygon);
       flyTo(auto.position, auto.target);
     }
-    setOpen(false);
+    setSelectedRoomId(room.id);
   };
 
   const getDeviceCount = (roomId: string) =>
@@ -31,13 +33,22 @@ export default function RoomNavigator() {
   const getLightCount = (roomId: string) =>
     markers.filter((m) => m.roomId === roomId && m.kind === 'light').length;
 
+  const handleClose = () => {
+    setOpen(false);
+    setSelectedRoomId(null);
+  };
+
   return (
     <div className="fixed bottom-20 right-20 z-50 flex flex-col items-end gap-2">
-      {open && (
+      {selectedRoomId && (
+        <RoomDetailPanel roomId={selectedRoomId} onClose={() => setSelectedRoomId(null)} />
+      )}
+
+      {open && !selectedRoomId && (
         <div className="glass-panel rounded-xl p-3 w-64 max-h-80 overflow-y-auto animate-in fade-in slide-in-from-bottom-2 duration-200 space-y-1">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-semibold text-foreground">Rum</span>
-            <button onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground">
+            <button onClick={handleClose} className="text-muted-foreground hover:text-foreground">
               <X size={14} />
             </button>
           </div>
@@ -68,10 +79,10 @@ export default function RoomNavigator() {
       )}
 
       <button
-        onClick={() => setOpen(!open)}
+        onClick={() => { if (open) handleClose(); else setOpen(true); }}
         className={cn(
           'w-14 h-14 rounded-full glass-panel flex items-center justify-center transition-all',
-          open ? 'text-primary amber-glow' : 'text-muted-foreground hover:text-foreground'
+          open || selectedRoomId ? 'text-primary amber-glow' : 'text-muted-foreground hover:text-foreground'
         )}
       >
         <DoorOpen size={20} />
