@@ -257,7 +257,7 @@ function PropModel({ id, url: rawUrl, position, rotation, scale, colorOverride, 
     window.addEventListener('pointerup', onPointerUp);
   };
 
-  // Memoize scene clone — only re-clone when scene or selection changes
+  // Memoize scene clone — apply material overrides
   const displayScene = useMemo(() => {
     if (!scene) return null;
     const clone = scene.clone();
@@ -265,15 +265,30 @@ function PropModel({ id, url: rawUrl, position, rotation, scale, colorOverride, 
       if (child.isMesh) {
         child.castShadow = false;
         child.receiveShadow = true;
+        // Always clone material to avoid mutating original
+        child.material = child.material.clone();
+
+        if (colorOverride) {
+          child.material.color = new THREE.Color(colorOverride);
+        }
+        if (textureOverride) {
+          const tex = new THREE.TextureLoader().load(textureOverride);
+          tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+          tex.repeat.set(textureScale, textureScale);
+          child.material.map = tex;
+          child.material.needsUpdate = true;
+        }
+        if (roughnessOverride !== undefined) child.material.roughness = roughnessOverride;
+        if (metalnessOverride !== undefined) child.material.metalness = metalnessOverride;
+
         if (isSelected) {
-          child.material = child.material.clone();
           child.material.emissive = new THREE.Color('#4a9eff');
           child.material.emissiveIntensity = 0.3;
         }
       }
     });
     return clone;
-  }, [scene, isSelected]);
+  }, [scene, isSelected, colorOverride, textureOverride, textureScale, roughnessOverride, metalnessOverride]);
 
   // Loading state
   if (status === 'loading' || status === 'idle') {
