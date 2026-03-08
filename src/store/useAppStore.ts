@@ -325,7 +325,6 @@ const storeCreator = (set: any, get: any): AppState => ({
       const allRooms = s.layout.floors.flatMap((f: any) => f.rooms ?? []);
       const room = allRooms.find((r: any) => scene.linkedRoomIds!.includes(r.id));
       if (room) {
-        const { flyTo, cameraForPolygon } = require('../lib/cameraRef');
         if (room.cameraPreset) {
           flyTo(room.cameraPreset.position, room.cameraPreset.target);
         } else if (room.polygon && room.polygon.length >= 3) {
