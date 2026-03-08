@@ -156,32 +156,6 @@ function CameraController() {
   );
 }
 
-function ContextLossHandler() {
-  const { gl } = useThree();
-  const [contextLost, setContextLost] = useState(false);
-
-  useEffect(() => {
-    const canvas = gl.domElement;
-    const handleLost = (e: Event) => {
-      e.preventDefault();
-      console.warn('[Scene3D] WebGL context lost');
-      setContextLost(true);
-    };
-    const handleRestored = () => {
-      console.info('[Scene3D] WebGL context restored');
-      setContextLost(false);
-    };
-    canvas.addEventListener('webglcontextlost', handleLost);
-    canvas.addEventListener('webglcontextrestored', handleRestored);
-    return () => {
-      canvas.removeEventListener('webglcontextlost', handleLost);
-      canvas.removeEventListener('webglcontextrestored', handleRestored);
-    };
-  }, [gl]);
-
-  if (contextLost) return null;
-  return null;
-}
 
 function SceneContent() {
   const appMode = useAppStore((s) => s.appMode);
