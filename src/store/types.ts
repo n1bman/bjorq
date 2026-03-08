@@ -924,6 +924,7 @@ export interface AppState {
   removeRoom: (floorId: string, roomId: string) => void;
   renameRoom: (floorId: string, roomId: string, name: string) => void;
   setRoomMaterial: (floorId: string, roomId: string, target: 'floor' | 'wall', materialId: string) => void;
+  setRoomCameraPreset: (floorId: string, roomId: string, preset: RoomCameraPreset | undefined) => void;
   addRoomFromRect: (floorId: string, x: number, z: number, w: number, d: number, name: string) => void;
 
   // Stair actions
