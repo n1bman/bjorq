@@ -118,6 +118,12 @@ function CameraController() {
     if (controlsRef.current) {
       cameraRef.target.copy(controlsRef.current.target);
     }
+    // Check for external flyTo requests
+    const { pendingFlyTo } = require('../lib/cameraRef');
+    if (pendingFlyTo) {
+      lerpingTo.current = { pos: pendingFlyTo.position, target: pendingFlyTo.target };
+      require('../lib/cameraRef').pendingFlyTo = null;
+    }
     if (lerpingTo.current) {
       const { pos: targetPos, target: targetTarget } = lerpingTo.current;
       camera.position.lerp(targetPos, delta * 3);
