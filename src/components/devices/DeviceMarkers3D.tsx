@@ -411,7 +411,7 @@ function drawScreenCanvas(
   }
 }
 
-function MediaScreenMarker({ position, id, onSelect, onDragStart, selected, marker, buildMode }: MediaScreenMarkerProps) {
+const MediaScreenMarker = React.forwardRef<THREE.Group, MediaScreenMarkerProps>(function MediaScreenMarker({ position, id, onSelect, onDragStart, selected, marker, buildMode }, ref) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const textureRef = useRef<THREE.CanvasTexture | null>(null);
   const glowMeshRef = useRef<THREE.Mesh>(null);
