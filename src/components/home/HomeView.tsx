@@ -169,6 +169,7 @@ export default function HomeView() {
       )}
 
       <CameraFab />
+      <RoomNavigator />
       <HomeNav />
     </div>
   );

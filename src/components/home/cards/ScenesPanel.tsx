@@ -42,11 +42,14 @@ export default function ScenesPanel() {
       icon: newIcon,
       snapshots,
       createdAt: new Date().toISOString(),
+      linkedRoomIds: selectedRooms.length > 0 ? selectedRooms : undefined,
+      scope: selectedRooms.length === 0 ? 'global' : selectedRooms.length === 1 ? 'room' : 'custom',
     };
 
     addScene(scene);
     setNewName('');
     setSelectedDevices([]);
+    setSelectedRooms([]);
     setShowAdd(false);
   };
 
