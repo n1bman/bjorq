@@ -17,6 +17,7 @@ import { domainToKind } from '../../lib/haDomainMapping';
 import VacuumMappingTools from './devices/VacuumMappingTools';
 import { cn } from '../../lib/utils';
 import { toast } from 'sonner';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from '../ui/dialog';
 
 const ImportPreview3D = lazy(() => import('./ImportPreview3D'));
 const ImportTools = lazy(() => import('./import/ImportTools'));
@@ -143,6 +144,11 @@ function FurnishCatalog() {
 function ImportCatalog() {
   const floorplanRef = useRef<HTMLInputElement>(null);
   const modelRef = useRef<HTMLInputElement>(null);
+  const [modelDialogOpen, setModelDialogOpen] = useState(false);
+  const imported = useAppStore((s) => s.homeGeometry.imported);
+  const setImportedModel = useAppStore((s) => s.setImportedModel);
+  const setHomeGeometrySource = useAppStore((s) => s.setHomeGeometrySource);
+
   const handleFloorplan = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -162,34 +168,111 @@ function ImportCatalog() {
     reader.readAsDataURL(file);
     e.target.value = '';
   };
-  const handleModel = (e: React.ChangeEvent<HTMLInputElement>) => {
+
+  const handleModel = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const blobUrl = URL.createObjectURL(file);
-    const reader = new FileReader();
-    reader.onload = () => {
-      const base64 = (reader.result as string).split(',')[1];
-      useAppStore.getState().setImportedModel({ url: blobUrl, fileData: base64 });
-      toast.success('3D-modell importerad');
-    };
-    reader.readAsDataURL(file);
+    const { isHostedSync } = await import('../../lib/apiClient');
+    if (isHostedSync()) {
+      try {
+        const { uploadAsset } = await import('../../lib/apiClient');
+        const result = await uploadAsset('home', 'building', file.name.replace(/\.\w+$/, ''), 'balanced', file);
+        const serverUrl = `/projects/home/assets/building/${result.assetId}/files/balanced.glb`;
+        setImportedModel({ url: serverUrl, fileData: undefined });
+        setHomeGeometrySource('imported');
+      } catch (err) {
+        console.error('[Import] Server upload failed, falling back to blob:', err);
+        const url = URL.createObjectURL(file);
+        setImportedModel({ url });
+        setHomeGeometrySource('imported');
+      }
+    } else {
+      const url = URL.createObjectURL(file);
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64 = (reader.result as string).split(',')[1];
+        setImportedModel({ url, fileData: base64 });
+        setHomeGeometrySource('imported');
+      };
+      reader.onerror = () => {
+        setImportedModel({ url });
+        setHomeGeometrySource('imported');
+      };
+      reader.readAsDataURL(file);
+    }
+    toast.success('3D-modell importerad');
     e.target.value = '';
   };
-  const cards = [
-    { label: 'Planritning', icon: FileImage, accept: '.png,.jpg,.jpeg', ref: floorplanRef, handler: handleFloorplan },
-    { label: '3D-modell', icon: Box, accept: '.glb,.gltf', ref: modelRef, handler: handleModel },
-  ];
+
   return (
     <>
-      {cards.map((card) => (
-        <div key={card.label}>
-          <button onClick={() => card.ref.current?.click()} className="flex flex-col items-center gap-1 px-4 py-2 rounded-md border border-border hover:bg-muted text-xs text-foreground transition-colors">
-            <card.icon className="w-5 h-5 text-muted-foreground" />
-            <span className="text-[10px]">{card.label}</span>
+      {/* Planritning — direct file picker */}
+      <div>
+        <button onClick={() => floorplanRef.current?.click()} className="flex flex-col items-center gap-1 px-4 py-2 rounded-md border border-border hover:bg-muted text-xs text-foreground transition-colors">
+          <FileImage className="w-5 h-5 text-muted-foreground" />
+          <span className="text-[10px]">Planritning</span>
+        </button>
+        <input ref={floorplanRef} type="file" accept=".png,.jpg,.jpeg" className="hidden" onChange={handleFloorplan} />
+      </div>
+
+      {/* 3D-modell — opens dialog */}
+      <Dialog open={modelDialogOpen} onOpenChange={setModelDialogOpen}>
+        <DialogTrigger asChild>
+          <button className="flex flex-col items-center gap-1 px-4 py-2 rounded-md border border-border hover:bg-muted text-xs text-foreground transition-colors">
+            <Box className="w-5 h-5 text-muted-foreground" />
+            <span className="text-[10px]">3D-modell</span>
           </button>
-          <input ref={card.ref} type="file" accept={card.accept} className="hidden" onChange={card.handler} />
-        </div>
-      ))}
+        </DialogTrigger>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Importera 3D-modell</DialogTitle>
+            <DialogDescription>Ladda upp en GLB/GLTF-fil av ditt hem.</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <button
+              onClick={() => modelRef.current?.click()}
+              className="w-full flex items-center justify-center gap-2 px-3 py-4 rounded-lg border-2 border-dashed border-border hover:border-primary/50 text-muted-foreground hover:text-primary text-sm transition-all"
+            >
+              <Upload size={18} />
+              <span>Välj GLB/GLTF</span>
+            </button>
+            <input ref={modelRef} type="file" accept=".glb,.gltf" className="hidden" onChange={handleModel} />
+
+            {imported.url && (
+              <div className="flex items-center gap-2 text-xs text-primary">
+                <Box size={14} />
+                <span className="truncate">{imported.url.split('/').pop()}</span>
+              </div>
+            )}
+
+            {imported.modelStats && (
+              <div className="rounded-lg border border-border p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">Prestanda</span>
+                  <span className={`text-xs font-bold px-2 py-0.5 rounded ${
+                    imported.modelStats.rating === 'ok' ? 'bg-green-500/20 text-green-400' :
+                    imported.modelStats.rating === 'heavy' ? 'bg-yellow-500/20 text-yellow-400' :
+                    'bg-red-500/20 text-red-400'
+                  }`}>
+                    {imported.modelStats.rating === 'ok' ? '✓ OK' : imported.modelStats.rating === 'heavy' ? '⚠ Tung' : '✗ För tung'}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                  <span className="text-muted-foreground">Trianglar</span>
+                  <span className="text-foreground text-right">{imported.modelStats.triangles.toLocaleString()}</span>
+                  <span className="text-muted-foreground">Material</span>
+                  <span className="text-foreground text-right">{imported.modelStats.materials}</span>
+                  <span className="text-muted-foreground">Texturer</span>
+                  <span className="text-foreground text-right">{imported.modelStats.textures}</span>
+                  <span className="text-muted-foreground">Max upplösning</span>
+                  <span className="text-foreground text-right">{imported.modelStats.maxTextureRes || '–'}px</span>
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
@@ -528,7 +611,7 @@ export default function BuildModeV2() {
   const activeTool = useAppStore((s) => s.build.activeTool);
   const activeTab = useAppStore((s) => s.build.tab);
   const showDevicePanel = activeTool.startsWith('place-') || activeTool === 'vacuum-zone' || activeTool === ('place-vacuum-dock' as any);
-  const showImportPanel = activeTab === 'import';
+  const showImportPanel = activeTab === 'import' && isImported;
 
   return (
     <div className="w-full h-full relative flex flex-col">
