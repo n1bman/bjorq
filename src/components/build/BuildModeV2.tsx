@@ -171,7 +171,7 @@ function AssetCatalog() {
     ...curatedAssets.map((c): ACEntry => ({
       id: c.id, name: c.name, thumbnail: c.thumbnail ? `/catalog/${c.thumbnail}` : undefined,
       category: c.category, source: 'curated', modelPath: `/catalog/${c.model}`, curatedMeta: c,
-      haMappable: c.ha?.mappable, dimensions: c.dimensions, performance: c.performance, subcategory: c.subcategory,
+      dimensions: c.dimensions, performance: c.performance, subcategory: c.subcategory,
     })),
     ...catalog.map((c): ACEntry => ({
       id: c.id, name: c.name, thumbnail: c.thumbnail, category: c.category || 'imported',
