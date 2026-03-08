@@ -105,6 +105,7 @@ function syncProjectToServer() {
       devices: s.devices,
       homeGeometry: homeGeo,
       props: s.props,
+      terrain: s.terrain,
       activityLog: s.activityLog,
     }).catch((err) => console.warn('[Sync] Failed to save project:', err));
   });
