@@ -163,14 +163,38 @@ const storeCreator = (set: any, get: any): AppState => ({
   // Device actions
   addDevice: (marker) => {
     get().pushUndo();
+    // Auto-assign roomId based on device position and current floor rooms
+    let enrichedMarker = marker;
+    if (!marker.roomId) {
+      const floor = get().layout.floors.find((f) => f.id === marker.floorId);
+      if (floor?.rooms?.length) {
+        import('../lib/roomDetection').then(({ findRoomForPoint }) => {
+          const roomId = findRoomForPoint(floor.rooms, [marker.position[0], marker.position[2]]);
+          if (roomId) {
+            set((s: any) => ({
+              devices: {
+                ...s.devices,
+                markers: s.devices.markers.map((m: any) => m.id === marker.id ? { ...m, roomId } : m),
+              },
+            }));
+          }
+        });
+      }
+    }
     set((s: any) => ({
       devices: {
         ...s.devices,
-        markers: [...s.devices.markers, marker],
+        markers: [...s.devices.markers, enrichedMarker],
         deviceStates: { ...s.devices.deviceStates, [marker.id]: getDefaultState(marker.kind) },
       },
     }));
   },
+  assignDeviceRoom: (deviceId: string, roomId: string | null) => set((s: any) => ({
+    devices: {
+      ...s.devices,
+      markers: s.devices.markers.map((m: any) => m.id === deviceId ? { ...m, roomId: roomId ?? undefined } : m),
+    },
+  })),
   removeDevice: (id) => {
     get().pushUndo();
     set((s: any) => {
