@@ -323,7 +323,7 @@ export default function Walls3D() {
                 <mesh key={`${wall.id}-garage-sec-${i}-${s}`} position={new THREE.Vector3(localX, 0, 0)
                   .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
                   .add(new THREE.Vector3(origCx, sy + elevation, origCz)).toArray()}
-                  rotation={[0, -angle, 0]} castShadow>
+                  rotation={[0, -angle, 0]}>
                   <boxGeometry args={[op.width - 0.06, sectionH - 0.02, 0.04]} />
                   <meshStandardMaterial color={garageColor} roughness={0.7} metalness={0.2} />
                 </mesh>
