@@ -1,10 +1,11 @@
-import { Canvas, useThree } from '@react-three/fiber';
+import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Grid, Environment } from '@react-three/drei';
-import { Suspense, useMemo, useRef, useEffect, useState } from 'react';
+import { Suspense, useMemo, useRef, useEffect, useState, useCallback } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useAppStore } from '../store/useAppStore';
 import { cameraRef } from '../lib/cameraRef';
+import * as cameraRefModule from '../lib/cameraRef';
 import Walls3D from './build/Walls3D';
 import Floors3D from './build/Floors3D';
 
