@@ -35,6 +35,7 @@ export default function AutomationsPanel() {
   const [newName, setNewName] = useState('');
   const [newTriggerType, setNewTriggerType] = useState<AutomationTrigger['type']>('time');
   const [newTriggerTime, setNewTriggerTime] = useState('08:00');
+  const [newLinkedRooms, setNewLinkedRooms] = useState<string[]>([]);
   const [newTriggerDevice, setNewTriggerDevice] = useState('');
   const [newActionType, setNewActionType] = useState<AutomationAction['type']>('device_toggle');
   const [newActionDevice, setNewActionDevice] = useState('');
