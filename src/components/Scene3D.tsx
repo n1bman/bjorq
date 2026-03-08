@@ -338,7 +338,7 @@ export default function Scene3D() {
       <Canvas
         key={canvasKey}
         shadows={shadows}
-        camera={{ position: [0, 25, 0.01], fov: 45 }}
+        camera={{ position: [0, 25, 0.01], fov: 45, near: 0.1, far: 500 }}
         style={{ background: 'transparent' }}
         gl={{
           antialias: antialiasing && !tabletMode,
