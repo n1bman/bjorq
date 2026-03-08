@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback, useEffect, useMemo } from 'react';
+import { useRef, useState, useEffect, useMemo } from 'react';
 import { ErrorBoundary } from './ErrorBoundary3D';
 import { useThree } from '@react-three/fiber';
 import { useAppStore } from '../../store/useAppStore';
@@ -89,17 +89,20 @@ function loadGltf(url: string): Promise<THREE.Group> {
   });
 }
 
-/** Hook to get a valid URL, reconstructing from catalog fileData if blob URL expired */
+/**
+ * Hook to get a valid URL, reconstructing from catalog fileData if blob URL expired.
+ * Uses stable deps only — reads store via getState() to avoid re-render loops.
+ */
 function useValidPropUrl(propId: string, originalUrl: string): string {
-  const catalog = useAppStore((s) => s.props.catalog);
-  const items = useAppStore((s) => s.props.items);
-  const updateProp = useAppStore((s) => s.updateProp);
   const [validUrl, setValidUrl] = useState(originalUrl);
+  const resolvedRef = useRef(false);
 
   useEffect(() => {
+    resolvedRef.current = false;
+
     if (!originalUrl) { setValidUrl(''); return; }
 
-    // Non-blob URLs are always valid (server paths, data URLs)
+    // Non-blob URLs are always valid
     if (!originalUrl.startsWith('blob:')) {
       setValidUrl(originalUrl);
       return;
@@ -107,23 +110,35 @@ function useValidPropUrl(propId: string, originalUrl: string): string {
 
     // Test if blob URL is still alive
     fetch(originalUrl, { method: 'HEAD' })
-      .then(() => setValidUrl(originalUrl))
+      .then(() => {
+        if (!resolvedRef.current) {
+          resolvedRef.current = true;
+          setValidUrl(originalUrl);
+        }
+      })
       .catch(() => {
-        // Blob expired — try to reconstruct from catalog fileData
+        if (resolvedRef.current) return;
+        resolvedRef.current = true;
+
+        // Read from store snapshot — no dependency needed
+        const state = useAppStore.getState();
+        const items = state.props.items;
+        const catalog = state.props.catalog;
         const propItem = items.find((p) => p.id === propId);
         const catItem = propItem ? catalog.find((c: any) => c.id === propItem.catalogId) : null;
         const fileData = (catItem as any)?.fileData;
+
         if (fileData) {
           const newUrl = base64ToBlobUrl(fileData);
-          updateProp(propId, { url: newUrl });
+          useAppStore.getState().updateProp(propId, { url: newUrl });
           setValidUrl(newUrl);
-          console.info(`[Props3D] Restored blob URL for "${propItem?.name}" from fileData`);
+          console.info(`[Props3D] Restored blob URL for prop from fileData`);
         } else {
           console.warn(`[Props3D] Blob URL expired and no fileData for prop ${propId}`);
           setValidUrl(originalUrl); // Will fail gracefully in loader
         }
       });
-  }, [originalUrl, propId, catalog, items, updateProp]);
+  }, [originalUrl, propId]); // ← stable deps only
 
   return validUrl;
 }
@@ -139,10 +154,8 @@ function PropModel({ id, url: rawUrl, position, rotation, scale }: {
   const appMode = useAppStore((s) => s.appMode);
   const selection = useAppStore((s) => s.build.selection);
   const setSelection = useAppStore((s) => s.setSelection);
-  const updateProp = useAppStore((s) => s.updateProp);
   const activeTool = useAppStore((s) => s.build.activeTool);
   const tab = useAppStore((s) => s.build.tab);
-  const catalog = useAppStore((s) => s.props.catalog);
 
   const isSelected = appMode === 'build' && selection.type === 'prop' && selection.id === id;
   const groupRef = useRef<THREE.Group>(null);
@@ -153,68 +166,88 @@ function PropModel({ id, url: rawUrl, position, rotation, scale }: {
 
   const [status, setStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [scene, setScene] = useState<THREE.Group | null>(null);
+  const loadingRef = useRef(false);
+  const lastLoadedUrl = useRef('');
   const retryCount = useRef(0);
-  const currentUrl = useRef('');
 
-  // Find catalog item for name
+  // Find model name for logging
   const items = useAppStore((s) => s.props.items);
   const propItem = items.find((p) => p.id === id);
-  const catItem = propItem ? catalog.find((c) => c.id === propItem.catalogId) : null;
-  const modelName = propItem?.name || catItem?.name || 'Modell';
+  const modelName = propItem?.name || 'Modell';
 
-  useEffect(() => {
-    if (!url) { setStatus('idle'); return; }
-    if (scene) { disposeScene(scene); setScene(null); }
-    currentUrl.current = url;
-    retryCount.current = 0;
-    doLoad(url);
-    return () => { currentUrl.current = ''; };
-  }, [url]);
-
-  const doLoad = useCallback((loadUrl: string) => {
+  // Plain function — no useCallback to avoid circular deps
+  const doLoad = (loadUrl: string) => {
+    if (loadingRef.current) return;
+    loadingRef.current = true;
     setStatus('loading');
+
     const timeout = setTimeout(() => {
-      if (currentUrl.current === url) {
+      if (loadingRef.current) {
         console.warn(`[Props3D] Timeout loading ${modelName}`);
-        handleLoadError(loadUrl);
+        loadingRef.current = false;
+        setStatus('error');
       }
     }, LOAD_TIMEOUT);
 
     loadGltf(loadUrl)
       .then((loadedScene) => {
         clearTimeout(timeout);
-        if (currentUrl.current !== url) { disposeScene(loadedScene); return; }
+        loadingRef.current = false;
+        // Check if URL is still current
+        if (lastLoadedUrl.current !== loadUrl.split('?')[0] && lastLoadedUrl.current !== loadUrl) {
+          disposeScene(loadedScene);
+          return;
+        }
         const info = analyzeModel(loadedScene);
         console.info(`[Props3D] Loaded "${modelName}": ${info.triangles.toLocaleString()} △ · ${info.meshCount} mesh · ${info.materialCount} mat — ${info.rating}`);
-        updateProp(id, { modelStats: info });
+        useAppStore.getState().updateProp(id, { modelStats: info });
         setScene(loadedScene);
         setStatus('ready');
       })
       .catch((err) => {
         clearTimeout(timeout);
+        loadingRef.current = false;
         console.warn(`[Props3D] Error loading "${modelName}":`, err);
-        handleLoadError(loadUrl);
+
+        if (retryCount.current < 1 && !isBlobOrDataUrl(loadUrl)) {
+          retryCount.current++;
+          const bustUrl = loadUrl + (loadUrl.includes('?') ? '&' : '?') + `v=${Date.now()}`;
+          console.info(`[Props3D] Retrying "${modelName}" with cache bust`);
+          doLoad(bustUrl);
+        } else {
+          setStatus('error');
+        }
       });
-  }, [url, modelName, id, updateProp]);
+  };
 
-  const handleLoadError = useCallback((failedUrl: string) => {
-    if (retryCount.current < 1 && !isBlobOrDataUrl(url)) {
-      retryCount.current++;
-      const bustUrl = url + (url.includes('?') ? '&' : '?') + `v=${Date.now()}`;
-      console.info(`[Props3D] Retrying "${modelName}" with cache bust`);
-      doLoad(bustUrl);
-    } else {
-      setStatus('error');
-    }
-  }, [url, doLoad, modelName]);
+  // Load effect — only runs when url actually changes
+  useEffect(() => {
+    if (!url) { setStatus('idle'); return; }
 
-  const handleClick = useCallback((e: ThreeEvent<PointerEvent>) => {
+    // Don't reload if same URL
+    const baseUrl = url.split('?')[0];
+    if (baseUrl === lastLoadedUrl.current) return;
+
+    // Dispose old scene
+    if (scene) { disposeScene(scene); setScene(null); }
+
+    lastLoadedUrl.current = baseUrl;
+    retryCount.current = 0;
+    loadingRef.current = false; // Reset guard
+    doLoad(url);
+
+    return () => {
+      lastLoadedUrl.current = '';
+    };
+  }, [url]);
+
+  const handleClick = (e: ThreeEvent<PointerEvent>) => {
     if (appMode !== 'build' || activeTool !== 'select') return;
     e.stopPropagation();
     setSelection({ type: 'prop', id });
-  }, [appMode, activeTool, id, setSelection]);
+  };
 
-  const handlePointerDown = useCallback((e: ThreeEvent<PointerEvent>) => {
+  const handlePointerDown = (e: ThreeEvent<PointerEvent>) => {
     if (appMode !== 'build' || activeTool !== 'select' || tab !== 'furnish') return;
     e.stopPropagation();
     setSelection({ type: 'prop', id });
@@ -239,7 +272,7 @@ function PropModel({ id, url: rawUrl, position, rotation, scale }: {
       const target = new THREE.Vector3();
       raycaster.ray.intersectPlane(dragPlane.current, target);
       if (target) {
-        updateProp(id, {
+        useAppStore.getState().updateProp(id, {
           position: [
             target.x - dragOffset.current.x,
             Math.max(0, position[1]),
@@ -258,9 +291,9 @@ function PropModel({ id, url: rawUrl, position, rotation, scale }: {
 
     window.addEventListener('pointermove', onPointerMove);
     window.addEventListener('pointerup', onPointerUp);
-  }, [appMode, activeTool, tab, id, position, camera, raycaster, gl, updateProp, setSelection]);
+  };
 
-  // Memoize scene clone — only re-clone when scene or selection changes, NOT every render
+  // Memoize scene clone — only re-clone when scene or selection changes
   const displayScene = useMemo(() => {
     if (!scene) return null;
     const clone = scene.clone();
@@ -310,7 +343,7 @@ function PropModel({ id, url: rawUrl, position, rotation, scale }: {
               Kunde inte ladda: {modelName}
             </div>
             <button
-              onClick={() => { retryCount.current = 0; doLoad(url); }}
+              onClick={() => { retryCount.current = 0; loadingRef.current = false; lastLoadedUrl.current = ''; doLoad(url); }}
               style={{
                 background: '#ef4444', color: '#fff', border: 'none', borderRadius: 6,
                 padding: '4px 10px', fontSize: 11, cursor: 'pointer', whiteSpace: 'nowrap',
