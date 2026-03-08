@@ -595,26 +595,42 @@ const storeCreator = (set: any, get: any): AppState => ({
         return s;
       }
 
-      // Determine which side of each wall faces into this room
-      const roomCx = room.polygon.reduce((a: number, p: [number, number]) => a + p[0], 0) / room.polygon.length;
-      const roomCz = room.polygon.reduce((a: number, p: [number, number]) => a + p[1], 0) / room.polygon.length;
+      // Use polygon winding to determine which side of each wall is interior
+      const poly = room.polygon as [number, number][];
+      // Compute signed area to determine winding (positive = CCW, negative = CW)
+      let signedArea = 0;
+      for (let i = 0; i < poly.length; i++) {
+        const j = (i + 1) % poly.length;
+        signedArea += (poly[j][0] - poly[i][0]) * (poly[j][1] + poly[i][1]);
+      }
+      const isCW = signedArea > 0; // In our coordinate system: positive = CW
 
       const updatedWalls = floor.walls.map((w: any) => {
         if (!room.wallIds.includes(w.id)) return w;
-        // Wall normal (perpendicular to from→to, pointing left)
-        const dx = w.to[0] - w.from[0];
-        const dz = w.to[1] - w.from[1];
-        const nx = -dz; // left normal
-        const nz = dx;
-        const wallMidX = (w.from[0] + w.to[0]) / 2;
-        const wallMidZ = (w.from[1] + w.to[1]) / 2;
-        // Check if room center is on the left or right side
-        const toRoom = (roomCx - wallMidX) * nx + (roomCz - wallMidZ) * nz;
-        if (toRoom >= 0) {
-          // Room is on the left side
+
+        // Find this wall's edge in the polygon to determine traversal direction
+        const EPS = 0.15;
+        let wallMatchesPolyDir = true; // default
+        for (let i = 0; i < poly.length; i++) {
+          const j = (i + 1) % poly.length;
+          const fromMatchesI = Math.abs(w.from[0] - poly[i][0]) < EPS && Math.abs(w.from[1] - poly[i][1]) < EPS;
+          const toMatchesJ = Math.abs(w.to[0] - poly[j][0]) < EPS && Math.abs(w.to[1] - poly[j][1]) < EPS;
+          const fromMatchesJ = Math.abs(w.from[0] - poly[j][0]) < EPS && Math.abs(w.from[1] - poly[j][1]) < EPS;
+          const toMatchesI = Math.abs(w.to[0] - poly[i][0]) < EPS && Math.abs(w.to[1] - poly[i][1]) < EPS;
+          if (fromMatchesI && toMatchesJ) { wallMatchesPolyDir = true; break; }
+          if (fromMatchesJ && toMatchesI) { wallMatchesPolyDir = false; break; }
+        }
+
+        // For CW polygon: left normal of polygon-direction edge points inward
+        // For CCW polygon: right normal of polygon-direction edge points inward
+        // wall's "left" = left normal of wall.from→to
+        // If wall matches polygon direction: interior = left for CW, right for CCW
+        // If wall is reversed: interior = right for CW, left for CCW
+        const interiorIsLeft = wallMatchesPolyDir ? isCW : !isCW;
+
+        if (interiorIsLeft) {
           return { ...w, leftMaterialId: materialId };
         } else {
-          // Room is on the right side
           return { ...w, rightMaterialId: materialId };
         }
       });

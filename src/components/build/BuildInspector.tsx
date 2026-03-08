@@ -937,10 +937,10 @@ function DeviceInspector({ deviceId, close }: { deviceId: string; close: React.R
         <div className="space-y-2">
           <label className="text-muted-foreground text-[10px]">Höjd (Y) — {device.position[1].toFixed(1)} m</label>
           <div className="flex items-center gap-2">
-            <Slider min={0} max={10} step={0.1} value={[device.position[1]]}
+            <Slider min={0} max={10} step={0.1} value={[Math.max(0, device.position[1])]}
               onValueChange={([v]) => {
                 const pos = [...device.position] as [number, number, number];
-                pos[1] = v;
+                pos[1] = Math.max(0, v);
                 updateDevice(device.id, { position: pos });
               }}
               className="flex-1"

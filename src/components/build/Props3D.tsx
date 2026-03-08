@@ -242,7 +242,7 @@ function PropModel({ id, url: rawUrl, position, rotation, scale }: {
         updateProp(id, {
           position: [
             target.x - dragOffset.current.x,
-            position[1],
+            Math.max(0, position[1]),
             target.z - dragOffset.current.z,
           ],
         });
