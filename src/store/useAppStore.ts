@@ -113,8 +113,8 @@ function syncProjectToServer() {
   });
 }
 
-/** Recompute environment profile from current state and store it */
-function recomputeEnvProfile(get: any, set: any) {
+/** Recompute environment profile from current state and store it. */
+function recomputeEnvProfile(get: any, set: any): void {
   const env = get().environment;
   const profile = computeEnvironmentProfile({
     sunAzimuth: env.sunAzimuth,
