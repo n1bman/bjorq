@@ -252,9 +252,9 @@ function InlineTerrainEnvironment3D() {
   if (!terrain?.enabled) return null;
   return (
     <group>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]} receiveShadow>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.015, 0]} receiveShadow>
         <circleGeometry args={[terrain.grassRadius || 20, 64]} />
-        <meshStandardMaterial color={terrain.grassColor || '#4a7a3a'} roughness={0.95} polygonOffset polygonOffsetFactor={-0.5} polygonOffsetUnits={-0.5} />
+        <meshStandardMaterial color={terrain.grassColor || '#4a7a3a'} roughness={0.95} polygonOffset polygonOffsetFactor={-1} polygonOffsetUnits={-1} />
       </mesh>
       {terrain.trees?.map((tree) => (
         <group key={tree.id} position={[tree.position[0], 0, tree.position[1]]} scale={tree.scale}>

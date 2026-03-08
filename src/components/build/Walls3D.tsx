@@ -453,7 +453,7 @@ export default function Walls3D() {
             position={[pos[0], maxHeight / 2 + elevation, pos[1]]}
             castShadow receiveShadow>
             <boxGeometry args={[maxThickness, maxHeight, maxThickness]} />
-            <meshStandardMaterial color={dominantColor} roughness={0.7} side={THREE.FrontSide} />
+            <meshStandardMaterial color={dominantColor} roughness={0.7} side={THREE.FrontSide} polygonOffset polygonOffsetFactor={-1} polygonOffsetUnits={-1} />
           </mesh>
         );
       }

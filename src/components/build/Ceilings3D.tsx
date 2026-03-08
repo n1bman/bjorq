@@ -34,7 +34,7 @@ export default function Ceilings3D() {
             <meshBasicMaterial
               colorWrite={false}
               depthWrite={false}
-              side={THREE.DoubleSide}
+              side={THREE.BackSide}
             />
           </mesh>
         );
