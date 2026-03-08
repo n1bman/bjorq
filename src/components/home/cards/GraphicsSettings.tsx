@@ -64,6 +64,7 @@ function getRecommendation(score: number, cores: number, memGB: number | null) {
 export default function GraphicsSettings() {
   const perf = useAppStore((s) => s.performance);
   const setPerformance = useAppStore((s) => s.setPerformance);
+  const setProfile = useAppStore((s) => s.setProfile);
 
   const score = useMemo(() => computeScore(perf.quality, perf.shadows, perf.postprocessing, perf.tabletMode), [perf]);
   const scoreInfo = getScoreInfo(score);
