@@ -451,21 +451,8 @@ export function detectRooms(walls: WallSegment[], existingRooms?: Room[]): Room[
     }
   }
 
-  // Collect existing "Rum N" numbers to avoid duplicates
+  // usedNumbers will be populated AFTER matching, not before
   const usedNumbers = new Set<number>();
-  if (existingRooms) {
-    for (const er of existingRooms) {
-      const m = er.name.match(/^Rum (\d+)$/);
-      if (m) usedNumbers.add(parseInt(m[1], 10));
-    }
-  }
-
-  let roomCounter = 1;
-  const getNextName = () => {
-    while (usedNumbers.has(roomCounter)) roomCounter++;
-    usedNumbers.add(roomCounter);
-    return `Rum ${roomCounter}`;
-  };
 
   const usedExistingIds = new Set<string>();
 
