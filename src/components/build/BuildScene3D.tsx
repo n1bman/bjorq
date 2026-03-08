@@ -174,6 +174,33 @@ function SceneContent() {
         const floorWalls = fl?.walls ?? [];
         const nodeSnap = snapToNode(snapped, floorWalls, 0.25);
         snapped = nodeSnap.snapped;
+
+        // Auto-close: if we have ≥3 nodes and click near the first node, close the loop
+        if (wallDrawing.isDrawing && wallDrawing.nodes.length >= 3 && activeFloorId) {
+          const firstNode = wallDrawing.nodes[0];
+          const distToFirst = Math.hypot(snapped[0] - firstNode[0], snapped[1] - firstNode[1]);
+          if (distToFirst < 0.3) {
+            pushUndo();
+            const nodes = [...wallDrawing.nodes, firstNode];
+            for (let i = 0; i < nodes.length - 1; i++) {
+              const len = Math.hypot(nodes[i+1][0] - nodes[i][0], nodes[i+1][1] - nodes[i][1]);
+              if (len < 0.05) continue; // skip zero-length
+              const wall: WallSegment = {
+                id: generateId(),
+                from: nodes[i],
+                to: nodes[i + 1],
+                height: activeFloor?.heightMeters ?? 2.5,
+                thickness: 0.15,
+                openings: [],
+              };
+              addWall(activeFloorId, wall);
+            }
+            setWallDrawing({ isDrawing: false, nodes: [] });
+            setCursorPos(null);
+            return;
+          }
+        }
+
         if (!wallDrawing.isDrawing) {
           setWallDrawing({ isDrawing: true, nodes: [snapped] });
         } else {
