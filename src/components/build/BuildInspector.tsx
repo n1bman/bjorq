@@ -268,12 +268,47 @@ function WallInspector({ floorId, wallId, floor, close }: { floorId: string; wal
     setSelection({ type: null, id: null });
   };
 
+  // Determine which geometric side (left/right of from→to) is "exterior"
+  // by checking which side faces AWAY from the nearest room centroid.
+  const rooms = floor.rooms ?? [];
+  const wallMidX = (wall.from[0] + wall.to[0]) / 2;
+  const wallMidZ = (wall.from[1] + wall.to[1]) / 2;
+  const wallDx = wall.to[0] - wall.from[0];
+  const wallDz = wall.to[1] - wall.from[1];
+  // Left normal: (-dz, dx)
+  const leftNx = -wallDz;
+  const leftNz = wallDx;
+
+  let exteriorIsLeft = true; // default: left = exterior
+  if (rooms.length > 0) {
+    // Find nearest room centroid
+    let bestDist = Infinity;
+    let bestCx = 0, bestCz = 0;
+    for (const r of rooms) {
+      if (!r.polygon || r.polygon.length < 3) continue;
+      const cx = r.polygon.reduce((a: number, p: [number, number]) => a + p[0], 0) / r.polygon.length;
+      const cz = r.polygon.reduce((a: number, p: [number, number]) => a + p[1], 0) / r.polygon.length;
+      const d = Math.hypot(cx - wallMidX, cz - wallMidZ);
+      if (d < bestDist) { bestDist = d; bestCx = cx; bestCz = cz; }
+    }
+    // Room centroid direction from wall midpoint
+    const toCx = bestCx - wallMidX;
+    const toCz = bestCz - wallMidZ;
+    const dot = toCx * leftNx + toCz * leftNz;
+    // If room is on the left side, then left = interior, so exterior is right
+    exteriorIsLeft = dot < 0;
+  }
+
   const handleSetMaterial = (matId: string) => {
     pushUndo();
     if (materialTarget === 'exterior') {
-      updateWall(floorId, wall.id, { materialId: matId });
+      updateWall(floorId, wall.id, exteriorIsLeft
+        ? { leftMaterialId: matId }
+        : { rightMaterialId: matId });
     } else {
-      updateWall(floorId, wall.id, { interiorMaterialId: matId });
+      updateWall(floorId, wall.id, exteriorIsLeft
+        ? { rightMaterialId: matId }
+        : { leftMaterialId: matId });
     }
   };
 
