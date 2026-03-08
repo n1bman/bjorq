@@ -29,7 +29,7 @@ function SceneContent() {
   const gridState = useAppStore((s) => s.build.grid);
   const sunAzimuth = useAppStore((s) => s.environment.sunAzimuth);
   const sunElevation = useAppStore((s) => s.environment.sunElevation);
-  const weatherCondition = useAppStore((s) => s.environment.weather.condition);
+  const profile = useAppStore((s) => s.environment.profile);
   const perf = useAppStore((s) => s.performance);
 
   // Calculate sun position from azimuth and elevation
@@ -44,13 +44,7 @@ function SceneContent() {
     ] as [number, number, number];
   }, [sunAzimuth, sunElevation]);
 
-  const isNight = sunElevation < 0;
-  const isTwilight = sunElevation >= 0 && sunElevation < 15;
-  const ambientIntensity = isNight ? 0.1 : isTwilight ? 0.25 : (weatherCondition === 'cloudy' || weatherCondition === 'rain' ? 0.5 : 0.35);
-  const ambientColor = isNight ? '#1a1a3e' : isTwilight ? '#ff9966' : '#b8c4d4';
-  const sunIntensity = isNight ? 0 : (weatherCondition === 'cloudy' ? 0.4 : weatherCondition === 'rain' ? 0.2 : weatherCondition === 'snow' ? 0.3 : 1.2);
-
-  const enableShadows = perf.shadows && !isNight;
+  const enableShadows = perf.shadows && profile.shadowEnabled;
   const shadowMapSize = perf.quality === 'low' ? 512 : perf.quality === 'medium' ? 1024 : 2048;
 
   const setWallDrawing = useAppStore((s) => s.setWallDrawing);
@@ -254,12 +248,28 @@ function SceneContent() {
 
   return (
     <>
-      <ambientLight intensity={ambientIntensity} color={ambientColor} />
-      <directionalLight position={sunPos} intensity={sunIntensity} color="#ffd699" castShadow={enableShadows}
-        shadow-mapSize-width={shadowMapSize} shadow-mapSize-height={shadowMapSize}
+      <ambientLight
+        intensity={profile.ambientIntensity}
+        color={new THREE.Color(profile.ambientColor[0], profile.ambientColor[1], profile.ambientColor[2])}
+      />
+      <directionalLight
+        position={sunPos}
+        intensity={profile.sunIntensity}
+        color={new THREE.Color(profile.sunColor[0], profile.sunColor[1], profile.sunColor[2])}
+        castShadow={enableShadows}
+        shadow-mapSize-width={shadowMapSize}
+        shadow-mapSize-height={shadowMapSize}
         shadow-camera-far={50} shadow-camera-left={-20} shadow-camera-right={20}
-        shadow-camera-top={20} shadow-camera-bottom={-20} shadow-bias={-0.002} />
-      {!isNight && perf.quality !== 'low' && <pointLight position={[0, 8, 0]} intensity={0.15} color="#4a9eff" />}
+        shadow-camera-top={20} shadow-camera-bottom={-20}
+        shadow-bias={profile.shadowSoftness > 0.3 ? -0.003 : -0.002}
+      />
+      <hemisphereLight
+        args={[
+          new THREE.Color(profile.hemisphereSkyColor[0], profile.hemisphereSkyColor[1], profile.hemisphereSkyColor[2]),
+          new THREE.Color(profile.hemisphereGroundColor[0], profile.hemisphereGroundColor[1], profile.hemisphereGroundColor[2]),
+          profile.hemisphereIntensity,
+        ]}
+      />
 
       <GroundPlane onPointerDown={handleGroundPointerDown} onPointerMove={handleGroundPointerMove} />
 

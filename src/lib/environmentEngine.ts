@@ -113,8 +113,8 @@ const CLEAR: WeatherProfile = {
 
 const PARTLY_CLOUDY: WeatherProfile = {
   sunIntensity: 0.7,
-  ambientIntensity: 0.45,
-  hemisphereIntensity: 0.5,
+  ambientIntensity: 0.50,
+  hemisphereIntensity: 0.55,
   shadowEnabled: true,
   shadowSoftness: 0.5,
   sunColor: [0.95, 0.88, 0.7],
@@ -123,8 +123,8 @@ const PARTLY_CLOUDY: WeatherProfile = {
 
 const CLOUDY: WeatherProfile = {
   sunIntensity: 0.25,
-  ambientIntensity: 0.55,
-  hemisphereIntensity: 0.6,
+  ambientIntensity: 0.65,
+  hemisphereIntensity: 0.7,
   shadowEnabled: false,
   shadowSoftness: 1.0,
   sunColor: [0.85, 0.85, 0.82],
@@ -199,13 +199,13 @@ export function computeEnvironmentProfile(input: EnvironmentInput): EnvironmentP
   // 2. Get weather-based profile
   let weatherProfile = getWeatherProfile(weatherCondition);
 
-  // 3. Apply cloud coverage interpolation
-  if (atmosphere.cloudinessAffectsLight && cloudCoverage > 0 && weatherCondition === 'clear') {
-    // Interpolate clear → partly cloudy → cloudy based on cloud coverage
+  // 3. Apply cloud coverage interpolation (always blend based on cloudCoverage)
+  if (atmosphere.cloudinessAffectsLight && cloudCoverage > 0) {
+    const baseProfile = getWeatherProfile(weatherCondition);
     if (cloudCoverage <= 0.5) {
-      weatherProfile = blendProfiles(CLEAR, PARTLY_CLOUDY, cloudCoverage * 2);
+      weatherProfile = blendProfiles(CLEAR, blendProfiles(PARTLY_CLOUDY, baseProfile, 0.5), cloudCoverage * 2);
     } else {
-      weatherProfile = blendProfiles(PARTLY_CLOUDY, CLOUDY, (cloudCoverage - 0.5) * 2);
+      weatherProfile = blendProfiles(blendProfiles(PARTLY_CLOUDY, baseProfile, 0.5), CLOUDY, (cloudCoverage - 0.5) * 2);
     }
   }
 

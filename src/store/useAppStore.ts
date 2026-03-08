@@ -391,7 +391,7 @@ const storeCreator = (set: any, get: any): AppState => ({
     sunElevation: 45,
     cloudCoverage: 0,
     precipitationOverride: 'auto',
-    sunCalibration: { northOffset: 0, azimuthCorrection: 0, elevationCorrection: 0, intensityMultiplier: 1.0, indoorBounce: 0 },
+    sunCalibration: { northOffset: 0, azimuthCorrection: 0, elevationCorrection: 0, intensityMultiplier: 1.0, indoorBounce: 1.0 },
     atmosphere: { fogEnabled: false, fogDensity: 0.3, cloudinessAffectsLight: true, dayNightTransition: 'smooth', atmosphereIntensity: 1.0 },
     skyStyle: 'auto',
     profile: DEFAULT_ENVIRONMENT_PROFILE,
