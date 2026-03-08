@@ -113,8 +113,8 @@ const CLEAR: WeatherProfile = {
 
 const PARTLY_CLOUDY: WeatherProfile = {
   sunIntensity: 0.7,
-  ambientIntensity: 0.45,
-  hemisphereIntensity: 0.5,
+  ambientIntensity: 0.50,
+  hemisphereIntensity: 0.55,
   shadowEnabled: true,
   shadowSoftness: 0.5,
   sunColor: [0.95, 0.88, 0.7],
@@ -123,8 +123,8 @@ const PARTLY_CLOUDY: WeatherProfile = {
 
 const CLOUDY: WeatherProfile = {
   sunIntensity: 0.25,
-  ambientIntensity: 0.55,
-  hemisphereIntensity: 0.6,
+  ambientIntensity: 0.65,
+  hemisphereIntensity: 0.7,
   shadowEnabled: false,
   shadowSoftness: 1.0,
   sunColor: [0.85, 0.85, 0.82],
