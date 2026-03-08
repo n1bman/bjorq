@@ -318,6 +318,23 @@ const storeCreator = (set: any, get: any): AppState => ({
         s.updateDeviceState(snap.deviceId, snap.state);
       }
     }
+    // Phase 7: Scene camera integration
+    if (scene.cameraMode === 'first-linked-room' && scene.linkedRoomIds?.length) {
+      const allRooms = s.layout.floors.flatMap((f: any) => f.rooms ?? []);
+      const room = allRooms.find((r: any) => scene.linkedRoomIds!.includes(r.id));
+      if (room) {
+        const { flyTo, cameraForPolygon } = require('../lib/cameraRef');
+        if (room.cameraPreset) {
+          flyTo(room.cameraPreset.position, room.cameraPreset.target);
+        } else if (room.polygon && room.polygon.length >= 3) {
+          const auto = cameraForPolygon(room.polygon);
+          flyTo(auto.position, auto.target);
+        }
+      }
+    } else if (scene.cameraMode === 'custom' && scene.customCameraPreset) {
+      const { flyTo } = require('../lib/cameraRef');
+      flyTo(scene.customCameraPreset.position, scene.customCameraPreset.target);
+    }
     s.pushActivity({ deviceId: undefined, kind: 'state_change', category: 'system', title: `Scen "${scene.name}" aktiverad`, severity: 'info' });
   },
   setPerformance: (changes) => { set((s: any) => ({ performance: { ...s.performance, ...changes } })); syncProfileToServer(); },

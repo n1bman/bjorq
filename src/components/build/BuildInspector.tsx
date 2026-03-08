@@ -735,21 +735,22 @@ function RoomInspector({ floorId, roomId, floor, close }: { floorId: string; roo
   };
 
   const handleSaveCamera = () => {
-    const { cameraRef } = require('../../lib/cameraRef');
+    const camRef = (await import('../../lib/cameraRef')).cameraRef;
     setRoomCameraPreset(floorId, room.id, {
-      position: [cameraRef.position.x, cameraRef.position.y, cameraRef.position.z],
-      target: [cameraRef.target.x, cameraRef.target.y, cameraRef.target.z],
+      position: [camRef.position.x, camRef.position.y, camRef.position.z],
+      target: [camRef.target.x, camRef.target.y, camRef.target.z],
     });
   };
 
   const handleGoToCamera = () => {
-    const { flyTo, cameraForPolygon } = require('../../lib/cameraRef');
-    if (room.cameraPreset) {
-      flyTo(room.cameraPreset.position, room.cameraPreset.target);
-    } else if (room.polygon) {
-      const auto = cameraForPolygon(room.polygon);
-      flyTo(auto.position, auto.target);
-    }
+    import('../../lib/cameraRef').then(({ flyTo: ft, cameraForPolygon: cfp }) => {
+      if (room.cameraPreset) {
+        ft(room.cameraPreset.position, room.cameraPreset.target);
+      } else if (room.polygon) {
+        const auto = cfp(room.polygon);
+        ft(auto.position, auto.target);
+      }
+    });
   };
 
   const floorMats = presetMaterials.filter((m) => m.type === 'wood' || m.type === 'tile' || m.type === 'concrete');
