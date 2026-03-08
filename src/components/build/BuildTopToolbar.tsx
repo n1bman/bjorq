@@ -434,6 +434,9 @@ export default function BuildTopToolbar() {
         <Check size={16} />
         <span className="hidden sm:inline">Klar</span>
       </button>
+
+      {/* Hidden file input for project import */}
+      <input ref={importFileRef} type="file" accept=".json" className="hidden" onChange={handleImportFile} />
     </div>
   );
 }
