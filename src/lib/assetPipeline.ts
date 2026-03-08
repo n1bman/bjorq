@@ -150,58 +150,19 @@ export async function processModel(file: File, options?: { maxTextureRes?: numbe
   scene.position.set(-center.x, -box.min.y, -center.z);
   scene.updateMatrixWorld(true);
 
-  // Analyze + downscale textures (analysis pass)
-  const processedTextures = new Set<string>();
-  let maxTexRes = 0;
-  let texturesDownscaled = 0;
-  let triangles = 0;
-  const materialSet = new Set<string>();
-
-  scene.traverse((child) => {
-    if (child instanceof THREE.Mesh) {
-      const geo = child.geometry;
-      if (geo.index) {
-        triangles += geo.index.count / 3;
-      } else if (geo.attributes.position) {
-        triangles += geo.attributes.position.count / 3;
-      }
-      const mats = Array.isArray(child.material) ? child.material : [child.material];
-      for (const mat of mats) {
-        if (mat) {
-          materialSet.add(mat.uuid);
-          for (const prop of TEX_PROPS) {
-            const tex = (mat as any)[prop] as THREE.Texture | undefined;
-            if (tex?.image && !processedTextures.has(tex.uuid)) {
-              processedTextures.add(tex.uuid);
-              const w = tex.image.width || 0;
-              const h = tex.image.height || 0;
-              maxTexRes = Math.max(maxTexRes, w, h);
-              if (Math.max(w, h) > maxTextureRes) {
-                if (downscaleTexture(tex, maxTextureRes)) texturesDownscaled++;
-              }
-            }
-          }
-        }
-      }
-    }
-  });
-
-  const triCount = Math.round(triangles);
+  // Analyze only — do NOT mutate textures
+  const analysis = analyzeScene(scene);
   const fileSizeKB = Math.round(file.size / 1024);
 
-  if (triCount > 500000) warnings.push(`Hög polygonantal: ${(triCount / 1000).toFixed(0)}k trianglar`);
+  if (analysis.triangles > 500000) warnings.push(`Hög polygonantal: ${(analysis.triangles / 1000).toFixed(0)}k trianglar`);
   if (fileSizeKB > 10240) warnings.push(`Stor fil: ${(fileSizeKB / 1024).toFixed(1)} MB`);
-  if (texturesDownscaled > 0) {
-    warnings.push(`${texturesDownscaled} textur${texturesDownscaled > 1 ? 'er' : ''} nedskalade till ${maxTextureRes}px`);
-  } else if (maxTexRes > maxTextureRes) {
-    warnings.push(`Stora texturer: ${maxTexRes}px`);
-  }
+  if (analysis.maxTexRes > 2048) warnings.push(`Stora texturer: ${analysis.maxTexRes}px`);
 
   const stats: AssetPerformanceStats = {
-    triangles: triCount,
-    materials: materialSet.size,
+    triangles: analysis.triangles,
+    materials: analysis.materialSet.size,
     fileSizeKB,
-    maxTextureRes: maxTexRes,
+    maxTextureRes: analysis.maxTexRes,
   };
 
   const dimensions: AssetDimensions = {
@@ -212,7 +173,7 @@ export async function processModel(file: File, options?: { maxTextureRes?: numbe
 
   const thumbnail = generateThumbnail(scene, box);
 
-  return { scene, stats, dimensions, thumbnail, warnings, unitScaleFactor, texturesDownscaled };
+  return { scene, stats, dimensions, thumbnail, warnings, unitScaleFactor };
 }
 
 // ─── Optimization level ───
