@@ -175,7 +175,7 @@ function AssetCatalog() {
     })),
     ...catalog.map((c): ACEntry => ({
       id: c.id, name: c.name, thumbnail: c.thumbnail, category: c.category || 'imported',
-      source: c.source as any, catalogItem: c, haMappable: c.haMapping?.mappable,
+      source: c.source as any, catalogItem: c,
       dimensions: c.dimensions, performance: c.performance as any, subcategory: c.subcategory,
     })),
   ];
