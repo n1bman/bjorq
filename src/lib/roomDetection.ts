@@ -342,6 +342,8 @@ export function detectRooms(walls: WallSegment[], existingRooms?: Room[]): Room[
   const splitWalls = splitAtTJunctions(healedWalls);
   const graph = buildGraph(splitWalls);
   const cycles = findMinimalCycles(graph);
+  
+  console.log(`[detectRooms] walls=${walls.length} healed=${healedWalls.length} split=${splitWalls.length} nodes=${Object.keys(graph).length} cycles=${cycles.length}`);
 
   // Collect existing "Rum N" numbers to avoid duplicates
   const usedNumbers = new Set<number>();
