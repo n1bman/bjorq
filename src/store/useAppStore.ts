@@ -4,6 +4,7 @@ import type { AppState, AppMode, BuildState, LayoutState, WallSegment, Room, Dev
 import { mapHAEntityToDeviceState } from '../lib/haMapping';
 import { setFromHA } from '../hooks/useHABridge';
 import { isHostedSync, debouncedSync, debouncedProjectSync, saveProfiles, saveProject, fetchBootstrap } from '../lib/apiClient';
+import { flyTo, cameraForPolygon } from '../lib/cameraRef';
 
 export function getDefaultState(kind: DeviceKind): DeviceState {
   switch (kind) {
