@@ -17,6 +17,7 @@ import SurveillancePanel from './cards/SurveillancePanel';
 import ProfilePanel from './cards/ProfilePanel';
 import ThemeCard from './cards/ThemeCard';
 import DataBackupCard from './cards/DataBackupCard';
+import ProjectManagerPanel from './cards/ProjectManagerPanel';
 import SystemStatusCard from './cards/SystemStatusCard';
 import CategoryCard from './cards/CategoryCard';
 import CategoryManager from './cards/CategoryManager';
