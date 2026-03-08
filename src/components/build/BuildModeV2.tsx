@@ -328,6 +328,31 @@ function AssetCatalog() {
         </button>
       </div>
 
+      {/* Placed items on this floor */}
+      {floorProps.length > 0 && (
+        <div className="space-y-1">
+          <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Placerade ({floorProps.length})</h4>
+          <div className="space-y-0.5 max-h-[30vh] overflow-y-auto">
+            {floorProps.map((p: any) => {
+              const catItem = catalog.find((c: any) => c.id === p.catalogId);
+              return (
+                <div key={p.id} className="flex items-center gap-1.5 px-1.5 py-1 rounded hover:bg-secondary/40 group text-[10px]">
+                  <button onClick={() => setSelection({ type: 'prop', id: p.id })} className="flex-1 text-left text-foreground truncate hover:text-primary transition-colors">
+                    {catItem?.name || p.catalogId}
+                  </button>
+                  <span className="text-muted-foreground/60 text-[8px]">
+                    {p.position[0].toFixed(1)},{p.position[2].toFixed(1)}
+                  </span>
+                  <button onClick={() => removeProp(p.id)} className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-opacity">
+                    <Trash2 size={10} />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       <input ref={fileRef} type="file" accept=".glb,.gltf" className="hidden" onChange={handleFileSelect} />
       <input ref={thumbRef} type="file" accept="image/*" className="hidden" onChange={handleReplaceThumbnail} />
 
