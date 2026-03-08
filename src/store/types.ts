@@ -1004,6 +1004,8 @@ export interface AppState {
   setSunCalibration: (changes: Partial<SunCalibration>) => void;
   setAtmosphere: (changes: Partial<AtmosphereSettings>) => void;
   setSkyStyle: (style: 'auto' | 'gradient' | 'solid') => void;
+  setCloudCoverage: (coverage: number) => void;
+  setEnvironmentProfile: (profile: import('../lib/environmentEngine').EnvironmentProfile) => void;
 
   // Opening/Stair update actions
   updateOpening: (floorId: string, wallId: string, openingId: string, changes: Partial<WallOpening>) => void;
