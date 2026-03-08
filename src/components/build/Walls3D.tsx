@@ -295,7 +295,7 @@ export default function Walls3D() {
                     opCenterY - op.height / 2 - 0.02 + elevation,
                     opPos.z + sillNormal.z * 0.05,
                   ]}
-                  rotation={[0, -angle, 0]} castShadow>
+                  rotation={[0, -angle, 0]}>
                   <boxGeometry args={[op.width + 0.12, 0.03, wall.thickness + 0.10]} />
                   <meshStandardMaterial color="#e0e0e0" roughness={0.6} />
                 </mesh>
