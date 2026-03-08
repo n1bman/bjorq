@@ -468,6 +468,7 @@ function SettingsCategory() {
       <section className="space-y-1">
         <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1">Data</h2>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+          <ProjectManagerPanel />
           <DataBackupCard />
         </div>
       </section>
