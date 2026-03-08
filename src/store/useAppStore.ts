@@ -113,6 +113,21 @@ function syncProjectToServer() {
   });
 }
 
+/** Recompute environment profile from current state and store it */
+function recomputeEnvProfile(get: any, set: any) {
+  const env = get().environment;
+  const profile = computeEnvironmentProfile({
+    sunAzimuth: env.sunAzimuth,
+    sunElevation: env.sunElevation,
+    weatherCondition: env.weather.condition,
+    cloudCoverage: env.cloudCoverage,
+    calibration: env.sunCalibration,
+    atmosphere: env.atmosphere,
+    precipitationOverride: env.precipitationOverride,
+  });
+  set((s: any) => ({ environment: { ...s.environment, profile } }));
+}
+
 // ── Store creator (shared between hosted and non-hosted) ──
 const storeCreator = (set: any, get: any): AppState => ({
   _hostedMode: false,
