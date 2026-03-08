@@ -856,17 +856,59 @@ const storeCreator = (set: any, get: any): AppState => ({
   addProp: (prop) => {
     get().pushUndo();
     set((s: any) => ({ props: { ...s.props, items: [...s.props.items, prop] } }));
+
+    // Auto-create DeviceMarker if the catalog item is HA-mappable
+    const catItem = get().props.catalog.find((c: any) => c.id === prop.catalogId);
+    if (catItem?.haMapping?.mappable && catItem.haMapping.defaultKind) {
+      const deviceId = Math.random().toString(36).slice(2, 10);
+      get().addDevice({
+        id: deviceId,
+        kind: catItem.haMapping.defaultKind,
+        name: catItem.name || prop.name || 'Enhet',
+        floorId: prop.floorId,
+        surface: 'floor',
+        position: [...prop.position] as [number, number, number],
+        rotation: [0, 0, 0],
+      });
+      // Link the prop to the device
+      set((s: any) => ({
+        props: {
+          ...s.props,
+          items: s.props.items.map((p: any) => p.id === prop.id ? { ...p, linkedDeviceId: deviceId } : p),
+        },
+      }));
+    }
   },
 
   removeProp: (id) => {
     get().pushUndo();
+    // Remove linked device marker if exists
+    const prop = get().props.items.find((p: any) => p.id === id);
+    if (prop?.linkedDeviceId) {
+      get().removeDevice(prop.linkedDeviceId);
+    }
     set((s: any) => ({ props: { ...s.props, items: s.props.items.filter((p: any) => p.id !== id) } }));
   },
 
-  updateProp: (id, changes) =>
+  updateProp: (id, changes) => {
     set((s: any) => ({
       props: { ...s.props, items: s.props.items.map((p: any) => (p.id === id ? { ...p, ...changes } : p)) },
-    })),
+    }));
+    // Sync position to linked device marker
+    if (changes.position) {
+      const prop = get().props.items.find((p: any) => p.id === id);
+      if (prop?.linkedDeviceId) {
+        set((s: any) => ({
+          devices: {
+            ...s.devices,
+            markers: s.devices.markers.map((m: any) =>
+              m.id === prop.linkedDeviceId ? { ...m, position: [...changes.position!] } : m
+            ),
+          },
+        }));
+      }
+    }
+  },
 
   // Build actions
   setBuildTab: (tab) =>
