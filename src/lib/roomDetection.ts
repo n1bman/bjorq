@@ -3,32 +3,48 @@ import { generateId } from './buildUtils';
 
 const EPSILON = 0.15; // 15cm tolerance for node matching (increased to handle older imprecise walls)
 
-function keyFor(p: [number, number]): string {
-  return `${Math.round(p[0] / EPSILON)},${Math.round(p[1] / EPSILON)}`;
-}
+/**
+ * Distance-based point deduplication.
+ * Avoids the grid-boundary problem of the old keyFor approach where
+ * two points within EPSILON could hash to different grid cells.
+ */
+class PointIndex {
+  private points: [number, number][] = [];
 
-function snapPoint(p: [number, number]): [number, number] {
-  return [
-    Math.round(p[0] / EPSILON) * EPSILON,
-    Math.round(p[1] / EPSILON) * EPSILON,
-  ];
+  /** Return string ID for a point, merging with existing point if within EPSILON */
+  getId(p: [number, number]): string {
+    for (let i = 0; i < this.points.length; i++) {
+      if (Math.hypot(this.points[i][0] - p[0], this.points[i][1] - p[1]) < EPSILON) {
+        return String(i);
+      }
+    }
+    this.points.push([p[0], p[1]]);
+    return String(this.points.length - 1);
+  }
+
+  /** Get the representative coordinate for a point ID */
+  getPoint(id: string): [number, number] {
+    return this.points[parseInt(id, 10)];
+  }
 }
 
 interface Graph {
   [key: string]: { node: [number, number]; neighbors: string[] };
 }
 
-function buildGraph(walls: WallSegment[]): Graph {
+function buildGraph(walls: WallSegment[]): { graph: Graph; pointIndex: PointIndex } {
   const g: Graph = {};
+  const pi = new PointIndex();
   for (const w of walls) {
-    const fk = keyFor(w.from);
-    const tk = keyFor(w.to);
-    if (!g[fk]) g[fk] = { node: snapPoint(w.from), neighbors: [] };
-    if (!g[tk]) g[tk] = { node: snapPoint(w.to), neighbors: [] };
+    const fk = pi.getId(w.from);
+    const tk = pi.getId(w.to);
+    if (fk === tk) continue; // skip zero-length segments
+    if (!g[fk]) g[fk] = { node: pi.getPoint(fk), neighbors: [] };
+    if (!g[tk]) g[tk] = { node: pi.getPoint(tk), neighbors: [] };
     if (!g[fk].neighbors.includes(tk)) g[fk].neighbors.push(tk);
     if (!g[tk].neighbors.includes(fk)) g[tk].neighbors.push(fk);
   }
-  return g;
+  return { graph: g, pointIndex: pi };
 }
 
 function angle(from: [number, number], to: [number, number]): number {
@@ -345,7 +361,7 @@ export function detectRooms(walls: WallSegment[], existingRooms?: Room[]): Room[
   
   const { walls: healedWalls } = healWalls(walls);
   const splitWalls = splitAtTJunctions(healedWalls);
-  const graph = buildGraph(splitWalls);
+  const { graph, pointIndex } = buildGraph(splitWalls);
   const cycles = findMinimalCycles(graph);
   
   const deadEnds = Object.values(graph).filter((n) => n.neighbors.length < 2).length;
@@ -356,7 +372,19 @@ export function detectRooms(walls: WallSegment[], existingRooms?: Room[]): Room[
     console.warn('[detectRooms] No cycles found! Graph dump:');
     for (const [key, node] of Object.entries(graph)) {
       const status = node.neighbors.length < 2 ? ' ⚠️ DEAD-END' : '';
-      console.warn(`  node ${key} [${node.node[0].toFixed(2)}, ${node.node[1].toFixed(2)}] → ${node.neighbors.length} neighbors${status}`);
+      // For dead-ends, find nearest other node to help debug
+      let nearestInfo = '';
+      if (node.neighbors.length < 2) {
+        let minDist = Infinity;
+        let nearestKey = '';
+        for (const [ok, on] of Object.entries(graph)) {
+          if (ok === key) continue;
+          const d = Math.hypot(on.node[0] - node.node[0], on.node[1] - node.node[1]);
+          if (d < minDist) { minDist = d; nearestKey = ok; }
+        }
+        nearestInfo = ` (nearest node=${nearestKey} dist=${minDist.toFixed(3)}m)`;
+      }
+      console.warn(`  node ${key} [${node.node[0].toFixed(3)}, ${node.node[1].toFixed(3)}] → ${node.neighbors.length} neighbors${status}${nearestInfo}`);
     }
   }
 
@@ -391,12 +419,12 @@ export function detectRooms(walls: WallSegment[], existingRooms?: Room[]): Room[
         const b = cycle[(i + 1) % cycle.length];
         // First try splitWalls, then fall back to original walls
         const wall = splitWalls.find((w) => {
-          const fk = keyFor(w.from);
-          const tk = keyFor(w.to);
+          const fk = pointIndex.getId(w.from);
+          const tk = pointIndex.getId(w.to);
           return (fk === a && tk === b) || (fk === b && tk === a);
         }) || healedWalls.find((w) => {
-          const fk = keyFor(w.from);
-          const tk = keyFor(w.to);
+          const fk = pointIndex.getId(w.from);
+          const tk = pointIndex.getId(w.to);
           return (fk === a && tk === b) || (fk === b && tk === a);
         });
         if (wall) wallIds.push(wall.id);

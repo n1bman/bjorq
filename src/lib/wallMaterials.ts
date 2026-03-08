@@ -48,11 +48,19 @@ export function resolveWallColors(wall: {
   const extMat = extMatId ? getMaterialById(extMatId) : null;
   const intMat = intMatId ? getMaterialById(intMatId) : null;
 
+  const resolvedExterior = leftMat?.color ?? extMat?.color ?? defaultColor;
+  const resolvedInterior = rightMat?.color ?? intMat?.color ?? defaultColor;
+
+  // When no per-side material is set AND no legacy material is set,
+  // use the same color on both sides to avoid misleading inside/outside coloring
+  // before room detection has run.
+  const hasAnyMaterial = wall.leftMaterialId || wall.rightMaterialId || wall.materialId || wall.interiorMaterialId || fallbackMatId;
+
   return {
-    exteriorColor: leftMat?.color ?? extMat?.color ?? defaultColor,
-    interiorColor: rightMat?.color ?? intMat?.color ?? defaultColor,
+    exteriorColor: resolvedExterior,
+    interiorColor: hasAnyMaterial ? resolvedInterior : resolvedExterior,
     edgeColor: extMat?.color ?? defaultColor,
     exteriorRoughness: leftMat?.roughness ?? extMat?.roughness ?? defaultRoughness,
-    interiorRoughness: rightMat?.roughness ?? intMat?.roughness ?? defaultRoughness,
+    interiorRoughness: hasAnyMaterial ? (rightMat?.roughness ?? intMat?.roughness ?? defaultRoughness) : (leftMat?.roughness ?? extMat?.roughness ?? defaultRoughness),
   };
 }
