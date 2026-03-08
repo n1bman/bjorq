@@ -74,32 +74,9 @@ function CompactDeviceView({ marker, state }: { marker: DeviceMarker; state: imp
   const isOn = 'on' in state.data ? (state.data as any).on : state.kind === 'door-lock' ? !(state.data as LockState).locked : state.kind === 'cover' ? (state.data as CoverState).position > 0 : state.kind !== 'scene';
   const wc = marker.widgetConfig;
 
-  // Camera compact: show mini preview
+  // Camera compact: extract to sub-component so hook can be called
   if (state.kind === 'camera') {
-    const camData = state.data as CameraState;
-    return (
-      <div className="space-y-1.5">
-        {(wc?.showImage !== false) && (
-          <div className={cn(
-            'relative rounded-lg overflow-hidden aspect-video',
-            camData.on ? 'bg-gradient-to-br from-slate-800 to-slate-900' : 'bg-muted'
-          )}>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <Video size={20} className={cn('text-muted-foreground', camData.on && 'text-primary/60')} />
-            </div>
-            {camData.on && (
-              <div className="absolute top-1 left-1 flex items-center gap-0.5 bg-red-500/80 rounded px-1 py-0.5">
-                <span className="w-1 h-1 rounded-full bg-white animate-pulse" />
-                <span className="text-[8px] text-white font-bold">LIVE</span>
-              </div>
-            )}
-          </div>
-        )}
-        {(wc?.showLabel !== false) && (
-          <p className="text-[10px] text-muted-foreground truncate">{wc?.customLabel || marker.name || 'Kamera'}</p>
-        )}
-      </div>
-    );
+    return <CompactCameraCard marker={marker} data={state.data as CameraState} />;
   }
 
   // Media screen compact: show inline controls when on
