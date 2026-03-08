@@ -101,7 +101,11 @@ function findMinimalCycles(graph: Graph): string[][] {
         const minIdx = cycle.indexOf(cycle.reduce((a, b) => a < b ? a : b));
         const normalized = [...cycle.slice(minIdx), ...cycle.slice(0, minIdx)];
         const key = normalized.join(',');
-        const revKey = [...normalized].reverse().join(',');
+        // Normalize the reversed cycle too (rotate to start from smallest element)
+        const rev = [...normalized].reverse();
+        const revMinIdx = rev.indexOf(rev.reduce((a, b) => a < b ? a : b));
+        const revNormalized = [...rev.slice(revMinIdx), ...rev.slice(0, revMinIdx)];
+        const revKey = revNormalized.join(',');
 
         if (!cycles.some((c) => c.join(',') === key || c.join(',') === revKey)) {
           cycles.push(normalized);
@@ -334,10 +338,7 @@ export function healWalls(walls: WallSegment[]): { walls: WallSegment[]; healed:
     cx /= members.length;
     cy /= members.length;
     // Snap to grid-friendly value
-    const snap: [number, number] = [
-      Math.round(cx / EPSILON) * EPSILON,
-      Math.round(cy / EPSILON) * EPSILON,
-    ];
+    const snap: [number, number] = [cx, cy];
     for (const m of members) {
       const entry = allPts[m];
       const w = result[entry.wallIdx];
