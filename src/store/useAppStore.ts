@@ -166,7 +166,7 @@ const storeCreator = (set: any, get: any): AppState => ({
     // Auto-assign roomId based on device position and current floor rooms
     let enrichedMarker = marker;
     if (!marker.roomId) {
-      const floor = get().layout.floors.find((f) => f.id === marker.floorId);
+      const floor = get().layout.floors.find((f: any) => f.id === marker.floorId);
       if (floor?.rooms?.length) {
         import('../lib/roomDetection').then(({ findRoomForPoint }) => {
           const roomId = findRoomForPoint(floor.rooms, [marker.position[0], marker.position[2]]);
