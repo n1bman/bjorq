@@ -84,12 +84,17 @@ function getFileDataForProp(propId: string): string | null {
   return (catItem as any)?.fileData ?? null;
 }
 
-function PropModel({ id, url: rawUrl, position, rotation, scale }: {
+function PropModel({ id, url: rawUrl, position, rotation, scale, colorOverride, textureOverride, textureScale = 1, metalness: metalnessOverride, roughness: roughnessOverride }: {
   id: string;
   url: string;
   position: [number, number, number];
   rotation: [number, number, number];
   scale: [number, number, number];
+  colorOverride?: string;
+  textureOverride?: string;
+  textureScale?: number;
+  metalness?: number;
+  roughness?: number;
 }) {
   const url = rawUrl;
   const appMode = useAppStore((s) => s.appMode);
