@@ -246,7 +246,53 @@ export async function uploadPropAsset(
   return res.json();
 }
 
-// ── Debounced sync helpers ──
+/** Ingest a model into the curated catalog (hosted mode only) */
+export async function ingestToCatalog(
+  file: File,
+  metadata: {
+    name: string;
+    category?: string;
+    subcategory?: string;
+    placement?: string;
+    dimensions?: object;
+    performance?: object;
+    ha?: object;
+  },
+  thumbnailDataUrl?: string
+): Promise<{ ok: boolean; assetId: string; path: string } | null> {
+  if (!isHostedSync()) return null;
+
+  const form = new FormData();
+  form.append('model', file);
+  form.append('name', metadata.name);
+  if (metadata.category) form.append('category', metadata.category);
+  if (metadata.subcategory) form.append('subcategory', metadata.subcategory);
+  if (metadata.placement) form.append('placement', metadata.placement);
+  if (metadata.dimensions) form.append('dimensions', JSON.stringify(metadata.dimensions));
+  if (metadata.performance) form.append('performance', JSON.stringify(metadata.performance));
+  if (metadata.ha) form.append('ha', JSON.stringify(metadata.ha));
+
+  if (thumbnailDataUrl) {
+    try {
+      const res = await fetch(thumbnailDataUrl);
+      const blob = await res.blob();
+      form.append('thumbnail', blob, 'thumb.png');
+    } catch { /* skip */ }
+  }
+
+  const res = await fetch('/api/catalog/ingest', { method: 'POST', body: form });
+  if (!res.ok) throw new Error('Failed to ingest to catalog');
+  return res.json();
+}
+
+/** Trigger catalog reindex (hosted mode only) */
+export async function reindexCatalog(): Promise<{ ok: boolean; count: number } | null> {
+  if (!isHostedSync()) return null;
+  const res = await fetch('/api/catalog/reindex', { method: 'POST' });
+  if (!res.ok) throw new Error('Failed to reindex catalog');
+  return res.json();
+}
+
 
 let _profileSyncTimer: ReturnType<typeof setTimeout> | null = null;
 let _projectSyncTimer: ReturnType<typeof setTimeout> | null = null;
