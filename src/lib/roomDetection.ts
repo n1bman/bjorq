@@ -191,8 +191,8 @@ function splitAtTJunctions(walls: WallSegment[]): WallSegment[] {
     const nextResult: WallSegment[] = [];
 
     for (const wall of result) {
-      // Collect split points on this wall
-      const splits: number[] = [];
+      // Collect split points on this wall — store actual endpoint coords
+      const splits: { t: number; point: [number, number] }[] = [];
 
       for (const ep of endpoints) {
         // Skip if ep is near either endpoint of this wall
@@ -215,7 +215,8 @@ function splitAtTJunctions(walls: WallSegment[]): WallSegment[] {
         const py = wall.from[1] + t * dy;
         const dist = Math.hypot(ep[0] - px, ep[1] - py);
         if (dist < EPSILON) {
-          splits.push(t);
+          // Store t AND the actual endpoint coordinate
+          splits.push({ t, point: [ep[0], ep[1]] });
         }
       }
 
@@ -223,24 +224,21 @@ function splitAtTJunctions(walls: WallSegment[]): WallSegment[] {
         nextResult.push(wall);
       } else {
         changed = true;
-        // Sort splits and create sub-segments
-        splits.sort((a, b) => a - b);
-        // Deduplicate
-        const unique = [splits[0]];
+        // Sort splits by t and deduplicate
+        splits.sort((a, b) => a.t - b.t);
         const wallLen = Math.sqrt(
           (wall.to[0] - wall.from[0]) ** 2 + (wall.to[1] - wall.from[1]) ** 2
         );
         const tDedup = wallLen > 0 ? EPSILON / wallLen : EPSILON;
+        const unique = [splits[0]];
         for (let i = 1; i < splits.length; i++) {
-          if (splits[i] - unique[unique.length - 1] > tDedup) unique.push(splits[i]);
+          if (splits[i].t - unique[unique.length - 1].t > tDedup) unique.push(splits[i]);
         }
 
+        // Use actual endpoint coordinates (not projected) so keyFor matches
         const points: [number, number][] = [wall.from];
-        for (const t of unique) {
-          points.push([
-            wall.from[0] + (wall.to[0] - wall.from[0]) * t,
-            wall.from[1] + (wall.to[1] - wall.from[1]) * t,
-          ]);
+        for (const s of unique) {
+          points.push(s.point);
         }
         points.push(wall.to);
 
@@ -344,6 +342,8 @@ export function detectRooms(walls: WallSegment[], existingRooms?: Room[]): Room[
   const splitWalls = splitAtTJunctions(healedWalls);
   const graph = buildGraph(splitWalls);
   const cycles = findMinimalCycles(graph);
+  
+  console.log(`[detectRooms] walls=${walls.length} healed=${healedWalls.length} split=${splitWalls.length} nodes=${Object.keys(graph).length} cycles=${cycles.length}`);
 
   // Collect existing "Rum N" numbers to avoid duplicates
   const usedNumbers = new Set<number>();
