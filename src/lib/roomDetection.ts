@@ -451,68 +451,73 @@ export function detectRooms(walls: WallSegment[], existingRooms?: Room[]): Room[
     }
   }
 
-  // usedNumbers will be populated AFTER matching, not before
-  const usedNumbers = new Set<number>();
-
   const usedExistingIds = new Set<string>();
 
-  return cycles
-    .map((cycle) => {
-      const polygon: [number, number][] = cycle.map((k) => graph[k].node);
-      const area = polygonArea(polygon);
-      if (area < 0.5) return null; // Skip tiny areas
+  // First pass: determine which existing rooms match new polygons
+  const matchResults: { cycle: string[]; polygon: [number, number][]; area: number; wallIds: string[]; matchedRoom?: Room }[] = [];
 
-      // Find wall IDs that form this room — search in splitWalls (post T-junction)
-      const wallIds: string[] = [];
-      for (let i = 0; i < cycle.length; i++) {
-        const a = cycle[i];
-        const b = cycle[(i + 1) % cycle.length];
-        // First try splitWalls, then fall back to original walls
-        const wall = splitWalls.find((w) => {
-          const fk = pointIndex.getId(w.from);
-          const tk = pointIndex.getId(w.to);
-          return (fk === a && tk === b) || (fk === b && tk === a);
-        }) || healedWalls.find((w) => {
-          const fk = pointIndex.getId(w.from);
-          const tk = pointIndex.getId(w.to);
-          return (fk === a && tk === b) || (fk === b && tk === a);
-        });
-        if (wall) wallIds.push(wall.id);
-      }
+  for (const cycle of cycles) {
+    const polygon: [number, number][] = cycle.map((k) => graph[k].node);
+    const area = polygonArea(polygon);
+    if (area < 0.5) continue;
 
-      // Try to match with existing room by polygon overlap (skip already matched)
-      let matchedRoom: Room | undefined;
-      if (existingRooms) {
-        let bestOverlap = 0;
-        for (const er of existingRooms) {
-          if (usedExistingIds.has(er.id)) continue;
-          if (!er.polygon || er.polygon.length < 3) continue;
-          const erArea = polygonArea(er.polygon);
-          const areaRatio = Math.max(area, erArea) / Math.min(area, erArea);
-          if (areaRatio >= 3) continue; // prevent large merged room matching small old room
-          const overlap = polygonOverlap(polygon, er.polygon);
-          if (overlap > 0.6 && overlap > bestOverlap) {
-            bestOverlap = overlap;
-            matchedRoom = er;
-          }
+    const wallIds: string[] = [];
+    for (let i = 0; i < cycle.length; i++) {
+      const a = cycle[i];
+      const b = cycle[(i + 1) % cycle.length];
+      const wall = splitWalls.find((w) => {
+        const fk = pointIndex.getId(w.from);
+        const tk = pointIndex.getId(w.to);
+        return (fk === a && tk === b) || (fk === b && tk === a);
+      }) || healedWalls.find((w) => {
+        const fk = pointIndex.getId(w.from);
+        const tk = pointIndex.getId(w.to);
+        return (fk === a && tk === b) || (fk === b && tk === a);
+      });
+      if (wall) wallIds.push(wall.id);
+    }
+
+    let matchedRoom: Room | undefined;
+    if (existingRooms) {
+      let bestOverlap = 0;
+      for (const er of existingRooms) {
+        if (usedExistingIds.has(er.id)) continue;
+        if (!er.polygon || er.polygon.length < 3) continue;
+        const erArea = polygonArea(er.polygon);
+        const areaRatio = Math.max(area, erArea) / Math.min(area, erArea);
+        if (areaRatio >= 3) continue;
+        const overlap = polygonOverlap(polygon, er.polygon);
+        if (overlap > 0.6 && overlap > bestOverlap) {
+          bestOverlap = overlap;
+          matchedRoom = er;
         }
       }
+    }
 
-      if (matchedRoom) {
-        usedExistingIds.add(matchedRoom.id);
-        return {
-          ...matchedRoom,
-          wallIds,
-          polygon,
-        } as Room;
-      }
+    if (matchedRoom) usedExistingIds.add(matchedRoom.id);
+    matchResults.push({ cycle, polygon, area, wallIds, matchedRoom });
+  }
 
-      return {
-        id: generateId(),
-        name: getNextName(),
-        wallIds,
-        polygon,
-      } as Room;
-    })
-    .filter(Boolean) as Room[];
+  // Build usedNumbers only from matched rooms (not all existing rooms)
+  const usedNumbers = new Set<number>();
+  for (const r of matchResults) {
+    if (r.matchedRoom) {
+      const m = r.matchedRoom.name.match(/^Rum (\d+)$/);
+      if (m) usedNumbers.add(parseInt(m[1], 10));
+    }
+  }
+
+  let roomCounter = 1;
+  const getNextName = () => {
+    while (usedNumbers.has(roomCounter)) roomCounter++;
+    usedNumbers.add(roomCounter);
+    return `Rum ${roomCounter}`;
+  };
+
+  return matchResults.map((r) => {
+    if (r.matchedRoom) {
+      return { ...r.matchedRoom, wallIds: r.wallIds, polygon: r.polygon } as Room;
+    }
+    return { id: generateId(), name: getNextName(), wallIds: r.wallIds, polygon: r.polygon } as Room;
+  });
 }
