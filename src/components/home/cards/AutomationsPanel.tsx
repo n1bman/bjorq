@@ -27,6 +27,9 @@ export default function AutomationsPanel() {
   const toggleAutomation = useAppStore((s) => s.toggleAutomation);
   const markers = useAppStore((s) => s.devices.markers);
   const savedScenes = useAppStore((s) => s.savedScenes);
+  const floors = useAppStore((s) => s.layout.floors);
+
+  const allRooms = floors.flatMap((f) => f.rooms ?? []);
 
   const [showAdd, setShowAdd] = useState(false);
   const [newName, setNewName] = useState('');
