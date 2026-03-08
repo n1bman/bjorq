@@ -161,58 +161,63 @@ function SceneContent() {
   const appMode = useAppStore((s) => s.appMode);
   const sunAzimuth = useAppStore((s) => s.environment.sunAzimuth);
   const sunElevation = useAppStore((s) => s.environment.sunElevation);
-  const weatherCondition = useAppStore((s) => s.environment.weather.condition);
+  const profile = useAppStore((s) => s.environment.profile);
   const perf = useAppStore((s) => s.performance);
-  const sunCal = useAppStore((s) => s.environment.sunCalibration) ?? { northOffset: 0, azimuthCorrection: 0, elevationCorrection: 0, intensityMultiplier: 1, indoorBounce: 0 };
-  const atmosphere = useAppStore((s) => s.environment.atmosphere) ?? { fogEnabled: false, fogDensity: 0.3, cloudinessAffectsLight: true, dayNightTransition: 'smooth', atmosphereIntensity: 1 };
-
-  // Apply calibration offsets
-  const finalAz = sunAzimuth + (sunCal.northOffset || 0) + (sunCal.azimuthCorrection || 0);
-  const finalEl = sunElevation + (sunCal.elevationCorrection || 0);
 
   const sunPos = useMemo(() => {
-    const azRad = (finalAz * Math.PI) / 180;
-    const elRad = (finalEl * Math.PI) / 180;
+    const azRad = (sunAzimuth * Math.PI) / 180;
+    const elRad = (sunElevation * Math.PI) / 180;
     const dist = 20;
     return [
       dist * Math.cos(elRad) * Math.sin(azRad),
       dist * Math.sin(elRad),
       dist * Math.cos(elRad) * Math.cos(azRad),
     ] as [number, number, number];
-  }, [finalAz, finalEl]);
-
-  const isNight = finalEl < 0;
-  const isTwilight = finalEl >= 0 && finalEl < 15;
-
-  // Base ambient — cloudiness can dim it
-  const cloudDim = atmosphere.cloudinessAffectsLight && (weatherCondition === 'cloudy' || weatherCondition === 'rain') ? 1 : 0;
-  // ambientIntensity computed inline below (increased daytime to 0.45)
-  const ambientColor = isNight ? '#1a1a3e' : isTwilight ? '#ff9966' : '#b8c4d4';
-
-  // Sun intensity with calibration multiplier
-  const baseSunIntensity = isNight ? 0 : (weatherCondition === 'cloudy' && atmosphere.cloudinessAffectsLight ? 0.4 : weatherCondition === 'rain' && atmosphere.cloudinessAffectsLight ? 0.2 : weatherCondition === 'snow' ? 0.3 : 1.2);
-  const sunIntensity = baseSunIntensity * sunCal.intensityMultiplier;
+  }, [sunAzimuth, sunElevation]);
 
   const shadowMapSize = perf.quality === 'low' ? 512 : perf.quality === 'medium' ? 1024 : 2048;
   const showGrid = appMode === 'build';
-  const enableShadows = perf.shadows && !isNight;
+  const enableShadows = perf.shadows && profile.shadowEnabled;
 
   return (
     <>
-      
-      <ambientLight intensity={isNight ? 0.1 : isTwilight ? 0.25 : (cloudDim ? 0.5 : 0.45)} color={ambientColor} />
-      <directionalLight position={sunPos} intensity={sunIntensity} color="#ffd699" castShadow={enableShadows}
-        shadow-mapSize-width={shadowMapSize} shadow-mapSize-height={shadowMapSize}
-        shadow-camera-far={50} shadow-camera-left={-20} shadow-camera-right={20}
-        shadow-camera-top={20} shadow-camera-bottom={-20} shadow-bias={-0.002} />
-
-      {/* Hemisphere light for indoor bounce — replaces pointLight bounce */}
-      <hemisphereLight
-        args={['#fff5e0', '#3a5a2a', (isNight ? 0.05 : 0.4) * Math.max(sunCal.indoorBounce, 0.3)]}
+      <ambientLight
+        intensity={profile.ambientIntensity}
+        color={new THREE.Color(profile.ambientColor[0], profile.ambientColor[1], profile.ambientColor[2])}
+      />
+      <directionalLight
+        position={sunPos}
+        intensity={profile.sunIntensity}
+        color={new THREE.Color(profile.sunColor[0], profile.sunColor[1], profile.sunColor[2])}
+        castShadow={enableShadows}
+        shadow-mapSize-width={shadowMapSize}
+        shadow-mapSize-height={shadowMapSize}
+        shadow-camera-far={50}
+        shadow-camera-left={-20}
+        shadow-camera-right={20}
+        shadow-camera-top={20}
+        shadow-camera-bottom={-20}
+        shadow-bias={-0.002}
       />
 
-      {/* Fog */}
-      {atmosphere.fogEnabled && <fog attach="fog" args={['#c8d0d8', 20, 60 - atmosphere.fogDensity * 40]} />}
+      <hemisphereLight
+        args={[
+          new THREE.Color(profile.hemisphereSkyColor[0], profile.hemisphereSkyColor[1], profile.hemisphereSkyColor[2]),
+          new THREE.Color(profile.hemisphereGroundColor[0], profile.hemisphereGroundColor[1], profile.hemisphereGroundColor[2]),
+          profile.hemisphereIntensity,
+        ]}
+      />
+
+      {profile.fogEnabled && (
+        <fog
+          attach="fog"
+          args={[
+            new THREE.Color(profile.fogColor[0], profile.fogColor[1], profile.fogColor[2]),
+            profile.fogNear,
+            profile.fogFar,
+          ]}
+        />
+      )}
 
       <GroundPlane />
 

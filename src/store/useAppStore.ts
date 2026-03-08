@@ -5,6 +5,7 @@ import { mapHAEntityToDeviceState } from '../lib/haMapping';
 import { setFromHA } from '../hooks/useHABridge';
 import { isHostedSync, debouncedSync, debouncedProjectSync, saveProfiles, saveProject, fetchBootstrap } from '../lib/apiClient';
 import { flyTo, cameraForPolygon } from '../lib/cameraRef';
+import { DEFAULT_ENVIRONMENT_PROFILE } from '../lib/environmentEngine';
 
 export function getDefaultState(kind: DeviceKind): DeviceState {
   switch (kind) {
@@ -373,10 +374,12 @@ const storeCreator = (set: any, get: any): AppState => ({
     weather: { condition: 'clear', temperature: 18, intensity: 0 },
     sunAzimuth: 135,
     sunElevation: 45,
+    cloudCoverage: 0,
     precipitationOverride: 'auto',
     sunCalibration: { northOffset: 0, azimuthCorrection: 0, elevationCorrection: 0, intensityMultiplier: 1.0, indoorBounce: 0 },
     atmosphere: { fogEnabled: false, fogDensity: 0.3, cloudinessAffectsLight: true, dayNightTransition: 'smooth', atmosphereIntensity: 1.0 },
     skyStyle: 'auto',
+    profile: DEFAULT_ENVIRONMENT_PROFILE,
   },
 
   homeAssistant: {
@@ -1058,6 +1061,12 @@ const storeCreator = (set: any, get: any): AppState => ({
   setAtmosphere: (changes) => { set((s: any) => ({ environment: { ...s.environment, atmosphere: { ...s.environment.atmosphere, ...changes } } })); syncProfileToServer(); },
 
   setSkyStyle: (style) => { set((s: any) => ({ environment: { ...s.environment, skyStyle: style } })); syncProfileToServer(); },
+
+  setCloudCoverage: (coverage) =>
+    set((s: any) => ({ environment: { ...s.environment, cloudCoverage: coverage } })),
+
+  setEnvironmentProfile: (profile) =>
+    set((s: any) => ({ environment: { ...s.environment, profile } })),
 
   // Opening update
   updateOpening: (floorId, wallId, openingId, changes) =>

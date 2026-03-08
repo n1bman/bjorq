@@ -603,10 +603,12 @@ export interface EnvironmentState {
   forecast?: ForecastDay[];
   sunAzimuth: number;
   sunElevation: number;
+  cloudCoverage: number; // 0-1, from HA or estimated from condition
   precipitationOverride: PrecipitationOverride;
   sunCalibration: SunCalibration;
   atmosphere: AtmosphereSettings;
   skyStyle: 'auto' | 'gradient' | 'solid';
+  profile: import('../lib/environmentEngine').EnvironmentProfile;
 }
 
 // ─── Home Assistant Layer ───
@@ -1002,6 +1004,8 @@ export interface AppState {
   setSunCalibration: (changes: Partial<SunCalibration>) => void;
   setAtmosphere: (changes: Partial<AtmosphereSettings>) => void;
   setSkyStyle: (style: 'auto' | 'gradient' | 'solid') => void;
+  setCloudCoverage: (coverage: number) => void;
+  setEnvironmentProfile: (profile: import('../lib/environmentEngine').EnvironmentProfile) => void;
 
   // Opening/Stair update actions
   updateOpening: (floorId: string, wallId: string, openingId: string, changes: Partial<WallOpening>) => void;
