@@ -119,11 +119,10 @@ function CameraController() {
     if (controlsRef.current) {
       cameraRef.target.copy(controlsRef.current.target);
     }
-    // Check for external flyTo requests
-    const { pendingFlyTo } = require('../lib/cameraRef');
-    if (pendingFlyTo) {
-      lerpingTo.current = { pos: pendingFlyTo.position, target: pendingFlyTo.target };
-      require('../lib/cameraRef').pendingFlyTo = null;
+    // Check for external flyTo requests via module-level variable
+    if (cameraRefModule.pendingFlyTo) {
+      lerpingTo.current = { pos: cameraRefModule.pendingFlyTo.position, target: cameraRefModule.pendingFlyTo.target };
+      cameraRefModule.pendingFlyTo = null;
     }
     if (lerpingTo.current) {
       const { pos: targetPos, target: targetTarget } = lerpingTo.current;
