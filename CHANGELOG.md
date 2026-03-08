@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-03-08
+
+### Added
+- **Build Project Persistence System** — full save/export/import for build projects
+- `BuildProject` schema with versioning (`schemaVersion: 1`) for portable project files
+- **Project Export** — export entire build (layout, devices, props, terrain, metadata) as `.json`
+- **Project Import** — import with schema validation, migration support, and preview dialog showing stats
+- **ProjectManagerPanel** — new UI card in Settings → Data for save/export/import actions
+- `projectIO.ts` — export/import utilities with stats calculation
+- `projectMigrations.ts` — versioned migration system for future schema evolution
+- Terrain and comfort state now correctly persisted in server sync and bootstrap load
+
+### Fixed
+- `terrain` and `comfort` data no longer silently lost on server restart in hosted mode
+- Server sync subscriber now watches `terrain` changes alongside layout/devices/homeGeometry/props
+
+### Changed
+- Version bump to 0.6.0
+
 ## [0.5.0] - 2026-03-08
 
 ### Added
