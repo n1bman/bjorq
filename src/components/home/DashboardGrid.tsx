@@ -478,13 +478,10 @@ function SettingsCategory() {
 
 function GraphicsCategory() {
   return (
-    <div className="max-w-[1100px] mx-auto space-y-[var(--space-section)]">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
-        <GraphicsSettings />
-        <SunCalibrationPanel />
-        <WeatherAtmospherePanel />
-        <EnvironmentPanel />
-      </div>
+    <div className="max-w-[700px] mx-auto space-y-4">
+      <GraphicsSettings />
+      <SunWeatherPanel />
+      <EnvironmentPanel />
     </div>
   );
 }

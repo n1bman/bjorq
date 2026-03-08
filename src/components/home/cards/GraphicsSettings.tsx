@@ -197,7 +197,7 @@ export default function GraphicsSettings() {
       <Collapsible>
         <CollapsibleTrigger className="flex items-center justify-between w-full py-2 group">
           <div className="flex items-center gap-2">
-            <Settings2Icon size={14} className="text-muted-foreground" />
+            <Cpu size={14} className="text-muted-foreground" />
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Avancerat</span>
           </div>
           <ChevronRight size={14} className="text-muted-foreground transition-transform group-data-[state=open]:rotate-90" />
