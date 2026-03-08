@@ -289,6 +289,7 @@ function AssetCatalog() {
   const handleDeleteCurated = useCallback(async () => { if (!manageAsset) return; if (!window.confirm(`Ta bort "${manageAsset.name}"?`)) return; try { await deleteCatalogAsset(manageAsset.id); clearCatalogCache(); loadCuratedCatalog().then(setCuratedAssets); toast.success('Borttagen'); setManageDialogOpen(false); } catch { toast.error('Kunde inte ta bort'); } }, [manageAsset]);
 
   const rating = importResult ? ratePerformance(importResult.stats) : null;
+  const optLevel: OptimizationLevel | null = importResult ? getOptimizationLevel(importResult.stats) : null;
   const getPerfColor = (perf?: ACEntry['performance']) => { if (!perf) return null; const t = perf.triangles ?? 0; if (t <= 10000) return 'bg-primary'; if (t <= 50000) return 'bg-yellow-500'; return 'bg-destructive'; };
 
   return (
