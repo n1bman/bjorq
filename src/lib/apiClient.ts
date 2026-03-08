@@ -8,16 +8,12 @@ let _resolvePromise: Promise<AppMode> | null = null;
 
 /**
  * Resolve the app mode. Runs once, caches result.
- * - VITE_FORCE_DEV=1 → DEV (skip probe)
- * - VITE_FORCE_HOSTED=1 → HOSTED (fail loudly if server unreachable)
- * - Otherwise: probe GET /api/bootstrap with 1000ms timeout
  */
 export async function resolveMode(): Promise<AppMode> {
   if (_mode !== null) return _mode;
   if (_resolvePromise) return _resolvePromise;
 
   _resolvePromise = (async () => {
-    // Env overrides
     if (import.meta.env.VITE_FORCE_DEV === '1') {
       _mode = 'DEV';
       console.log('[Mode] Forced DEV via env');
@@ -25,27 +21,24 @@ export async function resolveMode(): Promise<AppMode> {
     }
 
     if (import.meta.env.VITE_FORCE_HOSTED === '1') {
-      // Must succeed
       try {
         const res = await fetch('/api/config', { signal: AbortSignal.timeout(2000) });
         if (!res.ok) throw new Error(`Status ${res.status}`);
         _mode = 'HOSTED';
       } catch (err) {
         console.error('[Mode] VITE_FORCE_HOSTED=1 but server unreachable:', err);
-        _mode = 'HOSTED'; // Still set hosted — will fail on API calls
+        _mode = 'HOSTED';
       }
       console.log('[Mode] Forced HOSTED via env');
       return _mode;
     }
 
-    // Default: in Vite dev mode (Lovable preview), skip probe entirely → DEV
     if (import.meta.env.DEV) {
       _mode = 'DEV';
       console.log('[Mode] DEV (Vite dev mode, no probe)');
       return _mode;
     }
 
-    // Production build: probe server
     try {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 1000);
@@ -63,23 +56,11 @@ export async function resolveMode(): Promise<AppMode> {
   return _resolvePromise;
 }
 
-/** Sync mode check — only valid after resolveMode() completes */
-export function isHostedSync(): boolean {
-  return _mode === 'HOSTED';
-}
+export function isHostedSync(): boolean { return _mode === 'HOSTED'; }
+export async function isHosted(): Promise<boolean> { return (await resolveMode()) === 'HOSTED'; }
+export function getMode(): AppMode | null { return _mode; }
 
-/** Legacy alias */
-export async function isHosted(): Promise<boolean> {
-  const mode = await resolveMode();
-  return mode === 'HOSTED';
-}
-
-/** Get current mode string (sync, returns null before resolution) */
-export function getMode(): AppMode | null {
-  return _mode;
-}
-
-// ── Bootstrap (single fetch for all data) ──
+// ── Bootstrap ──
 
 export async function fetchBootstrap(): Promise<{
   config: Record<string, unknown>;
@@ -147,11 +128,7 @@ export async function saveProject(id: string, data: Record<string, unknown>) {
 }
 
 export async function uploadAsset(
-  projectId: string,
-  type: string,
-  name: string,
-  variant: string,
-  file: File
+  projectId: string, type: string, name: string, variant: string, file: File
 ) {
   const form = new FormData();
   form.append('type', type);
@@ -167,53 +144,38 @@ export async function uploadAsset(
   return res.json();
 }
 
-// ── HA Proxy (token NEVER sent to browser) ──
+// ── HA Proxy ──
 
 export async function haProxyFetch(path: string, options?: RequestInit) {
   const url = `/api/ha/${path.replace(/^\//, '')}`;
-  const res = await fetch(url, {
+  return fetch(url, {
     ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options?.headers,
-    },
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
   });
-  return res;
 }
 
-/** Fetch all HA entity states via server proxy */
 export async function fetchHAStates(): Promise<any[]> {
   const res = await haProxyFetch('states');
   if (!res.ok) throw new Error('Failed to fetch HA states');
   return res.json();
 }
 
-/** Call an HA service via server proxy */
 export async function callHAService(
-  domain: string,
-  service: string,
-  serviceData: Record<string, unknown>
+  domain: string, service: string, serviceData: Record<string, unknown>
 ) {
-  const res = await haProxyFetch(`services/${domain}/${service}`, {
+  return haProxyFetch(`services/${domain}/${service}`, {
     method: 'POST',
     body: JSON.stringify(serviceData),
   });
-  return res;
 }
 
-// ── Asset upload (hosted mode) ──
+// ── Prop asset upload ──
 
 export async function uploadPropAsset(
-  projectId: string,
-  file: File,
+  projectId: string, file: File,
   metadata: {
-    name: string;
-    category?: string;
-    subcategory?: string;
-    placement?: string;
-    dimensions?: object;
-    performance?: object;
-    haMapping?: object;
+    name: string; category?: string; subcategory?: string; placement?: string;
+    dimensions?: object; performance?: object; haMapping?: object;
   },
   thumbnailDataUrl?: string
 ): Promise<{ modelUrl: string; thumbnailUrl?: string; assetId: string } | null> {
@@ -229,7 +191,6 @@ export async function uploadPropAsset(
   if (metadata.performance) form.append('performance', JSON.stringify(metadata.performance));
   if (metadata.haMapping) form.append('haMapping', JSON.stringify(metadata.haMapping));
 
-  // Convert thumbnail data URL to blob if provided
   if (thumbnailDataUrl) {
     try {
       const res = await fetch(thumbnailDataUrl);
@@ -246,19 +207,16 @@ export async function uploadPropAsset(
   return res.json();
 }
 
-/** Ingest a model into the curated catalog (hosted mode only) */
+// ── Catalog ingest ──
+
 export async function ingestToCatalog(
   file: File,
   metadata: {
-    name: string;
-    category?: string;
-    subcategory?: string;
-    placement?: string;
-    dimensions?: object;
-    performance?: object;
-    ha?: object;
+    name: string; category?: string; subcategory?: string; placement?: string;
+    dimensions?: object; performance?: object; ha?: object;
   },
-  thumbnailDataUrl?: string
+  thumbnailDataUrl?: string,
+  force?: boolean
 ): Promise<{ ok: boolean; assetId: string; path: string } | null> {
   if (!isHostedSync()) return null;
 
@@ -274,18 +232,24 @@ export async function ingestToCatalog(
 
   if (thumbnailDataUrl) {
     try {
-      const res = await fetch(thumbnailDataUrl);
-      const blob = await res.blob();
+      const r = await fetch(thumbnailDataUrl);
+      const blob = await r.blob();
       form.append('thumbnail', blob, 'thumb.png');
     } catch { /* skip */ }
   }
 
-  const res = await fetch('/api/catalog/ingest', { method: 'POST', body: form });
-  if (!res.ok) throw new Error('Failed to ingest to catalog');
+  const url = force ? '/api/catalog/ingest?force=true' : '/api/catalog/ingest';
+  const res = await fetch(url, { method: 'POST', body: form });
+  if (!res.ok) {
+    if (res.status === 409) {
+      const data = await res.json();
+      throw Object.assign(new Error('Conflict'), { status: 409, data });
+    }
+    throw new Error('Failed to ingest to catalog');
+  }
   return res.json();
 }
 
-/** Trigger catalog reindex (hosted mode only) */
 export async function reindexCatalog(): Promise<{ ok: boolean; count: number } | null> {
   if (!isHostedSync()) return null;
   const res = await fetch('/api/catalog/reindex', { method: 'POST' });
@@ -293,6 +257,47 @@ export async function reindexCatalog(): Promise<{ ok: boolean; count: number } |
   return res.json();
 }
 
+// ── Catalog management (hosted mode) ──
+
+export async function updateCatalogMeta(
+  assetId: string,
+  updates: Record<string, unknown>
+): Promise<{ ok: boolean; meta: Record<string, unknown> } | null> {
+  if (!isHostedSync()) return null;
+  const res = await fetch(`/api/catalog/${assetId}/meta`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(updates),
+  });
+  if (!res.ok) throw new Error('Failed to update catalog meta');
+  return res.json();
+}
+
+export async function replaceCatalogThumbnail(
+  assetId: string,
+  file: File
+): Promise<{ ok: boolean; thumbnail: string } | null> {
+  if (!isHostedSync()) return null;
+  const form = new FormData();
+  form.append('thumbnail', file);
+  const res = await fetch(`/api/catalog/${assetId}/thumbnail`, {
+    method: 'PUT',
+    body: form,
+  });
+  if (!res.ok) throw new Error('Failed to replace thumbnail');
+  return res.json();
+}
+
+export async function deleteCatalogAsset(
+  assetId: string
+): Promise<{ ok: boolean } | null> {
+  if (!isHostedSync()) return null;
+  const res = await fetch(`/api/catalog/${assetId}`, { method: 'DELETE' });
+  if (!res.ok) throw new Error('Failed to delete catalog asset');
+  return res.json();
+}
+
+// ── Debounced sync helpers ──
 
 let _profileSyncTimer: ReturnType<typeof setTimeout> | null = null;
 let _projectSyncTimer: ReturnType<typeof setTimeout> | null = null;

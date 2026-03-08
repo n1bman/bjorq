@@ -13,7 +13,54 @@ const CATALOG_DIR = path.resolve(__dirname, '../../public/catalog');
 const upload = multer({ dest: '/tmp/bjorq-uploads' });
 const router = Router();
 
-// List all assets for a project (optionally filter by type)
+// ── Helpers ──
+
+/** Generate a unique slug by appending -2, -3, etc. if folder exists */
+async function uniqueSlug(baseDir, slug) {
+  let candidate = slug;
+  let counter = 1;
+  while (true) {
+    try {
+      await fs.access(path.join(baseDir, candidate));
+      counter++;
+      candidate = `${slug}-${counter}`;
+    } catch {
+      return candidate; // doesn't exist → unique
+    }
+  }
+}
+
+/** Check if file looks like a GLB (by extension or magic bytes) */
+function isGLB(file) {
+  const ext = path.extname(file.originalname || '').toLowerCase();
+  if (ext === '.glb') return true;
+  // Also accept by mimetype
+  if (file.mimetype === 'model/gltf-binary') return true;
+  return false;
+}
+
+/** Find a curated asset folder by ID (scans catalog tree) */
+async function findCatalogAssetDir(assetId) {
+  async function search(dir) {
+    let entries;
+    try { entries = await fs.readdir(dir, { withFileTypes: true }); } catch { return null; }
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue;
+      const full = path.join(dir, entry.name);
+      if (entry.name === assetId) {
+        // Verify it has model.glb
+        try { await fs.access(path.join(full, 'model.glb')); return full; } catch { /* continue */ }
+      }
+      const found = await search(full);
+      if (found) return found;
+    }
+    return null;
+  }
+  return search(CATALOG_DIR);
+}
+
+// ── Project asset routes ──
+
 router.get('/projects/:id/assets', async (req, res) => {
   try {
     const typeFilter = req.query.type;
@@ -34,7 +81,6 @@ router.get('/projects/:id/assets', async (req, res) => {
   }
 });
 
-// Get single asset metadata
 router.get('/projects/:id/assets/:assetId', async (req, res) => {
   try {
     const assetsBase = path.join(projectDir(req.params.id), 'assets');
@@ -49,7 +95,6 @@ router.get('/projects/:id/assets/:assetId', async (req, res) => {
   }
 });
 
-// Upload model file (GLB) for an asset (legacy building import)
 router.post('/projects/:id/assets/upload', upload.single('file'), async (req, res) => {
   try {
     const { type = 'building', name = 'Unnamed', variant = 'balanced' } = req.body;
@@ -74,7 +119,8 @@ router.post('/projects/:id/assets/upload', upload.single('file'), async (req, re
   }
 });
 
-// Upload prop/furniture asset with full metadata + optional thumbnail
+// ── Prop upload ──
+
 const propUpload = multer({ dest: '/tmp/bjorq-uploads' }).fields([
   { name: 'model', maxCount: 1 },
   { name: 'thumbnail', maxCount: 1 },
@@ -136,7 +182,8 @@ router.post('/projects/:id/assets/props/upload', propUpload, async (req, res) =>
   }
 });
 
-// ── Catalog ingest: upload GLB to curated catalog with auto-generated metadata ──
+// ── Catalog ingest ──
+
 const catalogUpload = multer({ dest: '/tmp/bjorq-uploads' }).fields([
   { name: 'model', maxCount: 1 },
   { name: 'thumbnail', maxCount: 1 },
@@ -148,19 +195,59 @@ router.post('/catalog/ingest', catalogUpload, async (req, res) => {
     const modelFile = files?.model?.[0];
     if (!modelFile) return res.status(400).json({ error: 'No model file provided' });
 
+    // Validate GLB
+    if (!isGLB(modelFile)) {
+      // Clean up temp file
+      try { await fs.unlink(modelFile.path); } catch { /* ignore */ }
+      return res.status(400).json({ error: 'Only .glb files are accepted' });
+    }
+
     const name = req.body.name || 'Unnamed';
     const category = req.body.category || 'imported';
     const subcategory = req.body.subcategory || category;
-    const assetId = req.body.assetId || name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    const baseSlug = req.body.assetId || name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 
-    // Determine folder path in catalog
     const topLevel = ['devices'].includes(category) ? 'devices' : 'furniture';
     const subFolder = subcategory || category;
-    const assetDir = path.join(CATALOG_DIR, topLevel, subFolder, assetId);
+    const parentDir = path.join(CATALOG_DIR, topLevel, subFolder);
+    await ensureDir(parentDir);
+
+    const force = req.query.force === 'true';
+
+    // Check collision
+    const assetId = force ? baseSlug : await uniqueSlug(parentDir, baseSlug);
+
+    // If not forced and slug already existed (meaning uniqueSlug changed it), that's fine.
+    // But if force=false and the exact baseSlug exists, return 409
+    if (!force && assetId !== baseSlug) {
+      // Slug was adjusted — proceed with the new unique slug
+    } else if (!force) {
+      try {
+        await fs.access(path.join(parentDir, baseSlug));
+        // Exists — return conflict
+        const existingMeta = await readJSON(path.join(parentDir, baseSlug, 'meta.json'));
+        // Clean up temp files
+        try { await fs.unlink(modelFile.path); } catch { /* ignore */ }
+        const thumbFile = files?.thumbnail?.[0];
+        if (thumbFile) try { await fs.unlink(thumbFile.path); } catch { /* ignore */ }
+        return res.status(409).json({
+          error: 'Asset with this ID already exists',
+          existingAssetId: baseSlug,
+          existingMeta,
+        });
+      } catch {
+        // Doesn't exist — proceed
+      }
+    }
+
+    const assetDir = path.join(parentDir, assetId);
     await ensureDir(assetDir);
 
-    // Move model
-    await fs.rename(modelFile.path, path.join(assetDir, 'model.glb'));
+    // Atomic write: model to .tmp then rename
+    const tmpModel = path.join(assetDir, 'model.glb.tmp');
+    const finalModel = path.join(assetDir, 'model.glb');
+    await fs.rename(modelFile.path, tmpModel);
+    await fs.rename(tmpModel, finalModel);
 
     // Move thumbnail if provided
     const thumbFile = files?.thumbnail?.[0];
@@ -185,7 +272,6 @@ router.post('/catalog/ingest', catalogUpload, async (req, res) => {
     };
     await fs.writeFile(path.join(assetDir, 'meta.json'), JSON.stringify(meta, null, 2));
 
-    // Regenerate index.json
     await regenerateCatalogIndex();
 
     res.status(201).json({ ok: true, assetId, path: `${topLevel}/${subFolder}/${assetId}` });
@@ -194,7 +280,8 @@ router.post('/catalog/ingest', catalogUpload, async (req, res) => {
   }
 });
 
-// Trigger catalog index regeneration
+// ── Catalog reindex ──
+
 router.post('/catalog/reindex', async (_req, res) => {
   try {
     await regenerateCatalogIndex();
@@ -205,7 +292,75 @@ router.post('/catalog/reindex', async (_req, res) => {
   }
 });
 
-// Serve asset files
+// ── Catalog management endpoints (hosted mode) ──
+
+// Update metadata for a curated asset
+router.put('/catalog/:assetId/meta', async (req, res) => {
+  try {
+    const assetDir = await findCatalogAssetDir(req.params.assetId);
+    if (!assetDir) return res.status(404).json({ error: 'Curated asset not found' });
+
+    const metaPath = path.join(assetDir, 'meta.json');
+    let meta;
+    try { meta = JSON.parse(await fs.readFile(metaPath, 'utf-8')); } catch { meta = {}; }
+
+    // Merge updates (only allowed fields)
+    const allowed = ['name', 'category', 'subcategory', 'placement', 'style', 'tags', 'ha', 'dimensions', 'performance'];
+    for (const key of allowed) {
+      if (req.body[key] !== undefined) meta[key] = req.body[key];
+    }
+    meta.id = req.params.assetId; // Ensure ID stays consistent
+
+    await fs.writeFile(metaPath, JSON.stringify(meta, null, 2));
+    await regenerateCatalogIndex();
+
+    res.json({ ok: true, meta });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Replace thumbnail for a curated asset
+const thumbUpload = multer({ dest: '/tmp/bjorq-uploads' }).single('thumbnail');
+router.put('/catalog/:assetId/thumbnail', thumbUpload, async (req, res) => {
+  try {
+    const assetDir = await findCatalogAssetDir(req.params.assetId);
+    if (!assetDir) return res.status(404).json({ error: 'Curated asset not found' });
+    if (!req.file) return res.status(400).json({ error: 'No thumbnail file provided' });
+
+    // Remove existing thumbnails
+    for (const name of ['thumb.webp', 'thumb.png', 'thumb.jpg']) {
+      try { await fs.unlink(path.join(assetDir, name)); } catch { /* ignore */ }
+    }
+
+    const ext = path.extname(req.file.originalname) || '.png';
+    const thumbName = `thumb${ext}`;
+    await fs.rename(req.file.path, path.join(assetDir, thumbName));
+    await regenerateCatalogIndex();
+
+    res.json({ ok: true, thumbnail: thumbName });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Delete a curated asset
+router.delete('/catalog/:assetId', async (req, res) => {
+  try {
+    const assetDir = await findCatalogAssetDir(req.params.assetId);
+    if (!assetDir) return res.status(404).json({ error: 'Curated asset not found' });
+
+    await fs.rm(assetDir, { recursive: true, force: true });
+    await regenerateCatalogIndex();
+
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Serve asset files ──
+
 router.get('/projects/:id/assets/:type/:assetId/files/:filename', async (req, res) => {
   try {
     const filePath = path.join(
@@ -231,7 +386,7 @@ router.delete('/projects/:id/assets/props/:assetId', async (req, res) => {
   }
 });
 
-// ── Internal: regenerate index.json by scanning catalog folders ──
+// ── Internal: regenerate index.json ──
 
 const FOLDER_TO_CATEGORY = {
   sofas: 'sofas', chairs: 'chairs', tables: 'tables', beds: 'beds',
@@ -257,7 +412,6 @@ async function scanAssets(dir, relativeTo) {
     try {
       await fs.access(modelPath);
     } catch {
-      // Not an asset folder — recurse
       assets.push(...await scanAssets(assetDir, relativeTo));
       continue;
     }
@@ -266,6 +420,14 @@ async function scanAssets(dir, relativeTo) {
     let meta;
     try {
       meta = JSON.parse(await fs.readFile(path.join(assetDir, 'meta.json'), 'utf-8'));
+      // Merge defaults for missing required fields
+      if (!meta.id) meta.id = entry.name;
+      if (!meta.name) meta.name = entry.name.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+      if (!meta.category) {
+        const parts = relDir.split('/');
+        const subcategory = parts.length >= 2 ? parts[parts.length - 2] : 'imported';
+        meta.category = FOLDER_TO_CATEGORY[subcategory] || subcategory;
+      }
     } catch {
       const parts = relDir.split('/');
       const subcategory = parts.length >= 2 ? parts[parts.length - 2] : 'imported';
