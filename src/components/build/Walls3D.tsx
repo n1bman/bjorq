@@ -365,7 +365,7 @@ export default function Walls3D() {
             // Top frame
             segments.push(
               <mesh key={`${wall.id}-pass-ft-${i}`} position={[opPos.x, opBottom + op.height - pFrameW / 2 + elevation, opPos.z]}
-                rotation={[0, -angle, 0]} castShadow>
+                rotation={[0, -angle, 0]}>
                 <boxGeometry args={[op.width, pFrameW, pFrameDepth]} />
                 <meshStandardMaterial color={pFrameColor} roughness={0.4} />
               </mesh>
