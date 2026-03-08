@@ -1,216 +1,281 @@
 
 
-## Build Mode Refactoring Plan (Active)
+# HA-Driven Lighting System — Architecture Plan
 
-### Sprint 1: Canvas2D Refaktorisering + Undo/Redo ✅ DONE
-- BuildCanvas2D split into canvas2d/ module (Canvas2DView, useCanvas2DCamera, useCanvas2DDraw, useCanvas2DDrag, constants)
-- Shared buildUtils.ts with snap/grid/hit-test utilities
-- UndoSnapshot expanded to cover layout + devices + props (30 levels)
-- pushUndo auto-called on addDevice, removeDevice, addProp, removeProp
+## Current State
 
-### Sprint 2: Väggsystem + Live Room Detection (NEXT)
-### Sprint 3: Dörrar, Fönster, Garageportar
-### Sprint 4: Referensritning + Material + Mark
-### Sprint 5: Multi-select, Copy/Paste
-### Sprint 6: HA-koppling openings + Dashboard-synk
-### Sprint 7: Polish och Stabilitet
+The system has three layers that are partially mixed:
+
+1. **Data sources** (`useWeatherSync.ts`) — reads from HA `liveStates` or Open-Meteo, writes raw weather + sun position directly to store
+2. **Store** (`EnvironmentState`) — holds raw values: `sunAzimuth`, `sunElevation`, `weather.condition`, `sunCalibration`, `atmosphere`
+3. **Renderer** (`Scene3D.tsx SceneContent`) — reads raw values and computes lighting inline (ambient, sun intensity, hemisphere, fog)
+
+**Problem**: There is no interpretation layer. Scene3D directly maps raw weather condition + sun elevation into light intensities with inline ternaries. No structured "environment profile" exists. Adding more nuance (partly cloudy, dusk color, indoor fill scaling) means more inline logic in the renderer.
 
 ---
 
-## Full Roadmap: EPIC A through I + Klimat-flik
+## Proposed Architecture
 
-Since this is ~20 features across 9 epics, each implementation message will handle 2-3 tasks. Here is the complete plan split into implementation sprints.
-
----
-
-### Sprint 1: EPIC A -- Data, profiler & multi-device consistency
-
-**A1: "Ta bort demo-projekt"**
-- Add "Ta bort demo-projekt" button in `DataBackupCard.tsx`
-- If demo is the active project: reset to empty initial state (reuse existing `clearAllFloors` + clear devices)
-- Confirmation dialog with warning about what gets removed
-- In hosted mode: also delete project on server via `DELETE /api/projects/demo`
-
-**A2: "localStorage enforcement i HOSTED"**
-- In `initHostedMode()` (useAppStore.ts): after bootstrap loads, run a one-time `localStorage.removeItem('hometwin-store')` cleanup
-- Add a "Storage Mode" indicator in Settings showing HOSTED/DEV + last sync time
-- Ensure `partialize` returns `{}` in hosted mode (already done, but verify edge cases)
-
-**Files:** `DataBackupCard.tsx`, `useAppStore.ts`, `DashboardGrid.tsx` (settings section)
-
----
-
-### Sprint 2: EPIC B -- HA connection stability
-
-**B1: "Reconnect / Reload entities / Reset HA config"**
-- Enhance `HAConnectionPanel.tsx` with 3 action buttons:
-  - **Reconnect**: calls `disconnect()` then `connect()` with stored credentials
-  - **Reload entities**: re-sends `get_states` over existing WS (or re-polls in hosted)
-  - **Reset HA config**: clears wsUrl/token, disconnects, clears entities
-- Add auto-reconnect status indicator with retry count
-
-**B2: "Rate-limit / debounce service calls"**
-- Create `src/lib/serviceThrottle.ts`:
-  - Per-entity throttle (max 10 calls/sec per entity, last-write-wins)
-  - Circuit breaker: if >5 errors in 10s, pause and show toast
-- Wrap `haServiceCaller.current` through throttle in `Index.tsx`
-- Apply throttle to slider `onValueChange` handlers in `DeviceControlCard.tsx` (lights, fans, volume)
-
-**Files:** `HAConnectionPanel.tsx`, new `serviceThrottle.ts`, `Index.tsx`, `useHABridge.ts`
+```text
+┌─────────────────────────┐
+│  1. INPUT LAYER          │  useWeatherSync.ts (unchanged role)
+│  HA liveStates / API     │  Reads: sun.sun, weather.*, sensor.cloud_coverage
+│  Open-Meteo fallback     │  Writes raw data to store
+└────────────┬────────────┘
+             │ raw: condition, temperature, azimuth, elevation, cloud%
+             ▼
+┌─────────────────────────┐
+│  2. INTERPRETATION       │  NEW: src/lib/environmentEngine.ts
+│  Pure function           │  Input: raw env + calibration + atmosphere settings
+│  No React / no Three.js  │  Output: EnvironmentProfile (typed struct)
+└────────────┬────────────┘
+             │ profile: sunIntensity, ambientIntensity, shadowSoftness, ...
+             ▼
+┌─────────────────────────┐
+│  3. STORE                │  environment.profile (derived, stored for reactivity)
+│  Computed on every sync  │  Updated by useWeatherSync after setting raw data
+└────────────┬────────────┘
+             │
+             ▼
+┌─────────────────────────┐
+│  4. RENDERER             │  Scene3D.tsx reads profile values directly
+│  No weather logic here   │  Just: light.intensity = profile.sunIntensity
+└─────────────────────────┘
+```
 
 ---
 
-### Sprint 3: EPIC C1-C2 -- Entity remapping + RGB color picker
+## 1. Input Layer — What HA Data to Read
 
-**C1: "Edit HA entity mapping from dashboard"**
-- Add "Edit mapping" button in expanded `DevicesSection.tsx` device cards
-- Show searchable entity dropdown (reuse `HAEntityPicker` from build mode)
-- On change: call `updateDevice(id, { ha: { entityId } })` + re-map state from liveStates
+Currently reads: `weather.*` entity (state + attributes: temperature, wind_speed, humidity, forecast).
 
-**C2: "RGB color picker"**
-- Replace R/G/B sliders in `LightControl` with an HSV color wheel (canvas-based)
-- Keep brightness slider separate
-- Send `rgb_color` or `hs_color` based on entity's `supported_color_modes`
+**Add** (in `useWeatherSync.ts` HA branch):
+- `sun.sun` entity — state: `above_horizon` / `below_horizon`, attributes: `azimuth`, `elevation`, `next_rising`, `next_setting`
+- `sensor.cloud_coverage` or `weather.*.cloud_coverage` attribute (if available) — 0-100%
 
-**Files:** `DeviceControlCard.tsx`, `DevicesSection.tsx`, new `ColorPicker.tsx`
+When HA provides `sun.sun` with real azimuth/elevation, use those directly instead of the calculated approximation. Fall back to the calculation when HA data is unavailable.
+
+**No changes** to Open-Meteo fallback — it already works well.
 
 ---
 
-### Sprint 4: EPIC C3-C5 -- Energy sensors + Fan + Climate improvements
+## 2. Interpretation Layer — `src/lib/environmentEngine.ts`
 
-**C3: "Energy sensors"**
-- Extend `EnergyWidget` + `EnergyDeviceList` to pull from HA `sensor.*_power` / `sensor.*_energy` entities
-- Add entity picker in energy settings to select which sensors to track
-- Show "Nu", "Idag", "Manad" tabs in energy panel
+A pure TypeScript module with **no React or Three.js imports**. Single exported function:
 
-**C4: "Fan extended controls"**
-- Extend `FanState` with `oscillate`, `direction`, `preset_modes`, `available_preset_modes`
-- Update `FanControl` UI: preset mode buttons, oscillate toggle, direction toggle
-- Gate UI elements on entity attributes (`supported_features`)
+```typescript
+export interface EnvironmentProfile {
+  // Time phase
+  phase: 'night' | 'dawn' | 'day' | 'dusk';
+  phaseFactor: number;            // 0-1 blend within phase
 
-**C5: "Climate overhaul"**
-- Extend `ClimateState` with `hvac_modes`, `fan_mode`, `swing_mode`, `preset_mode`, `target_temp_low/high`
-- Add quick action buttons ("Heat 21", "Cool 23", "Auto")
-- Show `current_humidity` if available
-- Gate UI on entity's `supported_features`
+  // Sun
+  sunIntensity: number;           // directional light intensity (0-2)
+  sunColor: [number, number, number]; // RGB normalized
+  shadowEnabled: boolean;
+  shadowSoftness: number;         // 0-1 (maps to shadow bias/radius)
 
-**Files:** `types.ts`, `DeviceControlCard.tsx`, `EnergyWidget.tsx`, `EnergyDeviceList.tsx`, `haMapping.ts`, `useHABridge.ts`
+  // Ambient / Fill
+  ambientIntensity: number;       // 0-1
+  ambientColor: [number, number, number];
+  hemisphereIntensity: number;    // 0-1
+  hemisphereSkyColor: [number, number, number];
+  hemisphereGroundColor: [number, number, number];
 
----
+  // Indoor
+  indoorFillIntensity: number;    // 0-1 — hemisphere + ambient boost for interiors
 
-### Sprint 5: EPIC D -- Camera & media
+  // Atmosphere
+  fogNear: number;
+  fogFar: number;
+  fogColor: [number, number, number];
+  fogEnabled: boolean;
 
-**D1: "Camera stream fallback chain"**
-- In `CameraControl`: attempt MJPEG stream URL from HA entity attributes (`entity_picture`)
-- In hosted mode: proxy through `/api/ha/camera_proxy/<entity_id>`
-- Fallback chain: stream -> snapshot polling (5s) -> static placeholder
-- Show clear error state with reason
+  // Weather effects
+  precipitationType: 'none' | 'rain' | 'snow';
+  precipitationIntensity: number; // 0-1
+}
 
-**D2: "Camera freeze after refresh"**
-- Defer OrbitControls re-binding until scene is fully mounted (add `ready` state in `Scene3D.tsx`)
-- Ensure pointer event listeners are removed and re-added cleanly on HMR/reload
+export function computeEnvironmentProfile(input: {
+  sunAzimuth: number;
+  sunElevation: number;
+  weatherCondition: WeatherCondition;
+  cloudCoverage: number;          // 0-1 (0=clear, 1=overcast)
+  calibration: SunCalibration;
+  atmosphere: AtmosphereSettings;
+  precipitationOverride: PrecipitationOverride;
+}): EnvironmentProfile;
+```
 
-**D3: "Media/screen widget with image entities + AndroidTV"**
-- New widget type in dashboard: `MediaScreenWidget`
-- Pull `entity_picture`, `media_image_url` from HA attributes
-- Display app artwork, media title, app_name from `media_player` attributes
+**Key interpretation rules inside this function:**
 
-**Files:** `DeviceControlCard.tsx`, `Scene3D.tsx`, `DeviceMarkers3D.tsx`, new `MediaScreenWidget.tsx`
+| Condition | Sun intensity | Ambient | Hemisphere | Shadow |
+|-----------|--------------|---------|------------|--------|
+| Clear day | 1.2 × cal.intensity | 0.35 | 0.4 | sharp |
+| Partly cloudy | 0.7 × cal | 0.45 | 0.5 | soft |
+| Cloudy | 0.25 × cal | 0.55 | 0.6 | very soft / off |
+| Rain | 0.15 × cal | 0.5 | 0.55 | off |
+| Snow | 0.3 × cal | 0.6 | 0.5 | soft |
+| Night | 0 | 0.08 | 0.05 | off |
+| Dusk/Dawn | lerp between day and night based on elevation 0-15° | warm tint | — | soft |
 
----
+Cloud coverage (0-1) interpolates between clear and cloudy profiles when `cloudinessAffectsLight` is enabled.
 
-### Sprint 6: EPIC E -- Weather override
-
-**E1: "Precipitation mode override"**
-- Add `precipitationOverride` to `EnvironmentState`: `'auto' | 'rain' | 'snow' | 'off'`
-- UI in settings under environment: 4 toggle buttons
-- `WeatherEffects3D.tsx` reads override; if not `auto`, forces that condition regardless of HA/API data
-- Location source remains separate (HA/manual)
-
-**Files:** `types.ts`, `useAppStore.ts`, `WeatherEffects3D.tsx`, `DashboardGrid.tsx` (settings section)
-
----
-
-### Sprint 7: EPIC F -- Standby + Vio mode
-
-**F1: "Vio mode + motion sensor wake"**
-- Extend standby state machine: `Active -> Standby -> Vio`
-  - Standby: current behavior (dim camera, info overlay)
-  - Vio: near-black screen, minimal clock only, GPU paused (stop R3F render loop)
-- Add `vioTimeout` setting (minutes after standby -> vio)
-- Add `motionEntityId` setting: pick a `binary_sensor.*` from HA entities
-- In `useIdleTimer`: subscribe to motion entity state changes; if `on` -> exit standby/vio
-- Wake transition: vio -> active (skip standby on motion)
-
-**Files:** `types.ts`, `StandbyMode.tsx`, `useIdleTimer.ts`, `DashboardGrid.tsx` (standby settings)
+Indoor fill = `hemisphere * cal.indoorBounce` — already exists conceptually but will be explicit.
 
 ---
 
-### Sprint 8: EPIC G -- Navigation & Home UI
+## 3. Store Changes — `src/store/types.ts`
 
-**G1: "Expanding FAB navigation"**
-- Replace `HomeNav` pill with a single center button that expands into 3 buttons on tap
-- Animation: radial expand with spring transition
-- Move camera FAB to consistent bottom-right position
+Add to `EnvironmentState`:
 
-**G2: "Device marker visibility"**
-- Add outline/glow shader to markers in `DeviceMarkers3D.tsx` for better contrast
-- Add `markerSize` setting in preferences: S/M/L (scales marker geometry)
+```typescript
+export interface EnvironmentState {
+  // ... existing fields ...
+  cloudCoverage: number;            // 0-1, from HA or estimated from condition
+  profile: EnvironmentProfile;      // computed by environmentEngine, stored for reactivity
+}
+```
 
-**G3: "Build devices: better categorization"**
-- Group device placement tools by category in `DevicePlacementTools.tsx`
-- Categories: Lights, Switches, Climate, Fans, Sensors, Cameras, Vacuum, Media, Security, Other
+Add `cloudCoverage` to weather sync output. Default: estimated from condition (clear=0, partly=0.4, cloudy=0.8, rain=0.9, snow=0.7).
 
-**Files:** `HomeNav.tsx`, `CameraFab.tsx`, `DeviceMarkers3D.tsx`, `DevicePlacementTools.tsx`, `types.ts`
+Add store action `setEnvironmentProfile(profile: EnvironmentProfile)`.
 
----
-
-### Sprint 9: EPIC H -- Vacuum 3D movement
-
-**H1: "Vacuum movement in 3D"**
-- Debug current vacuum animation in `DeviceMarkers3D.tsx` (VacuumMarker section)
-- Verify position source: check if `lawnmower pattern` movement code is still running
-- Add debug overlay (toggle in vacuum control card) showing position/timestamp/status
-- Ensure `useFrame` animation loop only runs when `status === 'cleaning'`
-
-**Files:** `DeviceMarkers3D.tsx`, `DeviceControlCard.tsx`
+In `useWeatherSync`, after setting raw weather/sun data, call `computeEnvironmentProfile()` and store the result. This runs once per sync cycle (every 30s for HA, every 60s for sun update, every 15min for Open-Meteo) — negligible cost.
 
 ---
 
-### Sprint 10: EPIC I -- Performance (RPi)
+## 4. Renderer Changes — `src/components/Scene3D.tsx`
 
-**I1: "Default tablet mode for weak hardware"**
-- On first boot (no persisted state): run hardware detection
-- If `navigator.hardwareConcurrency <= 4` or `deviceMemory <= 4`: auto-set `tabletMode: true`
-- Store flag `_autoDetectedPerformance` to avoid re-applying on subsequent boots
+Replace all inline lighting computation in `SceneContent` with direct reads from `environment.profile`:
 
-**I2: "RPi optimization package"**
-- Lower DPR floor to 0.75 in tablet mode
-- Add `maxLights` setting: in tablet mode, cap number of active pointLights in scene
-- Batch entity state updates (collect changes over 100ms, apply once)
-- Add "Performance HUD" toggle in settings: shows FPS, tri-count, material count overlay
+```typescript
+function SceneContent() {
+  const profile = useAppStore((s) => s.environment.profile);
+  const perf = useAppStore((s) => s.performance);
+  const sunPos = useAppStore((s) => /* existing sun position calc stays */);
 
-**Files:** `PerformanceSettings.tsx`, `useAppStore.ts`, `Scene3D.tsx`, `DeviceMarkers3D.tsx`
+  return (
+    <>
+      <ambientLight
+        intensity={profile.ambientIntensity}
+        color={new THREE.Color(...profile.ambientColor)}
+      />
+      <directionalLight
+        position={sunPos}
+        intensity={profile.sunIntensity}
+        color={new THREE.Color(...profile.sunColor)}
+        castShadow={perf.shadows && profile.shadowEnabled}
+        /* shadow config unchanged */
+      />
+      <hemisphereLight
+        args={[
+          new THREE.Color(...profile.hemisphereSkyColor),
+          new THREE.Color(...profile.hemisphereGroundColor),
+          profile.hemisphereIntensity
+        ]}
+      />
+      {profile.fogEnabled && <fog ... />}
+      /* rest unchanged */
+    </>
+  );
+}
+```
+
+All weather ternaries, cloud dimming, night checks, twilight checks — **removed from Scene3D**. The engine handles it.
 
 ---
 
-### Sprint 11: Climate Tab (Extra)
+## 5. Calibration Layer
 
-- New dashboard tab "Klimat" in `DashboardGrid.tsx`
-- "Comfort engine" UI:
-  - Select temperature sources (climate/sensor entities)
-  - Select controllable devices (fan/climate)
-  - Define rules: "If temp > X -> device Y at Z%"
-  - Hysteresis setting (default 0.5C)
-  - Schedule: day/night mode
-- Widgets: "Comfort status" card, "Next action", "Override 30 min" button
-- Client-side rule engine (runs in `useEffect` loop, checks every 30s)
-- Store rules in `automations` slice with type `comfort_rule`
+Already exists as `SunCalibration`. The engine uses it as input:
 
-**Files:** `types.ts`, `DashboardGrid.tsx`, new `ClimateTab.tsx`, new `ComfortEngine.ts`
+- `northOffset` + `azimuthCorrection` → applied to sun position (already done in useWeatherSync)
+- `elevationCorrection` → applied to sun position (already done)
+- `intensityMultiplier` → scales `sunIntensity` in engine
+- `indoorBounce` → scales `hemisphereIntensity` and `indoorFillIntensity` in engine
+
+**No new calibration fields needed** — the existing set covers the user's requirements. The `atmosphere` settings (fogDensity, cloudinessAffectsLight, atmosphereIntensity) also feed into the engine.
 
 ---
 
-### Implementation Order
+## 6. Mode System — Live / Live+Calibrated / Manual
 
-Each sprint will be implemented as 1-2 messages. Total: ~11-14 messages to complete everything. Ready to start with Sprint 1 (EPIC A) on approval.
+Current `source` field: `'ha' | 'manual' | 'auto'`.
+
+This already maps to the three modes:
+- **`'ha'`** = Live (HA data) — calibration is always applied (= Live+Calibrated)
+- **`'auto'`** = Live (Open-Meteo) — same behavior, different data source
+- **`'manual'`** = Manual — user sets condition/time, engine still computes profile
+
+There is no need for a separate "live+calibrated" mode because calibration **always** applies. The calibration sliders simply default to neutral (0 offset, 1.0 multiplier). No UI change needed.
+
+---
+
+## 7. HA Sun Entity Usage
+
+In `useWeatherSync.ts` HA branch, add:
+
+```typescript
+const sunEntity = liveStates['sun.sun'];
+if (sunEntity) {
+  const haAz = sunEntity.attributes.azimuth as number;
+  const haEl = sunEntity.attributes.elevation as number;
+  if (typeof haAz === 'number' && typeof haEl === 'number') {
+    // Use HA's precise sun position instead of calculated
+    setSunPosition(
+      haAz + cal.northOffset + cal.azimuthCorrection,
+      haEl + cal.elevationCorrection
+    );
+  }
+}
+```
+
+Also read `cloud_coverage` from weather entity attributes if available.
+
+---
+
+## 8. Settings UI Mapping
+
+No UI redesign. The existing settings panels map cleanly:
+
+| Settings section | Controls | Engine input |
+|-----------------|----------|--------------|
+| **Rendering** | Quality, shadows, post-processing, tablet mode | `perf.*` (unchanged) |
+| **Sol & Dagsljus** | Source selector, north offset, azimuth/elevation correction, intensity, indoor bounce | `calibration.*` → engine input |
+| **Väder & Atmosfär** | Live weather toggle, cloud affects light, fog, atmosphere intensity | `atmosphere.*` → engine input |
+
+---
+
+## Implementation Phases
+
+### Phase 1: Environment Engine (core)
+- Create `src/lib/environmentEngine.ts` with `computeEnvironmentProfile()` and `EnvironmentProfile` type
+- Add `cloudCoverage` and `profile` to `EnvironmentState` in types
+- Add `setEnvironmentProfile` action to store
+
+### Phase 2: Wire Engine to Sync
+- Update `useWeatherSync.ts` to read `sun.sun` and cloud coverage from HA
+- Call `computeEnvironmentProfile()` after each data update and store result
+- Estimate `cloudCoverage` from condition when not available from HA
+
+### Phase 3: Simplify Renderer
+- Replace all inline lighting logic in `Scene3D.tsx SceneContent` with profile reads
+- Remove weather ternaries, night/twilight checks, cloud dimming logic
+- Keep sun position calculation (azimuth→xyz conversion) in Scene3D
+
+### Phase 4: Test and tune
+- Verify all five weather profiles look correct visually
+- Tune the numeric values in the engine lookup table
+- Confirm no performance regression (engine runs ~once/minute, zero render cost)
+
+### Files
+
+| File | Change |
+|------|--------|
+| `src/lib/environmentEngine.ts` | **NEW** — pure function, profile computation |
+| `src/store/types.ts` | Add `cloudCoverage`, `profile` to `EnvironmentState`, add `EnvironmentProfile` type |
+| `src/store/useAppStore.ts` | Add `setEnvironmentProfile` action, add defaults for new fields |
+| `src/hooks/useWeatherSync.ts` | Read `sun.sun` + cloud coverage, call engine after sync |
+| `src/components/Scene3D.tsx` | Replace inline lighting logic with profile reads |
+
