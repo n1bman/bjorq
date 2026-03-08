@@ -514,7 +514,7 @@ const storeCreator = (set: any, get: any): AppState => ({
       },
     })),
 
-  splitWall: (floorId, wallId, point) =>
+  splitWall: (floorId, wallId, point) => {
     set((s: any) => ({
       layout: {
         ...s.layout,
@@ -540,7 +540,14 @@ const storeCreator = (set: any, get: any): AppState => ({
           };
         }),
       },
-    })),
+    }));
+    // Trigger room detection after split
+    setTimeout(() => {
+      const s = useAppStore.getState();
+      const updateRooms = s.updateRoomPolygons;
+      if (updateRooms) updateRooms(floorId);
+    }, 50);
+  },
 
   // Opening actions
   addOpening: (floorId, wallId, opening) =>

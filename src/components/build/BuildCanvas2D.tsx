@@ -586,7 +586,7 @@ export default function BuildCanvas2D({ overlayMode = false }: { overlayMode?: b
       for (const [nx2, ny2, wx2, wz2] of [[x1, y1, wall.from[0], wall.from[1]], [x2, y2, wall.to[0], wall.to[1]]] as [number, number, number, number][]) {
         const connCount = walls.filter((w) => (Math.abs(w.from[0] - wx2) < 0.15 && Math.abs(w.from[1] - wz2) < 0.15) || (Math.abs(w.to[0] - wx2) < 0.15 && Math.abs(w.to[1] - wz2) < 0.15)).length;
         ctx.fillStyle = COLORS.node; ctx.beginPath(); ctx.arc(nx2, ny2, nodeSize, 0, Math.PI * 2); ctx.fill();
-        if (activeTool === 'wall') { ctx.strokeStyle = connCount >= 2 ? '#4ade80' : '#e8a845'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(nx2, ny2, nodeSize + 3, 0, Math.PI * 2); ctx.stroke(); }
+        ctx.strokeStyle = connCount >= 2 ? '#4ade80' : '#e8a845'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(nx2, ny2, nodeSize + 3, 0, Math.PI * 2); ctx.stroke();
       }
     }
 
