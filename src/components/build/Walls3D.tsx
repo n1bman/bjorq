@@ -194,7 +194,7 @@ export default function Walls3D() {
                 <mesh key={`${wall.id}-door-pl-${i}`} position={new THREE.Vector3(localX - panelW / 2 - 0.01, 0, 0)
                   .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
                   .add(new THREE.Vector3(origCx, opBottom + op.height / 2 + elevation, origCz)).toArray()}
-                  rotation={[0, -angle, 0]} castShadow>
+                  rotation={[0, -angle, 0]}>
                   <boxGeometry args={[panelW, op.height - 0.06, 0.04]} />
                   <meshStandardMaterial color={doorColor} roughness={0.5} />
                 </mesh>
@@ -203,7 +203,7 @@ export default function Walls3D() {
                 <mesh key={`${wall.id}-door-pr-${i}`} position={new THREE.Vector3(localX + panelW / 2 + 0.01, 0, 0)
                   .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
                   .add(new THREE.Vector3(origCx, opBottom + op.height / 2 + elevation, origCz)).toArray()}
-                  rotation={[0, -angle, 0]} castShadow>
+                  rotation={[0, -angle, 0]}>
                   <boxGeometry args={[panelW, op.height - 0.06, 0.04]} />
                   <meshStandardMaterial color={doorColor} roughness={0.5} />
                 </mesh>
