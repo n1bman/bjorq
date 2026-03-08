@@ -401,30 +401,40 @@ function AssetCatalog() {
               {/* Optimized thumbnail */}
               {optimizedResult.thumbnail ? <div className="flex justify-center"><img src={optimizedResult.thumbnail} alt="Optimerad" className="w-24 h-24 object-contain rounded bg-muted/20" /></div> : null}
 
-              <div className="rounded-lg border border-primary/30 bg-primary/5 p-3">
-                <p className="text-[10px] font-semibold text-primary mb-2 flex items-center gap-1"><CheckCircle size={12} /> Optimering klar</p>
-                <div className="grid grid-cols-[auto_1fr_1fr_auto] gap-x-3 gap-y-1 text-[10px]">
-                  <span className="text-muted-foreground">Storlek</span>
-                  <span className="text-muted-foreground text-right">{formatSize(optimizedResult.beforeStats.fileSizeKB)}</span>
-                  <span className="text-foreground text-right font-medium">{formatSize(optimizedResult.stats.fileSizeKB)}</span>
-                  <span className={cn("font-bold", optimizedResult.savings.fileSizePct > 0 ? "text-primary" : "text-muted-foreground")}>{optimizedResult.savings.fileSizePct > 0 ? `-${optimizedResult.savings.fileSizePct}%` : '0%'}</span>
-
-                  <span className="text-muted-foreground">Texturer</span>
-                  <span className="text-muted-foreground text-right">{optimizedResult.beforeStats.maxTextureRes ?? '–'}px</span>
-                  <span className="text-foreground text-right font-medium">{optimizedResult.stats.maxTextureRes ?? '–'}px</span>
-                  <span className={cn("font-bold", optimizedResult.savings.texResPct > 0 ? "text-primary" : "text-muted-foreground")}>{optimizedResult.savings.texResPct > 0 ? `-${optimizedResult.savings.texResPct}%` : '0%'}</span>
-
-                  <span className="text-muted-foreground">Material</span>
-                  <span className="text-muted-foreground text-right">{optimizedResult.beforeStats.materials}</span>
-                  <span className="text-foreground text-right font-medium">{optimizedResult.stats.materials}</span>
-                  <span className={cn("font-bold", optimizedResult.savings.materialsPct > 0 ? "text-primary" : "text-muted-foreground")}>{optimizedResult.savings.materialsPct > 0 ? `-${optimizedResult.savings.materialsPct}%` : '0%'}</span>
-
-                  <span className="text-muted-foreground">Trianglar</span>
-                  <span className="text-muted-foreground text-right">{optimizedResult.beforeStats.triangles > 1000 ? `${(optimizedResult.beforeStats.triangles / 1000).toFixed(1)}k` : optimizedResult.beforeStats.triangles}</span>
-                  <span className="text-foreground text-right font-medium">{optimizedResult.stats.triangles > 1000 ? `${(optimizedResult.stats.triangles / 1000).toFixed(1)}k` : optimizedResult.stats.triangles}</span>
-                  <span className="text-muted-foreground font-bold">0%</span>
+              {optimizedResult.noImprovement ? (
+                <div className="rounded-lg border border-muted bg-muted/20 p-3">
+                  <p className="text-[10px] font-semibold text-foreground flex items-center gap-1"><CheckCircle size={12} className="text-primary" /> Modellen är redan optimerad</p>
+                  <p className="text-[10px] text-muted-foreground mt-1">Ingen ytterligare förbättring möjlig. Originalet importeras.</p>
                 </div>
-              </div>
+              ) : (
+                <div className="rounded-lg border border-primary/30 bg-primary/5 p-3">
+                  <p className="text-[10px] font-semibold text-primary mb-2 flex items-center gap-1"><CheckCircle size={12} /> Optimering klar</p>
+                  <div className="grid grid-cols-[auto_1fr_1fr_auto] gap-x-3 gap-y-1 text-[10px]">
+                    {optimizedResult.savings.fileSizePct !== 0 && (<>
+                      <span className="text-muted-foreground">Storlek</span>
+                      <span className="text-muted-foreground text-right">{formatSize(optimizedResult.beforeStats.fileSizeKB)}</span>
+                      <span className="text-foreground text-right font-medium">{formatSize(optimizedResult.stats.fileSizeKB)}</span>
+                      <span className="font-bold text-primary">-{optimizedResult.savings.fileSizePct}%</span>
+                    </>)}
+                    {optimizedResult.savings.texResPct !== 0 && (<>
+                      <span className="text-muted-foreground">Texturer</span>
+                      <span className="text-muted-foreground text-right">{optimizedResult.beforeStats.maxTextureRes ?? '–'}px</span>
+                      <span className="text-foreground text-right font-medium">{optimizedResult.stats.maxTextureRes ?? '–'}px</span>
+                      <span className="font-bold text-primary">-{optimizedResult.savings.texResPct}%</span>
+                    </>)}
+                    {optimizedResult.savings.materialsPct !== 0 && (<>
+                      <span className="text-muted-foreground">Material</span>
+                      <span className="text-muted-foreground text-right">{optimizedResult.beforeStats.materials}</span>
+                      <span className="text-foreground text-right font-medium">{optimizedResult.stats.materials}</span>
+                      <span className="font-bold text-primary">-{optimizedResult.savings.materialsPct}%</span>
+                    </>)}
+                    <span className="text-muted-foreground">Trianglar</span>
+                    <span className="text-muted-foreground text-right">{optimizedResult.beforeStats.triangles > 1000 ? `${(optimizedResult.beforeStats.triangles / 1000).toFixed(1)}k` : optimizedResult.beforeStats.triangles}</span>
+                    <span className="text-foreground text-right font-medium">{optimizedResult.stats.triangles > 1000 ? `${(optimizedResult.stats.triangles / 1000).toFixed(1)}k` : optimizedResult.stats.triangles}</span>
+                    <span className="text-muted-foreground font-bold">0%</span>
+                  </div>
+                </div>
+              )}
 
               {/* Metadata fields still editable */}
               <div className="space-y-1"><Label className="text-[10px]">Namn</Label><Input value={importName} onChange={(e) => setImportName(e.target.value)} className="h-7 text-xs" /></div>

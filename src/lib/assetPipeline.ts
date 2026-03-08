@@ -109,7 +109,7 @@ function analyzeScene(scene: THREE.Object3D): { triangles: number; materialSet: 
 
 // ─── processModel ───
 
-export async function processModel(file: File, options?: { maxTextureRes?: number }): Promise<PipelineResult> {
+export async function processModel(file: File, _options?: { maxTextureRes?: number }): Promise<PipelineResult> {
   const warnings: string[] = [];
   
 
