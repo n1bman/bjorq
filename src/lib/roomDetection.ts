@@ -227,8 +227,12 @@ function splitAtTJunctions(walls: WallSegment[]): WallSegment[] {
         splits.sort((a, b) => a - b);
         // Deduplicate
         const unique = [splits[0]];
+        const wallLen = Math.sqrt(
+          (wall.to[0] - wall.from[0]) ** 2 + (wall.to[1] - wall.from[1]) ** 2
+        );
+        const tDedup = wallLen > 0 ? EPSILON / wallLen : EPSILON;
         for (let i = 1; i < splits.length; i++) {
-          if (splits[i] - unique[unique.length - 1] > EPSILON) unique.push(splits[i]);
+          if (splits[i] - unique[unique.length - 1] > tDedup) unique.push(splits[i]);
         }
 
         const points: [number, number][] = [wall.from];

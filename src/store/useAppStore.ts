@@ -673,7 +673,7 @@ const storeCreator = (set: any, get: any): AppState => ({
         // wall's "left" = left normal of wall.from→to
         // If wall matches polygon direction: interior = left for CW, right for CCW
         // If wall is reversed: interior = right for CW, left for CCW
-        const interiorIsLeft = wallMatchesPolyDir ? isCW : !isCW;
+        const interiorIsLeft = wallMatchesPolyDir ? !isCW : isCW;
 
         if (interiorIsLeft) {
           return { ...w, leftMaterialId: materialId };
