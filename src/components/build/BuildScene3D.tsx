@@ -387,8 +387,18 @@ export default function BuildScene3D() {
   const handleDoubleClick = useCallback(() => {
     if (activeTool === 'wall' && wallDrawing.isDrawing && activeFloorId) {
       pushUndo();
-      const nodes = wallDrawing.nodes;
+      let nodes = [...wallDrawing.nodes];
+      // Auto-close if last node is near first node
+      if (nodes.length >= 3) {
+        const first = nodes[0];
+        const last = nodes[nodes.length - 1];
+        if (Math.hypot(last[0] - first[0], last[1] - first[1]) < 0.3) {
+          nodes[nodes.length - 1] = first;
+        }
+      }
       for (let i = 0; i < nodes.length - 1; i++) {
+        const len = Math.hypot(nodes[i+1][0] - nodes[i][0], nodes[i+1][1] - nodes[i][1]);
+        if (len < 0.05) continue;
         const wall: WallSegment = {
           id: generateId(),
           from: nodes[i],

@@ -349,7 +349,16 @@ export function detectRooms(walls: WallSegment[], existingRooms?: Room[]): Room[
   const cycles = findMinimalCycles(graph);
   
   const deadEnds = Object.values(graph).filter((n) => n.neighbors.length < 2).length;
-  console.log(`[detectRooms] walls=${walls.length} → healed=${healedWalls.length} → split=${splitWalls.length} | nodes=${Object.keys(graph).length} (dead-ends=${deadEnds}) | cycles=${cycles.length} (verts: ${cycles.map(c => c.length).join(',')})`);
+  const nodeCount = Object.keys(graph).length;
+  console.log(`[detectRooms] walls=${walls.length} → healed=${healedWalls.length} → split=${splitWalls.length} | nodes=${nodeCount} (dead-ends=${deadEnds}) | cycles=${cycles.length} (verts: ${cycles.map(c => c.length).join(',')})`);
+  
+  if (cycles.length === 0 && nodeCount > 0) {
+    console.warn('[detectRooms] No cycles found! Graph dump:');
+    for (const [key, node] of Object.entries(graph)) {
+      const status = node.neighbors.length < 2 ? ' ⚠️ DEAD-END' : '';
+      console.warn(`  node ${key} [${node.node[0].toFixed(2)}, ${node.node[1].toFixed(2)}] → ${node.neighbors.length} neighbors${status}`);
+    }
+  }
 
   // Collect existing "Rum N" numbers to avoid duplicates
   const usedNumbers = new Set<number>();
