@@ -370,23 +370,6 @@ export default function BuildTopToolbar() {
             </button>
           </div>
 
-          {/* Clear */}
-          <div className="border-t border-border pt-3">
-            {!showClearConfirm ? (
-              <button onClick={() => setShowClearConfirm(true)}
-                className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs text-destructive hover:bg-destructive/10 transition-colors">
-                <XCircle size={13} /> Rensa allt
-              </button>
-            ) : (
-              <div className="space-y-2">
-                <p className="text-[10px] text-muted-foreground text-center">Alla väggar, rum och möbler tas bort permanent.</p>
-                <div className="flex gap-2">
-                  <button onClick={() => setShowClearConfirm(false)} className="flex-1 py-1.5 rounded-lg bg-secondary/50 text-xs">Avbryt</button>
-                  <button onClick={() => { clearAllFloors(); setShowClearConfirm(false); }} className="flex-1 py-1.5 rounded-lg bg-destructive text-destructive-foreground text-xs">Rensa</button>
-                </div>
-              </div>
-            )}
-          </div>
         </PopoverContent>
       </Popover>
 
