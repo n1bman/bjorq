@@ -1,64 +1,216 @@
 
 
-# Fix: Infinite WebGL Context Loss Recovery Loop
+## Build Mode Refactoring Plan (Active)
 
-## Problem
-The console shows context loss every ~1.5 seconds in an infinite loop. The current recovery mechanism remounts the Canvas, but the new Canvas immediately loses context again, creating a never-ending cycle. The 3D scene never renders — just flashes "Återställer 3D…" forever.
+### Sprint 1: Canvas2D Refaktorisering + Undo/Redo ✅ DONE
+- BuildCanvas2D split into canvas2d/ module (Canvas2DView, useCanvas2DCamera, useCanvas2DDraw, useCanvas2DDrag, constants)
+- Shared buildUtils.ts with snap/grid/hit-test utilities
+- UndoSnapshot expanded to cover layout + devices + props (30 levels)
+- pushUndo auto-called on addDevice, removeDevice, addProp, removeProp
 
-## Root Cause
-The recovery has no retry limit or backoff. Each remount creates a new WebGL context that immediately fails (browser/GPU resource exhaustion), triggering another recovery, ad infinitum.
+### Sprint 2: Väggsystem + Live Room Detection (NEXT)
+### Sprint 3: Dörrar, Fönster, Garageportar
+### Sprint 4: Referensritning + Material + Mark
+### Sprint 5: Multi-select, Copy/Paste
+### Sprint 6: HA-koppling openings + Dashboard-synk
+### Sprint 7: Polish och Stabilitet
 
-## Solution
+---
 
-### `src/components/Scene3D.tsx`
-1. **Cap retries at 3** — after 3 failed recoveries, stop trying and show a static fallback (gradient background + message + "Försök igen" button)
-2. **Exponential backoff** — wait 1s, then 2s, then 4s between retries instead of always 1s
-3. **Manual retry button** resets the counter so the user can try again after switching tabs or waiting
-4. **`failedAt` timestamp** — only count rapid failures (within 10s) as consecutive; if the scene ran fine for a while before failing, reset the counter
+## Full Roadmap: EPIC A through I + Klimat-flik
 
-### `src/components/build/BuildScene3D.tsx`
-Same pattern: max 3 retries with backoff, then show fallback with retry button.
+Since this is ~20 features across 9 epics, each implementation message will handle 2-3 tasks. Here is the complete plan split into implementation sprints.
 
-### `src/components/home/DashboardView.tsx`
-If Scene3D is in failed state, the gradient fallback from the scene itself handles it — no change needed.
+---
 
-## Key Logic
-```typescript
-const MAX_RECOVERY = 3;
-const [recoveryCount, setRecoveryCount] = useState(0);
-const [recovering, setRecovering] = useState(false);
-const [failed, setFailed] = useState(false);
-const lastSuccessRef = useRef(Date.now());
+### Sprint 1: EPIC A -- Data, profiler & multi-device consistency
 
-const handleCreated = ({ gl }) => {
-  lastSuccessRef.current = Date.now(); // context created OK
-  gl.domElement.addEventListener('webglcontextlost', (e) => {
-    e.preventDefault();
-    // If scene ran >10s, reset counter (it was a one-off)
-    const elapsed = Date.now() - lastSuccessRef.current;
-    setRecoveryCount(prev => {
-      const next = elapsed > 10000 ? 1 : prev + 1;
-      if (next > MAX_RECOVERY) { setFailed(true); return prev; }
-      setRecovering(true);
-      const delay = Math.min(1000 * Math.pow(2, next - 1), 4000);
-      setTimeout(() => { setRecovering(false); }, delay);
-      return next;
-    });
-  });
-};
+**A1: "Ta bort demo-projekt"**
+- Add "Ta bort demo-projekt" button in `DataBackupCard.tsx`
+- If demo is the active project: reset to empty initial state (reuse existing `clearAllFloors` + clear devices)
+- Confirmation dialog with warning about what gets removed
+- In hosted mode: also delete project on server via `DELETE /api/projects/demo`
 
-// Fallback UI when failed
-if (failed) return (
-  <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-primary/10 to-secondary/10">
-    <p>3D-scenen kunde inte startas</p>
-    <button onClick={() => { setFailed(false); setRecoveryCount(0); }}>Försök igen</button>
-  </div>
-);
-```
+**A2: "localStorage enforcement i HOSTED"**
+- In `initHostedMode()` (useAppStore.ts): after bootstrap loads, run a one-time `localStorage.removeItem('hometwin-store')` cleanup
+- Add a "Storage Mode" indicator in Settings showing HOSTED/DEV + last sync time
+- Ensure `partialize` returns `{}` in hosted mode (already done, but verify edge cases)
 
-## Files
-| File | Change |
-|------|--------|
-| `src/components/Scene3D.tsx` | Max 3 retries, backoff, fallback UI |
-| `src/components/build/BuildScene3D.tsx` | Same pattern |
+**Files:** `DataBackupCard.tsx`, `useAppStore.ts`, `DashboardGrid.tsx` (settings section)
 
+---
+
+### Sprint 2: EPIC B -- HA connection stability
+
+**B1: "Reconnect / Reload entities / Reset HA config"**
+- Enhance `HAConnectionPanel.tsx` with 3 action buttons:
+  - **Reconnect**: calls `disconnect()` then `connect()` with stored credentials
+  - **Reload entities**: re-sends `get_states` over existing WS (or re-polls in hosted)
+  - **Reset HA config**: clears wsUrl/token, disconnects, clears entities
+- Add auto-reconnect status indicator with retry count
+
+**B2: "Rate-limit / debounce service calls"**
+- Create `src/lib/serviceThrottle.ts`:
+  - Per-entity throttle (max 10 calls/sec per entity, last-write-wins)
+  - Circuit breaker: if >5 errors in 10s, pause and show toast
+- Wrap `haServiceCaller.current` through throttle in `Index.tsx`
+- Apply throttle to slider `onValueChange` handlers in `DeviceControlCard.tsx` (lights, fans, volume)
+
+**Files:** `HAConnectionPanel.tsx`, new `serviceThrottle.ts`, `Index.tsx`, `useHABridge.ts`
+
+---
+
+### Sprint 3: EPIC C1-C2 -- Entity remapping + RGB color picker
+
+**C1: "Edit HA entity mapping from dashboard"**
+- Add "Edit mapping" button in expanded `DevicesSection.tsx` device cards
+- Show searchable entity dropdown (reuse `HAEntityPicker` from build mode)
+- On change: call `updateDevice(id, { ha: { entityId } })` + re-map state from liveStates
+
+**C2: "RGB color picker"**
+- Replace R/G/B sliders in `LightControl` with an HSV color wheel (canvas-based)
+- Keep brightness slider separate
+- Send `rgb_color` or `hs_color` based on entity's `supported_color_modes`
+
+**Files:** `DeviceControlCard.tsx`, `DevicesSection.tsx`, new `ColorPicker.tsx`
+
+---
+
+### Sprint 4: EPIC C3-C5 -- Energy sensors + Fan + Climate improvements
+
+**C3: "Energy sensors"**
+- Extend `EnergyWidget` + `EnergyDeviceList` to pull from HA `sensor.*_power` / `sensor.*_energy` entities
+- Add entity picker in energy settings to select which sensors to track
+- Show "Nu", "Idag", "Manad" tabs in energy panel
+
+**C4: "Fan extended controls"**
+- Extend `FanState` with `oscillate`, `direction`, `preset_modes`, `available_preset_modes`
+- Update `FanControl` UI: preset mode buttons, oscillate toggle, direction toggle
+- Gate UI elements on entity attributes (`supported_features`)
+
+**C5: "Climate overhaul"**
+- Extend `ClimateState` with `hvac_modes`, `fan_mode`, `swing_mode`, `preset_mode`, `target_temp_low/high`
+- Add quick action buttons ("Heat 21", "Cool 23", "Auto")
+- Show `current_humidity` if available
+- Gate UI on entity's `supported_features`
+
+**Files:** `types.ts`, `DeviceControlCard.tsx`, `EnergyWidget.tsx`, `EnergyDeviceList.tsx`, `haMapping.ts`, `useHABridge.ts`
+
+---
+
+### Sprint 5: EPIC D -- Camera & media
+
+**D1: "Camera stream fallback chain"**
+- In `CameraControl`: attempt MJPEG stream URL from HA entity attributes (`entity_picture`)
+- In hosted mode: proxy through `/api/ha/camera_proxy/<entity_id>`
+- Fallback chain: stream -> snapshot polling (5s) -> static placeholder
+- Show clear error state with reason
+
+**D2: "Camera freeze after refresh"**
+- Defer OrbitControls re-binding until scene is fully mounted (add `ready` state in `Scene3D.tsx`)
+- Ensure pointer event listeners are removed and re-added cleanly on HMR/reload
+
+**D3: "Media/screen widget with image entities + AndroidTV"**
+- New widget type in dashboard: `MediaScreenWidget`
+- Pull `entity_picture`, `media_image_url` from HA attributes
+- Display app artwork, media title, app_name from `media_player` attributes
+
+**Files:** `DeviceControlCard.tsx`, `Scene3D.tsx`, `DeviceMarkers3D.tsx`, new `MediaScreenWidget.tsx`
+
+---
+
+### Sprint 6: EPIC E -- Weather override
+
+**E1: "Precipitation mode override"**
+- Add `precipitationOverride` to `EnvironmentState`: `'auto' | 'rain' | 'snow' | 'off'`
+- UI in settings under environment: 4 toggle buttons
+- `WeatherEffects3D.tsx` reads override; if not `auto`, forces that condition regardless of HA/API data
+- Location source remains separate (HA/manual)
+
+**Files:** `types.ts`, `useAppStore.ts`, `WeatherEffects3D.tsx`, `DashboardGrid.tsx` (settings section)
+
+---
+
+### Sprint 7: EPIC F -- Standby + Vio mode
+
+**F1: "Vio mode + motion sensor wake"**
+- Extend standby state machine: `Active -> Standby -> Vio`
+  - Standby: current behavior (dim camera, info overlay)
+  - Vio: near-black screen, minimal clock only, GPU paused (stop R3F render loop)
+- Add `vioTimeout` setting (minutes after standby -> vio)
+- Add `motionEntityId` setting: pick a `binary_sensor.*` from HA entities
+- In `useIdleTimer`: subscribe to motion entity state changes; if `on` -> exit standby/vio
+- Wake transition: vio -> active (skip standby on motion)
+
+**Files:** `types.ts`, `StandbyMode.tsx`, `useIdleTimer.ts`, `DashboardGrid.tsx` (standby settings)
+
+---
+
+### Sprint 8: EPIC G -- Navigation & Home UI
+
+**G1: "Expanding FAB navigation"**
+- Replace `HomeNav` pill with a single center button that expands into 3 buttons on tap
+- Animation: radial expand with spring transition
+- Move camera FAB to consistent bottom-right position
+
+**G2: "Device marker visibility"**
+- Add outline/glow shader to markers in `DeviceMarkers3D.tsx` for better contrast
+- Add `markerSize` setting in preferences: S/M/L (scales marker geometry)
+
+**G3: "Build devices: better categorization"**
+- Group device placement tools by category in `DevicePlacementTools.tsx`
+- Categories: Lights, Switches, Climate, Fans, Sensors, Cameras, Vacuum, Media, Security, Other
+
+**Files:** `HomeNav.tsx`, `CameraFab.tsx`, `DeviceMarkers3D.tsx`, `DevicePlacementTools.tsx`, `types.ts`
+
+---
+
+### Sprint 9: EPIC H -- Vacuum 3D movement
+
+**H1: "Vacuum movement in 3D"**
+- Debug current vacuum animation in `DeviceMarkers3D.tsx` (VacuumMarker section)
+- Verify position source: check if `lawnmower pattern` movement code is still running
+- Add debug overlay (toggle in vacuum control card) showing position/timestamp/status
+- Ensure `useFrame` animation loop only runs when `status === 'cleaning'`
+
+**Files:** `DeviceMarkers3D.tsx`, `DeviceControlCard.tsx`
+
+---
+
+### Sprint 10: EPIC I -- Performance (RPi)
+
+**I1: "Default tablet mode for weak hardware"**
+- On first boot (no persisted state): run hardware detection
+- If `navigator.hardwareConcurrency <= 4` or `deviceMemory <= 4`: auto-set `tabletMode: true`
+- Store flag `_autoDetectedPerformance` to avoid re-applying on subsequent boots
+
+**I2: "RPi optimization package"**
+- Lower DPR floor to 0.75 in tablet mode
+- Add `maxLights` setting: in tablet mode, cap number of active pointLights in scene
+- Batch entity state updates (collect changes over 100ms, apply once)
+- Add "Performance HUD" toggle in settings: shows FPS, tri-count, material count overlay
+
+**Files:** `PerformanceSettings.tsx`, `useAppStore.ts`, `Scene3D.tsx`, `DeviceMarkers3D.tsx`
+
+---
+
+### Sprint 11: Climate Tab (Extra)
+
+- New dashboard tab "Klimat" in `DashboardGrid.tsx`
+- "Comfort engine" UI:
+  - Select temperature sources (climate/sensor entities)
+  - Select controllable devices (fan/climate)
+  - Define rules: "If temp > X -> device Y at Z%"
+  - Hysteresis setting (default 0.5C)
+  - Schedule: day/night mode
+- Widgets: "Comfort status" card, "Next action", "Override 30 min" button
+- Client-side rule engine (runs in `useEffect` loop, checks every 30s)
+- Store rules in `automations` slice with type `comfort_rule`
+
+**Files:** `types.ts`, `DashboardGrid.tsx`, new `ClimateTab.tsx`, new `ComfortEngine.ts`
+
+---
+
+### Implementation Order
+
+Each sprint will be implemented as 1-2 messages. Total: ~11-14 messages to complete everything. Ready to start with Sprint 1 (EPIC A) on approval.

@@ -1,10 +1,11 @@
-import { Canvas, useThree } from '@react-three/fiber';
+import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Grid, Environment } from '@react-three/drei';
 import { Suspense, useMemo, useRef, useEffect, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useAppStore } from '../store/useAppStore';
 import { cameraRef } from '../lib/cameraRef';
+import { pendingFlyTo, clearPendingFlyTo } from '../lib/cameraRef';
 import Walls3D from './build/Walls3D';
 import Floors3D from './build/Floors3D';
 
@@ -119,10 +120,9 @@ function CameraController() {
       cameraRef.target.copy(controlsRef.current.target);
     }
     // Check for external flyTo requests
-    const { pendingFlyTo } = require('../lib/cameraRef');
     if (pendingFlyTo) {
       lerpingTo.current = { pos: pendingFlyTo.position, target: pendingFlyTo.target };
-      require('../lib/cameraRef').pendingFlyTo = null;
+      clearPendingFlyTo();
     }
     if (lerpingTo.current) {
       const { pos: targetPos, target: targetTarget } = lerpingTo.current;
@@ -272,6 +272,8 @@ function InlineTerrainEnvironment3D() {
   );
 }
 
+const MAX_RECOVERY = 3;
+
 export default function Scene3D() {
   const shadows = useAppStore((s) => s.performance.shadows);
   const quality = useAppStore((s) => s.performance.quality);
@@ -284,21 +286,47 @@ export default function Scene3D() {
 
   const [recoveryCount, setRecoveryCount] = useState(0);
   const [recovering, setRecovering] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const lastSuccessRef = useRef(Date.now());
 
   const handleCreated = ({ gl }: { gl: THREE.WebGLRenderer }) => {
+    lastSuccessRef.current = Date.now();
     const canvas = gl.domElement;
     canvas.addEventListener('webglcontextlost', (e) => {
       e.preventDefault();
       console.warn('[Scene3D] WebGL context lost — recovering...');
-      setRecovering(true);
-      setTimeout(() => {
-        setRecoveryCount((c) => c + 1);
-        setRecovering(false);
-      }, 1000);
+      const elapsed = Date.now() - lastSuccessRef.current;
+      setRecoveryCount((prev) => {
+        const next = elapsed > 10000 ? 1 : prev + 1;
+        if (next > MAX_RECOVERY) {
+          setFailed(true);
+          return prev;
+        }
+        setRecovering(true);
+        const delay = Math.min(1000 * Math.pow(2, next - 1), 4000);
+        setTimeout(() => {
+          setRecovering(false);
+        }, delay);
+        return next;
+      });
     });
   };
 
   const canvasKey = `${quality}-${shadows}-${postprocessing}-${tabletMode}-${antialiasing}-${toneMapping}-${recoveryCount}`;
+
+  if (failed) {
+    return (
+      <div className="w-full h-full flex flex-col items-center justify-center gap-4 bg-gradient-to-br from-primary/10 to-secondary/10">
+        <p className="text-sm text-muted-foreground">3D-scenen kunde inte startas</p>
+        <button
+          onClick={() => { setFailed(false); setRecoveryCount(0); lastSuccessRef.current = Date.now(); }}
+          className="px-4 py-2 text-sm rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+        >
+          Försök igen
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>

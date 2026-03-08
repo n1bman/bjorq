@@ -9,6 +9,9 @@ export const cameraRef = {
 // Global fly-to request — CameraController reads and clears this each frame
 export let pendingFlyTo: { position: THREE.Vector3; target: THREE.Vector3 } | null = null;
 
+export function clearPendingFlyTo() {
+  pendingFlyTo = null;
+}
 /**
  * Request the camera to smoothly fly to a position/target.
  * Works from anywhere — the CameraController in Scene3D picks it up.
