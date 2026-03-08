@@ -1,5 +1,6 @@
 import { lazy, Suspense, useRef, useState, useMemo, useEffect, useCallback } from 'react';
 import { useAppStore } from '../../store/useAppStore';
+import { cameraRef } from '../../lib/cameraRef';
 import BuildTopToolbar from './BuildTopToolbar';
 import BuildInspector from './BuildInspector';
 import BuildCanvas2D from './BuildCanvas2D';
@@ -135,9 +136,20 @@ interface ACEntry {
 function AssetCatalog() {
   const activeFloorId = useAppStore((s) => s.layout.activeFloorId);
   const catalog = useAppStore((s) => s.props.catalog);
+  const propItems = useAppStore((s) => s.props.items);
   const addToCatalog = useAppStore((s) => s.addToCatalog);
   const addProp = useAppStore((s) => s.addProp);
+  const removeProp = useAppStore((s) => s.removeProp);
   const removeFromCatalog = useAppStore((s) => s.removeFromCatalog);
+  const setSelection = useAppStore((s) => s.setSelection);
+
+  // Count instances per catalogId on this floor
+  const floorProps = useMemo(() => propItems.filter((p: any) => p.floorId === activeFloorId), [propItems, activeFloorId]);
+  const instanceCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const p of floorProps) { counts[p.catalogId] = (counts[p.catalogId] || 0) + 1; }
+    return counts;
+  }, [floorProps]);
 
   const [curatedAssets, setCuratedAssets] = useState<CatalogAssetMeta[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -201,8 +213,14 @@ function AssetCatalog() {
 
   const placePropFn = useCallback((catalogId: string, url: string) => {
     if (!activeFloorId) return;
-    addProp({ id: generateId(), catalogId, floorId: activeFloorId, url, position: [0,0,0], rotation: [0,0,0], scale: [1,1,1] });
-  }, [activeFloorId, addProp]);
+    // Smart placement: use camera target as placement point instead of origin
+    const tx = Math.round(cameraRef.target.x * 10) / 10;
+    const tz = Math.round(cameraRef.target.z * 10) / 10;
+    // Offset slightly if there's already a prop at the same spot
+    const existing = floorProps.filter((p: any) => p.catalogId === catalogId);
+    const offset = existing.length * 0.5;
+    addProp({ id: generateId(), catalogId, floorId: activeFloorId, url, position: [tx + offset, 0, tz + offset], rotation: [0,0,0], scale: [1,1,1] });
+  }, [activeFloorId, addProp, floorProps]);
 
   const handleImportConfirm = useCallback(async () => {
     if (!importFile || !importResult || !activeFloorId || !importName.trim()) return;
@@ -285,7 +303,8 @@ function AssetCatalog() {
       <div className="grid grid-cols-2 gap-1.5 max-h-[60vh] overflow-y-auto">
         {filtered.map((entry) => (
           <button key={entry.id} onClick={() => handlePlaceEntry(entry)} className="relative flex flex-col items-center gap-0.5 p-2 rounded-lg bg-secondary/30 hover:bg-secondary/60 transition-colors text-xs group min-h-[44px]">
-            {entry.haMappable && <div className="absolute top-1 left-1 p-0.5 rounded bg-primary/20 text-primary z-10"><Zap size={10} /></div>}
+            {instanceCounts[entry.id] > 0 && <div className="absolute top-1 left-1 bg-primary text-primary-foreground text-[8px] font-bold rounded-full w-4 h-4 flex items-center justify-center z-20">×{instanceCounts[entry.id]}</div>}
+            {entry.haMappable && <div className={cn("absolute top-1 p-0.5 rounded bg-primary/20 text-primary z-10", instanceCounts[entry.id] > 0 ? "left-6" : "left-1")}><Zap size={10} /></div>}
             <div className="absolute top-1 right-1 p-0.5 rounded text-muted-foreground/50 z-10">{entry.source === 'curated' ? <Archive size={8} /> : <User size={8} />}</div>
             {entry.thumbnail ? (
               <img src={entry.thumbnail} alt={entry.name} className="w-full h-16 object-contain rounded" loading="lazy"
@@ -308,6 +327,31 @@ function AssetCatalog() {
           <Upload size={16} /><span className="text-[10px]">Importera</span>
         </button>
       </div>
+
+      {/* Placed items on this floor */}
+      {floorProps.length > 0 && (
+        <div className="space-y-1">
+          <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Placerade ({floorProps.length})</h4>
+          <div className="space-y-0.5 max-h-[30vh] overflow-y-auto">
+            {floorProps.map((p: any) => {
+              const catItem = catalog.find((c: any) => c.id === p.catalogId);
+              return (
+                <div key={p.id} className="flex items-center gap-1.5 px-1.5 py-1 rounded hover:bg-secondary/40 group text-[10px]">
+                  <button onClick={() => setSelection({ type: 'prop', id: p.id })} className="flex-1 text-left text-foreground truncate hover:text-primary transition-colors">
+                    {catItem?.name || p.catalogId}
+                  </button>
+                  <span className="text-muted-foreground/60 text-[8px]">
+                    {p.position[0].toFixed(1)},{p.position[2].toFixed(1)}
+                  </span>
+                  <button onClick={() => removeProp(p.id)} className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-opacity">
+                    <Trash2 size={10} />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <input ref={fileRef} type="file" accept=".glb,.gltf" className="hidden" onChange={handleFileSelect} />
       <input ref={thumbRef} type="file" accept="image/*" className="hidden" onChange={handleReplaceThumbnail} />
@@ -339,6 +383,14 @@ function AssetCatalog() {
               <div className="space-y-1"><Label className="text-[10px]">HA-mappning</Label><select value={importHAMapping} onChange={(e) => setImportHAMapping(e.target.value)} className="w-full h-7 text-xs bg-secondary text-foreground rounded-md px-2 border border-border"><option value="none">Ingen</option>{AC_HA_DOMAINS.map(o => <option key={o.domain} value={o.domain}>{o.label}</option>)}</select></div>
               {isHostedSync() && <label className="flex items-center gap-2 text-[10px] text-muted-foreground cursor-pointer"><input type="checkbox" checked={saveToCatalog} onChange={(e) => setSaveToCatalog(e.target.checked)} className="rounded border-border" /><FolderPlus size={12} />Spara i permanent katalog</label>}
               {importResult.warnings.length > 0 && <div className="space-y-1">{importResult.warnings.map((w,i) => <p key={i} className="text-[10px] text-accent-foreground flex items-center gap-1"><AlertTriangle size={10} /> {w}</p>)}</div>}
+              {/* Optimization verdict */}
+              <div className={cn("rounded-lg p-2 text-[10px] flex items-center gap-2", rating === 'ok' ? 'bg-primary/10 text-primary' : rating === 'heavy' ? 'bg-accent/50 text-accent-foreground' : 'bg-destructive/10 text-destructive')}>
+                {rating === 'ok' ? <CheckCircle size={14} /> : <AlertTriangle size={14} />}
+                <div>
+                  <p className="font-medium">{rating === 'ok' ? 'Bra optimering' : rating === 'heavy' ? 'Tung modell' : 'Mycket tung'}</p>
+                  <p className="opacity-70">{rating === 'ok' ? 'OK för Raspberry Pi och mobil' : rating === 'heavy' ? 'Kan vara trög på mobil/RPi' : 'Risk för låg FPS — överväg att förenkla'}</p>
+                </div>
+              </div>
             </div>
           ) : null}
           <DialogFooter>

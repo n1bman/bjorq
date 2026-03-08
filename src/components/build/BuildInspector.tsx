@@ -508,7 +508,7 @@ function PropInspector({ propId, close }: { propId: string; close: React.ReactNo
   };
 
   return (
-    <div className="absolute top-3 right-3 w-56 glass-panel rounded-xl p-3 space-y-3 text-xs z-10">
+    <div className="absolute top-3 right-3 w-56 max-h-[calc(100vh-6rem)] overflow-y-auto glass-panel rounded-xl p-3 space-y-3 text-xs z-10">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-foreground font-display">Möbel</h3>
         {close}
