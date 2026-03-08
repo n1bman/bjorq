@@ -1,24 +1,35 @@
-import { lazy, Suspense, useRef, useState, useMemo } from 'react';
+import { lazy, Suspense, useRef, useState, useMemo, useEffect, useCallback } from 'react';
 import { useAppStore } from '../../store/useAppStore';
 import BuildTopToolbar from './BuildTopToolbar';
 import BuildInspector from './BuildInspector';
 import BuildCanvas2D from './BuildCanvas2D';
 import BuildScene3D from './BuildScene3D';
-import AssetCatalog from './AssetCatalog.tsx';
 import type { BuildTool, BuildTab } from '../../store/types';
 import { openingPresets } from '../../lib/openingPresets';
 import { getAllMaterials } from '../../lib/materials';
+import { loadCuratedCatalog, clearCatalogCache } from '../../lib/catalogLoader';
+import { processModel, validateFormat, formatStats, ratePerformance } from '../../lib/assetPipeline';
+import {
+  isHostedSync, uploadPropAsset, ingestToCatalog,
+  updateCatalogMeta, replaceCatalogThumbnail, deleteCatalogAsset,
+} from '../../lib/apiClient';
 import {
   MousePointer2, Minus, Square, DoorOpen, PanelTop,
   Warehouse, Footprints, Paintbrush, Sofa, Cpu,
   Import, Eraser, Upload, Search, FileImage, Box, Ruler, Trash2,
   Lightbulb, ToggleLeft, Activity, Thermometer, Camera, Bot, CookingPot, WashingMachine, Lock, Plug, Refrigerator, Monitor, ChevronDown, ChevronRight, Link2, Fan, ShieldAlert, Droplets, Flame, Bell, Grip, Wifi, Trees, Speaker, Music,
+  Zap, Archive, User, Settings, Lamp, Flower2, Bed, UtensilsCrossed, Bath, TreePine, Package, AlertTriangle, CheckCircle, Loader2, FolderPlus,
 } from 'lucide-react';
 import { domainToKind } from '../../lib/haDomainMapping';
 import VacuumMappingTools from './devices/VacuumMappingTools';
 import { cn } from '../../lib/utils';
 import { toast } from 'sonner';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from '../ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogFooter } from '../ui/dialog';
+import { Input } from '../ui/input';
+import { Button } from '../ui/button';
+import { Label } from '../ui/label';
+import type { CatalogAssetMeta, PropCatalogItem, AssetCategory, AssetHAMapping, DeviceKind } from '../../store/types';
+import type { PipelineResult } from '../../lib/assetPipeline';
 
 const ImportPreview3D = lazy(() => import('./ImportPreview3D'));
 const ImportTools = lazy(() => import('./import/ImportTools'));
@@ -83,7 +94,278 @@ function PaintCatalog() {
   );
 }
 
-// FurnishCatalog removed — replaced by AssetCatalog side panel
+/* ═══════════════════════════════════════════════
+   AssetCatalog — inlined to avoid Vite resolve issues
+   ═══════════════════════════════════════════════ */
+
+const AC_CATEGORY_LABELS: Record<string, string> = {
+  sofas: 'Soffor', chairs: 'Stolar', tables: 'Bord', beds: 'Sängar',
+  storage: 'Förvaring', lighting: 'Belysning', decor: 'Dekoration',
+  plants: 'Växter', kitchen: 'Kök', bathroom: 'Badrum',
+  devices: 'Enheter', outdoor: 'Utomhus', imported: 'Importerade',
+};
+
+const AC_CATEGORY_ICONS: Record<string, React.ElementType> = {
+  sofas: Sofa, chairs: Sofa, tables: Box, beds: Bed,
+  storage: Package, lighting: Lamp, decor: Box, plants: Flower2,
+  kitchen: UtensilsCrossed, bathroom: Bath, outdoor: TreePine,
+  devices: Monitor, imported: Box,
+};
+
+const AC_HA_DOMAINS: { label: string; domain: string; kind: DeviceKind }[] = [
+  { label: 'Lampa', domain: 'light', kind: 'light' },
+  { label: 'Högtalare', domain: 'media_player', kind: 'speaker' },
+  { label: 'Skärm', domain: 'media_player', kind: 'media_screen' },
+  { label: 'Strömbrytare', domain: 'switch', kind: 'switch' },
+  { label: 'Sensor', domain: 'sensor', kind: 'sensor' },
+  { label: 'Fläkt', domain: 'fan', kind: 'fan' },
+];
+
+type ACSourceFilter = 'all' | 'curated' | 'user';
+
+interface ACEntry {
+  id: string; name: string; thumbnail?: string; category: string;
+  source: 'curated' | 'user' | 'builtin'; modelPath?: string;
+  catalogItem?: PropCatalogItem; curatedMeta?: CatalogAssetMeta;
+  haMappable?: boolean; dimensions?: { width: number; depth: number; height: number };
+  performance?: { vertices?: number; triangles?: number; textureBytes?: number };
+  subcategory?: string;
+}
+
+function AssetCatalog() {
+  const activeFloorId = useAppStore((s) => s.layout.activeFloorId);
+  const catalog = useAppStore((s) => s.props.catalog);
+  const addToCatalog = useAppStore((s) => s.addToCatalog);
+  const addProp = useAppStore((s) => s.addProp);
+  const removeFromCatalog = useAppStore((s) => s.removeFromCatalog);
+
+  const [curatedAssets, setCuratedAssets] = useState<CatalogAssetMeta[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterCategory, setFilterCategory] = useState<string | null>(null);
+  const [sourceFilter, setSourceFilter] = useState<ACSourceFilter>('all');
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [importResult, setImportResult] = useState<PipelineResult | null>(null);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importName, setImportName] = useState('');
+  const [importCategory, setImportCategory] = useState<AssetCategory>('imported');
+  const [importSubcategory, setImportSubcategory] = useState('');
+  const [importHAMapping, setImportHAMapping] = useState<string>('none');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [saveToCatalog, setSaveToCatalog] = useState(false);
+  const [manageAsset, setManageAsset] = useState<ACEntry | null>(null);
+  const [manageDialogOpen, setManageDialogOpen] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const thumbRef = useRef<HTMLInputElement>(null);
+  const [manageName, setManageName] = useState('');
+  const [manageCategory, setManageCategory] = useState<AssetCategory>('imported');
+  const [manageSubcategory, setManageSubcategory] = useState('');
+  const [managePlacement, setManagePlacement] = useState('floor');
+
+  useEffect(() => { loadCuratedCatalog().then(setCuratedAssets); }, []);
+
+  const allEntries: ACEntry[] = [
+    ...curatedAssets.map((c): ACEntry => ({
+      id: c.id, name: c.name, thumbnail: c.thumbnail ? `/catalog/${c.thumbnail}` : undefined,
+      category: c.category, source: 'curated', modelPath: `/catalog/${c.model}`, curatedMeta: c,
+      haMappable: c.ha?.mappable, dimensions: c.dimensions, performance: c.performance, subcategory: c.subcategory,
+    })),
+    ...catalog.map((c): ACEntry => ({
+      id: c.id, name: c.name, thumbnail: c.thumbnail, category: c.category || 'imported',
+      source: c.source as any, catalogItem: c, haMappable: c.haMapping?.mappable,
+      dimensions: c.dimensions, performance: c.performance as any, subcategory: c.subcategory,
+    })),
+  ];
+
+  const categories = [...new Set(allEntries.map((e) => e.category))].sort();
+  const hasUser = allEntries.some((e) => e.source === 'user');
+  const hasCurated = allEntries.some((e) => e.source === 'curated');
+  const filtered = allEntries
+    .filter((e) => !searchQuery || e.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    .filter((e) => !filterCategory || e.category === filterCategory)
+    .filter((e) => sourceFilter === 'all' || e.source === sourceFilter)
+    .sort((a, b) => a.name.localeCompare(b.name, 'sv'));
+
+  const handleFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]; if (!file) return; e.target.value = '';
+    const err = validateFormat(file); if (err) { toast.error(err); return; }
+    setImportFile(file); setImportName(file.name.replace(/\.(glb|gltf)$/i, ''));
+    setImportCategory('imported'); setImportSubcategory(''); setImportHAMapping('none');
+    setIsProcessing(true); setImportDialogOpen(true);
+    try {
+      const result = await processModel(file); setImportResult(result);
+      result.warnings.forEach((w) => toast.warning(w));
+      if (!result.thumbnail) toast.warning('Thumbnail kunde inte genereras');
+    } catch { toast.error('Kunde inte analysera modellen'); setImportDialogOpen(false); }
+    finally { setIsProcessing(false); }
+  }, []);
+
+  const placePropFn = useCallback((catalogId: string, url: string) => {
+    if (!activeFloorId) return;
+    addProp({ id: generateId(), catalogId, floorId: activeFloorId, url, position: [0,0,0], rotation: [0,0,0], scale: [1,1,1] });
+  }, [activeFloorId, addProp]);
+
+  const handleImportConfirm = useCallback(async () => {
+    if (!importFile || !importResult || !activeFloorId || !importName.trim()) return;
+    const catalogId = (() => { const b = generateId(); return (catalog.find(c => c.id === b) || curatedAssets.find(c => c.id === b)) ? b + generateId().slice(0,4) : b; })();
+    const haMapping: AssetHAMapping | undefined = importHAMapping !== 'none'
+      ? { mappable: true, defaultDomain: AC_HA_DOMAINS.find(o => o.domain === importHAMapping)?.domain, defaultKind: AC_HA_DOMAINS.find(o => o.domain === importHAMapping)?.kind }
+      : undefined;
+
+    if (saveToCatalog && isHostedSync()) {
+      try {
+        await ingestToCatalog(importFile, { name: importName.trim(), category: importCategory, subcategory: importSubcategory || undefined, placement: 'floor', dimensions: importResult.dimensions, performance: importResult.stats, ha: haMapping ? { mappable: true, defaultDomain: haMapping.defaultDomain, defaultKind: haMapping.defaultKind } : undefined }, importResult.thumbnail || undefined);
+        clearCatalogCache(); loadCuratedCatalog().then(setCuratedAssets); toast.success('Sparad i katalogen');
+      } catch (err: any) {
+        if (err?.status === 409) { if (window.confirm('Asset finns redan. Ersätt?')) { try { await ingestToCatalog(importFile, { name: importName.trim(), category: importCategory, placement: 'floor', dimensions: importResult.dimensions, performance: importResult.stats }, importResult.thumbnail || undefined, true); clearCatalogCache(); loadCuratedCatalog().then(setCuratedAssets); } catch {} } }
+        else toast.error('Kunde inte spara till katalogen');
+      }
+    }
+
+    if (isHostedSync()) {
+      try {
+        const result = await uploadPropAsset('home', importFile, { name: importName.trim(), category: importCategory, subcategory: importSubcategory || undefined, placement: 'floor', dimensions: importResult.dimensions, performance: importResult.stats, haMapping }, importResult.thumbnail || undefined);
+        if (result) {
+          const item: PropCatalogItem = { id: result.assetId || catalogId, name: importName.trim(), url: result.modelUrl, source: 'user', thumbnail: result.thumbnailUrl || importResult.thumbnail || undefined, category: importCategory, subcategory: importSubcategory || undefined, dimensions: importResult.dimensions, placement: 'floor', haMapping, performance: importResult.stats };
+          addToCatalog(item as any); placePropFn(item.id, result.modelUrl); setImportDialogOpen(false); setImportResult(null); setImportFile(null); return;
+        }
+      } catch (err) { console.warn('[AssetCatalog] Server upload failed:', err); }
+    }
+
+    const url = URL.createObjectURL(importFile);
+    const item: PropCatalogItem = { id: catalogId, name: importName.trim(), url, source: 'user', thumbnail: importResult.thumbnail || undefined, category: importCategory, subcategory: importSubcategory || undefined, dimensions: importResult.dimensions, placement: 'floor', haMapping, performance: importResult.stats };
+    if (importFile.size <= 4*1024*1024) { const r = new FileReader(); r.onload = () => { addToCatalog({ ...item, fileData: (r.result as string).split(',')[1] } as any); placePropFn(catalogId, url); }; r.readAsDataURL(importFile); }
+    else { addToCatalog(item as any); placePropFn(catalogId, url); toast.info('Stor modell — sparas bara under denna session'); }
+    setImportDialogOpen(false); setImportResult(null); setImportFile(null);
+  }, [importFile, importResult, activeFloorId, importName, importCategory, importSubcategory, importHAMapping, addToCatalog, saveToCatalog, catalog, curatedAssets, placePropFn]);
+
+  const handlePlaceEntry = useCallback((entry: ACEntry) => {
+    if (!activeFloorId) return;
+    if (entry.source === 'curated' && entry.modelPath) {
+      if (!catalog.find(c => c.id === entry.id)) addToCatalog({ id: entry.id, name: entry.name, url: entry.modelPath, source: 'curated', thumbnail: entry.thumbnail, category: entry.category, placement: entry.curatedMeta?.placement, dimensions: entry.curatedMeta?.dimensions, haMapping: entry.curatedMeta?.ha, performance: entry.curatedMeta?.performance } as any);
+      placePropFn(entry.id, entry.modelPath);
+    } else if (entry.catalogItem) { placePropFn(entry.catalogItem.id, entry.catalogItem.url); }
+  }, [activeFloorId, catalog, addToCatalog, placePropFn]);
+
+  const openManageDialog = useCallback((entry: ACEntry) => { setManageAsset(entry); setManageName(entry.name); setManageCategory((entry.category as AssetCategory) || 'imported'); setManageSubcategory(entry.subcategory || ''); setManagePlacement(entry.curatedMeta?.placement || 'floor'); setManageDialogOpen(true); }, []);
+  const handleSaveMeta = useCallback(async () => { if (!manageAsset) return; try { await updateCatalogMeta(manageAsset.id, { name: manageName.trim() || manageAsset.name, category: manageCategory, subcategory: manageSubcategory || undefined, placement: managePlacement }); clearCatalogCache(); loadCuratedCatalog().then(setCuratedAssets); toast.success('Metadata uppdaterad'); setManageDialogOpen(false); } catch { toast.error('Kunde inte uppdatera'); } }, [manageAsset, manageName, manageCategory, manageSubcategory, managePlacement]);
+  const handleReplaceThumbnail = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => { const f = e.target.files?.[0]; if (!f || !manageAsset) return; try { await replaceCatalogThumbnail(manageAsset.id, f); clearCatalogCache(); loadCuratedCatalog().then(setCuratedAssets); toast.success('Thumbnail ersatt'); } catch { toast.error('Kunde inte ersätta thumbnail'); } }, [manageAsset]);
+  const handleDeleteCurated = useCallback(async () => { if (!manageAsset) return; if (!window.confirm(`Ta bort "${manageAsset.name}"?`)) return; try { await deleteCatalogAsset(manageAsset.id); clearCatalogCache(); loadCuratedCatalog().then(setCuratedAssets); toast.success('Borttagen'); setManageDialogOpen(false); } catch { toast.error('Kunde inte ta bort'); } }, [manageAsset]);
+
+  const rating = importResult ? ratePerformance(importResult.stats) : null;
+  const getPerfColor = (perf?: ACEntry['performance']) => { if (!perf) return null; const t = perf.triangles ?? 0; if (t <= 10000) return 'bg-primary'; if (t <= 50000) return 'bg-yellow-500'; return 'bg-destructive'; };
+
+  return (
+    <div className="space-y-3 px-1">
+      <div className="relative">
+        <Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
+        <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Sök modell..." className="h-7 text-xs pl-7" />
+      </div>
+
+      {(hasUser && hasCurated) && (
+        <div className="flex gap-1">
+          {(['all', 'curated', 'user'] as ACSourceFilter[]).map((sf) => (
+            <Button key={sf} size="sm" variant={sourceFilter === sf ? 'default' : 'outline'} className="h-5 text-[9px] px-2 shrink-0" onClick={() => setSourceFilter(sf)}>
+              {sf === 'all' ? 'Alla' : sf === 'curated' ? 'Katalog' : 'Mina'}
+            </Button>
+          ))}
+        </div>
+      )}
+
+      {categories.length > 1 && (
+        <div className="flex gap-1 overflow-x-auto pb-1">
+          <Button size="sm" variant={!filterCategory ? 'default' : 'outline'} className="h-5 text-[9px] px-2 shrink-0" onClick={() => setFilterCategory(null)}>Alla</Button>
+          {categories.map((c) => (
+            <Button key={c} size="sm" variant={filterCategory === c ? 'default' : 'outline'} className="h-5 text-[9px] px-2 shrink-0" onClick={() => setFilterCategory(c)}>
+              {AC_CATEGORY_LABELS[c] || c}
+            </Button>
+          ))}
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 gap-1.5 max-h-[60vh] overflow-y-auto">
+        {filtered.map((entry) => (
+          <button key={entry.id} onClick={() => handlePlaceEntry(entry)} className="relative flex flex-col items-center gap-0.5 p-2 rounded-lg bg-secondary/30 hover:bg-secondary/60 transition-colors text-xs group min-h-[44px]">
+            {entry.haMappable && <div className="absolute top-1 left-1 p-0.5 rounded bg-primary/20 text-primary z-10"><Zap size={10} /></div>}
+            <div className="absolute top-1 right-1 p-0.5 rounded text-muted-foreground/50 z-10">{entry.source === 'curated' ? <Archive size={8} /> : <User size={8} />}</div>
+            {entry.thumbnail ? (
+              <img src={entry.thumbnail} alt={entry.name} className="w-full h-16 object-contain rounded" loading="lazy"
+                onError={(e) => { e.currentTarget.style.display = 'none'; const p = e.currentTarget.nextElementSibling; if (p) (p as HTMLElement).style.display = 'flex'; }} />
+            ) : null}
+            <div className="w-full h-16 bg-muted/30 rounded items-center justify-center text-muted-foreground" style={{ display: entry.thumbnail ? 'none' : 'flex' }}>
+              {(() => { const I = AC_CATEGORY_ICONS[entry.category] || Box; return <I size={20} strokeWidth={1.5} />; })()}
+            </div>
+            <span className="text-[10px] text-foreground truncate w-full text-center">{entry.name}</span>
+            <div className="flex items-center gap-1 w-full justify-center">
+              {entry.dimensions && <span className="text-[8px] text-muted-foreground">{entry.dimensions.width}×{entry.dimensions.depth}×{entry.dimensions.height}m</span>}
+              {getPerfColor(entry.performance) && <span className={`inline-block w-1.5 h-1.5 rounded-full ${getPerfColor(entry.performance)}`} />}
+              {entry.subcategory && entry.subcategory !== entry.category && <span className="text-[8px] text-muted-foreground/60">{entry.subcategory}</span>}
+            </div>
+            {entry.source === 'user' && <button onClick={(e) => { e.stopPropagation(); removeFromCatalog(entry.id); }} className="absolute bottom-1 right-1 p-0.5 rounded opacity-0 group-hover:opacity-100 hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-opacity"><Trash2 size={10} /></button>}
+            {entry.source === 'curated' && isHostedSync() && <button onClick={(e) => { e.stopPropagation(); openManageDialog(entry); }} className="absolute bottom-1 right-1 p-0.5 rounded opacity-0 group-hover:opacity-100 hover:bg-accent text-muted-foreground hover:text-foreground transition-opacity"><Settings size={10} /></button>}
+          </button>
+        ))}
+        <button onClick={() => fileRef.current?.click()} className="flex flex-col items-center justify-center gap-1 p-2 rounded-lg border-2 border-dashed border-border hover:border-primary/50 text-muted-foreground hover:text-primary transition-all min-h-[80px]">
+          <Upload size={16} /><span className="text-[10px]">Importera</span>
+        </button>
+      </div>
+
+      <input ref={fileRef} type="file" accept=".glb,.gltf" className="hidden" onChange={handleFileSelect} />
+      <input ref={thumbRef} type="file" accept="image/*" className="hidden" onChange={handleReplaceThumbnail} />
+
+      {filtered.length === 0 && !searchQuery && catalog.length === 0 && curatedAssets.length === 0 && (
+        <div className="flex flex-col items-center gap-3 py-6 text-center">
+          <div className="w-12 h-12 rounded-full bg-muted/40 flex items-center justify-center"><Sofa size={20} className="text-muted-foreground" /></div>
+          <div><p className="text-xs font-medium text-foreground">Inga möbler i katalogen ännu</p><p className="text-[10px] text-muted-foreground mt-0.5">Importera 3D-modeller (GLB/GLTF) för att börja möblera.</p></div>
+          <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1" onClick={() => fileRef.current?.click()}><Upload size={12} />Importera modell</Button>
+        </div>
+      )}
+
+      <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle className="text-sm">Importera modell</DialogTitle><DialogDescription className="sr-only">Importera en 3D-modell</DialogDescription></DialogHeader>
+          {isProcessing ? (
+            <div className="flex flex-col items-center gap-3 py-8"><Loader2 size={24} className="animate-spin text-primary" /><p className="text-xs text-muted-foreground">Analyserar modell...</p></div>
+          ) : importResult ? (
+            <div className="space-y-3">
+              {importResult.thumbnail ? <div className="flex justify-center"><img src={importResult.thumbnail} alt="Preview" className="w-24 h-24 object-contain rounded bg-muted/20" /></div> : <div className="flex justify-center"><div className="w-24 h-24 bg-muted/20 rounded flex items-center justify-center text-muted-foreground text-[10px]">Ingen förhandsgranskning</div></div>}
+              <div className="flex items-center gap-2 text-[10px]">
+                {rating === 'ok' && <CheckCircle size={12} className="text-primary" />}{rating === 'heavy' && <AlertTriangle size={12} className="text-accent-foreground" />}{rating === 'too-heavy' && <AlertTriangle size={12} className="text-destructive" />}
+                <span className="text-muted-foreground">{formatStats(importResult.stats)}</span>
+                {importResult.dimensions && <span className="text-muted-foreground">· {importResult.dimensions.width}×{importResult.dimensions.depth}×{importResult.dimensions.height}m</span>}
+              </div>
+              <div className="space-y-1"><Label className="text-[10px]">Namn</Label><Input value={importName} onChange={(e) => setImportName(e.target.value)} className="h-7 text-xs" /></div>
+              <div className="space-y-1"><Label className="text-[10px]">Kategori</Label><select value={importCategory} onChange={(e) => setImportCategory(e.target.value as AssetCategory)} className="w-full h-7 text-xs bg-secondary text-foreground rounded-md px-2 border border-border">{Object.entries(AC_CATEGORY_LABELS).map(([k,v]) => <option key={k} value={k}>{v}</option>)}</select></div>
+              <div className="space-y-1"><Label className="text-[10px]">Underkategori</Label><Input value={importSubcategory} onChange={(e) => setImportSubcategory(e.target.value)} placeholder="t.ex. soffbord..." className="h-7 text-xs" /></div>
+              <div className="space-y-1"><Label className="text-[10px]">HA-mappning</Label><select value={importHAMapping} onChange={(e) => setImportHAMapping(e.target.value)} className="w-full h-7 text-xs bg-secondary text-foreground rounded-md px-2 border border-border"><option value="none">Ingen</option>{AC_HA_DOMAINS.map(o => <option key={o.domain} value={o.domain}>{o.label}</option>)}</select></div>
+              {isHostedSync() && <label className="flex items-center gap-2 text-[10px] text-muted-foreground cursor-pointer"><input type="checkbox" checked={saveToCatalog} onChange={(e) => setSaveToCatalog(e.target.checked)} className="rounded border-border" /><FolderPlus size={12} />Spara i permanent katalog</label>}
+              {importResult.warnings.length > 0 && <div className="space-y-1">{importResult.warnings.map((w,i) => <p key={i} className="text-[10px] text-accent-foreground flex items-center gap-1"><AlertTriangle size={10} /> {w}</p>)}</div>}
+            </div>
+          ) : null}
+          <DialogFooter>
+            <Button size="sm" variant="outline" onClick={() => setImportDialogOpen(false)}>Avbryt</Button>
+            <Button size="sm" onClick={handleImportConfirm} disabled={isProcessing || !importName.trim() || !importResult}>Importera</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={manageDialogOpen} onOpenChange={setManageDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle className="text-sm">Hantera katalogresurs</DialogTitle><DialogDescription className="text-[10px]">Redigera metadata, byt thumbnail eller ta bort.</DialogDescription></DialogHeader>
+          {manageAsset && (
+            <div className="space-y-3">
+              <div className="space-y-1"><Label className="text-[10px]">Namn</Label><Input value={manageName} onChange={(e) => setManageName(e.target.value)} className="h-7 text-xs" /></div>
+              <div className="space-y-1"><Label className="text-[10px]">Kategori</Label><select value={manageCategory} onChange={(e) => setManageCategory(e.target.value as AssetCategory)} className="w-full h-7 text-xs bg-secondary text-foreground rounded-md px-2 border border-border">{Object.entries(AC_CATEGORY_LABELS).map(([k,v]) => <option key={k} value={k}>{v}</option>)}</select></div>
+              <div className="space-y-1"><Label className="text-[10px]">Underkategori</Label><Input value={manageSubcategory} onChange={(e) => setManageSubcategory(e.target.value)} className="h-7 text-xs" /></div>
+              <div className="space-y-1"><Label className="text-[10px]">Placering</Label><select value={managePlacement} onChange={(e) => setManagePlacement(e.target.value)} className="w-full h-7 text-xs bg-secondary text-foreground rounded-md px-2 border border-border"><option value="floor">Golv</option><option value="wall">Vägg</option><option value="ceiling">Tak</option></select></div>
+              <div className="flex gap-2"><Button size="sm" variant="outline" onClick={() => thumbRef.current?.click()} className="text-[10px]">Byt thumbnail</Button><Button size="sm" variant="destructive" onClick={handleDeleteCurated} className="text-[10px]">Ta bort</Button></div>
+            </div>
+          )}
+          <DialogFooter><Button size="sm" variant="outline" onClick={() => setManageDialogOpen(false)}>Avbryt</Button><Button size="sm" onClick={handleSaveMeta}>Spara</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
 
 function ImportCatalog() {
   const floorplanRef = useRef<HTMLInputElement>(null);
