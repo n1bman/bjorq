@@ -487,6 +487,9 @@ export function detectRooms(walls: WallSegment[], existingRooms?: Room[]): Room[
         for (const er of existingRooms) {
           if (usedExistingIds.has(er.id)) continue;
           if (!er.polygon || er.polygon.length < 3) continue;
+          const erArea = polygonArea(er.polygon);
+          const areaRatio = Math.max(area, erArea) / Math.min(area, erArea);
+          if (areaRatio >= 3) continue; // prevent large merged room matching small old room
           const overlap = polygonOverlap(polygon, er.polygon);
           if (overlap > 0.6 && overlap > bestOverlap) {
             bestOverlap = overlap;
