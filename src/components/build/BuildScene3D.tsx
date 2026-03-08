@@ -254,7 +254,6 @@ function SceneContent() {
 
   return (
     <>
-      <ContextLossHandler />
       <ambientLight intensity={ambientIntensity} color={ambientColor} />
       <directionalLight position={sunPos} intensity={sunIntensity} color="#ffd699" castShadow={enableShadows}
         shadow-mapSize-width={shadowMapSize} shadow-mapSize-height={shadowMapSize}
