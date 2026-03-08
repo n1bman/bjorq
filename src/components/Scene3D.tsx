@@ -282,25 +282,49 @@ export default function Scene3D() {
   const exposure = useAppStore((s) => s.performance.exposure);
   const dpr = tabletMode ? 0.75 : quality === 'low' ? 1 : quality === 'medium' ? 1.5 : undefined;
 
-  const canvasKey = `${quality}-${shadows}-${postprocessing}-${tabletMode}-${antialiasing}-${toneMapping}`;
+  const [recoveryCount, setRecoveryCount] = useState(0);
+  const [recovering, setRecovering] = useState(false);
+
+  const handleCreated = ({ gl }: { gl: THREE.WebGLRenderer }) => {
+    const canvas = gl.domElement;
+    canvas.addEventListener('webglcontextlost', (e) => {
+      e.preventDefault();
+      console.warn('[Scene3D] WebGL context lost — recovering...');
+      setRecovering(true);
+      setTimeout(() => {
+        setRecoveryCount((c) => c + 1);
+        setRecovering(false);
+      }, 1000);
+    });
+  };
+
+  const canvasKey = `${quality}-${shadows}-${postprocessing}-${tabletMode}-${antialiasing}-${toneMapping}-${recoveryCount}`;
 
   return (
-    <Canvas
-      key={canvasKey}
-      shadows={shadows}
-      camera={{ position: [0, 25, 0.01], fov: 45 }}
-      style={{ background: 'transparent' }}
-      gl={{
-        antialias: antialiasing && !tabletMode,
-        alpha: true,
-        toneMapping: toneMapping ? THREE.ACESFilmicToneMapping : THREE.NoToneMapping,
-        toneMappingExposure: exposure,
-      }}
-      dpr={dpr}
-    >
-      <Suspense fallback={null}>
-        <SceneContent />
-      </Suspense>
-    </Canvas>
+    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+      {recovering && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+          <p className="text-sm text-muted-foreground animate-pulse">Återställer 3D…</p>
+        </div>
+      )}
+      <Canvas
+        key={canvasKey}
+        shadows={shadows}
+        camera={{ position: [0, 25, 0.01], fov: 45 }}
+        style={{ background: 'transparent' }}
+        gl={{
+          antialias: antialiasing && !tabletMode,
+          alpha: true,
+          toneMapping: toneMapping ? THREE.ACESFilmicToneMapping : THREE.NoToneMapping,
+          toneMappingExposure: exposure,
+        }}
+        dpr={dpr}
+        onCreated={handleCreated}
+      >
+        <Suspense fallback={null}>
+          <SceneContent />
+        </Suspense>
+      </Canvas>
+    </div>
   );
 }
