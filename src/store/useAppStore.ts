@@ -643,6 +643,18 @@ const storeCreator = (set: any, get: any): AppState => ({
       },
     })),
 
+  setRoomCameraPreset: (floorId, roomId, preset) =>
+    set((s: any) => ({
+      layout: {
+        ...s.layout,
+        floors: s.layout.floors.map((f: any) =>
+          f.id === floorId
+            ? { ...f, rooms: f.rooms.map((r: any) => r.id === roomId ? { ...r, cameraPreset: preset } : r) }
+            : f
+        ),
+      },
+    })),
+
   setRoomMaterial: (floorId, roomId, target, materialId) =>
     set((s: any) => {
       if (target === 'floor') {
