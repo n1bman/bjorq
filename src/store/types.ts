@@ -737,6 +737,7 @@ export interface Automation {
   trigger: AutomationTrigger;
   actions: AutomationAction[];
   lastTriggered?: string;
+  linkedRoomIds?: string[];
 }
 
 // ─── Comfort Rules ───
