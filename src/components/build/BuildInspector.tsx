@@ -1,6 +1,6 @@
 import { useAppStore } from '../../store/useAppStore';
 import { cn } from '../../lib/utils';
-import { X, Plus, DoorOpen, RotateCcw, Move, Trash2, Layers, Home, Lightbulb, ArrowRightLeft, Monitor, RectangleHorizontal, Warehouse, Upload } from 'lucide-react';
+import { X, Plus, DoorOpen, RotateCcw, Move, Trash2, Layers, Home, Lightbulb, ArrowRightLeft, Monitor, RectangleHorizontal, Warehouse, Upload, Paintbrush, Image, RotateCw } from 'lucide-react';
 import { Slider } from '../ui/slider';
 import { Input } from '../ui/input';
 import { Switch } from '../ui/switch';
@@ -597,6 +597,111 @@ function PropInspector({ propId, close }: { propId: string; close: React.ReactNo
             className="flex-1"
           />
           <span className="text-[10px] text-foreground w-8 text-right">{prop.scale[0].toFixed(2)}x</span>
+        </div>
+      </div>
+
+      {/* Material overrides */}
+      <div className="border-t border-border pt-2 space-y-2">
+        <div className="flex items-center gap-1 text-muted-foreground"><Paintbrush size={12} /> Material</div>
+
+        {/* Color override */}
+        <div className="space-y-1">
+          <label className="text-muted-foreground text-[10px]">Färg</label>
+          <div className="flex items-center gap-2">
+            <input
+              type="color"
+              value={prop.colorOverride || '#ffffff'}
+              onChange={(e) => updateProp(prop.id, { colorOverride: e.target.value })}
+              className="w-7 h-7 rounded-md border border-border cursor-pointer bg-transparent"
+            />
+            <span className="text-[10px] text-muted-foreground flex-1">{prop.colorOverride || 'Original'}</span>
+            {prop.colorOverride && (
+              <button
+                onClick={() => updateProp(prop.id, { colorOverride: undefined })}
+                className="px-1.5 py-0.5 rounded-md bg-secondary/50 hover:bg-secondary text-foreground text-[9px]"
+              >
+                Återställ
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Texture upload */}
+        <div className="space-y-1">
+          <label className="text-muted-foreground text-[10px]">Textur</label>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = 'image/png,image/jpeg,image/webp';
+                input.onchange = (e) => {
+                  const file = (e.target as HTMLInputElement).files?.[0];
+                  if (!file) return;
+                  const reader = new FileReader();
+                  reader.onload = () => {
+                    updateProp(prop.id, { textureOverride: reader.result as string });
+                  };
+                  reader.readAsDataURL(file);
+                };
+                input.click();
+              }}
+              className="flex items-center gap-1 px-2 py-1 rounded-md bg-secondary/50 hover:bg-secondary text-foreground text-[10px] transition-colors"
+            >
+              <Image size={10} /> Ladda upp
+            </button>
+            {prop.textureOverride && (
+              <>
+                <div className="w-7 h-7 rounded-md border border-border overflow-hidden">
+                  <img src={prop.textureOverride} alt="" className="w-full h-full object-cover" />
+                </div>
+                <button
+                  onClick={() => updateProp(prop.id, { textureOverride: undefined, textureScale: undefined })}
+                  className="px-1.5 py-0.5 rounded-md bg-secondary/50 hover:bg-secondary text-foreground text-[9px]"
+                >
+                  Ta bort
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Texture scale */}
+        {prop.textureOverride && (
+          <div className="space-y-1">
+            <label className="text-muted-foreground text-[10px]">Texturskala</label>
+            <div className="flex items-center gap-2">
+              <Slider min={0.1} max={10} step={0.1} value={[prop.textureScale ?? 1]}
+                onValueChange={([v]) => updateProp(prop.id, { textureScale: v })}
+                className="flex-1"
+              />
+              <span className="text-[10px] text-foreground w-8 text-right">{(prop.textureScale ?? 1).toFixed(1)}x</span>
+            </div>
+          </div>
+        )}
+
+        {/* Roughness */}
+        <div className="space-y-1">
+          <label className="text-muted-foreground text-[10px]">Grovhet</label>
+          <div className="flex items-center gap-2">
+            <Slider min={0} max={1} step={0.05} value={[prop.roughness ?? 0.5]}
+              onValueChange={([v]) => updateProp(prop.id, { roughness: v })}
+              className="flex-1"
+            />
+            <span className="text-[10px] text-foreground w-8 text-right">{(prop.roughness ?? 0.5).toFixed(2)}</span>
+          </div>
+        </div>
+
+        {/* Metalness */}
+        <div className="space-y-1">
+          <label className="text-muted-foreground text-[10px]">Metallkänsla</label>
+          <div className="flex items-center gap-2">
+            <Slider min={0} max={1} step={0.05} value={[prop.metalness ?? 0]}
+              onValueChange={([v]) => updateProp(prop.id, { metalness: v })}
+              className="flex-1"
+            />
+            <span className="text-[10px] text-foreground w-8 text-right">{(prop.metalness ?? 0).toFixed(2)}</span>
+          </div>
         </div>
       </div>
 

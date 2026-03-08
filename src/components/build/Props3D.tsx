@@ -84,12 +84,17 @@ function getFileDataForProp(propId: string): string | null {
   return (catItem as any)?.fileData ?? null;
 }
 
-function PropModel({ id, url: rawUrl, position, rotation, scale }: {
+function PropModel({ id, url: rawUrl, position, rotation, scale, colorOverride, textureOverride, textureScale = 1, metalness: metalnessOverride, roughness: roughnessOverride }: {
   id: string;
   url: string;
   position: [number, number, number];
   rotation: [number, number, number];
   scale: [number, number, number];
+  colorOverride?: string;
+  textureOverride?: string;
+  textureScale?: number;
+  metalness?: number;
+  roughness?: number;
 }) {
   const url = rawUrl;
   const appMode = useAppStore((s) => s.appMode);
@@ -252,7 +257,7 @@ function PropModel({ id, url: rawUrl, position, rotation, scale }: {
     window.addEventListener('pointerup', onPointerUp);
   };
 
-  // Memoize scene clone — only re-clone when scene or selection changes
+  // Memoize scene clone — apply material overrides
   const displayScene = useMemo(() => {
     if (!scene) return null;
     const clone = scene.clone();
@@ -260,15 +265,30 @@ function PropModel({ id, url: rawUrl, position, rotation, scale }: {
       if (child.isMesh) {
         child.castShadow = false;
         child.receiveShadow = true;
+        // Always clone material to avoid mutating original
+        child.material = child.material.clone();
+
+        if (colorOverride) {
+          child.material.color = new THREE.Color(colorOverride);
+        }
+        if (textureOverride) {
+          const tex = new THREE.TextureLoader().load(textureOverride);
+          tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+          tex.repeat.set(textureScale, textureScale);
+          child.material.map = tex;
+          child.material.needsUpdate = true;
+        }
+        if (roughnessOverride !== undefined) child.material.roughness = roughnessOverride;
+        if (metalnessOverride !== undefined) child.material.metalness = metalnessOverride;
+
         if (isSelected) {
-          child.material = child.material.clone();
           child.material.emissive = new THREE.Color('#4a9eff');
           child.material.emissiveIntensity = 0.3;
         }
       }
     });
     return clone;
-  }, [scene, isSelected]);
+  }, [scene, isSelected, colorOverride, textureOverride, textureScale, roughnessOverride, metalnessOverride]);
 
   // Loading state
   if (status === 'loading' || status === 'idle') {
@@ -361,6 +381,11 @@ export default function Props3D() {
             position={prop.position}
             rotation={prop.rotation}
             scale={prop.scale}
+            colorOverride={prop.colorOverride}
+            textureOverride={prop.textureOverride}
+            textureScale={prop.textureScale}
+            metalness={prop.metalness}
+            roughness={prop.roughness}
           />
         </ErrorBoundary>
       ))}
