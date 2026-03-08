@@ -9,8 +9,10 @@ import type { DeviceMarker, CameraState } from '../../../store/types';
 /* ── Per-camera card (isolates snapshot hook per camera) ── */
 function CameraCard({ cam, isOn, onClick }: { cam: DeviceMarker; isOn: boolean; onClick: () => void }) {
   const deviceState = useAppStore((s) => s.devices.deviceStates[cam.id]);
-  const entityId = (deviceState?.kind === 'camera' ? (deviceState.data as CameraState).entityId : undefined) || cam.ha?.entityId;
-  const snapshotUrl = useCameraSnapshot(entityId, isOn);
+  const camData = deviceState?.kind === 'camera' ? (deviceState.data as CameraState) : undefined;
+  const entityId = camData?.entityId || cam.ha?.entityId;
+  const entityPicture = camData?.lastSnapshot;
+  const snapshotUrl = useCameraSnapshot(entityId, isOn, entityPicture);
 
   return (
     <div
@@ -42,8 +44,10 @@ function CameraCard({ cam, isOn, onClick }: { cam: DeviceMarker; isOn: boolean; 
 /* ── Expanded camera view ── */
 function ExpandedCamera({ cam, isOn, onClose }: { cam: DeviceMarker; isOn: boolean; onClose: () => void }) {
   const deviceState = useAppStore((s) => s.devices.deviceStates[cam.id]);
-  const entityId = (deviceState?.kind === 'camera' ? (deviceState.data as CameraState).entityId : undefined) || cam.ha?.entityId;
-  const snapshotUrl = useCameraSnapshot(entityId, isOn);
+  const camData = deviceState?.kind === 'camera' ? (deviceState.data as CameraState) : undefined;
+  const entityId = camData?.entityId || cam.ha?.entityId;
+  const entityPicture = camData?.lastSnapshot;
+  const snapshotUrl = useCameraSnapshot(entityId, isOn, entityPicture);
 
   return (
     <div className="glass-panel rounded-2xl overflow-hidden animate-fade-in">

@@ -236,7 +236,7 @@ function CompactMediaControl({ id, data, update, label }: { id: string; data: Me
 function CameraControl({ id, data, update }: { id: string; data: CameraState; update: UpdateFn }) {
   const marker = useAppStore((s) => s.devices.markers.find((m) => m.id === id));
   const entityId = data.entityId || marker?.ha?.entityId;
-  const snapshotUrl = useCameraSnapshot(entityId, data.on && data.streaming);
+  const snapshotUrl = useCameraSnapshot(entityId, data.on && data.streaming, data.lastSnapshot);
   const [imgError, setImgError] = useState(false);
 
   const streamSource: 'snapshot' | 'placeholder' = snapshotUrl && !imgError ? 'snapshot' : 'placeholder';
