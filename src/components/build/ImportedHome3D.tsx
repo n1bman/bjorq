@@ -123,7 +123,10 @@ function ImportedModel({ url, opacity, shadowsEnabled }: { url: string; opacity:
     if (scene) {
       scene.traverse((child: any) => {
         if (child.isMesh) {
-          child.castShadow = false;
+          const isGlass = child.material.transparent
+            || child.material.opacity < 0.9
+            || /glass|window|glas|fönster/i.test(child.material.name || child.name);
+          child.castShadow = shadowsEnabled && !isGlass;
           child.receiveShadow = shadowsEnabled;
           if (opacity < 1) {
             child.material = child.material.clone();
