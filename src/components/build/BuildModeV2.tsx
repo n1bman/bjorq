@@ -120,7 +120,7 @@ interface ACEntry {
   id: string; name: string; thumbnail?: string; category: string;
   source: 'curated' | 'user' | 'builtin'; modelPath?: string;
   catalogItem?: PropCatalogItem; curatedMeta?: CatalogAssetMeta;
-  haMappable?: boolean; dimensions?: { width: number; depth: number; height: number };
+  dimensions?: { width: number; depth: number; height: number };
   performance?: { vertices?: number; triangles?: number; textureBytes?: number };
   subcategory?: string;
 }
