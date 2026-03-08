@@ -220,7 +220,7 @@ function AssetCatalog() {
 
     if (saveToCatalog && isHostedSync()) {
       try {
-        await ingestToCatalog(importFile, { name: importName.trim(), category: importCategory, subcategory: importSubcategory || undefined, placement: 'floor', dimensions: importResult.dimensions, performance: importResult.stats, ha: haMapping ? { mappable: true, defaultDomain: haMapping.defaultDomain, defaultKind: haMapping.defaultKind } : undefined }, importResult.thumbnail || undefined);
+        await ingestToCatalog(importFile, { name: importName.trim(), category: importCategory, subcategory: importSubcategory || undefined, placement: 'floor', dimensions: importResult.dimensions, performance: importResult.stats }, importResult.thumbnail || undefined);
         clearCatalogCache(); loadCuratedCatalog().then(setCuratedAssets); toast.success('Sparad i katalogen');
       } catch (err: any) {
         if (err?.status === 409) { if (window.confirm('Asset finns redan. Ersätt?')) { try { await ingestToCatalog(importFile, { name: importName.trim(), category: importCategory, placement: 'floor', dimensions: importResult.dimensions, performance: importResult.stats }, importResult.thumbnail || undefined, true); clearCatalogCache(); loadCuratedCatalog().then(setCuratedAssets); } catch {} } }
