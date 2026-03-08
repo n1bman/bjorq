@@ -189,12 +189,19 @@ export function getOptimizationLevel(stats: AssetPerformanceStats): Optimization
 // ─── V1 Optimize ───
 
 export async function optimizeModel(
-  scene: THREE.Group,
+  file: File,
   originalStats: AssetPerformanceStats,
   options?: { maxTextureRes?: number }
 ): Promise<OptimizationResult> {
   const maxTexRes = options?.maxTextureRes ?? 1024;
-  const cloned = scene.clone(true);
+
+  // Re-parse from the original file to get pristine, unmodified textures
+  const buffer = await file.arrayBuffer();
+  const loader = new GLTFLoader();
+  const gltf = await new Promise<any>((resolve, reject) => {
+    loader.parse(buffer, '', resolve, reject);
+  });
+  const cloned = gltf.scene as THREE.Group;
 
   // 1) Collect all materials and check global usage flags
   let anyAoMap = false;
