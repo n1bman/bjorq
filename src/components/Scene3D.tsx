@@ -186,7 +186,7 @@ function SceneContent() {
 
   // Base ambient — cloudiness can dim it
   const cloudDim = atmosphere.cloudinessAffectsLight && (weatherCondition === 'cloudy' || weatherCondition === 'rain') ? 1 : 0;
-  const ambientIntensity = (isNight ? 0.1 : isTwilight ? 0.25 : (cloudDim ? 0.5 : 0.35)) * atmosphere.atmosphereIntensity;
+  // ambientIntensity computed inline below (increased daytime to 0.45)
   const ambientColor = isNight ? '#1a1a3e' : isTwilight ? '#ff9966' : '#b8c4d4';
 
   // Sun intensity with calibration multiplier
@@ -200,17 +200,16 @@ function SceneContent() {
   return (
     <>
       
-      <ambientLight intensity={ambientIntensity} color={ambientColor} />
+      <ambientLight intensity={isNight ? 0.1 : isTwilight ? 0.25 : (cloudDim ? 0.5 : 0.45)} color={ambientColor} />
       <directionalLight position={sunPos} intensity={sunIntensity} color="#ffd699" castShadow={enableShadows}
         shadow-mapSize-width={shadowMapSize} shadow-mapSize-height={shadowMapSize}
         shadow-camera-far={50} shadow-camera-left={-20} shadow-camera-right={20}
         shadow-camera-top={20} shadow-camera-bottom={-20} shadow-bias={-0.002} />
-      {!isNight && perf.quality !== 'low' && (perf.maxLights === 0 || perf.maxLights > 2) && <pointLight position={[0, 8, 0]} intensity={0.15} color="#4a9eff" />}
 
-      {/* Indoor bounce fill light */}
-      {sunCal.indoorBounce > 0 && (
-        <pointLight position={[0, 3, 0]} intensity={sunCal.indoorBounce * 0.3} color="#fff5e0" />
-      )}
+      {/* Hemisphere light for indoor bounce — replaces pointLight bounce */}
+      <hemisphereLight
+        args={['#fff5e0', '#3a5a2a', (isNight ? 0.05 : 0.4) * Math.max(sunCal.indoorBounce, 0.3)]}
+      />
 
       {/* Fog */}
       {atmosphere.fogEnabled && <fog attach="fog" args={['#c8d0d8', 20, 60 - atmosphere.fogDensity * 40]} />}

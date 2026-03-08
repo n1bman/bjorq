@@ -162,7 +162,7 @@ export default function Walls3D() {
             // Door frame – top
             segments.push(
               <mesh key={`${wall.id}-door-ft-${i}`} position={[opPos.x, opBottom + op.height - frameW / 2 + elevation, opPos.z]}
-                rotation={[0, -angle, 0]} castShadow>
+                rotation={[0, -angle, 0]}>
                 <boxGeometry args={[op.width, frameW, frameDepth]} />
                 <meshStandardMaterial color={frameColor} roughness={0.3} />
               </mesh>
@@ -172,7 +172,7 @@ export default function Walls3D() {
               <mesh key={`${wall.id}-door-fl-${i}`} position={new THREE.Vector3(localX - op.width / 2 + frameW / 2, 0, 0)
                 .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
                 .add(new THREE.Vector3(origCx, opBottom + op.height / 2 + elevation, origCz)).toArray()}
-                rotation={[0, -angle, 0]} castShadow>
+                rotation={[0, -angle, 0]}>
                 <boxGeometry args={[frameW, op.height, frameDepth]} />
                 <meshStandardMaterial color={frameColor} roughness={0.3} />
               </mesh>
@@ -182,7 +182,7 @@ export default function Walls3D() {
               <mesh key={`${wall.id}-door-fr-${i}`} position={new THREE.Vector3(localX + op.width / 2 - frameW / 2, 0, 0)
                 .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
                 .add(new THREE.Vector3(origCx, opBottom + op.height / 2 + elevation, origCz)).toArray()}
-                rotation={[0, -angle, 0]} castShadow>
+                rotation={[0, -angle, 0]}>
                 <boxGeometry args={[frameW, op.height, frameDepth]} />
                 <meshStandardMaterial color={frameColor} roughness={0.3} />
               </mesh>
@@ -194,7 +194,7 @@ export default function Walls3D() {
                 <mesh key={`${wall.id}-door-pl-${i}`} position={new THREE.Vector3(localX - panelW / 2 - 0.01, 0, 0)
                   .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
                   .add(new THREE.Vector3(origCx, opBottom + op.height / 2 + elevation, origCz)).toArray()}
-                  rotation={[0, -angle, 0]} castShadow>
+                  rotation={[0, -angle, 0]}>
                   <boxGeometry args={[panelW, op.height - 0.06, 0.04]} />
                   <meshStandardMaterial color={doorColor} roughness={0.5} />
                 </mesh>
@@ -203,7 +203,7 @@ export default function Walls3D() {
                 <mesh key={`${wall.id}-door-pr-${i}`} position={new THREE.Vector3(localX + panelW / 2 + 0.01, 0, 0)
                   .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
                   .add(new THREE.Vector3(origCx, opBottom + op.height / 2 + elevation, origCz)).toArray()}
-                  rotation={[0, -angle, 0]} castShadow>
+                  rotation={[0, -angle, 0]}>
                   <boxGeometry args={[panelW, op.height - 0.06, 0.04]} />
                   <meshStandardMaterial color={doorColor} roughness={0.5} />
                 </mesh>
@@ -214,7 +214,7 @@ export default function Walls3D() {
                 <mesh key={`${wall.id}-door-panel-${i}`} position={new THREE.Vector3(localX + panelOffset, 0, 0)
                   .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
                   .add(new THREE.Vector3(origCx, opBottom + op.height / 2 + elevation, origCz)).toArray()}
-                  rotation={[0, -angle, 0]} castShadow>
+                  rotation={[0, -angle, 0]}>
                   <boxGeometry args={[panelW, op.height - 0.06, 0.04]} />
                   <meshStandardMaterial color={isSliding ? '#5a4a3a' : doorColor} roughness={0.5} />
                 </mesh>
@@ -276,8 +276,8 @@ export default function Walls3D() {
 
             for (const [key, pos, dims] of bars) {
               segments.push(
-                <mesh key={`${wall.id}-win-f${key}-${i}`} position={pos as [number, number, number]}
-                  rotation={[0, -angle, 0]} castShadow>
+              <mesh key={`${wall.id}-win-f${key}-${i}`} position={pos as [number, number, number]}
+                  rotation={[0, -angle, 0]}>
                   <boxGeometry args={dims as [number, number, number]} />
                   <meshStandardMaterial color={frameColor} roughness={0.3} />
                 </mesh>
@@ -295,7 +295,7 @@ export default function Walls3D() {
                     opCenterY - op.height / 2 - 0.02 + elevation,
                     opPos.z + sillNormal.z * 0.05,
                   ]}
-                  rotation={[0, -angle, 0]} castShadow>
+                  rotation={[0, -angle, 0]}>
                   <boxGeometry args={[op.width + 0.12, 0.03, wall.thickness + 0.10]} />
                   <meshStandardMaterial color="#e0e0e0" roughness={0.6} />
                 </mesh>
@@ -323,7 +323,7 @@ export default function Walls3D() {
                 <mesh key={`${wall.id}-garage-sec-${i}-${s}`} position={new THREE.Vector3(localX, 0, 0)
                   .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
                   .add(new THREE.Vector3(origCx, sy + elevation, origCz)).toArray()}
-                  rotation={[0, -angle, 0]} castShadow>
+                  rotation={[0, -angle, 0]}>
                   <boxGeometry args={[op.width - 0.06, sectionH - 0.02, 0.04]} />
                   <meshStandardMaterial color={garageColor} roughness={0.7} metalness={0.2} />
                 </mesh>
@@ -334,7 +334,7 @@ export default function Walls3D() {
             const gFrameW = 0.05;
             segments.push(
               <mesh key={`${wall.id}-garage-ft-${i}`} position={[opPos.x, opBottom + op.height - gFrameW / 2 + elevation, opPos.z]}
-                rotation={[0, -angle, 0]} castShadow>
+                rotation={[0, -angle, 0]}>
                 <boxGeometry args={[op.width, gFrameW, 0.07]} />
                 <meshStandardMaterial color="#555" roughness={0.4} metalness={0.3} />
               </mesh>
@@ -343,7 +343,7 @@ export default function Walls3D() {
               <mesh key={`${wall.id}-garage-fl-${i}`} position={new THREE.Vector3(localX - op.width / 2 + gFrameW / 2, 0, 0)
                 .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
                 .add(new THREE.Vector3(origCx, opBottom + op.height / 2 + elevation, origCz)).toArray()}
-                rotation={[0, -angle, 0]} castShadow>
+                rotation={[0, -angle, 0]}>
                 <boxGeometry args={[gFrameW, op.height, 0.07]} />
                 <meshStandardMaterial color="#555" roughness={0.4} metalness={0.3} />
               </mesh>
@@ -352,7 +352,7 @@ export default function Walls3D() {
               <mesh key={`${wall.id}-garage-fr-${i}`} position={new THREE.Vector3(localX + op.width / 2 - gFrameW / 2, 0, 0)
                 .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
                 .add(new THREE.Vector3(origCx, opBottom + op.height / 2 + elevation, origCz)).toArray()}
-                rotation={[0, -angle, 0]} castShadow>
+                rotation={[0, -angle, 0]}>
                 <boxGeometry args={[gFrameW, op.height, 0.07]} />
                 <meshStandardMaterial color="#555" roughness={0.4} metalness={0.3} />
               </mesh>
@@ -365,7 +365,7 @@ export default function Walls3D() {
             // Top frame
             segments.push(
               <mesh key={`${wall.id}-pass-ft-${i}`} position={[opPos.x, opBottom + op.height - pFrameW / 2 + elevation, opPos.z]}
-                rotation={[0, -angle, 0]} castShadow>
+                rotation={[0, -angle, 0]}>
                 <boxGeometry args={[op.width, pFrameW, pFrameDepth]} />
                 <meshStandardMaterial color={pFrameColor} roughness={0.4} />
               </mesh>
@@ -375,7 +375,7 @@ export default function Walls3D() {
               <mesh key={`${wall.id}-pass-fl-${i}`} position={new THREE.Vector3(localX - op.width / 2 + pFrameW / 2, 0, 0)
                 .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
                 .add(new THREE.Vector3(origCx, opBottom + op.height / 2 + elevation, origCz)).toArray()}
-                rotation={[0, -angle, 0]} castShadow>
+                rotation={[0, -angle, 0]}>
                 <boxGeometry args={[pFrameW, op.height, pFrameDepth]} />
                 <meshStandardMaterial color={pFrameColor} roughness={0.4} />
               </mesh>
@@ -385,7 +385,7 @@ export default function Walls3D() {
               <mesh key={`${wall.id}-pass-fr-${i}`} position={new THREE.Vector3(localX + op.width / 2 - pFrameW / 2, 0, 0)
                 .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
                 .add(new THREE.Vector3(origCx, opBottom + op.height / 2 + elevation, origCz)).toArray()}
-                rotation={[0, -angle, 0]} castShadow>
+                rotation={[0, -angle, 0]}>
                 <boxGeometry args={[pFrameW, op.height, pFrameDepth]} />
                 <meshStandardMaterial color={pFrameColor} roughness={0.4} />
               </mesh>
