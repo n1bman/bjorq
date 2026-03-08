@@ -12,9 +12,11 @@ import { Popover, PopoverTrigger, PopoverContent } from '../ui/popover';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../ui/alert-dialog';
 import FloorPicker from './FloorPicker';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { detectRooms, healWalls, polygonArea } from '../../lib/roomDetection';
+import { exportBuildProject, importBuildProject, readProjectFile, extractBuildProject, calculateStats } from '../../lib/projectIO';
+import { validateProjectSchema } from '../../lib/projectMigrations';
 
 /* ═══════════════════════════════════════════════
    RoomManager — inlined to avoid Vite resolve issues
