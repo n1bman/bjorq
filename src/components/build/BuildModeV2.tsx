@@ -217,9 +217,6 @@ function AssetCatalog() {
   const handleImportConfirm = useCallback(async () => {
     if (!importFile || !importResult || !activeFloorId || !importName.trim()) return;
     const catalogId = (() => { const b = generateId(); return (catalog.find(c => c.id === b) || curatedAssets.find(c => c.id === b)) ? b + generateId().slice(0,4) : b; })();
-    const haMapping: AssetHAMapping | undefined = importHAMapping !== 'none'
-      ? { mappable: true, defaultDomain: AC_HA_DOMAINS.find(o => o.domain === importHAMapping)?.domain, defaultKind: AC_HA_DOMAINS.find(o => o.domain === importHAMapping)?.kind }
-      : undefined;
 
     if (saveToCatalog && isHostedSync()) {
       try {
