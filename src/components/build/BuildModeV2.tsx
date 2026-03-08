@@ -7,17 +7,29 @@ import BuildScene3D from './BuildScene3D';
 import type { BuildTool, BuildTab } from '../../store/types';
 import { openingPresets } from '../../lib/openingPresets';
 import { getAllMaterials } from '../../lib/materials';
+import { loadCuratedCatalog, clearCatalogCache } from '../../lib/catalogLoader';
+import { processModel, validateFormat, formatStats, ratePerformance } from '../../lib/assetPipeline';
+import {
+  isHostedSync, uploadPropAsset, ingestToCatalog,
+  updateCatalogMeta, replaceCatalogThumbnail, deleteCatalogAsset,
+} from '../../lib/apiClient';
 import {
   MousePointer2, Minus, Square, DoorOpen, PanelTop,
   Warehouse, Footprints, Paintbrush, Sofa, Cpu,
   Import, Eraser, Upload, Search, FileImage, Box, Ruler, Trash2,
   Lightbulb, ToggleLeft, Activity, Thermometer, Camera, Bot, CookingPot, WashingMachine, Lock, Plug, Refrigerator, Monitor, ChevronDown, ChevronRight, Link2, Fan, ShieldAlert, Droplets, Flame, Bell, Grip, Wifi, Trees, Speaker, Music,
+  Zap, Archive, User, Settings, Lamp, Flower2, Bed, UtensilsCrossed, Bath, TreePine, Package, AlertTriangle, CheckCircle, Loader2, FolderPlus,
 } from 'lucide-react';
 import { domainToKind } from '../../lib/haDomainMapping';
 import VacuumMappingTools from './devices/VacuumMappingTools';
 import { cn } from '../../lib/utils';
 import { toast } from 'sonner';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from '../ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogFooter } from '../ui/dialog';
+import { Input } from '../ui/input';
+import { Button } from '../ui/button';
+import { Label } from '../ui/label';
+import type { CatalogAssetMeta, PropCatalogItem, AssetCategory, AssetHAMapping, DeviceKind } from '../../store/types';
+import type { PipelineResult } from '../../lib/assetPipeline';
 
 const ImportPreview3D = lazy(() => import('./ImportPreview3D'));
 const ImportTools = lazy(() => import('./import/ImportTools'));
