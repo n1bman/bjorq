@@ -290,6 +290,25 @@ export default function BuildTopToolbar() {
         <Ghost size={16} />
       </button>
 
+      {/* Clear all */}
+      <AlertDialog>
+        <AlertDialogTrigger asChild>
+          <button title="Rensa allt" className="p-2.5 rounded-xl text-destructive/70 hover:text-destructive hover:bg-destructive/10 transition-all min-w-[44px] min-h-[44px] flex items-center justify-center">
+            <Trash2 size={16} />
+          </button>
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Är du säker?</AlertDialogTitle>
+            <AlertDialogDescription>Alla väggar, rum och möbler tas bort permanent.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Nej</AlertDialogCancel>
+            <AlertDialogAction onClick={() => clearAllFloors()} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Ja, rensa</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Settings popover */}
       <Popover>
         <PopoverTrigger asChild>
