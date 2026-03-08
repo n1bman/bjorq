@@ -74,6 +74,7 @@ export default function AutomationsPanel() {
 
     addAutomation(automation);
     setNewName('');
+    setNewLinkedRooms([]);
     setShowAdd(false);
   };
 
