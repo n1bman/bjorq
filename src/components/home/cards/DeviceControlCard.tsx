@@ -51,6 +51,37 @@ export default function DeviceControlCard({ marker, compact }: Props) {
   }
 }
 
+function CompactCameraCard({ marker, data }: { marker: DeviceMarker; data: CameraState }) {
+  const entityId = data.entityId || marker.ha?.entityId;
+  const snapshotUrl = useCameraSnapshot(entityId, data.on, data.lastSnapshot);
+  const wc = marker.widgetConfig;
+
+  return (
+    <div className="space-y-1.5">
+      {(wc?.showImage !== false) && (
+        <div className="relative rounded-lg overflow-hidden aspect-video bg-black/60">
+          {snapshotUrl ? (
+            <img src={snapshotUrl} alt={marker.name || 'Kamera'} className="absolute inset-0 w-full h-full object-cover" />
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <Video size={20} className="text-muted-foreground" />
+            </div>
+          )}
+          {data.on && (
+            <div className="absolute top-1 left-1 flex items-center gap-0.5 bg-destructive/80 rounded px-1 py-0.5">
+              <span className="w-1 h-1 rounded-full bg-destructive-foreground animate-pulse" />
+              <span className="text-[8px] text-destructive-foreground font-bold">LIVE</span>
+            </div>
+          )}
+        </div>
+      )}
+      {(wc?.showLabel !== false) && (
+        <p className="text-[10px] text-muted-foreground truncate">{wc?.customLabel || marker.name || 'Kamera'}</p>
+      )}
+    </div>
+  );
+}
+
 function CompactDeviceView({ marker, state }: { marker: DeviceMarker; state: import('../../../store/types').DeviceState }) {
   const kindIcons: Record<string, React.ReactNode> = {
     light: <Sun size={14} />,
@@ -74,32 +105,9 @@ function CompactDeviceView({ marker, state }: { marker: DeviceMarker; state: imp
   const isOn = 'on' in state.data ? (state.data as any).on : state.kind === 'door-lock' ? !(state.data as LockState).locked : state.kind === 'cover' ? (state.data as CoverState).position > 0 : state.kind !== 'scene';
   const wc = marker.widgetConfig;
 
-  // Camera compact: show mini preview
+  // Camera compact: extract to sub-component so hook can be called
   if (state.kind === 'camera') {
-    const camData = state.data as CameraState;
-    return (
-      <div className="space-y-1.5">
-        {(wc?.showImage !== false) && (
-          <div className={cn(
-            'relative rounded-lg overflow-hidden aspect-video',
-            camData.on ? 'bg-gradient-to-br from-slate-800 to-slate-900' : 'bg-muted'
-          )}>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <Video size={20} className={cn('text-muted-foreground', camData.on && 'text-primary/60')} />
-            </div>
-            {camData.on && (
-              <div className="absolute top-1 left-1 flex items-center gap-0.5 bg-red-500/80 rounded px-1 py-0.5">
-                <span className="w-1 h-1 rounded-full bg-white animate-pulse" />
-                <span className="text-[8px] text-white font-bold">LIVE</span>
-              </div>
-            )}
-          </div>
-        )}
-        {(wc?.showLabel !== false) && (
-          <p className="text-[10px] text-muted-foreground truncate">{wc?.customLabel || marker.name || 'Kamera'}</p>
-        )}
-      </div>
-    );
+    return <CompactCameraCard marker={marker} data={state.data as CameraState} />;
   }
 
   // Media screen compact: show inline controls when on
