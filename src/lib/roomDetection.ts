@@ -164,10 +164,21 @@ function findMinimalCycles(graph: Graph): string[][] {
     }
   }
 
+  console.log(`[findMinimalCycles] Total raw cycles found: ${cycles.length}`);
+  cycles.forEach((c, i) => {
+    const pts = c.map((k) => graph[k].node);
+    console.log(`  cycle ${i}: nodes=[${c.join(',')}] area=${polygonArea(pts).toFixed(2)}m²`);
+  });
+
   // Filter out tiny degenerate cycles BEFORE supercycle check
   const validCycles = cycles.filter((cycle) => {
     const pts = cycle.map((k) => graph[k].node);
-    return polygonArea(pts) >= 0.5;
+    const area = polygonArea(pts);
+    if (area < 0.5) {
+      console.log(`[findMinimalCycles] REJECTED (too small): area=${area.toFixed(2)}m² nodes=[${cycle.join(',')}]`);
+      return false;
+    }
+    return true;
   });
 
   if (validCycles.length <= 1) return validCycles;
