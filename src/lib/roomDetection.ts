@@ -69,6 +69,52 @@ function findMinimalCycles(graph: Graph): string[][] {
       let found = false;
 
       for (let i = 0; i < 50; i++) {
+        // Node revisit detection: if current is already in path (not startKey),
+        // extract the sub-cycle as a valid minimal face
+        const revisitIdx = path.indexOf(current);
+        if (revisitIdx !== -1 && current !== startKey) {
+          const subCycle = path.slice(revisitIdx);
+          if (subCycle.length >= 3) {
+            const addCycle = (c: string[]) => {
+              const minI = c.indexOf(c.reduce((a, b) => a < b ? a : b));
+              const norm = [...c.slice(minI), ...c.slice(0, minI)];
+              const k = norm.join(',');
+              const r = [...norm].reverse();
+              const rMinI = r.indexOf(r.reduce((a, b) => a < b ? a : b));
+              const rNorm = [...r.slice(rMinI), ...r.slice(0, rMinI)];
+              const rk = rNorm.join(',');
+              if (!cycles.some((ex) => ex.join(',') === k || ex.join(',') === rk)) {
+                cycles.push(norm);
+                for (let si = 0; si < subCycle.length; si++) {
+                  const next = si < subCycle.length - 1 ? subCycle[si + 1] : subCycle[0];
+                  usedEdges.add(edgeKey(subCycle[si], next));
+                }
+                console.log(`[findMinimalCycles] Sub-cycle extracted at revisited node ${current}: [${norm.join(',')}]`);
+              }
+            };
+            addCycle(subCycle);
+          }
+          // Trim path back to the revisited node and continue tracing
+          path.splice(revisitIdx + 1);
+          prev = revisitIdx > 0 ? path[revisitIdx - 1] : path[path.length - 1];
+          // Continue — don't push current again, it's already at path[revisitIdx]
+          const node = graph[current];
+          if (!node) break;
+          const inAngle = angle(node.node, graph[prev].node);
+          let bestKey = '';
+          let bestAngle = Infinity;
+          for (const nk of node.neighbors) {
+            if (nk === prev) continue;
+            let a = angle(node.node, graph[nk].node) - inAngle;
+            if (a < 0) a += Math.PI * 2;
+            if (a < bestAngle) { bestAngle = a; bestKey = nk; }
+          }
+          if (!bestKey) break;
+          prev = current;
+          current = bestKey;
+          continue;
+        }
+
         path.push(current);
         if (current === startKey) { found = true; break; }
 
@@ -118,10 +164,21 @@ function findMinimalCycles(graph: Graph): string[][] {
     }
   }
 
+  console.log(`[findMinimalCycles] Total raw cycles found: ${cycles.length}`);
+  cycles.forEach((c, i) => {
+    const pts = c.map((k) => graph[k].node);
+    console.log(`  cycle ${i}: nodes=[${c.join(',')}] area=${polygonArea(pts).toFixed(2)}m²`);
+  });
+
   // Filter out tiny degenerate cycles BEFORE supercycle check
   const validCycles = cycles.filter((cycle) => {
     const pts = cycle.map((k) => graph[k].node);
-    return polygonArea(pts) >= 0.5;
+    const area = polygonArea(pts);
+    if (area < 0.5) {
+      console.log(`[findMinimalCycles] REJECTED (too small): area=${area.toFixed(2)}m² nodes=[${cycle.join(',')}]`);
+      return false;
+    }
+    return true;
   });
 
   if (validCycles.length <= 1) return validCycles;
@@ -152,11 +209,16 @@ function findMinimalCycles(graph: Graph): string[][] {
     const poly = polyForCycle(cycle);
     for (let j = 0; j < validCycles.length; j++) {
       if (i === j) continue;
-      if (pip(centroids[j][0], centroids[j][1], poly)) return false;
+      if (pip(centroids[j][0], centroids[j][1], poly)) {
+        const pts = cycle.map((k) => graph[k].node);
+        console.log(`[findMinimalCycles] REJECTED (supercycle): nodes=[${cycle.join(',')}] area=${polygonArea(pts).toFixed(2)}m² — contains centroid of cycle ${j}`);
+        return false;
+      }
     }
     return true;
   });
 
+  console.log(`[findMinimalCycles] Final accepted cycles: ${filtered.length}`);
   return filtered;
 }
 
