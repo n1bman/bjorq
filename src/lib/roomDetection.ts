@@ -523,7 +523,7 @@ export function detectRooms(walls: WallSegment[], existingRooms?: Room[]): Room[
 
   return matchResults.map((r) => {
     if (r.matchedRoom) {
-      return { ...r.matchedRoom, wallIds: r.wallIds, polygon: r.polygon } as Room;
+      return { ...r.matchedRoom, wallIds: r.wallIds, polygon: r.polygon, cameraPreset: r.matchedRoom.cameraPreset } as Room;
     }
     return { id: generateId(), name: getNextName(), wallIds: r.wallIds, polygon: r.polygon } as Room;
   });

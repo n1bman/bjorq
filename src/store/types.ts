@@ -62,6 +62,11 @@ export interface WallSegment {
   openings: WallOpening[];
 }
 
+export interface RoomCameraPreset {
+  position: [number, number, number];
+  target: [number, number, number];
+}
+
 export interface Room {
   id: string;
   name: string;
@@ -69,6 +74,7 @@ export interface Room {
   floorMaterialId?: string;
   wallMaterialId?: string;
   polygon?: [number, number][]; // cached polygon for rendering
+  cameraPreset?: RoomCameraPreset;
 }
 
 export interface StairItem {
@@ -731,6 +737,7 @@ export interface Automation {
   trigger: AutomationTrigger;
   actions: AutomationAction[];
   lastTriggered?: string;
+  linkedRoomIds?: string[];
 }
 
 // ─── Comfort Rules ───
@@ -776,6 +783,10 @@ export interface SavedScene {
   icon: string;
   snapshots: SceneSnapshot[];
   createdAt: string;
+  linkedRoomIds?: string[];
+  scope?: 'global' | 'room' | 'custom';
+  cameraMode?: 'none' | 'first-linked-room' | 'custom';
+  customCameraPreset?: RoomCameraPreset;
 }
 
 export interface UserProfile {
@@ -913,6 +924,7 @@ export interface AppState {
   removeRoom: (floorId: string, roomId: string) => void;
   renameRoom: (floorId: string, roomId: string, name: string) => void;
   setRoomMaterial: (floorId: string, roomId: string, target: 'floor' | 'wall', materialId: string) => void;
+  setRoomCameraPreset: (floorId: string, roomId: string, preset: RoomCameraPreset | undefined) => void;
   addRoomFromRect: (floorId: string, x: number, z: number, w: number, d: number, name: string) => void;
 
   // Stair actions

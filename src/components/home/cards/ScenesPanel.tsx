@@ -15,11 +15,15 @@ export default function ScenesPanel() {
   const activateScene = useAppStore((s) => s.activateScene);
   const markers = useAppStore((s) => s.devices.markers);
   const deviceStates = useAppStore((s) => s.devices.deviceStates);
+  const floors = useAppStore((s) => s.layout.floors);
+
+  const allRooms = floors.flatMap((f) => f.rooms ?? []);
 
   const [showAdd, setShowAdd] = useState(false);
   const [newName, setNewName] = useState('');
   const [newIcon, setNewIcon] = useState('🌅');
   const [selectedDevices, setSelectedDevices] = useState<string[]>([]);
+  const [selectedRooms, setSelectedRooms] = useState<string[]>([]);
 
   const handleAdd = () => {
     if (!newName.trim()) return;
@@ -38,11 +42,14 @@ export default function ScenesPanel() {
       icon: newIcon,
       snapshots,
       createdAt: new Date().toISOString(),
+      linkedRoomIds: selectedRooms.length > 0 ? selectedRooms : undefined,
+      scope: selectedRooms.length === 0 ? 'global' : selectedRooms.length === 1 ? 'room' : 'custom',
     };
 
     addScene(scene);
     setNewName('');
     setSelectedDevices([]);
+    setSelectedRooms([]);
     setShowAdd(false);
   };
 
@@ -114,6 +121,26 @@ export default function ScenesPanel() {
               </div>
             </div>
 
+            {/* Room linking */}
+            {allRooms.length > 0 && (
+              <div className="space-y-1">
+                <p className="text-[10px] text-muted-foreground font-medium">Länka till rum (valfritt)</p>
+                <div className="max-h-24 overflow-y-auto space-y-1">
+                  {allRooms.map((r) => (
+                    <label key={r.id} className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedRooms.includes(r.id)}
+                        onChange={() => setSelectedRooms((prev) => prev.includes(r.id) ? prev.filter((id) => id !== r.id) : [...prev, r.id])}
+                        className="rounded border-border"
+                      />
+                      <span className="text-[10px] text-foreground">{r.name}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <Button size="sm" className="w-full h-7 text-[10px]" onClick={handleAdd} disabled={!newName.trim() || selectedDevices.length === 0}>
               Spara scen ({selectedDevices.length} enheter)
             </Button>
@@ -136,7 +163,13 @@ export default function ScenesPanel() {
                     <span className="text-lg">{scene.icon}</span>
                     <div className="min-w-0">
                       <p className="text-xs font-medium text-foreground truncate">{scene.name}</p>
-                      <p className="text-[9px] text-muted-foreground">{scene.snapshots.length} enheter</p>
+                      <p className="text-[9px] text-muted-foreground">
+                        {scene.snapshots.length} enheter
+                        {scene.linkedRoomIds && scene.linkedRoomIds.length > 0 && (
+                          <> · {scene.linkedRoomIds.map((rid) => allRooms.find((r) => r.id === rid)?.name).filter(Boolean).join(', ')}</>
+                        )}
+                        {(!scene.linkedRoomIds || scene.linkedRoomIds.length === 0) && ' · Global'}
+                      </p>
                     </div>
                   </div>
                 </button>

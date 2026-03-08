@@ -3,6 +3,7 @@ import { useAppStore } from '../../store/useAppStore';
 import Scene3D from '../Scene3D';
 import HomeNav from './HomeNav';
 import CameraFab from './CameraFab';
+import RoomNavigator from './RoomNavigator';
 import ClockWidget from './cards/ClockWidget';
 import WeatherWidget from './cards/WeatherWidget';
 import EnergyWidget from './cards/EnergyWidget';
@@ -168,6 +169,7 @@ export default function HomeView() {
       )}
 
       <CameraFab />
+      <RoomNavigator />
       <HomeNav />
     </div>
   );

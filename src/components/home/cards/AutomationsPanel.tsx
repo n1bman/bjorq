@@ -27,11 +27,15 @@ export default function AutomationsPanel() {
   const toggleAutomation = useAppStore((s) => s.toggleAutomation);
   const markers = useAppStore((s) => s.devices.markers);
   const savedScenes = useAppStore((s) => s.savedScenes);
+  const floors = useAppStore((s) => s.layout.floors);
+
+  const allRooms = floors.flatMap((f) => f.rooms ?? []);
 
   const [showAdd, setShowAdd] = useState(false);
   const [newName, setNewName] = useState('');
   const [newTriggerType, setNewTriggerType] = useState<AutomationTrigger['type']>('time');
   const [newTriggerTime, setNewTriggerTime] = useState('08:00');
+  const [newLinkedRooms, setNewLinkedRooms] = useState<string[]>([]);
   const [newTriggerDevice, setNewTriggerDevice] = useState('');
   const [newActionType, setNewActionType] = useState<AutomationAction['type']>('device_toggle');
   const [newActionDevice, setNewActionDevice] = useState('');
@@ -65,10 +69,12 @@ export default function AutomationsPanel() {
       enabled: true,
       trigger,
       actions: [action],
+      linkedRoomIds: newLinkedRooms.length > 0 ? newLinkedRooms : undefined,
     };
 
     addAutomation(automation);
     setNewName('');
+    setNewLinkedRooms([]);
     setShowAdd(false);
   };
 
@@ -180,6 +186,26 @@ export default function AutomationsPanel() {
               )}
             </div>
 
+            {/* Room linking */}
+            {allRooms.length > 0 && (
+              <div className="space-y-1">
+                <p className="text-[10px] text-muted-foreground font-medium">Länka till rum (valfritt)</p>
+                <div className="max-h-24 overflow-y-auto space-y-1">
+                  {allRooms.map((r) => (
+                    <label key={r.id} className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={newLinkedRooms.includes(r.id)}
+                        onChange={() => setNewLinkedRooms((prev) => prev.includes(r.id) ? prev.filter((id) => id !== r.id) : [...prev, r.id])}
+                        className="rounded border-border"
+                      />
+                      <span className="text-[10px] text-foreground">{r.name}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <Button size="sm" className="w-full h-7 text-[10px]" onClick={handleAdd} disabled={!newName.trim()}>
               Skapa automation
             </Button>
@@ -202,6 +228,9 @@ export default function AutomationsPanel() {
                   <p className="text-xs font-medium text-foreground truncate">{a.name}</p>
                   <p className="text-[9px] text-muted-foreground">
                     {getTriggerLabel(a)} → {a.actions.map(getActionLabel).join(', ')}
+                    {a.linkedRoomIds && a.linkedRoomIds.length > 0 && (
+                      <> · {a.linkedRoomIds.map((rid) => allRooms.find((r) => r.id === rid)?.name).filter(Boolean).join(', ')}</>
+                    )}
                   </p>
                 </div>
                 <button onClick={() => removeAutomation(a.id)} className="p-1 rounded hover:bg-destructive/20 text-muted-foreground shrink-0">
