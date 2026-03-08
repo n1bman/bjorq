@@ -117,7 +117,7 @@ function PropModel({ id, url: rawUrl, position, rotation, scale }: {
   const modelName = propItem?.name || 'Modell';
 
   // Plain function — no useCallback to avoid circular deps
-  const doLoad = (loadUrl: string) => {
+  const doLoad = (propId: string, loadUrl: string) => {
     if (loadingRef.current) return;
     loadingRef.current = true;
     setStatus('loading');
@@ -130,35 +130,53 @@ function PropModel({ id, url: rawUrl, position, rotation, scale }: {
       }
     }, LOAD_TIMEOUT);
 
-    loadGltf(loadUrl)
-      .then((loadedScene) => {
-        clearTimeout(timeout);
-        loadingRef.current = false;
-        // Check if URL is still current
-        if (lastLoadedUrl.current !== loadUrl.split('?')[0] && lastLoadedUrl.current !== loadUrl) {
-          disposeScene(loadedScene);
-          return;
-        }
-        const info = analyzeModel(loadedScene);
-        console.info(`[Props3D] Loaded "${modelName}": ${info.triangles.toLocaleString()} △ · ${info.meshCount} mesh · ${info.materialCount} mat — ${info.rating}`);
-        useAppStore.getState().updateProp(id, { modelStats: info });
-        setScene(loadedScene);
-        setStatus('ready');
-      })
-      .catch((err) => {
-        clearTimeout(timeout);
-        loadingRef.current = false;
-        console.warn(`[Props3D] Error loading "${modelName}":`, err);
+    const handleSuccess = (loadedScene: THREE.Group) => {
+      clearTimeout(timeout);
+      loadingRef.current = false;
+      const info = analyzeModel(loadedScene);
+      console.info(`[Props3D] Loaded "${modelName}": ${info.triangles.toLocaleString()} △ · ${info.meshCount} mesh · ${info.materialCount} mat — ${info.rating}`);
+      useAppStore.getState().updateProp(propId, { modelStats: info });
+      setScene(loadedScene);
+      setStatus('ready');
+    };
 
-        if (retryCount.current < 1 && !isBlobOrDataUrl(loadUrl)) {
+    const handleError = () => {
+      clearTimeout(timeout);
+      loadingRef.current = false;
+      setStatus('error');
+    };
+
+    // Strategy 1: Try loading from catalog fileData (base64) — works everywhere
+    const fileData = getFileDataForProp(propId);
+    if (fileData) {
+      console.info(`[Props3D] Loading "${modelName}" from fileData (base64)`);
+      loadFromBase64(fileData).then(handleSuccess).catch((err: unknown) => {
+        console.warn(`[Props3D] fileData parse failed for "${modelName}":`, err);
+        handleError();
+      });
+      return;
+    }
+
+    // Strategy 2: Non-blob URL — load via network
+    if (!isBlobOrDataUrl(loadUrl)) {
+      loadGltfFromUrl(loadUrl).then(handleSuccess).catch((err: unknown) => {
+        console.warn(`[Props3D] Network load failed for "${modelName}":`, err);
+        if (retryCount.current < 1) {
           retryCount.current++;
+          loadingRef.current = false;
           const bustUrl = loadUrl + (loadUrl.includes('?') ? '&' : '?') + `v=${Date.now()}`;
           console.info(`[Props3D] Retrying "${modelName}" with cache bust`);
-          doLoad(bustUrl);
+          doLoad(propId, bustUrl);
         } else {
-          setStatus('error');
+          handleError();
         }
       });
+      return;
+    }
+
+    // Strategy 3: blob/data URL with no fileData — unlikely to work in sandbox but try
+    console.warn(`[Props3D] No fileData for "${modelName}", blob URL may fail`);
+    handleError();
   };
 
   // Load effect — only runs when url actually changes
