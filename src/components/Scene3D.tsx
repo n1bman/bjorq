@@ -5,7 +5,7 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useAppStore } from '../store/useAppStore';
 import { cameraRef } from '../lib/cameraRef';
-import * as cameraRefModule from '../lib/cameraRef';
+import { pendingFlyTo, clearPendingFlyTo } from '../lib/cameraRef';
 import Walls3D from './build/Walls3D';
 import Floors3D from './build/Floors3D';
 
