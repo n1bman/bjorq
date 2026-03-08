@@ -1,5 +1,5 @@
 // @ts-nocheck — R3F ThreeEvent<PointerEvent> vs ThreeEvent<MouseEvent> mismatch is safe
-import { useRef, useCallback, useMemo, useEffect, useState } from 'react';
+import React, { useRef, useCallback, useMemo, useEffect, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { useAppStore } from '../../store/useAppStore';
 import type { DeviceKind, DeviceMarker, VacuumZone, LightType } from '../../store/types';
