@@ -210,10 +210,10 @@ function AssetCatalog() {
   }, []);
 
   const handleOptimize = useCallback(async () => {
-    if (!importResult) return;
+    if (!importResult || !importFile) return;
     setIsOptimizing(true); setOptimizationStep('optimizing');
     try {
-      const result = await optimizeModel(importResult.scene, importResult.stats, { maxTextureRes: 1024 });
+      const result = await optimizeModel(importFile, importResult.stats, { maxTextureRes: 1024 });
       setOptimizedResult(result);
       setOptimizationStep('optimized');
     } catch (err) {
@@ -223,7 +223,7 @@ function AssetCatalog() {
     } finally {
       setIsOptimizing(false);
     }
-  }, [importResult]);
+  }, [importResult, importFile]);
 
   const placePropFn = useCallback((catalogId: string, url: string) => {
     if (!activeFloorId) return;

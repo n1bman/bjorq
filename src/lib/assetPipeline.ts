@@ -111,7 +111,7 @@ function analyzeScene(scene: THREE.Object3D): { triangles: number; materialSet: 
 
 export async function processModel(file: File, options?: { maxTextureRes?: number }): Promise<PipelineResult> {
   const warnings: string[] = [];
-  const maxTextureRes = options?.maxTextureRes ?? 2048;
+  
 
   const buffer = await file.arrayBuffer();
   const loader = new GLTFLoader();
