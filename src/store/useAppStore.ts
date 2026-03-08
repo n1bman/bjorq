@@ -333,7 +333,6 @@ const storeCreator = (set: any, get: any): AppState => ({
         }
       }
     } else if (scene.cameraMode === 'custom' && scene.customCameraPreset) {
-      const { flyTo } = require('../lib/cameraRef');
       flyTo(scene.customCameraPreset.position, scene.customCameraPreset.target);
     }
     s.pushActivity({ deviceId: undefined, kind: 'state_change', category: 'system', title: `Scen "${scene.name}" aktiverad`, severity: 'info' });

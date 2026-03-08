@@ -154,7 +154,7 @@ const CameraController = React.forwardRef(function CameraController(_props, _ref
       maxPolarAngle={Math.PI / 2.1}
     />
   );
-}
+});
 
 
 function SceneContent() {
