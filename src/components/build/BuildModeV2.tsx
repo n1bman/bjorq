@@ -399,7 +399,7 @@ function AssetCatalog() {
           ) : optimizationStep === 'optimized' && optimizedResult ? (
             <div className="space-y-3">
               {/* Optimized thumbnail */}
-              {optimizedResult.thumbnail ? <div className="flex justify-center"><img src={optimizedResult.thumbnail} alt="Optimerad" className="w-24 h-24 object-contain rounded bg-muted/20" /></div> : null}
+              {(optimizedResult.thumbnail || importResult?.thumbnail) ? <div className="flex justify-center"><img src={optimizedResult.thumbnail || importResult?.thumbnail || ''} alt="Optimerad" className="w-24 h-24 object-contain rounded bg-muted/20" /></div> : null}
 
               {optimizedResult.noImprovement ? (
                 <div className="rounded-lg border border-muted bg-muted/20 p-3">
