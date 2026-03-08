@@ -1,5 +1,6 @@
 import { lazy, Suspense, useRef, useState, useMemo, useEffect, useCallback } from 'react';
 import { useAppStore } from '../../store/useAppStore';
+import { cameraRef } from '../../lib/cameraRef';
 import BuildTopToolbar from './BuildTopToolbar';
 import BuildInspector from './BuildInspector';
 import BuildCanvas2D from './BuildCanvas2D';
