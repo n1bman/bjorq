@@ -826,10 +826,16 @@ function DeviceInspector({ deviceId, close }: { deviceId: string; close: React.R
   const markers = useAppStore((s) => s.devices.markers);
   const updateDevice = useAppStore((s) => s.updateDevice);
   const removeDevice = useAppStore((s) => s.removeDevice);
+  const assignDeviceRoom = useAppStore((s) => s.assignDeviceRoom);
   const setSelection = useAppStore((s) => s.setSelection);
+  const floors = useAppStore((s) => s.layout.floors);
 
   const device = markers.find((m) => m.id === deviceId);
   if (!device) return null;
+
+  const floor = floors.find((f) => f.id === device.floorId);
+  const rooms = floor?.rooms ?? [];
+  const currentRoom = rooms.find((r) => r.id === device.roomId);
 
   const isScreen = device.kind === 'media_screen';
   const isLight = device.kind === 'light';
