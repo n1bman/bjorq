@@ -5,7 +5,7 @@ import { mapHAEntityToDeviceState } from '../lib/haMapping';
 import { setFromHA } from '../hooks/useHABridge';
 import { isHostedSync, debouncedSync, debouncedProjectSync, saveProfiles, saveProject, fetchBootstrap } from '../lib/apiClient';
 import { flyTo, cameraForPolygon } from '../lib/cameraRef';
-import { DEFAULT_ENVIRONMENT_PROFILE } from '../lib/environmentEngine';
+import { DEFAULT_ENVIRONMENT_PROFILE, computeEnvironmentProfile } from '../lib/environmentEngine';
 
 export function getDefaultState(kind: DeviceKind): DeviceState {
   switch (kind) {
@@ -111,6 +111,21 @@ function syncProjectToServer() {
       activityLog: s.activityLog,
     }).catch((err) => console.warn('[Sync] Failed to save project:', err));
   });
+}
+
+/** Recompute environment profile from current state and store it */
+function recomputeEnvProfile(get: any, set: any) {
+  const env = get().environment;
+  const profile = computeEnvironmentProfile({
+    sunAzimuth: env.sunAzimuth,
+    sunElevation: env.sunElevation,
+    weatherCondition: env.weather.condition,
+    cloudCoverage: env.cloudCoverage,
+    calibration: env.sunCalibration,
+    atmosphere: env.atmosphere,
+    precipitationOverride: env.precipitationOverride,
+  });
+  set((s: any) => ({ environment: { ...s.environment, profile } }));
 }
 
 // ── Store creator (shared between hosted and non-hosted) ──
@@ -1032,38 +1047,56 @@ const storeCreator = (set: any, get: any): AppState => ({
   setPreviewDateTime: (dt) =>
     set((s: any) => ({ environment: { ...s.environment, previewDateTime: dt } })),
 
-  setSunPosition: (azimuth, elevation) =>
-    set((s: any) => ({ environment: { ...s.environment, sunAzimuth: azimuth, sunElevation: elevation } })),
+  setSunPosition: (azimuth, elevation) => {
+    set((s: any) => ({ environment: { ...s.environment, sunAzimuth: azimuth, sunElevation: elevation } }));
+    recomputeEnvProfile(get, set);
+  },
 
-  setWeather: (condition) =>
-    set((s: any) => ({ environment: { ...s.environment, weather: { ...s.environment.weather, condition } } })),
+  setWeather: (condition) => {
+    set((s: any) => ({ environment: { ...s.environment, weather: { ...s.environment.weather, condition } } }));
+    recomputeEnvProfile(get, set);
+  },
 
-  setWeatherData: (data) =>
+  setWeatherData: (data) => {
     set((s: any) => ({
       environment: {
         ...s.environment,
         weather: { ...s.environment.weather, condition: data.condition, temperature: data.temperature, windSpeed: data.windSpeed, humidity: data.humidity, intensity: data.intensity ?? s.environment.weather.intensity },
         ...(data.forecast ? { forecast: data.forecast } : {}),
       },
-    })),
+    }));
+    recomputeEnvProfile(get, set);
+  },
 
   setWeatherSource: (source) =>
     set((s: any) => ({ environment: { ...s.environment, source } })),
 
-  setPrecipitationOverride: (override) =>
-    set((s: any) => ({ environment: { ...s.environment, precipitationOverride: override } })),
+  setPrecipitationOverride: (override) => {
+    set((s: any) => ({ environment: { ...s.environment, precipitationOverride: override } }));
+    recomputeEnvProfile(get, set);
+  },
 
   setLocation: (lat, lon) =>
     set((s: any) => ({ environment: { ...s.environment, location: { ...s.environment.location, lat, lon } } })),
 
-  setSunCalibration: (changes) => { set((s: any) => ({ environment: { ...s.environment, sunCalibration: { ...s.environment.sunCalibration, ...changes } } })); syncProfileToServer(); },
+  setSunCalibration: (changes) => {
+    set((s: any) => ({ environment: { ...s.environment, sunCalibration: { ...s.environment.sunCalibration, ...changes } } }));
+    recomputeEnvProfile(get, set);
+    syncProfileToServer();
+  },
 
-  setAtmosphere: (changes) => { set((s: any) => ({ environment: { ...s.environment, atmosphere: { ...s.environment.atmosphere, ...changes } } })); syncProfileToServer(); },
+  setAtmosphere: (changes) => {
+    set((s: any) => ({ environment: { ...s.environment, atmosphere: { ...s.environment.atmosphere, ...changes } } }));
+    recomputeEnvProfile(get, set);
+    syncProfileToServer();
+  },
 
   setSkyStyle: (style) => { set((s: any) => ({ environment: { ...s.environment, skyStyle: style } })); syncProfileToServer(); },
 
-  setCloudCoverage: (coverage) =>
-    set((s: any) => ({ environment: { ...s.environment, cloudCoverage: coverage } })),
+  setCloudCoverage: (coverage) => {
+    set((s: any) => ({ environment: { ...s.environment, cloudCoverage: coverage } }));
+    recomputeEnvProfile(get, set);
+  },
 
   setEnvironmentProfile: (profile) =>
     set((s: any) => ({ environment: { ...s.environment, profile } })),
