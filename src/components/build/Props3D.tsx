@@ -381,6 +381,11 @@ export default function Props3D() {
             position={prop.position}
             rotation={prop.rotation}
             scale={prop.scale}
+            colorOverride={prop.colorOverride}
+            textureOverride={prop.textureOverride}
+            textureScale={prop.textureScale}
+            metalness={prop.metalness}
+            roughness={prop.roughness}
           />
         </ErrorBoundary>
       ))}

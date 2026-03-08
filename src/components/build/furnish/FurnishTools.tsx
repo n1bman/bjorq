@@ -232,7 +232,12 @@ export default function FurnishTools() {
             return (
               <div key={prop.id} className="bg-secondary/30 rounded-lg p-2 space-y-1.5 text-xs">
                 <div className="flex items-center justify-between">
-                  <span className="text-foreground truncate">{catItem?.name || 'Modell'}</span>
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    {prop.colorOverride && (
+                      <div className="w-3 h-3 rounded-full shrink-0 border border-border" style={{ backgroundColor: prop.colorOverride }} />
+                    )}
+                    <span className="text-foreground truncate">{catItem?.name || 'Modell'}</span>
+                  </div>
                   <button onClick={() => removeProp(prop.id)} className="p-0.5 rounded hover:bg-destructive/20 text-destructive">
                     <Trash2 size={12} />
                   </button>

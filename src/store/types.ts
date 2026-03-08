@@ -570,6 +570,11 @@ export interface PropItem {
   name?: string;
   modelStats?: PropModelStats;
   haEntityId?: string;
+  colorOverride?: string;
+  textureOverride?: string;    // base64 data URL
+  textureScale?: number;       // UV repeat (default 1)
+  metalness?: number;           // 0-1
+  roughness?: number;           // 0-1
 }
 
 export interface PropsState {
