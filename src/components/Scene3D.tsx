@@ -1,6 +1,6 @@
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Grid, Environment } from '@react-three/drei';
-import { Suspense, useMemo, useRef, useEffect, useState } from 'react';
+import React, { Suspense, useMemo, useRef, useEffect, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useAppStore } from '../store/useAppStore';
@@ -64,7 +64,7 @@ function StandbyStaticCamera() {
   return null;
 }
 
-function CameraController() {
+const CameraController = React.forwardRef(function CameraController(_props, _ref) {
   const cameraPreset = useAppStore((s) => s.homeView.cameraPreset);
   const appMode = useAppStore((s) => s.appMode);
   const customStartPos = useAppStore((s) => s.homeView.customStartPos);
@@ -154,7 +154,7 @@ function CameraController() {
       maxPolarAngle={Math.PI / 2.1}
     />
   );
-}
+});
 
 
 function SceneContent() {

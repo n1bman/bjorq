@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.1] - 2026-03-08
+
+### Fixed
+- WebGL context loss now recovers with exponential backoff (max 3 retries) instead of infinite loop
+- Dashboard 3D background missing when `dashboardBg` setting was undefined (added fallback)
+- `require()` calls in scene activation replaced with ESM imports (fixes production builds)
+- "Function components cannot be given refs" warnings for MediaScreenMarker and CameraController
+
+### Added
+- "Återställ standard" button in Graphics Settings — resets all rendering options and re-enables 3D background
+- Static fallback UI with "Försök igen" button when WebGL context cannot be restored
+
 ## [0.6.0] - 2026-03-08
 
 ### Added

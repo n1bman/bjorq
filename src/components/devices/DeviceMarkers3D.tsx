@@ -1,5 +1,5 @@
 // @ts-nocheck — R3F ThreeEvent<PointerEvent> vs ThreeEvent<MouseEvent> mismatch is safe
-import { useRef, useCallback, useMemo, useEffect, useState } from 'react';
+import React, { useRef, useCallback, useMemo, useEffect, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { useAppStore } from '../../store/useAppStore';
 import type { DeviceKind, DeviceMarker, VacuumZone, LightType } from '../../store/types';
@@ -411,7 +411,7 @@ function drawScreenCanvas(
   }
 }
 
-function MediaScreenMarker({ position, id, onSelect, onDragStart, selected, marker, buildMode }: MediaScreenMarkerProps) {
+const MediaScreenMarker = React.forwardRef<THREE.Group, MediaScreenMarkerProps>(function MediaScreenMarker({ position, id, onSelect, onDragStart, selected, marker, buildMode }, ref) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const textureRef = useRef<THREE.CanvasTexture | null>(null);
   const glowMeshRef = useRef<THREE.Mesh>(null);
@@ -486,6 +486,7 @@ function MediaScreenMarker({ position, id, onSelect, onDragStart, selected, mark
 
   return (
     <group
+      ref={ref}
       position={position}
       rotation={marker.rotation.map((r) => r) as [number, number, number]}
       onClick={handleClick}
@@ -545,7 +546,7 @@ function MediaScreenMarker({ position, id, onSelect, onDragStart, selected, mark
       )}
     </group>
   );
-}
+});
 
 function VacuumMarker3D({ position, id, onSelect, onDragStart, selected }: MarkerProps) {
   const state = useAppStore((s) => s.devices.deviceStates[id]);
