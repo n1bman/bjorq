@@ -6,7 +6,8 @@ import type { DeviceState } from '../store/types';
 export function mapHAEntityToDeviceState(
   domain: string,
   state: string,
-  attributes: Record<string, unknown>
+  attributes: Record<string, unknown>,
+  entityId?: string
 ): DeviceState | null {
   switch (domain) {
     case 'light': {
