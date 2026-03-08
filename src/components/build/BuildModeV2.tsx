@@ -21,6 +21,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 
 const ImportPreview3D = lazy(() => import('./ImportPreview3D'));
 const ImportTools = lazy(() => import('./import/ImportTools'));
+const AssetCatalog = lazy(() => import('./furnish/AssetCatalog'));
 
 const generateId = () => Math.random().toString(36).slice(2, 10);
 
@@ -82,79 +83,7 @@ function PaintCatalog() {
   );
 }
 
-function FurnishCatalog() {
-  const catalog = useAppStore((s) => s.props.catalog);
-  const addProp = useAppStore((s) => s.addProp);
-  const removeFromCatalog = useAppStore((s) => s.removeFromCatalog);
-  const activeFloorId = useAppStore((s) => s.layout.activeFloorId);
-  const setBuildTool = useAppStore((s) => s.setBuildTool);
-  const fileRef = useRef<HTMLInputElement>(null);
-  const [search, setSearch] = useState('');
-  const filtered = useMemo(
-    () => catalog.filter((c) => c.name.toLowerCase().includes(search.toLowerCase())),
-    [catalog, search],
-  );
-  const handlePlace = (item: typeof catalog[0]) => {
-    if (!activeFloorId) { toast.error('Välj en våning först'); return; }
-    addProp({ id: generateId(), catalogId: item.id, name: item.name, floorId: activeFloorId, url: item.url, position: [0, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1] });
-    setBuildTool('select');
-    toast.success(`Placerat: ${item.name}`);
-  };
-  const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const MAX_FILE_DATA = 4 * 1024 * 1024; // 4 MB
-    const MAX_WARN_SIZE = 10 * 1024 * 1024; // 10 MB
-
-    if (file.size > MAX_WARN_SIZE) {
-      toast.warning('Stor fil (>10 MB) — modellen kan vara tung att rendera');
-    }
-
-    const blobUrl = URL.createObjectURL(file);
-    const name = file.name.replace(/\.[^.]+$/, '');
-    const id = generateId();
-
-    if (file.size <= MAX_FILE_DATA) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const base64 = (reader.result as string).split(',')[1];
-        useAppStore.getState().addToCatalog({ id, name, url: blobUrl, fileData: base64, source: 'user' as const, category: 'imported' } as any);
-        toast.success(`Importerad: ${name}`);
-      };
-      reader.readAsDataURL(file);
-    } else {
-      useAppStore.getState().addToCatalog({ id, name, url: blobUrl, source: 'user' as const, category: 'imported' } as any);
-      toast.info('Modellen är stor och sparas bara under denna session');
-    }
-    e.target.value = '';
-  };
-  return (
-    <>
-      <div className="flex items-center gap-1 px-2 border border-border rounded-md bg-muted/50">
-        <Search className="w-3.5 h-3.5 text-muted-foreground" />
-        <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Sök möbler…" className="bg-transparent text-xs py-1 w-24 outline-none text-foreground placeholder:text-muted-foreground" />
-      </div>
-      {filtered.map((item) => (
-        <div key={item.id} className="relative group">
-          <button onClick={() => handlePlace(item)} className="flex flex-col items-center gap-1 px-3 py-1.5 rounded-md border border-border hover:bg-muted text-xs text-foreground transition-colors">
-            <Box className="w-5 h-5 text-muted-foreground" />
-            <span className="text-[10px]">{item.name}</span>
-          </button>
-          <button onClick={(e) => { e.stopPropagation(); removeFromCatalog(item.id); toast.success(`Borttagen: ${item.name}`); }}
-            className="absolute -top-1.5 -right-1.5 hidden group-hover:flex w-5 h-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground">
-            <Trash2 className="w-3 h-3" />
-          </button>
-        </div>
-      ))}
-      <button onClick={() => fileRef.current?.click()} className="flex flex-col items-center gap-1 px-3 py-1.5 rounded-md border border-dashed border-border hover:bg-muted text-xs text-muted-foreground transition-colors">
-        <Upload className="w-5 h-5" />
-        <span className="text-[10px]">Ladda upp</span>
-      </button>
-      <input ref={fileRef} type="file" accept=".glb,.gltf" className="hidden" onChange={handleUpload} />
-    </>
-  );
-}
+// FurnishCatalog removed — replaced by AssetCatalog side panel
 
 function ImportCatalog() {
   const floorplanRef = useRef<HTMLInputElement>(null);
@@ -550,13 +479,12 @@ function InlinedUnlinkedHAEntities() {
 
 function BuildCatalogRow() {
   const activeTool = useAppStore((s) => s.build.activeTool);
-  const showCatalog = activeTool === 'door' || activeTool === 'window' || activeTool === 'garage-door' || activeTool === 'passage' || activeTool === ('furnish' as any) || activeTool === ('import' as any);
+  const showCatalog = activeTool === 'door' || activeTool === 'window' || activeTool === 'garage-door' || activeTool === 'passage' || activeTool === ('import' as any);
   if (!showCatalog) return null;
   return (
     <div className="border-t border-border bg-background/95 backdrop-blur px-2 py-1.5 overflow-x-auto">
       <div className="flex items-center gap-2 min-w-max">
         {(activeTool === 'door' || activeTool === 'window' || activeTool === 'garage-door' || activeTool === 'passage') && <OpeningCatalog type={activeTool as any} />}
-        {activeTool === ('furnish' as any) && <FurnishCatalog />}
         {activeTool === ('import' as any) && <ImportCatalog />}
       </div>
     </div>
@@ -627,6 +555,7 @@ export default function BuildModeV2() {
   const activeTab = useAppStore((s) => s.build.tab);
   const showDevicePanel = activeTool.startsWith('place-') || activeTool === 'vacuum-zone' || activeTool === ('place-vacuum-dock' as any);
   const showImportPanel = activeTab === 'import' && isImported;
+  const showFurnishPanel = activeTool === ('furnish' as any);
 
   return (
     <div className="w-full h-full relative flex flex-col">
@@ -639,10 +568,18 @@ export default function BuildModeV2() {
           </div>
         )}
         {/* Import tools side panel */}
-        {showImportPanel && !showDevicePanel && (
+        {showImportPanel && !showDevicePanel && !showFurnishPanel && (
           <div className="absolute left-0 top-0 bottom-0 w-[220px] bg-card/95 backdrop-blur-sm border-r border-border z-20 overflow-y-auto py-3">
             <Suspense fallback={null}>
               <ImportTools />
+            </Suspense>
+          </div>
+        )}
+        {/* Furnish side panel */}
+        {showFurnishPanel && !showDevicePanel && (
+          <div className="absolute left-0 top-0 bottom-0 w-[260px] bg-card/95 backdrop-blur-sm border-r border-border z-20 overflow-y-auto py-3 px-2">
+            <Suspense fallback={null}>
+              <AssetCatalog />
             </Suspense>
           </div>
         )}
