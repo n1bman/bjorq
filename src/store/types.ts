@@ -542,14 +542,69 @@ export interface DevicesState {
   vacuumDebug: Record<string, VacuumDebugInfo>;
 }
 
+// ─── Asset Catalog ───
+export type AssetCategory =
+  | 'sofas' | 'chairs' | 'tables' | 'beds' | 'storage'
+  | 'lighting' | 'decor' | 'plants' | 'kitchen' | 'bathroom'
+  | 'devices' | 'outdoor' | 'imported';
+
+export type AssetPlacement = 'floor' | 'wall' | 'ceiling' | 'table';
+
+export interface AssetDimensions {
+  width: number;   // meters
+  depth: number;
+  height: number;
+}
+
+export interface AssetHAMapping {
+  mappable: boolean;
+  defaultDomain?: string;    // e.g. "light", "media_player"
+  defaultKind?: DeviceKind;
+}
+
+export interface AssetPerformanceStats {
+  triangles: number;
+  materials: number;
+  fileSizeKB: number;
+}
+
+/** Metadata for curated catalog assets (read from public/catalog/index.json) */
+export interface CatalogAssetMeta {
+  id: string;
+  name: string;
+  category: AssetCategory;
+  subcategory?: string;
+  style?: string;
+  tags?: string[];
+  model: string;         // relative path to GLB from catalog root
+  thumbnail?: string;    // relative path to thumb image
+  dimensions?: AssetDimensions;
+  placement: AssetPlacement;
+  defaultRotation?: [number, number, number];
+  shadow?: { cast: boolean; receive: boolean };
+  ha?: AssetHAMapping;
+  performance?: AssetPerformanceStats;
+  source: 'curated';
+}
+
 // ─── Props Layer ───
 export interface PropCatalogItem {
   id: string;
   name: string;
   url: string;
-  source: 'builtin' | 'user';
+  source: 'builtin' | 'user' | 'curated';
   thumbnail?: string;
   category?: string;
+  // Extended metadata
+  subcategory?: string;
+  style?: string;
+  tags?: string[];
+  dimensions?: AssetDimensions;
+  placement?: AssetPlacement;
+  defaultRotation?: [number, number, number];
+  haMapping?: AssetHAMapping;
+  fileData?: string;           // base64 for user imports
+  performance?: AssetPerformanceStats;
 }
 
 export interface PropModelStats {
