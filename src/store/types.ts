@@ -566,6 +566,7 @@ export interface AssetPerformanceStats {
   triangles: number;
   materials: number;
   fileSizeKB: number;
+  maxTextureRes?: number;
 }
 
 /** Metadata for curated catalog assets (read from public/catalog/index.json) */
