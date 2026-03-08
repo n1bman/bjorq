@@ -19,6 +19,7 @@ import { cn } from '../../lib/utils';
 import { toast } from 'sonner';
 
 const ImportPreview3D = lazy(() => import('./ImportPreview3D'));
+const ImportTools = lazy(() => import('./import/ImportTools'));
 
 const generateId = () => Math.random().toString(36).slice(2, 10);
 
