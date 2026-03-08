@@ -1651,6 +1651,15 @@ useAppStore.subscribe((state) => {
     const newRooms = detectRooms(currentFloor.walls, currentFloor.rooms);
     if (newRooms.length > 0 || currentFloor.rooms.length > 0) {
       useAppStore.getState().setRooms(floorId, newRooms);
+      // Re-assign device roomIds after room detection
+      const { findRoomForPoint } = await import('../lib/roomDetection');
+      const devices = useAppStore.getState().devices.markers.filter((m: any) => m.floorId === floorId);
+      for (const d of devices) {
+        const newRoomId = findRoomForPoint(newRooms, [d.position[0], d.position[2]]);
+        if ((newRoomId ?? undefined) !== d.roomId) {
+          useAppStore.getState().assignDeviceRoom(d.id, newRoomId);
+        }
+      }
     }
   }, 300);
 });
