@@ -1,4 +1,5 @@
 import { useAppStore } from '../../../store/useAppStore';
+import { toast } from 'sonner';
 import { useRef, useState } from 'react';
 import { Upload, Trash2, RotateCcw, Search, FolderOpen } from 'lucide-react';
 import { Slider } from '../../ui/slider';
