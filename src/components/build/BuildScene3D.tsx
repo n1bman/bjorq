@@ -224,12 +224,24 @@ function SceneContent() {
         const floorWalls = fl?.walls ?? [];
         const nodeSnap = snapToNode(snapped, floorWalls, 0.25);
         snapped = nodeSnap.snapped;
+
+        // Snap to first node for auto-close feedback
+        let isFirstNodeSnap = false;
+        if (wallDrawing.isDrawing && wallDrawing.nodes.length >= 3) {
+          const firstNode = wallDrawing.nodes[0];
+          const distToFirst = Math.hypot(snapped[0] - firstNode[0], snapped[1] - firstNode[1]);
+          if (distToFirst < 0.3) {
+            snapped = firstNode;
+            isFirstNodeSnap = true;
+          }
+        }
+
         setCursorPos(snapped);
-        setCursorSnapped(nodeSnap.isSnapped);
-        setCursorMidSnap(!!nodeSnap.isMidSnap);
+        setCursorSnapped(nodeSnap.isSnapped || isFirstNodeSnap);
+        setCursorMidSnap(!!nodeSnap.isMidSnap && !isFirstNodeSnap);
       }
     },
-    [activeTool, snapToGrid, floors, activeFloorId]
+    [activeTool, snapToGrid, floors, activeFloorId, wallDrawing]
   );
 
   const handleDoubleClick = useCallback(() => {
