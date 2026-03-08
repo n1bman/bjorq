@@ -1410,7 +1410,7 @@ export const useAppStore = create<AppState>()(
           activityLog: state.activityLog,
           profile: state.profile,
           customCategories: state.customCategories,
-          standby: state.standby,
+          standby: { ...state.standby, phase: 'standby' as const },
           wifi: state.wifi,
           energyConfig: state.energyConfig,
           calendar: state.calendar,
