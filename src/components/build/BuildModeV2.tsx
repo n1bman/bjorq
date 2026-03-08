@@ -153,7 +153,7 @@ function AssetCatalog() {
   const [importName, setImportName] = useState('');
   const [importCategory, setImportCategory] = useState<AssetCategory>('imported');
   const [importSubcategory, setImportSubcategory] = useState('');
-  const [importHAMapping, setImportHAMapping] = useState<string>('none');
+  
   const [isProcessing, setIsProcessing] = useState(false);
   const [saveToCatalog, setSaveToCatalog] = useState(false);
   const [manageAsset, setManageAsset] = useState<ACEntry | null>(null);
