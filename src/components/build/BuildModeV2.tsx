@@ -158,6 +158,9 @@ function AssetCatalog() {
   
   const [isProcessing, setIsProcessing] = useState(false);
   const [saveToCatalog, setSaveToCatalog] = useState(false);
+  const [optimizedResult, setOptimizedResult] = useState<OptimizationResult | null>(null);
+  const [isOptimizing, setIsOptimizing] = useState(false);
+  const [optimizationStep, setOptimizationStep] = useState<'analyze' | 'optimizing' | 'optimized'>('analyze');
   const [manageAsset, setManageAsset] = useState<ACEntry | null>(null);
   const [manageDialogOpen, setManageDialogOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
