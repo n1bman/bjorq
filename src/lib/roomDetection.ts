@@ -106,7 +106,7 @@ function findMinimalCycles(graph: Graph): string[][] {
 
   if (validCycles.length <= 1) return validCycles;
 
-  const centroids = cycles.map((cycle) => {
+  const centroids = validCycles.map((cycle) => {
     const pts = cycle.map((k) => graph[k].node);
     const cx = pts.reduce((a, p) => a + p[0], 0) / pts.length;
     const cy = pts.reduce((a, p) => a + p[1], 0) / pts.length;
@@ -128,9 +128,9 @@ function findMinimalCycles(graph: Graph): string[][] {
   };
 
   // A cycle is a supercycle if another cycle's centroid is inside it
-  const filtered = cycles.filter((cycle, i) => {
+  const filtered = validCycles.filter((cycle, i) => {
     const poly = polyForCycle(cycle);
-    for (let j = 0; j < cycles.length; j++) {
+    for (let j = 0; j < validCycles.length; j++) {
       if (i === j) continue;
       if (pip(centroids[j][0], centroids[j][1], poly)) return false;
     }
