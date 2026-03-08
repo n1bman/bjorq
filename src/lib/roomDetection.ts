@@ -361,7 +361,7 @@ export function detectRooms(walls: WallSegment[], existingRooms?: Room[]): Room[
   
   const { walls: healedWalls } = healWalls(walls);
   const splitWalls = splitAtTJunctions(healedWalls);
-  const graph = buildGraph(splitWalls);
+  const { graph, pointIndex } = buildGraph(splitWalls);
   const cycles = findMinimalCycles(graph);
   
   const deadEnds = Object.values(graph).filter((n) => n.neighbors.length < 2).length;
@@ -372,7 +372,19 @@ export function detectRooms(walls: WallSegment[], existingRooms?: Room[]): Room[
     console.warn('[detectRooms] No cycles found! Graph dump:');
     for (const [key, node] of Object.entries(graph)) {
       const status = node.neighbors.length < 2 ? ' ⚠️ DEAD-END' : '';
-      console.warn(`  node ${key} [${node.node[0].toFixed(2)}, ${node.node[1].toFixed(2)}] → ${node.neighbors.length} neighbors${status}`);
+      // For dead-ends, find nearest other node to help debug
+      let nearestInfo = '';
+      if (node.neighbors.length < 2) {
+        let minDist = Infinity;
+        let nearestKey = '';
+        for (const [ok, on] of Object.entries(graph)) {
+          if (ok === key) continue;
+          const d = Math.hypot(on.node[0] - node.node[0], on.node[1] - node.node[1]);
+          if (d < minDist) { minDist = d; nearestKey = ok; }
+        }
+        nearestInfo = ` (nearest node=${nearestKey} dist=${minDist.toFixed(3)}m)`;
+      }
+      console.warn(`  node ${key} [${node.node[0].toFixed(3)}, ${node.node[1].toFixed(3)}] → ${node.neighbors.length} neighbors${status}${nearestInfo}`);
     }
   }
 
