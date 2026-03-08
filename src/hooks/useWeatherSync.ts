@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useAppStore } from '../store/useAppStore';
 import type { WeatherCondition, ForecastDay } from '../store/types';
+import { computeEnvironmentProfile, estimateCloudCoverage } from '../lib/environmentEngine';
 
 // Map WMO weather codes to our conditions
 function wmoToCondition(code: number): WeatherCondition {
@@ -11,7 +12,6 @@ function wmoToCondition(code: number): WeatherCondition {
 }
 
 function wmoToIntensity(code: number): number {
-  // Light: 0.3, Moderate: 0.6, Heavy: 1.0
   if ([51, 56, 71, 85, 80].includes(code)) return 0.3;
   if ([53, 57, 73, 61, 81].includes(code)) return 0.6;
   if ([55, 67, 75, 65, 82, 77, 86].includes(code)) return 1.0;
@@ -78,6 +78,22 @@ async function fetchWeather(lat: number, lon: number) {
   };
 }
 
+/** Recompute and store the environment profile from current state */
+function updateProfile() {
+  const s = useAppStore.getState();
+  const env = s.environment;
+  const profile = computeEnvironmentProfile({
+    sunAzimuth: env.sunAzimuth,
+    sunElevation: env.sunElevation,
+    weatherCondition: env.weather.condition,
+    cloudCoverage: env.cloudCoverage,
+    calibration: env.sunCalibration,
+    atmosphere: env.atmosphere,
+    precipitationOverride: env.precipitationOverride,
+  });
+  s.setEnvironmentProfile(profile);
+}
+
 const POLL_INTERVAL = 15 * 60 * 1000; // 15 minutes
 const SUN_INTERVAL = 60 * 1000; // 1 minute
 
@@ -87,6 +103,7 @@ export function useWeatherSync() {
   const lon = useAppStore((s) => s.environment.location.lon);
   const setWeatherData = useAppStore((s) => s.setWeatherData);
   const setSunPosition = useAppStore((s) => s.setSunPosition);
+  const setCloudCoverage = useAppStore((s) => s.setCloudCoverage);
   const intervalRef = useRef<ReturnType<typeof setInterval>>();
   const sunRef = useRef<ReturnType<typeof setInterval>>();
 
@@ -94,6 +111,8 @@ export function useWeatherSync() {
     if (source !== 'auto' && source !== 'ha') {
       if (intervalRef.current) clearInterval(intervalRef.current);
       if (sunRef.current) clearInterval(sunRef.current);
+      // Still compute profile for manual mode
+      updateProfile();
       return;
     }
 
@@ -101,8 +120,34 @@ export function useWeatherSync() {
     if (source === 'ha') {
       const syncFromHA = () => {
         const liveStates = useAppStore.getState().homeAssistant.liveStates;
+        const cal = useAppStore.getState().environment.sunCalibration ?? { northOffset: 0, azimuthCorrection: 0, elevationCorrection: 0, intensityMultiplier: 1, indoorBounce: 0 };
+
+        // --- Read sun.sun entity for precise sun position ---
+        const sunEntity = liveStates['sun.sun'];
+        if (sunEntity) {
+          const haAz = sunEntity.attributes.azimuth as number;
+          const haEl = sunEntity.attributes.elevation as number;
+          if (typeof haAz === 'number' && typeof haEl === 'number') {
+            setSunPosition(
+              haAz + cal.northOffset + cal.azimuthCorrection,
+              haEl + cal.elevationCorrection
+            );
+          }
+        } else {
+          // Fallback to calculated sun position
+          const { azimuth, elevation } = calculateSunPosition(lat, lon, new Date());
+          setSunPosition(
+            azimuth + cal.northOffset + cal.azimuthCorrection,
+            elevation + cal.elevationCorrection
+          );
+        }
+
+        // --- Read weather entity ---
         const weatherKey = Object.keys(liveStates).find((k) => k.startsWith('weather.'));
-        if (!weatherKey) return;
+        if (!weatherKey) {
+          updateProfile();
+          return;
+        }
         const ws = liveStates[weatherKey];
         const attrs = ws.attributes;
 
@@ -118,11 +163,28 @@ export function useWeatherSync() {
         const humidity = typeof attrs.humidity === 'number' ? attrs.humidity : undefined;
         const intensity = condition === 'rain' ? 0.6 : condition === 'snow' ? 0.5 : 0;
 
+        // --- Read cloud coverage ---
+        let cloudCov: number | undefined;
+        // Try weather entity attributes first
+        if (typeof attrs.cloud_coverage === 'number') {
+          cloudCov = attrs.cloud_coverage / 100;
+        }
+        // Try dedicated sensor
+        const cloudSensor = liveStates['sensor.cloud_coverage'];
+        if (cloudSensor && typeof cloudSensor.state === 'string') {
+          const parsed = parseFloat(cloudSensor.state);
+          if (!isNaN(parsed)) cloudCov = parsed / 100;
+        }
+        // Estimate from condition if unavailable
+        if (cloudCov === undefined) {
+          cloudCov = estimateCloudCoverage(condition);
+        }
+        setCloudCoverage(Math.max(0, Math.min(1, cloudCov)));
+
         // Parse forecast from HA attributes
         let forecast: ForecastDay[] | undefined;
         const haForecast = attrs.forecast as Array<{ datetime: string; condition: string; temperature: number; templow: number }> | undefined;
         if (Array.isArray(haForecast) && haForecast.length > 0) {
-          const dayNames = ['Sön', 'Mån', 'Tis', 'Ons', 'Tor', 'Fre', 'Lör'];
           forecast = haForecast.slice(0, 7).map((f) => {
             const d = new Date(f.datetime);
             return {
@@ -135,20 +197,29 @@ export function useWeatherSync() {
         }
 
         setWeatherData({ condition, temperature, windSpeed, humidity, intensity, forecast });
+
+        // Recompute profile after all data is set
+        // Use setTimeout(0) to ensure store has updated
+        setTimeout(updateProfile, 0);
       };
 
       syncFromHA();
-      intervalRef.current = setInterval(syncFromHA, 30_000); // re-read every 30s
+      intervalRef.current = setInterval(syncFromHA, 30_000);
 
+      // Sun update without HA fallback (HA sync handles sun.sun)
       const updateSun = () => {
-        const { azimuth, elevation } = calculateSunPosition(lat, lon, new Date());
+        const liveStates = useAppStore.getState().homeAssistant.liveStates;
         const cal = useAppStore.getState().environment.sunCalibration ?? { northOffset: 0, azimuthCorrection: 0, elevationCorrection: 0, intensityMultiplier: 1, indoorBounce: 0 };
-        setSunPosition(
-          azimuth + cal.northOffset + cal.azimuthCorrection,
-          elevation + cal.elevationCorrection
-        );
+        const sunEntity = liveStates['sun.sun'];
+        if (!sunEntity) {
+          const { azimuth, elevation } = calculateSunPosition(lat, lon, new Date());
+          setSunPosition(
+            azimuth + cal.northOffset + cal.azimuthCorrection,
+            elevation + cal.elevationCorrection
+          );
+        }
+        setTimeout(updateProfile, 0);
       };
-      updateSun();
       sunRef.current = setInterval(updateSun, SUN_INTERVAL);
 
       return () => {
@@ -162,18 +233,21 @@ export function useWeatherSync() {
       try {
         const data = await fetchWeather(lat, lon);
         setWeatherData(data);
+        setCloudCoverage(estimateCloudCoverage(data.condition));
+        setTimeout(updateProfile, 0);
       } catch (e) {
         console.warn('Weather sync failed:', e);
       }
     };
 
     const updateSun = () => {
-      const { azimuth, elevation } = calculateSunPosition(lat, lon, new Date());
       const cal = useAppStore.getState().environment.sunCalibration ?? { northOffset: 0, azimuthCorrection: 0, elevationCorrection: 0, intensityMultiplier: 1, indoorBounce: 0 };
+      const { azimuth, elevation } = calculateSunPosition(lat, lon, new Date());
       setSunPosition(
         azimuth + cal.northOffset + cal.azimuthCorrection,
         elevation + cal.elevationCorrection
       );
+      setTimeout(updateProfile, 0);
     };
 
     doFetch();
@@ -184,5 +258,5 @@ export function useWeatherSync() {
       if (intervalRef.current) clearInterval(intervalRef.current);
       if (sunRef.current) clearInterval(sunRef.current);
     };
-  }, [source, lat, lon, setWeatherData, setSunPosition]);
+  }, [source, lat, lon, setWeatherData, setSunPosition, setCloudCoverage]);
 }
