@@ -1,216 +1,93 @@
 
 
-## Build Mode Refactoring Plan (Active)
+# V1 Model Optimization Pipeline
 
-### Sprint 1: Canvas2D Refaktorisering + Undo/Redo ✅ DONE
-- BuildCanvas2D split into canvas2d/ module (Canvas2DView, useCanvas2DCamera, useCanvas2DDraw, useCanvas2DDrag, constants)
-- Shared buildUtils.ts with snap/grid/hit-test utilities
-- UndoSnapshot expanded to cover layout + devices + props (30 levels)
-- pushUndo auto-called on addDevice, removeDevice, addProp, removeProp
+## Summary
 
-### Sprint 2: Väggsystem + Live Room Detection (NEXT)
-### Sprint 3: Dörrar, Fönster, Garageportar
-### Sprint 4: Referensritning + Material + Mark
-### Sprint 5: Multi-select, Copy/Paste
-### Sprint 6: HA-koppling openings + Dashboard-synk
-### Sprint 7: Polish och Stabilitet
+Add real client-side optimization to the import workflow: texture downscaling, material deduplication, scene cleanup, and GLB re-export. Users choose between importing original or optimized version, with before/after comparison.
 
----
+## File Changes
 
-## Full Roadmap: EPIC A through I + Klimat-flik
+### 1. `src/store/types.ts` — Add `maxTextureRes` to stats
 
-Since this is ~20 features across 9 epics, each implementation message will handle 2-3 tasks. Here is the complete plan split into implementation sprints.
+Add `maxTextureRes?: number` field to `AssetPerformanceStats` (line 568) so we can track texture resolution in before/after comparisons.
 
----
+### 2. `src/lib/assetPipeline.ts` — Add optimization functions
 
-### Sprint 1: EPIC A -- Data, profiler & multi-device consistency
+**Update `processModel`** to also capture `maxTextureRes` in returned stats (already computed as `maxTexRes` but not returned).
 
-**A1: "Ta bort demo-projekt"**
-- Add "Ta bort demo-projekt" button in `DataBackupCard.tsx`
-- If demo is the active project: reset to empty initial state (reuse existing `clearAllFloors` + clear devices)
-- Confirmation dialog with warning about what gets removed
-- In hosted mode: also delete project on server via `DELETE /api/projects/demo`
+**New: `getOptimizationLevel(stats)`** — Returns `'ok' | 'recommended' | 'strongly-recommended'` based on:
+- OK: <150k tri, <5MB, textures ≤2048
+- Recommended: >150k tri OR >5MB OR textures >2048
+- Strongly recommended: >500k tri OR >10MB OR textures >4096
 
-**A2: "localStorage enforcement i HOSTED"**
-- In `initHostedMode()` (useAppStore.ts): after bootstrap loads, run a one-time `localStorage.removeItem('hometwin-store')` cleanup
-- Add a "Storage Mode" indicator in Settings showing HOSTED/DEV + last sync time
-- Ensure `partialize` returns `{}` in hosted mode (already done, but verify edge cases)
+**New: `OptimizationResult` interface**:
+```typescript
+{
+  scene: THREE.Group;
+  blob: Blob;
+  stats: AssetPerformanceStats;
+  beforeStats: AssetPerformanceStats;
+  thumbnail: string;
+  savings: { fileSizePct: number; materialsPct: number; texResPct: number };
+}
+```
 
-**Files:** `DataBackupCard.tsx`, `useAppStore.ts`, `DashboardGrid.tsx` (settings section)
+**New: `optimizeModel(scene, originalStats, options?)`** — Performs:
+1. **Texture downscaling** (max 1024px) — uses existing `downscaleTexture` helper on all maps
+2. **Safe JPEG conversion** — only for `map` property where material has `transparent === false` and no `alphaMap`. Uses canvas `toDataURL('image/jpeg', 0.85)` for quality. Normal/roughness/metalness/AO/emissive maps stay as-is (PNG via canvas).
+3. **Material deduplication** — key = `color.getHex() + roughness + metalness + map-uuid + normalMap-uuid`. Materials with identical keys share a single instance. Only reassigns `child.material`, no geometry changes.
+4. **Scene cleanup** — traverse and remove: empty groups (no mesh children), embedded cameras (`THREE.Camera`), embedded lights (`THREE.Light`), animation clips (set `gltf.animations = []`).
+5. **Unused vertex attribute stripping** — remove `uv2` if no material in the scene uses `aoMap`. Remove `color` attribute if no material uses `vertexColors`. Conservative: check usage across all materials first.
+6. **No geometry merging** — meshes stay intact to preserve structure.
 
----
+**New: `exportToGLB(scene): Promise<Blob>`** — Uses `GLTFExporter` from `three/examples/jsm/exporters/GLTFExporter.js` to serialize scene to binary GLB blob.
 
-### Sprint 2: EPIC B -- HA connection stability
+After optimization, re-analyze the scene to get accurate `afterStats`, then generate a new thumbnail.
 
-**B1: "Reconnect / Reload entities / Reset HA config"**
-- Enhance `HAConnectionPanel.tsx` with 3 action buttons:
-  - **Reconnect**: calls `disconnect()` then `connect()` with stored credentials
-  - **Reload entities**: re-sends `get_states` over existing WS (or re-polls in hosted)
-  - **Reset HA config**: clears wsUrl/token, disconnects, clears entities
-- Add auto-reconnect status indicator with retry count
+### 3. `src/components/build/BuildModeV2.tsx` — Updated import dialog
 
-**B2: "Rate-limit / debounce service calls"**
-- Create `src/lib/serviceThrottle.ts`:
-  - Per-entity throttle (max 10 calls/sec per entity, last-write-wins)
-  - Circuit breaker: if >5 errors in 10s, pause and show toast
-- Wrap `haServiceCaller.current` through throttle in `Index.tsx`
-- Apply throttle to slider `onValueChange` handlers in `DeviceControlCard.tsx` (lights, fans, volume)
+**New state variables** (in `AssetCatalog`):
+- `optimizedResult: OptimizationResult | null`
+- `isOptimizing: boolean`
+- `optimizationStep: 'analyze' | 'optimizing' | 'optimized'`
 
-**Files:** `HAConnectionPanel.tsx`, new `serviceThrottle.ts`, `Index.tsx`, `useHABridge.ts`
+**Dialog flow changes** (lines 356-390):
 
----
+**Step 1 — Analysis complete**: Show thumbnail, stats, name/category/subcategory fields (same as now), plus optimization recommendation:
 
-### Sprint 3: EPIC C1-C2 -- Entity remapping + RGB color picker
+| Level | UI |
+|---|---|
+| OK | Green box: "Bra — redo att använda". Buttons: `[Avbryt] [Importera]`. Small text link: "Optimera ändå" |
+| Rekommenderas | Yellow box: "Optimering rekommenderas — minskar filstorlek och texturer. Triangelantal påverkas inte nämnvärt." Buttons: `[Avbryt] [Importera original] [Optimera & importera]` |
+| Starkt rekommenderad | Red box: "Optimering starkt rekommenderad — stor fil och/eller tunga texturer kan ge låg FPS." Buttons: `[Avbryt] [Importera original] [Optimera & importera]` |
 
-**C1: "Edit HA entity mapping from dashboard"**
-- Add "Edit mapping" button in expanded `DevicesSection.tsx` device cards
-- Show searchable entity dropdown (reuse `HAEntityPicker` from build mode)
-- On change: call `updateDevice(id, { ha: { entityId } })` + re-map state from liveStates
+**Step 2 — Optimizing**: Spinner with message "Optimerar... Skalar ner texturer, rensar tomma noder..."
 
-**C2: "RGB color picker"**
-- Replace R/G/B sliders in `LightControl` with an HSV color wheel (canvas-based)
-- Keep brightness slider separate
-- Send `rgb_color` or `hs_color` based on entity's `supported_color_modes`
+**Step 3 — Optimized**: Show before/after comparison table:
 
-**Files:** `DeviceControlCard.tsx`, `DevicesSection.tsx`, new `ColorPicker.tsx`
+```
+           Före        Efter
+Storlek    16.5 MB     4.2 MB    -74%
+Texturer   4096 px     1024 px   -75%
+Material   10          6         -40%
+Trianglar  243k        243k       0%
+```
 
----
+Green/red percentage indicators. Buttons: `[Avbryt] [Importera]`
 
-### Sprint 4: EPIC C3-C5 -- Energy sensors + Fan + Climate improvements
+**`handleImportConfirm` update**: If `optimizedResult` exists, use `optimizedResult.blob` as the file source (create a `new File([blob], importName + '.glb')`) and `optimizedResult.stats` as performance data. Otherwise use original `importFile`.
 
-**C3: "Energy sensors"**
-- Extend `EnergyWidget` + `EnergyDeviceList` to pull from HA `sensor.*_power` / `sensor.*_energy` entities
-- Add entity picker in energy settings to select which sensors to track
-- Show "Nu", "Idag", "Manad" tabs in energy panel
+**Fallback**: Wrap the optimize call in try/catch. On failure:
+- Show toast: "Optimering misslyckades — du kan fortfarande importera originalet, men det kan påverka prestanda"
+- Reset to `optimizationStep: 'analyze'` so user can click "Importera original"
+- All metadata (name, category, subcategory) preserved
 
-**C4: "Fan extended controls"**
-- Extend `FanState` with `oscillate`, `direction`, `preset_modes`, `available_preset_modes`
-- Update `FanControl` UI: preset mode buttons, oscillate toggle, direction toggle
-- Gate UI elements on entity attributes (`supported_features`)
+**Keep metadata fields visible** throughout all steps — name, category, subcategory inputs remain editable. The `saveToCatalog` checkbox and hosted-mode logic stays unchanged.
 
-**C5: "Climate overhaul"**
-- Extend `ClimateState` with `hvac_modes`, `fan_mode`, `swing_mode`, `preset_mode`, `target_temp_low/high`
-- Add quick action buttons ("Heat 21", "Cool 23", "Auto")
-- Show `current_humidity` if available
-- Gate UI on entity's `supported_features`
+## What V1 does NOT do
+- No geometry merging or decimation
+- No lossy mesh simplification  
+- Triangle count stays the same (UI states this clearly)
+- Original file not stored separately (user can re-import from disk)
 
-**Files:** `types.ts`, `DeviceControlCard.tsx`, `EnergyWidget.tsx`, `EnergyDeviceList.tsx`, `haMapping.ts`, `useHABridge.ts`
-
----
-
-### Sprint 5: EPIC D -- Camera & media
-
-**D1: "Camera stream fallback chain"**
-- In `CameraControl`: attempt MJPEG stream URL from HA entity attributes (`entity_picture`)
-- In hosted mode: proxy through `/api/ha/camera_proxy/<entity_id>`
-- Fallback chain: stream -> snapshot polling (5s) -> static placeholder
-- Show clear error state with reason
-
-**D2: "Camera freeze after refresh"**
-- Defer OrbitControls re-binding until scene is fully mounted (add `ready` state in `Scene3D.tsx`)
-- Ensure pointer event listeners are removed and re-added cleanly on HMR/reload
-
-**D3: "Media/screen widget with image entities + AndroidTV"**
-- New widget type in dashboard: `MediaScreenWidget`
-- Pull `entity_picture`, `media_image_url` from HA attributes
-- Display app artwork, media title, app_name from `media_player` attributes
-
-**Files:** `DeviceControlCard.tsx`, `Scene3D.tsx`, `DeviceMarkers3D.tsx`, new `MediaScreenWidget.tsx`
-
----
-
-### Sprint 6: EPIC E -- Weather override
-
-**E1: "Precipitation mode override"**
-- Add `precipitationOverride` to `EnvironmentState`: `'auto' | 'rain' | 'snow' | 'off'`
-- UI in settings under environment: 4 toggle buttons
-- `WeatherEffects3D.tsx` reads override; if not `auto`, forces that condition regardless of HA/API data
-- Location source remains separate (HA/manual)
-
-**Files:** `types.ts`, `useAppStore.ts`, `WeatherEffects3D.tsx`, `DashboardGrid.tsx` (settings section)
-
----
-
-### Sprint 7: EPIC F -- Standby + Vio mode
-
-**F1: "Vio mode + motion sensor wake"**
-- Extend standby state machine: `Active -> Standby -> Vio`
-  - Standby: current behavior (dim camera, info overlay)
-  - Vio: near-black screen, minimal clock only, GPU paused (stop R3F render loop)
-- Add `vioTimeout` setting (minutes after standby -> vio)
-- Add `motionEntityId` setting: pick a `binary_sensor.*` from HA entities
-- In `useIdleTimer`: subscribe to motion entity state changes; if `on` -> exit standby/vio
-- Wake transition: vio -> active (skip standby on motion)
-
-**Files:** `types.ts`, `StandbyMode.tsx`, `useIdleTimer.ts`, `DashboardGrid.tsx` (standby settings)
-
----
-
-### Sprint 8: EPIC G -- Navigation & Home UI
-
-**G1: "Expanding FAB navigation"**
-- Replace `HomeNav` pill with a single center button that expands into 3 buttons on tap
-- Animation: radial expand with spring transition
-- Move camera FAB to consistent bottom-right position
-
-**G2: "Device marker visibility"**
-- Add outline/glow shader to markers in `DeviceMarkers3D.tsx` for better contrast
-- Add `markerSize` setting in preferences: S/M/L (scales marker geometry)
-
-**G3: "Build devices: better categorization"**
-- Group device placement tools by category in `DevicePlacementTools.tsx`
-- Categories: Lights, Switches, Climate, Fans, Sensors, Cameras, Vacuum, Media, Security, Other
-
-**Files:** `HomeNav.tsx`, `CameraFab.tsx`, `DeviceMarkers3D.tsx`, `DevicePlacementTools.tsx`, `types.ts`
-
----
-
-### Sprint 9: EPIC H -- Vacuum 3D movement
-
-**H1: "Vacuum movement in 3D"**
-- Debug current vacuum animation in `DeviceMarkers3D.tsx` (VacuumMarker section)
-- Verify position source: check if `lawnmower pattern` movement code is still running
-- Add debug overlay (toggle in vacuum control card) showing position/timestamp/status
-- Ensure `useFrame` animation loop only runs when `status === 'cleaning'`
-
-**Files:** `DeviceMarkers3D.tsx`, `DeviceControlCard.tsx`
-
----
-
-### Sprint 10: EPIC I -- Performance (RPi)
-
-**I1: "Default tablet mode for weak hardware"**
-- On first boot (no persisted state): run hardware detection
-- If `navigator.hardwareConcurrency <= 4` or `deviceMemory <= 4`: auto-set `tabletMode: true`
-- Store flag `_autoDetectedPerformance` to avoid re-applying on subsequent boots
-
-**I2: "RPi optimization package"**
-- Lower DPR floor to 0.75 in tablet mode
-- Add `maxLights` setting: in tablet mode, cap number of active pointLights in scene
-- Batch entity state updates (collect changes over 100ms, apply once)
-- Add "Performance HUD" toggle in settings: shows FPS, tri-count, material count overlay
-
-**Files:** `PerformanceSettings.tsx`, `useAppStore.ts`, `Scene3D.tsx`, `DeviceMarkers3D.tsx`
-
----
-
-### Sprint 11: Climate Tab (Extra)
-
-- New dashboard tab "Klimat" in `DashboardGrid.tsx`
-- "Comfort engine" UI:
-  - Select temperature sources (climate/sensor entities)
-  - Select controllable devices (fan/climate)
-  - Define rules: "If temp > X -> device Y at Z%"
-  - Hysteresis setting (default 0.5C)
-  - Schedule: day/night mode
-- Widgets: "Comfort status" card, "Next action", "Override 30 min" button
-- Client-side rule engine (runs in `useEffect` loop, checks every 30s)
-- Store rules in `automations` slice with type `comfort_rule`
-
-**Files:** `types.ts`, `DashboardGrid.tsx`, new `ClimateTab.tsx`, new `ComfortEngine.ts`
-
----
-
-### Implementation Order
-
-Each sprint will be implemented as 1-2 messages. Total: ~11-14 messages to complete everything. Ready to start with Sprint 1 (EPIC A) on approval.
