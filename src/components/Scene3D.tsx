@@ -247,30 +247,7 @@ function SceneContent() {
   );
 }
 
-function InlineTerrainEnvironment3D() {
-  const terrain = useAppStore((s) => s.terrain);
-  if (!terrain?.enabled) return null;
-  return (
-    <group>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]} receiveShadow>
-        <circleGeometry args={[terrain.grassRadius || 20, 64]} />
-        <meshStandardMaterial color={terrain.grassColor || '#4a7a3a'} roughness={0.95} polygonOffset polygonOffsetFactor={-0.5} polygonOffsetUnits={-0.5} />
-      </mesh>
-      {terrain.trees?.map((tree) => (
-        <group key={tree.id} position={[tree.position[0], 0, tree.position[1]]} scale={tree.scale}>
-          <mesh position={[0, 1, 0]} castShadow>
-            <cylinderGeometry args={[0.1, 0.15, 2, 8]} />
-            <meshStandardMaterial color="#6b4226" roughness={0.9} />
-          </mesh>
-          <mesh position={[0, 2.8, 0]} castShadow>
-            <sphereGeometry args={[1.2, 12, 12]} />
-            <meshStandardMaterial color="#3a6b2a" roughness={0.85} />
-          </mesh>
-        </group>
-      ))}
-    </group>
-  );
-}
+const MAX_RECOVERY = 3;
 
 export default function Scene3D() {
   const shadows = useAppStore((s) => s.performance.shadows);
@@ -284,21 +261,47 @@ export default function Scene3D() {
 
   const [recoveryCount, setRecoveryCount] = useState(0);
   const [recovering, setRecovering] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const lastSuccessRef = useRef(Date.now());
 
   const handleCreated = ({ gl }: { gl: THREE.WebGLRenderer }) => {
+    lastSuccessRef.current = Date.now();
     const canvas = gl.domElement;
     canvas.addEventListener('webglcontextlost', (e) => {
       e.preventDefault();
       console.warn('[Scene3D] WebGL context lost — recovering...');
-      setRecovering(true);
-      setTimeout(() => {
-        setRecoveryCount((c) => c + 1);
-        setRecovering(false);
-      }, 1000);
+      const elapsed = Date.now() - lastSuccessRef.current;
+      setRecoveryCount((prev) => {
+        const next = elapsed > 10000 ? 1 : prev + 1;
+        if (next > MAX_RECOVERY) {
+          setFailed(true);
+          return prev;
+        }
+        setRecovering(true);
+        const delay = Math.min(1000 * Math.pow(2, next - 1), 4000);
+        setTimeout(() => {
+          setRecovering(false);
+        }, delay);
+        return next;
+      });
     });
   };
 
   const canvasKey = `${quality}-${shadows}-${postprocessing}-${tabletMode}-${antialiasing}-${toneMapping}-${recoveryCount}`;
+
+  if (failed) {
+    return (
+      <div className="w-full h-full flex flex-col items-center justify-center gap-4 bg-gradient-to-br from-primary/10 to-secondary/10">
+        <p className="text-sm text-muted-foreground">3D-scenen kunde inte startas</p>
+        <button
+          onClick={() => { setFailed(false); setRecoveryCount(0); lastSuccessRef.current = Date.now(); }}
+          className="px-4 py-2 text-sm rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+        >
+          Försök igen
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
