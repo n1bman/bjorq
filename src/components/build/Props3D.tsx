@@ -260,52 +260,7 @@ function PropModel({ id, url: rawUrl, position, rotation, scale }: {
     window.addEventListener('pointerup', onPointerUp);
   }, [appMode, activeTool, tab, id, position, camera, raycaster, gl, updateProp, setSelection]);
 
-  // Loading state
-  if (status === 'loading' || status === 'idle') {
-    return (
-      <group position={position}>
-        <mesh>
-          <boxGeometry args={[0.5, 0.5, 0.5]} />
-          <meshStandardMaterial color="#e8a838" wireframe />
-        </mesh>
-        <Html center style={{ pointerEvents: 'none' }}>
-          <div style={{ background: 'hsl(220 18% 13% / 0.9)', color: '#fff', borderRadius: 8, padding: '4px 10px', fontSize: 10, whiteSpace: 'nowrap', textAlign: 'center' }}>
-            <div>Laddar...</div>
-            <div style={{ opacity: 0.6 }}>{modelName}</div>
-          </div>
-        </Html>
-      </group>
-    );
-  }
-
-  // Error state
-  if (status === 'error') {
-    return (
-      <group position={position}>
-        <mesh>
-          <boxGeometry args={[0.5, 0.5, 0.5]} />
-          <meshStandardMaterial color="#ef4444" wireframe />
-        </mesh>
-        <Html center style={{ pointerEvents: 'auto' }}>
-          <div style={{ background: 'hsl(220 18% 13% / 0.95)', borderRadius: 8, padding: '6px 12px', textAlign: 'center' }}>
-            <div style={{ color: '#ef4444', fontSize: 10, fontWeight: 600, marginBottom: 4 }}>
-              Kunde inte ladda: {modelName}
-            </div>
-            <button
-              onClick={() => { retryCount.current = 0; doLoad(url); }}
-              style={{
-                background: '#ef4444', color: '#fff', border: 'none', borderRadius: 6,
-                padding: '4px 10px', fontSize: 11, cursor: 'pointer', whiteSpace: 'nowrap',
-              }}
-            >
-              Ladda om
-            </button>
-          </div>
-        </Html>
-      </group>
-    );
-  }
-
+  // Memoize scene clone — only re-clone when scene or selection changes, NOT every render
   const displayScene = useMemo(() => {
     if (!scene) return null;
     const clone = scene.clone();
