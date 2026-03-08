@@ -335,7 +335,9 @@ function WallInspector({ floorId, wallId, floor, close }: { floorId: string; wal
   };
 
   const wallMats = presetMaterials.filter((m) => m.type === 'paint' || m.type === 'wood' || m.type === 'tile' || m.type === 'concrete');
-  const currentMatId = materialTarget === 'exterior' ? wall.materialId : wall.interiorMaterialId;
+  const currentMatId = materialTarget === 'exterior'
+    ? (exteriorIsLeft ? wall.leftMaterialId : wall.rightMaterialId) ?? wall.materialId
+    : (exteriorIsLeft ? wall.rightMaterialId : wall.leftMaterialId) ?? wall.interiorMaterialId;
 
   return (
     <div className="absolute top-3 right-3 w-60 glass-panel rounded-xl p-3 space-y-3 text-xs z-10 max-h-[80vh] overflow-y-auto">

@@ -348,7 +348,8 @@ export function detectRooms(walls: WallSegment[], existingRooms?: Room[]): Room[
   const graph = buildGraph(splitWalls);
   const cycles = findMinimalCycles(graph);
   
-  console.log(`[detectRooms] walls=${walls.length} healed=${healedWalls.length} split=${splitWalls.length} nodes=${Object.keys(graph).length} cycles=${cycles.length}`);
+  const deadEnds = Object.values(graph).filter((n) => n.neighbors.length < 2).length;
+  console.log(`[detectRooms] walls=${walls.length} → healed=${healedWalls.length} → split=${splitWalls.length} | nodes=${Object.keys(graph).length} (dead-ends=${deadEnds}) | cycles=${cycles.length} (verts: ${cycles.map(c => c.length).join(',')})`);
 
   // Collect existing "Rum N" numbers to avoid duplicates
   const usedNumbers = new Set<number>();
