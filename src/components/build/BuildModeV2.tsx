@@ -21,6 +21,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 
 const ImportPreview3D = lazy(() => import('./ImportPreview3D'));
 const ImportTools = lazy(() => import('./import/ImportTools'));
+const AssetCatalog = lazy(() => import('./furnish/AssetCatalog'));
 
 const generateId = () => Math.random().toString(36).slice(2, 10);
 
