@@ -112,8 +112,8 @@ export default function BuildCanvas2D({ overlayMode = false }: { overlayMode?: b
     canvasRef, containerRef, offset, zoom, overlayMode, grid, walls, rooms, stairs,
     selection, activeTool, wallDrawing, cursorWorld, ghostFloors, referenceDrawing,
     refImgRef, refImgLoaded, floorProps, deviceMarkers, activeFloorId,
-    measureStart, measureEnd, roomDrawStart, roomDrawEnd, homeGeometry,
-    vacZoneNodes, floor, worldToScreen, snapToGrid, setImportOverlaySync,
+    measureStart, measureEnd, roomDrawStart, roomDrawEnd, homeGeometry: homeGeometry as any,
+    vacZoneNodes, floor: floor as any, worldToScreen, snapToGrid, setImportOverlaySync,
   });
 
   // ─── Keyboard shortcuts ───
