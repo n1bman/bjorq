@@ -1,3 +1,4 @@
+import React from 'react';
 import { useAppStore } from '../../../store/useAppStore';
 import { Trees, Palette } from 'lucide-react';
 import { Switch } from '../../ui/switch';
@@ -5,14 +6,14 @@ import { Slider } from '../../ui/slider';
 import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
 
-export default function EnvironmentPanel() {
+const EnvironmentPanel = React.forwardRef<HTMLDivElement>((_, ref) => {
   const terrain = useAppStore((s) => s.terrain);
   const skyStyle = useAppStore((s) => s.environment.skyStyle) ?? 'auto';
   const setTerrain = useAppStore((s) => s.setTerrain);
   const setSkyStyle = useAppStore((s) => s.setSkyStyle);
 
   return (
-    <div className="glass-panel rounded-2xl p-[var(--space-panel)] space-y-4">
+    <div ref={ref} className="glass-panel rounded-2xl p-[var(--space-panel)] space-y-4">
       <div className="flex items-center gap-2">
         <Trees size={18} className="text-primary" />
         <h3 className="text-sm font-semibold text-foreground">Miljö & Terräng</h3>
@@ -90,4 +91,7 @@ export default function EnvironmentPanel() {
       </div>
     </div>
   );
-}
+});
+EnvironmentPanel.displayName = 'EnvironmentPanel';
+
+export default EnvironmentPanel;

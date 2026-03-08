@@ -5,6 +5,7 @@ import { Switch } from '../../ui/switch';
 import { Button } from '../../ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../../ui/collapsible';
 import { ChevronRight } from 'lucide-react';
+import React from 'react';
 import type { PrecipitationOverride, WeatherCondition } from '../../../store/types';
 
 const weatherOptions: { key: WeatherCondition; label: string; emoji: string }[] = [
@@ -21,9 +22,9 @@ const precipOptions: { key: PrecipitationOverride; label: string; emoji: string 
   { key: 'off', label: 'Av', emoji: '🚫' },
 ];
 
-function CollapsibleSection({ title, icon: Icon, children }: { title: string; icon: typeof Sun; children: React.ReactNode }) {
-  return (
-    <Collapsible>
+const CollapsibleSection = React.forwardRef<HTMLDivElement, { title: string; icon: typeof Sun; children: React.ReactNode }>(
+  ({ title, icon: Icon, children }, ref) => (
+    <Collapsible ref={ref}>
       <CollapsibleTrigger className="flex items-center justify-between w-full py-2 group">
         <div className="flex items-center gap-2">
           <Icon size={14} className="text-muted-foreground" />
@@ -35,8 +36,9 @@ function CollapsibleSection({ title, icon: Icon, children }: { title: string; ic
         {children}
       </CollapsibleContent>
     </Collapsible>
-  );
-}
+  )
+);
+CollapsibleSection.displayName = 'CollapsibleSection';
 
 export default function SunWeatherPanel() {
   const source = useAppStore((s) => s.environment.source);
