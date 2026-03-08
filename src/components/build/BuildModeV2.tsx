@@ -384,7 +384,7 @@ function AssetCatalog() {
               {isHostedSync() && <label className="flex items-center gap-2 text-[10px] text-muted-foreground cursor-pointer"><input type="checkbox" checked={saveToCatalog} onChange={(e) => setSaveToCatalog(e.target.checked)} className="rounded border-border" /><FolderPlus size={12} />Spara i permanent katalog</label>}
               {importResult.warnings.length > 0 && <div className="space-y-1">{importResult.warnings.map((w,i) => <p key={i} className="text-[10px] text-accent-foreground flex items-center gap-1"><AlertTriangle size={10} /> {w}</p>)}</div>}
               {/* Optimization verdict */}
-              <div className={cn("rounded-lg p-2 text-[10px] flex items-center gap-2", rating === 'ok' ? 'bg-primary/10 text-primary' : rating === 'heavy' ? 'bg-yellow-500/10 text-yellow-600' : 'bg-destructive/10 text-destructive')}>
+              <div className={cn("rounded-lg p-2 text-[10px] flex items-center gap-2", rating === 'ok' ? 'bg-primary/10 text-primary' : rating === 'heavy' ? 'bg-accent/50 text-accent-foreground' : 'bg-destructive/10 text-destructive')}>
                 {rating === 'ok' ? <CheckCircle size={14} /> : <AlertTriangle size={14} />}
                 <div>
                   <p className="font-medium">{rating === 'ok' ? 'Bra optimering' : rating === 'heavy' ? 'Tung modell' : 'Mycket tung'}</p>
