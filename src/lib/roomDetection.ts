@@ -98,10 +98,15 @@ function findMinimalCycles(graph: Graph): string[][] {
     }
   }
 
-  // Filter out supercycles that contain other cycles
-  if (cycles.length <= 1) return cycles;
+  // Filter out tiny degenerate cycles BEFORE supercycle check
+  const validCycles = cycles.filter((cycle) => {
+    const pts = cycle.map((k) => graph[k].node);
+    return polygonArea(pts) >= 0.5;
+  });
 
-  const centroids = cycles.map((cycle) => {
+  if (validCycles.length <= 1) return validCycles;
+
+  const centroids = validCycles.map((cycle) => {
     const pts = cycle.map((k) => graph[k].node);
     const cx = pts.reduce((a, p) => a + p[0], 0) / pts.length;
     const cy = pts.reduce((a, p) => a + p[1], 0) / pts.length;
@@ -123,9 +128,9 @@ function findMinimalCycles(graph: Graph): string[][] {
   };
 
   // A cycle is a supercycle if another cycle's centroid is inside it
-  const filtered = cycles.filter((cycle, i) => {
+  const filtered = validCycles.filter((cycle, i) => {
     const poly = polyForCycle(cycle);
-    for (let j = 0; j < cycles.length; j++) {
+    for (let j = 0; j < validCycles.length; j++) {
       if (i === j) continue;
       if (pip(centroids[j][0], centroids[j][1], poly)) return false;
     }
@@ -343,7 +348,8 @@ export function detectRooms(walls: WallSegment[], existingRooms?: Room[]): Room[
   const graph = buildGraph(splitWalls);
   const cycles = findMinimalCycles(graph);
   
-  console.log(`[detectRooms] walls=${walls.length} healed=${healedWalls.length} split=${splitWalls.length} nodes=${Object.keys(graph).length} cycles=${cycles.length}`);
+  const deadEnds = Object.values(graph).filter((n) => n.neighbors.length < 2).length;
+  console.log(`[detectRooms] walls=${walls.length} → healed=${healedWalls.length} → split=${splitWalls.length} | nodes=${Object.keys(graph).length} (dead-ends=${deadEnds}) | cycles=${cycles.length} (verts: ${cycles.map(c => c.length).join(',')})`);
 
   // Collect existing "Rum N" numbers to avoid duplicates
   const usedNumbers = new Set<number>();
