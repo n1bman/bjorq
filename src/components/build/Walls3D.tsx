@@ -276,8 +276,8 @@ export default function Walls3D() {
 
             for (const [key, pos, dims] of bars) {
               segments.push(
-                <mesh key={`${wall.id}-win-f${key}-${i}`} position={pos as [number, number, number]}
-                  rotation={[0, -angle, 0]} castShadow>
+              <mesh key={`${wall.id}-win-f${key}-${i}`} position={pos as [number, number, number]}
+                  rotation={[0, -angle, 0]}>
                   <boxGeometry args={dims as [number, number, number]} />
                   <meshStandardMaterial color={frameColor} roughness={0.3} />
                 </mesh>
