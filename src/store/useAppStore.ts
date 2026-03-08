@@ -1600,6 +1600,7 @@ export async function initHostedMode() {
       if (project.devices) stateUpdate.devices = project.devices;
       if (project.homeGeometry) stateUpdate.homeGeometry = project.homeGeometry;
       if (project.props) stateUpdate.props = project.props;
+      if (project.terrain) stateUpdate.terrain = project.terrain;
       if (project.activityLog) stateUpdate.activityLog = project.activityLog;
     }
 
