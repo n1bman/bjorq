@@ -1,7 +1,7 @@
 # bjorQ Dashboard — Roadmap vNext
 
 > Living document tracking all planned features and improvements.
-> Updated: 2026-03-02
+> Updated: 2026-03-08
 
 ---
 
