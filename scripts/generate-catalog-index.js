@@ -7,14 +7,6 @@
  * 
  * Usage:
  *   node scripts/generate-catalog-index.js
- * 
- * Each asset folder should contain:
- *   - model.glb (required)
- *   - meta.json (optional — will be auto-generated with defaults if missing)
- *   - thumb.webp or thumb.png (optional)
- * 
- * If meta.json is missing, the script creates one from folder structure:
- *   public/catalog/furniture/sofas/modern-sofa/ → category: "sofas", subcategory: "sofas"
  */
 
 import fs from 'fs';
@@ -25,7 +17,6 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const CATALOG_DIR = path.resolve(__dirname, '../public/catalog');
 const INDEX_PATH = path.join(CATALOG_DIR, 'index.json');
 
-// Map folder names to AssetCategory values
 const FOLDER_TO_CATEGORY = {
   sofas: 'sofas', chairs: 'chairs', tables: 'tables', beds: 'beds',
   storage: 'storage', lighting: 'lighting', decor: 'decor', plants: 'plants',
@@ -43,7 +34,6 @@ function findAssets(dir, relativeTo) {
     const assetDir = path.join(dir, entry.name);
     const modelPath = path.join(assetDir, 'model.glb');
 
-    // Check if this is an asset folder (has model.glb)
     if (fs.existsSync(modelPath)) {
       const relDir = path.relative(relativeTo, assetDir).replace(/\\/g, '/');
       const metaPath = path.join(assetDir, 'meta.json');
@@ -51,8 +41,15 @@ function findAssets(dir, relativeTo) {
       let meta;
       if (fs.existsSync(metaPath)) {
         meta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'));
+        // Merge defaults for missing required fields
+        if (!meta.id) meta.id = entry.name;
+        if (!meta.name) meta.name = entry.name.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+        if (!meta.category) {
+          const parts = relDir.split('/');
+          const subcategory = parts.length >= 2 ? parts[parts.length - 2] : 'imported';
+          meta.category = FOLDER_TO_CATEGORY[subcategory] || subcategory;
+        }
       } else {
-        // Auto-generate meta from folder path
         const parts = relDir.split('/');
         const subcategory = parts.length >= 2 ? parts[parts.length - 2] : 'imported';
         const category = FOLDER_TO_CATEGORY[subcategory] || subcategory;
@@ -63,12 +60,10 @@ function findAssets(dir, relativeTo) {
           subcategory,
           placement: 'floor',
         };
-        // Write auto-generated meta back
         fs.writeFileSync(metaPath, JSON.stringify(meta, null, 2));
         console.log(`  [auto] Created meta.json for ${relDir}`);
       }
 
-      // Find thumbnail
       let thumbnail = null;
       for (const ext of ['thumb.webp', 'thumb.png', 'thumb.jpg']) {
         if (fs.existsSync(path.join(assetDir, ext))) {
@@ -95,7 +90,6 @@ function findAssets(dir, relativeTo) {
         source: 'curated',
       });
     } else {
-      // Recurse into subdirectories
       assets.push(...findAssets(assetDir, relativeTo));
     }
   }
@@ -104,9 +98,16 @@ function findAssets(dir, relativeTo) {
 
 console.log('Scanning catalog directory:', CATALOG_DIR);
 const assets = findAssets(CATALOG_DIR, CATALOG_DIR);
-
-// Filter out any undefined/null entries
 const cleaned = assets.filter(Boolean);
+
+// Check for duplicate IDs
+const idMap = new Map();
+for (const asset of cleaned) {
+  if (idMap.has(asset.id)) {
+    console.warn(`  ⚠ Duplicate ID "${asset.id}" — "${idMap.get(asset.id)}" will be overwritten by "${asset.model}"`);
+  }
+  idMap.set(asset.id, asset.model);
+}
 
 fs.writeFileSync(INDEX_PATH, JSON.stringify(cleaned, null, 2));
 console.log(`\nGenerated ${INDEX_PATH}`);
