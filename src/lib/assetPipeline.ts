@@ -72,6 +72,44 @@ function downscaleTexture(tex: THREE.Texture, maxRes: number): boolean {
   return true;
 }
 
+/** Ensure texture is on a canvas, then re-encode as JPEG for smaller GLB export */
+async function reencodeTextureAsJPEG(tex: THREE.Texture, quality = 0.85): Promise<boolean> {
+  const img = tex.image;
+  if (!img) return false;
+
+  const w = img.width || 0;
+  const h = img.height || 0;
+  if (w === 0 || h === 0) return false;
+
+  // Render to canvas if not already
+  let canvas: HTMLCanvasElement;
+  if (img instanceof HTMLCanvasElement) {
+    canvas = img;
+  } else {
+    canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return false;
+    ctx.drawImage(img as any, 0, 0, w, h);
+  }
+
+  // Convert canvas to JPEG data URL
+  const jpegDataUrl = canvas.toDataURL('image/jpeg', quality);
+
+  // Load JPEG data URL back as an Image element
+  const jpegImg = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const el = new Image();
+    el.onload = () => resolve(el);
+    el.onerror = reject;
+    el.src = jpegDataUrl;
+  });
+
+  tex.image = jpegImg;
+  tex.needsUpdate = true;
+  return true;
+}
+
 // ─── Analysis helpers ───
 
 function analyzeScene(scene: THREE.Object3D): { triangles: number; materialSet: Set<string>; maxTexRes: number } {
