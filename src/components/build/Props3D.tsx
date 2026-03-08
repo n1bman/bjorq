@@ -91,7 +91,7 @@ function PropModel({ id, url: rawUrl, position, rotation, scale }: {
   rotation: [number, number, number];
   scale: [number, number, number];
 }) {
-  const url = useValidPropUrl(id, rawUrl);
+  const url = rawUrl;
   const appMode = useAppStore((s) => s.appMode);
   const selection = useAppStore((s) => s.build.selection);
   const setSelection = useAppStore((s) => s.setSelection);
