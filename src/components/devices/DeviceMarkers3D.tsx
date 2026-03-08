@@ -486,6 +486,7 @@ const MediaScreenMarker = React.forwardRef<THREE.Group, MediaScreenMarkerProps>(
 
   return (
     <group
+      ref={ref}
       position={position}
       rotation={marker.rotation.map((r) => r) as [number, number, number]}
       onClick={handleClick}
