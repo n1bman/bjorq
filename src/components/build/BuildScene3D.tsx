@@ -174,6 +174,33 @@ function SceneContent() {
         const floorWalls = fl?.walls ?? [];
         const nodeSnap = snapToNode(snapped, floorWalls, 0.25);
         snapped = nodeSnap.snapped;
+
+        // Auto-close: if we have ≥3 nodes and click near the first node, close the loop
+        if (wallDrawing.isDrawing && wallDrawing.nodes.length >= 3 && activeFloorId) {
+          const firstNode = wallDrawing.nodes[0];
+          const distToFirst = Math.hypot(snapped[0] - firstNode[0], snapped[1] - firstNode[1]);
+          if (distToFirst < 0.3) {
+            pushUndo();
+            const nodes = [...wallDrawing.nodes, firstNode];
+            for (let i = 0; i < nodes.length - 1; i++) {
+              const len = Math.hypot(nodes[i+1][0] - nodes[i][0], nodes[i+1][1] - nodes[i][1]);
+              if (len < 0.05) continue; // skip zero-length
+              const wall: WallSegment = {
+                id: generateId(),
+                from: nodes[i],
+                to: nodes[i + 1],
+                height: activeFloor?.heightMeters ?? 2.5,
+                thickness: 0.15,
+                openings: [],
+              };
+              addWall(activeFloorId, wall);
+            }
+            setWallDrawing({ isDrawing: false, nodes: [] });
+            setCursorPos(null);
+            return;
+          }
+        }
+
         if (!wallDrawing.isDrawing) {
           setWallDrawing({ isDrawing: true, nodes: [snapped] });
         } else {
@@ -186,7 +213,7 @@ function SceneContent() {
         setBuildTool('select');
       }
     },
-    [activeTool, wallDrawing, snapToGrid, setWallDrawing, setSelection, activeFloorId, addDevice, setBuildTool, floors]
+    [activeTool, wallDrawing, snapToGrid, setWallDrawing, setSelection, activeFloorId, activeFloor, addDevice, setBuildTool, floors, pushUndo, addWall]
   );
 
   const handleGroundPointerMove = useCallback(
@@ -197,19 +224,42 @@ function SceneContent() {
         const floorWalls = fl?.walls ?? [];
         const nodeSnap = snapToNode(snapped, floorWalls, 0.25);
         snapped = nodeSnap.snapped;
+
+        // Snap to first node for auto-close feedback
+        let isFirstNodeSnap = false;
+        if (wallDrawing.isDrawing && wallDrawing.nodes.length >= 3) {
+          const firstNode = wallDrawing.nodes[0];
+          const distToFirst = Math.hypot(snapped[0] - firstNode[0], snapped[1] - firstNode[1]);
+          if (distToFirst < 0.3) {
+            snapped = firstNode;
+            isFirstNodeSnap = true;
+          }
+        }
+
         setCursorPos(snapped);
-        setCursorSnapped(nodeSnap.isSnapped);
-        setCursorMidSnap(!!nodeSnap.isMidSnap);
+        setCursorSnapped(nodeSnap.isSnapped || isFirstNodeSnap);
+        setCursorMidSnap(!!nodeSnap.isMidSnap && !isFirstNodeSnap);
       }
     },
-    [activeTool, snapToGrid, floors, activeFloorId]
+    [activeTool, snapToGrid, floors, activeFloorId, wallDrawing]
   );
 
   const handleDoubleClick = useCallback(() => {
     if (activeTool === 'wall' && wallDrawing.isDrawing && activeFloorId) {
       pushUndo();
-      const nodes = wallDrawing.nodes;
+      let nodes = [...wallDrawing.nodes];
+      // Auto-close if last node is near first node
+      if (nodes.length >= 3) {
+        const first = nodes[0];
+        const last = nodes[nodes.length - 1];
+        const distToFirst = Math.hypot(last[0] - first[0], last[1] - first[1]);
+        if (distToFirst < 0.3) {
+          nodes[nodes.length - 1] = first; // snap last to first
+        }
+      }
       for (let i = 0; i < nodes.length - 1; i++) {
+        const len = Math.hypot(nodes[i+1][0] - nodes[i][0], nodes[i+1][1] - nodes[i][1]);
+        if (len < 0.05) continue; // skip zero-length
         const wall: WallSegment = {
           id: generateId(),
           from: nodes[i],
@@ -337,8 +387,18 @@ export default function BuildScene3D() {
   const handleDoubleClick = useCallback(() => {
     if (activeTool === 'wall' && wallDrawing.isDrawing && activeFloorId) {
       pushUndo();
-      const nodes = wallDrawing.nodes;
+      let nodes = [...wallDrawing.nodes];
+      // Auto-close if last node is near first node
+      if (nodes.length >= 3) {
+        const first = nodes[0];
+        const last = nodes[nodes.length - 1];
+        if (Math.hypot(last[0] - first[0], last[1] - first[1]) < 0.3) {
+          nodes[nodes.length - 1] = first;
+        }
+      }
       for (let i = 0; i < nodes.length - 1; i++) {
+        const len = Math.hypot(nodes[i+1][0] - nodes[i][0], nodes[i+1][1] - nodes[i][1]);
+        if (len < 0.05) continue;
         const wall: WallSegment = {
           id: generateId(),
           from: nodes[i],
