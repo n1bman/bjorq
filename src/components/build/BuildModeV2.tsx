@@ -199,6 +199,7 @@ function AssetCatalog() {
     const err = validateFormat(file); if (err) { toast.error(err); return; }
     setImportFile(file); setImportName(file.name.replace(/\.(glb|gltf)$/i, ''));
     setImportCategory('imported'); setImportSubcategory('');
+    setOptimizedResult(null); setOptimizationStep('analyze');
     setIsProcessing(true); setImportDialogOpen(true);
     try {
       const result = await processModel(file); setImportResult(result);
@@ -207,6 +208,22 @@ function AssetCatalog() {
     } catch { toast.error('Kunde inte analysera modellen'); setImportDialogOpen(false); }
     finally { setIsProcessing(false); }
   }, []);
+
+  const handleOptimize = useCallback(async () => {
+    if (!importResult) return;
+    setIsOptimizing(true); setOptimizationStep('optimizing');
+    try {
+      const result = await optimizeModel(importResult.scene, importResult.stats, { maxTextureRes: 1024 });
+      setOptimizedResult(result);
+      setOptimizationStep('optimized');
+    } catch (err) {
+      console.error('[Optimize] Failed:', err);
+      toast.error('Optimering misslyckades — du kan fortfarande importera originalet, men det kan påverka prestanda.');
+      setOptimizationStep('analyze');
+    } finally {
+      setIsOptimizing(false);
+    }
+  }, [importResult]);
 
   const placePropFn = useCallback((catalogId: string, url: string) => {
     if (!activeFloorId) return;
