@@ -17,6 +17,7 @@ import SurveillancePanel from './cards/SurveillancePanel';
 import ProfilePanel from './cards/ProfilePanel';
 import ThemeCard from './cards/ThemeCard';
 import DataBackupCard from './cards/DataBackupCard';
+import ProjectManagerPanel from './cards/ProjectManagerPanel';
 import SystemStatusCard from './cards/SystemStatusCard';
 import CategoryCard from './cards/CategoryCard';
 import CategoryManager from './cards/CategoryManager';
@@ -468,6 +469,7 @@ function SettingsCategory() {
       <section className="space-y-1">
         <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1">Data</h2>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+          <ProjectManagerPanel />
           <DataBackupCard />
         </div>
       </section>

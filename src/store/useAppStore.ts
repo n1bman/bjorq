@@ -105,6 +105,7 @@ function syncProjectToServer() {
       devices: s.devices,
       homeGeometry: homeGeo,
       props: s.props,
+      terrain: s.terrain,
       activityLog: s.activityLog,
     }).catch((err) => console.warn('[Sync] Failed to save project:', err));
   });
@@ -1599,6 +1600,7 @@ export async function initHostedMode() {
       if (project.devices) stateUpdate.devices = project.devices;
       if (project.homeGeometry) stateUpdate.homeGeometry = project.homeGeometry;
       if (project.props) stateUpdate.props = project.props;
+      if (project.terrain) stateUpdate.terrain = project.terrain;
       if (project.activityLog) stateUpdate.activityLog = project.activityLog;
     }
 
@@ -1648,7 +1650,8 @@ useAppStore.subscribe((state, prev) => {
     state.layout !== prev.layout ||
     state.devices !== prev.devices ||
     state.homeGeometry !== prev.homeGeometry ||
-    state.props !== prev.props
+    state.props !== prev.props ||
+    state.terrain !== prev.terrain
   ) {
     syncProjectToServer();
   }
