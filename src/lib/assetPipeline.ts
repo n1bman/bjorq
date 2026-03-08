@@ -22,6 +22,7 @@ export interface OptimizationResult {
   stats: AssetPerformanceStats;
   beforeStats: AssetPerformanceStats;
   thumbnail: string;
+  noImprovement?: boolean;
   savings: {
     fileSizePct: number;
     materialsPct: number;
