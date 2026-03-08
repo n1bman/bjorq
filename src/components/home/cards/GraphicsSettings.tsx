@@ -193,6 +193,92 @@ export default function GraphicsSettings() {
         />
       </div>
 
+      {/* Advanced collapsible */}
+      <Collapsible>
+        <CollapsibleTrigger className="flex items-center justify-between w-full py-2 group">
+          <div className="flex items-center gap-2">
+            <Settings2Icon size={14} className="text-muted-foreground" />
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Avancerat</span>
+          </div>
+          <ChevronRight size={14} className="text-muted-foreground transition-transform group-data-[state=open]:rotate-90" />
+        </CollapsibleTrigger>
+        <CollapsibleContent className="space-y-3 pt-1 pb-2">
+          {/* Anti-aliasing */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Eye size={14} className="text-muted-foreground" />
+              <span className="text-sm text-foreground">Anti-aliasing</span>
+            </div>
+            <Switch
+              checked={perf.antialiasing}
+              onCheckedChange={(v) => { setPerformance({ antialiasing: v }); notify(); }}
+            />
+          </div>
+
+          {/* Tone Mapping + Exposure */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Contrast size={14} className="text-muted-foreground" />
+                <span className="text-sm text-foreground">Tone mapping</span>
+              </div>
+              <Switch
+                checked={perf.toneMapping}
+                onCheckedChange={(v) => { setPerformance({ toneMapping: v }); notify(); }}
+              />
+            </div>
+            {perf.toneMapping && (
+              <div className="pl-6 space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">Exponering</span>
+                  <span className="text-xs font-mono text-muted-foreground">{perf.exposure.toFixed(1)}</span>
+                </div>
+                <Slider
+                  value={[perf.exposure]}
+                  min={0.5}
+                  max={2.0}
+                  step={0.1}
+                  onValueChange={([v]) => { setPerformance({ exposure: v }); }}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Environment Light */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Sparkles size={14} className="text-muted-foreground" />
+              <span className="text-sm text-foreground">Miljöljus (HDR)</span>
+            </div>
+            <Switch
+              checked={perf.environmentLight}
+              onCheckedChange={(v) => { setPerformance({ environmentLight: v }); notify(); }}
+            />
+          </div>
+
+          {/* Max lights */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Lightbulb size={14} className="text-muted-foreground" />
+                <span className="text-sm text-foreground">Max ljuskällor</span>
+              </div>
+              <span className="text-xs font-mono text-muted-foreground">
+                {perf.maxLights === 0 ? 'Obegränsat' : perf.maxLights}
+              </span>
+            </div>
+            <Slider
+              value={[perf.maxLights]}
+              min={0}
+              max={16}
+              step={1}
+              onValueChange={([v]) => { setPerformance({ maxLights: v }); }}
+            />
+            <p className="text-[9px] text-muted-foreground">0 = obegränsat. Lägre värde → bättre prestanda på RPi.</p>
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+
       {/* Performance HUD */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
