@@ -302,7 +302,7 @@ function PropModel({ id, url: rawUrl, position, rotation, scale }: {
               Kunde inte ladda: {modelName}
             </div>
             <button
-              onClick={() => { retryCount.current = 0; loadingRef.current = false; lastLoadedUrl.current = ''; doLoad(url); }}
+              onClick={() => { retryCount.current = 0; loadingRef.current = false; lastLoadedUrl.current = ''; doLoad(id, url); }}
               style={{
                 background: '#ef4444', color: '#fff', border: 'none', borderRadius: 6,
                 padding: '4px 10px', fontSize: 11, cursor: 'pointer', whiteSpace: 'nowrap',
