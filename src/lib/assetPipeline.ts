@@ -12,7 +12,6 @@ export interface PipelineResult {
   thumbnail: string;
   warnings: string[];
   unitScaleFactor: number;
-  texturesDownscaled: number;
 }
 
 export type OptimizationLevel = 'ok' | 'recommended' | 'strongly-recommended';
