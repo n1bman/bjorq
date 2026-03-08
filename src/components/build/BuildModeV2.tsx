@@ -384,38 +384,118 @@ function AssetCatalog() {
         </div>
       )}
 
-      <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
+      <Dialog open={importDialogOpen} onOpenChange={(open) => { setImportDialogOpen(open); if (!open) { setOptimizedResult(null); setOptimizationStep('analyze'); } }}>
         <DialogContent className="max-w-sm">
           <DialogHeader><DialogTitle className="text-sm">Importera modell</DialogTitle><DialogDescription className="sr-only">Importera en 3D-modell</DialogDescription></DialogHeader>
+
           {isProcessing ? (
             <div className="flex flex-col items-center gap-3 py-8"><Loader2 size={24} className="animate-spin text-primary" /><p className="text-xs text-muted-foreground">Analyserar modell...</p></div>
+          ) : optimizationStep === 'optimizing' ? (
+            <div className="flex flex-col items-center gap-3 py-8">
+              <Loader2 size={24} className="animate-spin text-primary" />
+              <p className="text-xs text-muted-foreground">Optimerar...</p>
+              <p className="text-[10px] text-muted-foreground/70">Skalar ner texturer, rensar tomma noder, deduplicerar material...</p>
+            </div>
+          ) : optimizationStep === 'optimized' && optimizedResult ? (
+            <div className="space-y-3">
+              {/* Optimized thumbnail */}
+              {optimizedResult.thumbnail ? <div className="flex justify-center"><img src={optimizedResult.thumbnail} alt="Optimerad" className="w-24 h-24 object-contain rounded bg-muted/20" /></div> : null}
+
+              <div className="rounded-lg border border-primary/30 bg-primary/5 p-3">
+                <p className="text-[10px] font-semibold text-primary mb-2 flex items-center gap-1"><CheckCircle size={12} /> Optimering klar</p>
+                <div className="grid grid-cols-[auto_1fr_1fr_auto] gap-x-3 gap-y-1 text-[10px]">
+                  <span className="text-muted-foreground">Storlek</span>
+                  <span className="text-muted-foreground text-right">{formatSize(optimizedResult.beforeStats.fileSizeKB)}</span>
+                  <span className="text-foreground text-right font-medium">{formatSize(optimizedResult.stats.fileSizeKB)}</span>
+                  <span className={cn("font-bold", optimizedResult.savings.fileSizePct > 0 ? "text-primary" : "text-muted-foreground")}>{optimizedResult.savings.fileSizePct > 0 ? `-${optimizedResult.savings.fileSizePct}%` : '0%'}</span>
+
+                  <span className="text-muted-foreground">Texturer</span>
+                  <span className="text-muted-foreground text-right">{optimizedResult.beforeStats.maxTextureRes ?? '–'}px</span>
+                  <span className="text-foreground text-right font-medium">{optimizedResult.stats.maxTextureRes ?? '–'}px</span>
+                  <span className={cn("font-bold", optimizedResult.savings.texResPct > 0 ? "text-primary" : "text-muted-foreground")}>{optimizedResult.savings.texResPct > 0 ? `-${optimizedResult.savings.texResPct}%` : '0%'}</span>
+
+                  <span className="text-muted-foreground">Material</span>
+                  <span className="text-muted-foreground text-right">{optimizedResult.beforeStats.materials}</span>
+                  <span className="text-foreground text-right font-medium">{optimizedResult.stats.materials}</span>
+                  <span className={cn("font-bold", optimizedResult.savings.materialsPct > 0 ? "text-primary" : "text-muted-foreground")}>{optimizedResult.savings.materialsPct > 0 ? `-${optimizedResult.savings.materialsPct}%` : '0%'}</span>
+
+                  <span className="text-muted-foreground">Trianglar</span>
+                  <span className="text-muted-foreground text-right">{optimizedResult.beforeStats.triangles > 1000 ? `${(optimizedResult.beforeStats.triangles / 1000).toFixed(1)}k` : optimizedResult.beforeStats.triangles}</span>
+                  <span className="text-foreground text-right font-medium">{optimizedResult.stats.triangles > 1000 ? `${(optimizedResult.stats.triangles / 1000).toFixed(1)}k` : optimizedResult.stats.triangles}</span>
+                  <span className="text-muted-foreground font-bold">0%</span>
+                </div>
+              </div>
+
+              {/* Metadata fields still editable */}
+              <div className="space-y-1"><Label className="text-[10px]">Namn</Label><Input value={importName} onChange={(e) => setImportName(e.target.value)} className="h-7 text-xs" /></div>
+              <div className="space-y-1"><Label className="text-[10px]">Kategori</Label><select value={importCategory} onChange={(e) => setImportCategory(e.target.value as AssetCategory)} className="w-full h-7 text-xs bg-secondary text-foreground rounded-md px-2 border border-border">{Object.entries(AC_CATEGORY_LABELS).map(([k,v]) => <option key={k} value={k}>{v}</option>)}</select></div>
+              <div className="space-y-1"><Label className="text-[10px]">Underkategori</Label><Input value={importSubcategory} onChange={(e) => setImportSubcategory(e.target.value)} placeholder="t.ex. soffbord..." className="h-7 text-xs" /></div>
+              {isHostedSync() && <label className="flex items-center gap-2 text-[10px] text-muted-foreground cursor-pointer"><input type="checkbox" checked={saveToCatalog} onChange={(e) => setSaveToCatalog(e.target.checked)} className="rounded border-border" /><FolderPlus size={12} />Spara i permanent katalog</label>}
+            </div>
           ) : importResult ? (
             <div className="space-y-3">
+              {/* Thumbnail */}
               {importResult.thumbnail ? <div className="flex justify-center"><img src={importResult.thumbnail} alt="Preview" className="w-24 h-24 object-contain rounded bg-muted/20" /></div> : <div className="flex justify-center"><div className="w-24 h-24 bg-muted/20 rounded flex items-center justify-center text-muted-foreground text-[10px]">Ingen förhandsgranskning</div></div>}
+
+              {/* Stats */}
               <div className="flex items-center gap-2 text-[10px]">
                 {rating === 'ok' && <CheckCircle size={12} className="text-primary" />}{rating === 'heavy' && <AlertTriangle size={12} className="text-accent-foreground" />}{rating === 'too-heavy' && <AlertTriangle size={12} className="text-destructive" />}
                 <span className="text-muted-foreground">{formatStats(importResult.stats)}</span>
                 {importResult.dimensions && <span className="text-muted-foreground">· {importResult.dimensions.width}×{importResult.dimensions.depth}×{importResult.dimensions.height}m</span>}
               </div>
+
+              {/* Metadata fields */}
               <div className="space-y-1"><Label className="text-[10px]">Namn</Label><Input value={importName} onChange={(e) => setImportName(e.target.value)} className="h-7 text-xs" /></div>
               <div className="space-y-1"><Label className="text-[10px]">Kategori</Label><select value={importCategory} onChange={(e) => setImportCategory(e.target.value as AssetCategory)} className="w-full h-7 text-xs bg-secondary text-foreground rounded-md px-2 border border-border">{Object.entries(AC_CATEGORY_LABELS).map(([k,v]) => <option key={k} value={k}>{v}</option>)}</select></div>
               <div className="space-y-1"><Label className="text-[10px]">Underkategori</Label><Input value={importSubcategory} onChange={(e) => setImportSubcategory(e.target.value)} placeholder="t.ex. soffbord..." className="h-7 text-xs" /></div>
-              
+
               {isHostedSync() && <label className="flex items-center gap-2 text-[10px] text-muted-foreground cursor-pointer"><input type="checkbox" checked={saveToCatalog} onChange={(e) => setSaveToCatalog(e.target.checked)} className="rounded border-border" /><FolderPlus size={12} />Spara i permanent katalog</label>}
               {importResult.warnings.length > 0 && <div className="space-y-1">{importResult.warnings.map((w,i) => <p key={i} className="text-[10px] text-accent-foreground flex items-center gap-1"><AlertTriangle size={10} /> {w}</p>)}</div>}
-              {/* Optimization verdict */}
-              <div className={cn("rounded-lg p-2 text-[10px] flex items-center gap-2", rating === 'ok' ? 'bg-primary/10 text-primary' : rating === 'heavy' ? 'bg-accent/50 text-accent-foreground' : 'bg-destructive/10 text-destructive')}>
-                {rating === 'ok' ? <CheckCircle size={14} /> : <AlertTriangle size={14} />}
+
+              {/* Optimization recommendation */}
+              <div className={cn("rounded-lg p-2 text-[10px] flex items-start gap-2",
+                optLevel === 'ok' ? 'bg-primary/10 text-primary' :
+                optLevel === 'recommended' ? 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400' :
+                'bg-destructive/10 text-destructive'
+              )}>
+                {optLevel === 'ok' ? <CheckCircle size={14} className="shrink-0 mt-0.5" /> : <AlertTriangle size={14} className="shrink-0 mt-0.5" />}
                 <div>
-                  <p className="font-medium">{rating === 'ok' ? 'Bra optimering' : rating === 'heavy' ? 'Tung modell' : 'Mycket tung'}</p>
-                  <p className="opacity-70">{rating === 'ok' ? 'OK för Raspberry Pi och mobil' : rating === 'heavy' ? 'Kan vara trög på mobil/RPi' : 'Risk för låg FPS — överväg att förenkla'}</p>
+                  <p className="font-medium">
+                    {optLevel === 'ok' ? 'Bra — redo att använda' :
+                     optLevel === 'recommended' ? 'Optimering rekommenderas' :
+                     'Optimering starkt rekommenderad'}
+                  </p>
+                  <p className="opacity-70 mt-0.5">
+                    {optLevel === 'ok'
+                      ? 'OK för Raspberry Pi och mobil'
+                      : 'Minskar filstorlek och texturer. Triangelantal påverkas inte nämnvärt.'}
+                  </p>
                 </div>
               </div>
             </div>
           ) : null}
-          <DialogFooter>
+
+          {/* Footer buttons — context-dependent */}
+          <DialogFooter className="gap-1">
             <Button size="sm" variant="outline" onClick={() => setImportDialogOpen(false)}>Avbryt</Button>
-            <Button size="sm" onClick={handleImportConfirm} disabled={isProcessing || !importName.trim() || !importResult}>Importera</Button>
+
+            {optimizationStep === 'optimized' && optimizedResult ? (
+              <Button size="sm" onClick={handleImportConfirm} disabled={!importName.trim()}>Importera</Button>
+            ) : optimizationStep === 'analyze' && importResult ? (
+              <>
+                {optLevel !== 'ok' ? (
+                  <>
+                    <Button size="sm" variant="outline" onClick={handleImportConfirm} disabled={isProcessing || !importName.trim()}>Importera original</Button>
+                    <Button size="sm" onClick={handleOptimize} disabled={isProcessing || isOptimizing}>Optimera & importera</Button>
+                  </>
+                ) : (
+                  <>
+                    <button onClick={handleOptimize} disabled={isOptimizing} className="text-[10px] text-muted-foreground hover:text-foreground underline disabled:opacity-50">Optimera ändå</button>
+                    <Button size="sm" onClick={handleImportConfirm} disabled={isProcessing || !importName.trim()}>Importera</Button>
+                  </>
+                )}
+              </>
+            ) : null}
           </DialogFooter>
         </DialogContent>
       </Dialog>
