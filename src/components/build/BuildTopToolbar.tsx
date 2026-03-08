@@ -97,8 +97,27 @@ export default function BuildTopToolbar() {
   const setWeather = useAppStore((s) => s.setWeather);
   const envSource = useAppStore((s) => s.environment.source);
   const setWeatherSource = useAppStore((s) => s.setWeatherSource);
+  const importFileRef = useRef<HTMLInputElement>(null);
 
-  
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+    try {
+      const data = await readProjectFile(file);
+      const { valid, errors } = validateProjectSchema(data);
+      if (!valid) { toast.error(`Ogiltig fil: ${errors.join(', ')}`); return; }
+      const result = importBuildProject(data, 'replace');
+      if (result.success) {
+        toast.success('Projekt importerat ✅', { description: `${result.stats.floors} våningar, ${result.stats.rooms} rum, ${result.stats.devices} enheter` });
+      } else {
+        toast.error(`Import misslyckades: ${result.error}`);
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Kunde inte läsa filen');
+    }
+  };
+
 
   return (
     <div className="relative z-50 flex items-center gap-1.5 px-2 py-1 border-b border-border bg-card/90 backdrop-blur-sm h-12">
