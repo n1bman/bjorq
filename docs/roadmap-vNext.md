@@ -228,7 +228,7 @@ Simplified to 4 clear light types: Tak, Strip, Vägg, Spot.
 ### 7.4 Shadow Improvements
 
 - SpotLights from spot and wall light types cast shadows with quality-scaled shadow maps
-- **Imported house model does NOT cast shadows** (so sunlight/lamp light enters interiors); only receives shadows
+- **Selective shadow casting on imported models** — opaque meshes cast shadows, glass/window materials detected via transparency + name heuristic and excluded (sunlight passes through)
 - Props/furniture `castShadow` and `receiveShadow` on all meshes — realistic furniture shadows
 - BuildScene3D respects global performance settings (shadows toggle, quality level, DPR)
 - "Solljus-transparens" slider lets users make imported models semi-transparent so sunlight enters the house
