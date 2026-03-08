@@ -239,7 +239,7 @@ function AssetCatalog() {
     }
 
     const url = URL.createObjectURL(importFile);
-    const item: PropCatalogItem = { id: catalogId, name: importName.trim(), url, source: 'user', thumbnail: importResult.thumbnail || undefined, category: importCategory, subcategory: importSubcategory || undefined, dimensions: importResult.dimensions, placement: 'floor', haMapping, performance: importResult.stats };
+    const item: PropCatalogItem = { id: catalogId, name: importName.trim(), url, source: 'user', thumbnail: importResult.thumbnail || undefined, category: importCategory, subcategory: importSubcategory || undefined, dimensions: importResult.dimensions, placement: 'floor', performance: importResult.stats };
     if (importFile.size <= 4*1024*1024) { const r = new FileReader(); r.onload = () => { addToCatalog({ ...item, fileData: (r.result as string).split(',')[1] } as any); placePropFn(catalogId, url); }; r.readAsDataURL(importFile); }
     else { addToCatalog(item as any); placePropFn(catalogId, url); toast.info('Stor modell — sparas bara under denna session'); }
     setImportDialogOpen(false); setImportResult(null); setImportFile(null);
