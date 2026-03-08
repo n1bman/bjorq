@@ -70,7 +70,10 @@ function ImportedModel({ url, opacity, shadowsEnabled }: { url: string; opacity:
         // Setup meshes: house model does NOT cast shadows, only receives
         cloned.traverse((child: any) => {
           if (child.isMesh) {
-            child.castShadow = false;
+            const isGlass = child.material.transparent
+              || child.material.opacity < 0.9
+              || /glass|window|glas|fönster/i.test(child.material.name || child.name);
+            child.castShadow = shadowsEnabled && !isGlass;
             child.receiveShadow = shadowsEnabled;
 
             // Preserve original transparency state (for glass/windows)
