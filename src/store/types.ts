@@ -811,6 +811,28 @@ export interface StandbySettings {
   phase: StandbyPhase;
 }
 
+// ─── Build Project (portable envelope) ───
+export const BUILD_PROJECT_SCHEMA_VERSION = 1;
+
+export interface BuildProjectMeta {
+  schemaVersion: number;
+  id: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+  appVersion: string;
+}
+
+export interface BuildProject {
+  meta: BuildProjectMeta;
+  layout: LayoutState;
+  devices: Omit<DevicesState, 'vacuumDebug'>;
+  homeGeometry: HomeGeometryState;
+  props: PropsState;
+  terrain: TerrainSettings;
+  activityLog: ActivityEvent[];
+}
+
 // ─── App State ───
 export type AppMode = 'home' | 'dashboard' | 'build' | 'standby';
 
