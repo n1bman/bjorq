@@ -135,9 +135,20 @@ interface ACEntry {
 function AssetCatalog() {
   const activeFloorId = useAppStore((s) => s.layout.activeFloorId);
   const catalog = useAppStore((s) => s.props.catalog);
+  const propItems = useAppStore((s) => s.props.items);
   const addToCatalog = useAppStore((s) => s.addToCatalog);
   const addProp = useAppStore((s) => s.addProp);
+  const removeProp = useAppStore((s) => s.removeProp);
   const removeFromCatalog = useAppStore((s) => s.removeFromCatalog);
+  const setSelection = useAppStore((s) => s.setSelection);
+
+  // Count instances per catalogId on this floor
+  const floorProps = useMemo(() => propItems.filter((p: any) => p.floorId === activeFloorId), [propItems, activeFloorId]);
+  const instanceCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const p of floorProps) { counts[p.catalogId] = (counts[p.catalogId] || 0) + 1; }
+    return counts;
+  }, [floorProps]);
 
   const [curatedAssets, setCuratedAssets] = useState<CatalogAssetMeta[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
