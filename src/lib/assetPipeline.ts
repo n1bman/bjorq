@@ -328,13 +328,19 @@ export async function optimizeModel(
 
   // Calculate savings
   const pct = (before: number, after: number) => before > 0 ? Math.round(((before - after) / before) * 100) : 0;
+
+  // If optimized blob is not smaller, return original and flag noImprovement
+  const noImprovement = blob.size >= file.size;
+  const finalBlob = noImprovement ? new Blob([buffer], { type: 'model/gltf-binary' }) : blob;
+  const finalStats = noImprovement ? originalStats : afterStats;
+
   const savings = {
-    fileSizePct: pct(originalStats.fileSizeKB, afterStats.fileSizeKB),
-    materialsPct: pct(originalStats.materials, afterStats.materials),
-    texResPct: pct(originalStats.maxTextureRes ?? 0, afterStats.maxTextureRes ?? 0),
+    fileSizePct: pct(originalStats.fileSizeKB, finalStats.fileSizeKB),
+    materialsPct: pct(originalStats.materials, finalStats.materials),
+    texResPct: pct(originalStats.maxTextureRes ?? 0, finalStats.maxTextureRes ?? 0),
   };
 
-  return { scene: cloned, blob, stats: afterStats, beforeStats: originalStats, thumbnail, savings };
+  return { scene: cloned, blob: finalBlob, stats: finalStats, beforeStats: originalStats, thumbnail, noImprovement, savings };
 }
 
 // ─── GLB Export ───
