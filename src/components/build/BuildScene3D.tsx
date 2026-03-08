@@ -19,32 +19,7 @@ import DeviceMarkers3D from '../devices/DeviceMarkers3D';
 import { useAppStore } from '../../store/useAppStore';
 import type { WallSegment, DeviceKind } from '../../store/types';
 
-/** Handles WebGL context loss/restore inside the Canvas */
-function ContextLossHandler() {
-  const { gl } = useThree();
-  const [contextLost, setContextLost] = useState(false);
-
-  useEffect(() => {
-    const canvas = gl.domElement;
-    const handleLost = (e: Event) => {
-      e.preventDefault();
-      console.warn('[BuildScene3D] WebGL context lost');
-      setContextLost(true);
-    };
-    const handleRestored = () => {
-      console.info('[BuildScene3D] WebGL context restored');
-      setContextLost(false);
-    };
-    canvas.addEventListener('webglcontextlost', handleLost);
-    canvas.addEventListener('webglcontextrestored', handleRestored);
-    return () => {
-      canvas.removeEventListener('webglcontextlost', handleLost);
-      canvas.removeEventListener('webglcontextrestored', handleRestored);
-    };
-  }, [gl]);
-
-  return null;
-}
+/* ContextLossHandler removed — recovery handled at Canvas level */
 
 function SceneContent() {
   const activeTool = useAppStore((s) => s.build.activeTool);
