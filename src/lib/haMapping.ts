@@ -93,7 +93,7 @@ export function mapHAEntityToDeviceState(
       return { kind: 'sensor', data: { value, unit, sensorType } };
     }
     case 'camera':
-      return { kind: 'camera', data: { on: state !== 'off', streaming: state === 'streaming', lastSnapshot: typeof attributes.entity_picture === 'string' ? attributes.entity_picture : undefined } };
+      return { kind: 'camera', data: { on: state !== 'off', streaming: state === 'streaming', entityId, lastSnapshot: typeof attributes.entity_picture === 'string' ? attributes.entity_picture : undefined } };
 
     case 'lock':
       return { kind: 'door-lock', data: { locked: state === 'locked' } };

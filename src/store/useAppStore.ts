@@ -1474,7 +1474,7 @@ const storeCreator = (set: any, get: any): AppState => ({
       const marker = s.devices.markers.find((m: any) => m.ha?.entityId === entityId);
       let newDeviceStates = s.devices.deviceStates;
       if (marker) {
-        const mapped = mapHAEntityToDeviceState(domain, state, attributes);
+        const mapped = mapHAEntityToDeviceState(domain, state, attributes, entityId);
         if (mapped) {
           const existing = newDeviceStates[marker.id];
           if (existing && JSON.stringify(existing.data) === JSON.stringify(mapped.data)) {

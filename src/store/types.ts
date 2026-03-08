@@ -466,6 +466,7 @@ export interface GenericDeviceState {
 export interface CameraState {
   on: boolean;
   streaming: boolean;
+  entityId?: string;      // HA entity_id for camera_proxy fetching
   lastSnapshot?: string;
 }
 
