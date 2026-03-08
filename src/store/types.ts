@@ -782,6 +782,10 @@ export interface SavedScene {
   icon: string;
   snapshots: SceneSnapshot[];
   createdAt: string;
+  linkedRoomIds?: string[];
+  scope?: 'global' | 'room' | 'custom';
+  cameraMode?: 'none' | 'first-linked-room' | 'custom';
+  customCameraPreset?: RoomCameraPreset;
 }
 
 export interface UserProfile {
