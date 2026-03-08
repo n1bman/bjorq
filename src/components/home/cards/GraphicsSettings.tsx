@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useAppStore } from '../../../store/useAppStore';
-import { Gauge, Monitor, Sun, Sparkles, RefreshCw, Cpu, AlertTriangle, CheckCircle, Activity, Lightbulb, Eye, Contrast, RotateCcw } from 'lucide-react';
+import { Gauge, Monitor, Sun, Sparkles, RefreshCw, Cpu, AlertTriangle, CheckCircle, Activity, Lightbulb, Eye, Contrast, RotateCcw, ChevronRight } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../../ui/collapsible';
 import { Switch } from '../../ui/switch';
 import { Slider } from '../../ui/slider';
 import { Progress } from '../../ui/progress';
