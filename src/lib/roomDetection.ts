@@ -209,11 +209,16 @@ function findMinimalCycles(graph: Graph): string[][] {
     const poly = polyForCycle(cycle);
     for (let j = 0; j < validCycles.length; j++) {
       if (i === j) continue;
-      if (pip(centroids[j][0], centroids[j][1], poly)) return false;
+      if (pip(centroids[j][0], centroids[j][1], poly)) {
+        const pts = cycle.map((k) => graph[k].node);
+        console.log(`[findMinimalCycles] REJECTED (supercycle): nodes=[${cycle.join(',')}] area=${polygonArea(pts).toFixed(2)}m² — contains centroid of cycle ${j}`);
+        return false;
+      }
     }
     return true;
   });
 
+  console.log(`[findMinimalCycles] Final accepted cycles: ${filtered.length}`);
   return filtered;
 }
 
