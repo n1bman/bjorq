@@ -69,6 +69,7 @@ export default function AutomationsPanel() {
       enabled: true,
       trigger,
       actions: [action],
+      linkedRoomIds: newLinkedRooms.length > 0 ? newLinkedRooms : undefined,
     };
 
     addAutomation(automation);
