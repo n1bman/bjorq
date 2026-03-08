@@ -306,20 +306,24 @@ function PropModel({ id, url: rawUrl, position, rotation, scale }: {
     );
   }
 
-  if (!scene) return null;
-
-  const clonedScene = scene.clone();
-  clonedScene.traverse((child: any) => {
-    if (child.isMesh) {
-      child.castShadow = false;
-      child.receiveShadow = true;
-      if (isSelected) {
-        child.material = child.material.clone();
-        child.material.emissive = new THREE.Color('#4a9eff');
-        child.material.emissiveIntensity = 0.3;
+  const displayScene = useMemo(() => {
+    if (!scene) return null;
+    const clone = scene.clone();
+    clone.traverse((child: any) => {
+      if (child.isMesh) {
+        child.castShadow = false;
+        child.receiveShadow = true;
+        if (isSelected) {
+          child.material = child.material.clone();
+          child.material.emissive = new THREE.Color('#4a9eff');
+          child.material.emissiveIntensity = 0.3;
+        }
       }
-    }
-  });
+    });
+    return clone;
+  }, [scene, isSelected]);
+
+  if (!displayScene) return null;
 
   return (
     <group ref={groupRef}>
