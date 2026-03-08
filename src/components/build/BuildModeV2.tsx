@@ -238,34 +238,42 @@ function AssetCatalog() {
 
   const handleImportConfirm = useCallback(async () => {
     if (!importFile || !importResult || !activeFloorId || !importName.trim()) return;
+
+    // Use optimized blob if available, otherwise original file
+    const finalFile = optimizedResult
+      ? new File([optimizedResult.blob], importName.trim().replace(/\s+/g, '_') + '.glb', { type: 'model/gltf-binary' })
+      : importFile;
+    const finalStats = optimizedResult ? optimizedResult.stats : importResult.stats;
+    const finalThumbnail = optimizedResult ? optimizedResult.thumbnail : importResult.thumbnail;
+
     const catalogId = (() => { const b = generateId(); return (catalog.find(c => c.id === b) || curatedAssets.find(c => c.id === b)) ? b + generateId().slice(0,4) : b; })();
 
     if (saveToCatalog && isHostedSync()) {
       try {
-        await ingestToCatalog(importFile, { name: importName.trim(), category: importCategory, subcategory: importSubcategory || undefined, placement: 'floor', dimensions: importResult.dimensions, performance: importResult.stats }, importResult.thumbnail || undefined);
+        await ingestToCatalog(finalFile, { name: importName.trim(), category: importCategory, subcategory: importSubcategory || undefined, placement: 'floor', dimensions: importResult.dimensions, performance: finalStats }, finalThumbnail || undefined);
         clearCatalogCache(); loadCuratedCatalog().then(setCuratedAssets); toast.success('Sparad i katalogen');
       } catch (err: any) {
-        if (err?.status === 409) { if (window.confirm('Asset finns redan. Ersätt?')) { try { await ingestToCatalog(importFile, { name: importName.trim(), category: importCategory, placement: 'floor', dimensions: importResult.dimensions, performance: importResult.stats }, importResult.thumbnail || undefined, true); clearCatalogCache(); loadCuratedCatalog().then(setCuratedAssets); } catch {} } }
+        if (err?.status === 409) { if (window.confirm('Asset finns redan. Ersätt?')) { try { await ingestToCatalog(finalFile, { name: importName.trim(), category: importCategory, placement: 'floor', dimensions: importResult.dimensions, performance: finalStats }, finalThumbnail || undefined, true); clearCatalogCache(); loadCuratedCatalog().then(setCuratedAssets); } catch {} } }
         else toast.error('Kunde inte spara till katalogen');
       }
     }
 
     if (isHostedSync()) {
       try {
-        const result = await uploadPropAsset('home', importFile, { name: importName.trim(), category: importCategory, subcategory: importSubcategory || undefined, placement: 'floor', dimensions: importResult.dimensions, performance: importResult.stats }, importResult.thumbnail || undefined);
+        const result = await uploadPropAsset('home', finalFile, { name: importName.trim(), category: importCategory, subcategory: importSubcategory || undefined, placement: 'floor', dimensions: importResult.dimensions, performance: finalStats }, finalThumbnail || undefined);
         if (result) {
-          const item: PropCatalogItem = { id: result.assetId || catalogId, name: importName.trim(), url: result.modelUrl, source: 'user', thumbnail: result.thumbnailUrl || importResult.thumbnail || undefined, category: importCategory, subcategory: importSubcategory || undefined, dimensions: importResult.dimensions, placement: 'floor', performance: importResult.stats };
-          addToCatalog(item as any); placePropFn(item.id, result.modelUrl); setImportDialogOpen(false); setImportResult(null); setImportFile(null); return;
+          const item: PropCatalogItem = { id: result.assetId || catalogId, name: importName.trim(), url: result.modelUrl, source: 'user', thumbnail: result.thumbnailUrl || finalThumbnail || undefined, category: importCategory, subcategory: importSubcategory || undefined, dimensions: importResult.dimensions, placement: 'floor', performance: finalStats };
+          addToCatalog(item as any); placePropFn(item.id, result.modelUrl); setImportDialogOpen(false); setImportResult(null); setImportFile(null); setOptimizedResult(null); return;
         }
       } catch (err) { console.warn('[AssetCatalog] Server upload failed:', err); }
     }
 
-    const url = URL.createObjectURL(importFile);
-    const item: PropCatalogItem = { id: catalogId, name: importName.trim(), url, source: 'user', thumbnail: importResult.thumbnail || undefined, category: importCategory, subcategory: importSubcategory || undefined, dimensions: importResult.dimensions, placement: 'floor', performance: importResult.stats };
-    if (importFile.size <= 4*1024*1024) { const r = new FileReader(); r.onload = () => { addToCatalog({ ...item, fileData: (r.result as string).split(',')[1] } as any); placePropFn(catalogId, url); }; r.readAsDataURL(importFile); }
+    const url = URL.createObjectURL(finalFile);
+    const item: PropCatalogItem = { id: catalogId, name: importName.trim(), url, source: 'user', thumbnail: finalThumbnail || undefined, category: importCategory, subcategory: importSubcategory || undefined, dimensions: importResult.dimensions, placement: 'floor', performance: finalStats };
+    if (finalFile.size <= 4*1024*1024) { const r = new FileReader(); r.onload = () => { addToCatalog({ ...item, fileData: (r.result as string).split(',')[1] } as any); placePropFn(catalogId, url); }; r.readAsDataURL(finalFile); }
     else { addToCatalog(item as any); placePropFn(catalogId, url); toast.info('Stor modell — sparas bara under denna session'); }
-    setImportDialogOpen(false); setImportResult(null); setImportFile(null);
-  }, [importFile, importResult, activeFloorId, importName, importCategory, importSubcategory, addToCatalog, saveToCatalog, catalog, curatedAssets, placePropFn]);
+    setImportDialogOpen(false); setImportResult(null); setImportFile(null); setOptimizedResult(null);
+  }, [importFile, importResult, activeFloorId, importName, importCategory, importSubcategory, addToCatalog, saveToCatalog, catalog, curatedAssets, placePropFn, optimizedResult]);
 
   const handlePlaceEntry = useCallback((entry: ACEntry) => {
     if (!activeFloorId) return;
