@@ -95,7 +95,7 @@ export default function BuildTopToolbar() {
   const envSource = useAppStore((s) => s.environment.source);
   const setWeatherSource = useAppStore((s) => s.setWeatherSource);
 
-  const [showClearConfirm, setShowClearConfirm] = useState(false);
+  
 
   return (
     <div className="relative z-50 flex items-center gap-1.5 px-2 py-1 border-b border-border bg-card/90 backdrop-blur-sm h-12">
