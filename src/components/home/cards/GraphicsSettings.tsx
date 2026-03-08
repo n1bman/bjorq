@@ -1,10 +1,11 @@
 import { useMemo } from 'react';
 import { useAppStore } from '../../../store/useAppStore';
-import { Gauge, Monitor, Sun, Sparkles, RefreshCw, Cpu, AlertTriangle, CheckCircle, Activity, Lightbulb, Eye, Contrast } from 'lucide-react';
+import { Gauge, Monitor, Sun, Sparkles, RefreshCw, Cpu, AlertTriangle, CheckCircle, Activity, Lightbulb, Eye, Contrast, RotateCcw } from 'lucide-react';
 import { Switch } from '../../ui/switch';
 import { Slider } from '../../ui/slider';
 import { Progress } from '../../ui/progress';
 import OptionButton from '../../ui/OptionButton';
+import { Button } from '../../ui/button';
 import { toast } from 'sonner';
 import type { QualityLevel } from '../../../store/types';
 
