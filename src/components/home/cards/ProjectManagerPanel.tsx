@@ -33,8 +33,8 @@ export default function ProjectManagerPanel() {
     name: string;
   } | null>(null);
 
-  // Current project stats — subscribe to trigger re-render on changes
-  const floorCount = useAppStore((s) => s.layout.floors.length);
+  // Subscribe to store to re-render when project changes
+  const _floors = useAppStore((s) => s.layout.floors);
   const currentProject = extractBuildProject();
   const currentStats = calculateStats(currentProject);
 
