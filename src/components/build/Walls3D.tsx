@@ -162,7 +162,7 @@ export default function Walls3D() {
             // Door frame – top
             segments.push(
               <mesh key={`${wall.id}-door-ft-${i}`} position={[opPos.x, opBottom + op.height - frameW / 2 + elevation, opPos.z]}
-                rotation={[0, -angle, 0]} castShadow>
+                rotation={[0, -angle, 0]}>
                 <boxGeometry args={[op.width, frameW, frameDepth]} />
                 <meshStandardMaterial color={frameColor} roughness={0.3} />
               </mesh>
