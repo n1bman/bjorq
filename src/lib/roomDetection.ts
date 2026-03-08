@@ -401,6 +401,31 @@ export function healWalls(walls: WallSegment[]): { walls: WallSegment[]; healed:
  * Detect rooms from walls. Preserves existing room metadata (name, materials)
  * by matching new polygons to existing rooms via polygon overlap.
  */
+/**
+ * Point-in-polygon test (ray casting algorithm).
+ * Returns the id of the room whose polygon contains the given point, or null.
+ */
+export function findRoomForPoint(rooms: Room[], point: [number, number]): string | null {
+  for (const room of rooms) {
+    if (!room.polygon || room.polygon.length < 3) continue;
+    if (pointInPolygon(point, room.polygon)) return room.id;
+  }
+  return null;
+}
+
+function pointInPolygon(point: [number, number], polygon: [number, number][]): boolean {
+  let inside = false;
+  const [px, py] = point;
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const [xi, yi] = polygon[i];
+    const [xj, yj] = polygon[j];
+    if ((yi > py) !== (yj > py) && px < (xj - xi) * (py - yi) / (yj - yi) + xi) {
+      inside = !inside;
+    }
+  }
+  return inside;
+}
+
 export function detectRooms(walls: WallSegment[], existingRooms?: Room[]): Room[] {
   if (walls.length < 3) return [];
   

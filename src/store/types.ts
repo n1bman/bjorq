@@ -883,6 +883,7 @@ export interface AppState {
   addDevice: (marker: DeviceMarker) => void;
   removeDevice: (id: string) => void;
   updateDevice: (id: string, changes: Partial<DeviceMarker>) => void;
+  assignDeviceRoom: (deviceId: string, roomId: string | null) => void;
   toggleDeviceState: (id: string) => void;
   setDeviceState: (id: string, state: DeviceState) => void;
   updateDeviceState: (id: string, partialData: Record<string, unknown>) => void;

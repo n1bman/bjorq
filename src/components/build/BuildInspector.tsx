@@ -826,10 +826,16 @@ function DeviceInspector({ deviceId, close }: { deviceId: string; close: React.R
   const markers = useAppStore((s) => s.devices.markers);
   const updateDevice = useAppStore((s) => s.updateDevice);
   const removeDevice = useAppStore((s) => s.removeDevice);
+  const assignDeviceRoom = useAppStore((s) => s.assignDeviceRoom);
   const setSelection = useAppStore((s) => s.setSelection);
+  const floors = useAppStore((s) => s.layout.floors);
 
   const device = markers.find((m) => m.id === deviceId);
   if (!device) return null;
+
+  const floor = floors.find((f) => f.id === device.floorId);
+  const rooms = floor?.rooms ?? [];
+  const currentRoom = rooms.find((r) => r.id === device.roomId);
 
   const isScreen = device.kind === 'media_screen';
   const isLight = device.kind === 'light';
@@ -892,7 +898,23 @@ function DeviceInspector({ deviceId, close }: { deviceId: string; close: React.R
         />
       </div>
 
-      {/* Light type selector */}
+      {/* Room assignment */}
+      <div className="space-y-2">
+        <label className="text-muted-foreground text-[10px]">Rum</label>
+        <select
+          value={device.roomId ?? ''}
+          onChange={(e) => assignDeviceRoom(device.id, e.target.value || null)}
+          className="w-full h-8 rounded-md bg-secondary/30 text-foreground text-xs px-2 border-none outline-none"
+        >
+          <option value="">Inget rum</option>
+          {rooms.map((r) => (
+            <option key={r.id} value={r.id}>{r.name}</option>
+          ))}
+        </select>
+        {currentRoom && (
+          <p className="text-[10px] text-muted-foreground">Auto: {currentRoom.name}</p>
+        )}
+      </div>
       {isLight && (
         <div className="space-y-2">
           <label className="text-muted-foreground text-[10px]">Ljustyp</label>
