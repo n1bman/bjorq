@@ -293,24 +293,52 @@ export default function BuildTopToolbar() {
         <Ghost size={16} />
       </button>
 
-      {/* Clear all */}
-      <AlertDialog>
-        <AlertDialogTrigger asChild>
-          <button title="Rensa allt" className="p-2.5 rounded-xl text-destructive/70 hover:text-destructive hover:bg-destructive/10 transition-all min-w-[44px] min-h-[44px] flex items-center justify-center">
-            <Trash2 size={16} />
+      {/* Project menu popover */}
+      <Popover>
+        <PopoverTrigger asChild>
+          <button title="Projekthantering" className="p-2.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary/40 transition-all min-w-[44px] min-h-[44px] flex items-center justify-center">
+            <FolderOpen size={16} />
           </button>
-        </AlertDialogTrigger>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Är du säker?</AlertDialogTitle>
-            <AlertDialogDescription>Alla väggar, rum och möbler tas bort permanent.</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Nej</AlertDialogCancel>
-            <AlertDialogAction onClick={() => clearAllFloors()} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Ja, rensa</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        </PopoverTrigger>
+        <PopoverContent side="bottom" align="end" className="w-56 p-2 space-y-1 bg-card border-border">
+          <button
+            onClick={() => { useAppStore.setState((s: any) => ({ activityLog: [...s.activityLog] })); toast.success('Projekt sparat ✅'); }}
+            className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-xs text-foreground hover:bg-secondary/40 transition-colors"
+          >
+            <Save size={14} /> Spara projekt
+          </button>
+          <button
+            onClick={() => { exportBuildProject(); toast.success('Projekt exporterat ✅'); }}
+            className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-xs text-foreground hover:bg-secondary/40 transition-colors"
+          >
+            <Download size={14} /> Exportera projekt
+          </button>
+          <button
+            onClick={() => importFileRef.current?.click()}
+            className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-xs text-foreground hover:bg-secondary/40 transition-colors"
+          >
+            <Upload size={14} /> Importera projekt
+          </button>
+          <div className="border-t border-border my-1" />
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <button className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-xs text-destructive/70 hover:text-destructive hover:bg-destructive/10 transition-colors">
+                <Trash2 size={14} /> Rensa allt
+              </button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Är du säker?</AlertDialogTitle>
+                <AlertDialogDescription>Alla väggar, rum och möbler tas bort permanent.</AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Nej</AlertDialogCancel>
+                <AlertDialogAction onClick={() => clearAllFloors()} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Ja, rensa</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </PopoverContent>
+      </Popover>
 
       {/* Settings popover */}
       <Popover>
