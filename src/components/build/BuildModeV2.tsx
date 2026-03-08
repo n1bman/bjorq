@@ -568,10 +568,18 @@ export default function BuildModeV2() {
           </div>
         )}
         {/* Import tools side panel */}
-        {showImportPanel && !showDevicePanel && (
+        {showImportPanel && !showDevicePanel && !showFurnishPanel && (
           <div className="absolute left-0 top-0 bottom-0 w-[220px] bg-card/95 backdrop-blur-sm border-r border-border z-20 overflow-y-auto py-3">
             <Suspense fallback={null}>
               <ImportTools />
+            </Suspense>
+          </div>
+        )}
+        {/* Furnish side panel */}
+        {showFurnishPanel && !showDevicePanel && (
+          <div className="absolute left-0 top-0 bottom-0 w-[260px] bg-card/95 backdrop-blur-sm border-r border-border z-20 overflow-y-auto py-3 px-2">
+            <Suspense fallback={null}>
+              <AssetCatalog />
             </Suspense>
           </div>
         )}
