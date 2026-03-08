@@ -29,6 +29,7 @@
 | **Model not loading** | Check file size (< 50 MB recommended). Try re-exporting as GLB from Blender |
 | **Model appears invisible** | Check opacity slider in Import settings. Verify the model has materials |
 | **Slow/laggy 3D** | Enable **Surfplatteläge** or lower quality to Medium/Låg. Disable shadows |
+| **No sunlight indoors** | Ensure shadows are enabled in **Grafik & Miljö → Rendering**. Name glass/window materials clearly (e.g., "Window_Glass", "Fönster") so the engine detects them and lets light through |
 | **Transparent materials gone** | Update to v0.1.8+. Earlier versions incorrectly reset material transparency |
 
 ## Data & Storage

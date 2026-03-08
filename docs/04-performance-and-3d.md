@@ -18,6 +18,17 @@ BJORQ renders a real-time 3D scene using WebGL (Three.js via React Three Fiber).
 
 Enables real-time shadow mapping for the sun and lights. Adds significant GPU load — disable on weaker devices.
 
+### Selective Shadow Casting (Imported Models)
+
+When shadows are enabled, imported 3D models use **selective shadow casting**: opaque meshes (walls, roof, floors) cast shadows to block sunlight, while glass and window materials are detected and excluded so sunlight passes through them into interior spaces.
+
+Glass detection uses a heuristic:
+- `material.transparent === true`
+- `material.opacity < 0.9`
+- Name matching: `/glass|window|glas|fönster/i`
+
+**Tip:** For best results, name your glass/window materials clearly in your 3D modeling software (e.g., "Window_Glass", "Fönster") before exporting to GLB.
+
 ### Efterbearbetning (Postprocessing)
 
 Adds screen-space effects like bloom and ambient occlusion. Demanding on mobile GPUs.
