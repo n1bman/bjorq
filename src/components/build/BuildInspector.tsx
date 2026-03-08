@@ -327,9 +327,13 @@ function WallInspector({ floorId, wallId, floor, close }: { floorId: string; wal
     });
     pushUndo();
     if (materialTarget === 'exterior') {
-      updateWall(floorId, wall.id, { materialId: customId });
+      updateWall(floorId, wall.id, exteriorIsLeft
+        ? { leftMaterialId: customId }
+        : { rightMaterialId: customId });
     } else {
-      updateWall(floorId, wall.id, { interiorMaterialId: customId });
+      updateWall(floorId, wall.id, exteriorIsLeft
+        ? { rightMaterialId: customId }
+        : { leftMaterialId: customId });
     }
     e.target.value = '';
   };
