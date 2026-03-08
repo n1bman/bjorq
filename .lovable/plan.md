@@ -1,80 +1,216 @@
 
 
-# Fix: 3D-modeller laddas aldrig — blob URLs fungerar inte i sandboxen
+## Build Mode Refactoring Plan (Active)
 
-## Rotorsak
+### Sprint 1: Canvas2D Refaktorisering + Undo/Redo ✅ DONE
+- BuildCanvas2D split into canvas2d/ module (Canvas2DView, useCanvas2DCamera, useCanvas2DDraw, useCanvas2DDrag, constants)
+- Shared buildUtils.ts with snap/grid/hit-test utilities
+- UndoSnapshot expanded to cover layout + devices + props (30 levels)
+- pushUndo auto-called on addDevice, removeDevice, addProp, removeProp
 
-Blob URLs (`blob:https://...`) fungerar **inte** i Lovable-sandboxmiljön — varken `fetch()` eller `XMLHttpRequest` kan läsa dem. Loggen visar:
-- Hundratals `HEAD blob:...` requests som alla misslyckas med "Failed to fetch"
-- `XHR network error` vid varje försök att ladda modellen
-- Modellen fastnar i en oändlig loop mellan "Laddar..." och "Kunde inte ladda"
+### Sprint 2: Väggsystem + Live Room Detection (NEXT)
+### Sprint 3: Dörrar, Fönster, Garageportar
+### Sprint 4: Referensritning + Material + Mark
+### Sprint 5: Multi-select, Copy/Paste
+### Sprint 6: HA-koppling openings + Dashboard-synk
+### Sprint 7: Polish och Stabilitet
 
-Tidigare fungerade detta troligen i en annan miljö (lokal server) där blob URLs stöds.
+---
 
-## Lösning
+## Full Roadmap: EPIC A through I + Klimat-flik
 
-Skippa blob URLs helt. Ladda modeller direkt från **base64 fileData** via `loader.parse(ArrayBuffer)` — ingen nätverksförfrågan behövs.
+Since this is ~20 features across 9 epics, each implementation message will handle 2-3 tasks. Here is the complete plan split into implementation sprints.
 
-### `src/components/build/Props3D.tsx`
+---
 
-**1. Ny funktion `loadFromFileData`** — konverterar base64 till ArrayBuffer och kör `loader.parse()` direkt. Ingen XHR, ingen fetch.
+### Sprint 1: EPIC A -- Data, profiler & multi-device consistency
 
-**2. Ändra `useValidPropUrl`** — för blob URLs, returnera originalUrl direkt utan HEAD-check (den misslyckas alltid i sandboxen).
+**A1: "Ta bort demo-projekt"**
+- Add "Ta bort demo-projekt" button in `DataBackupCard.tsx`
+- If demo is the active project: reset to empty initial state (reuse existing `clearAllFloors` + clear devices)
+- Confirmation dialog with warning about what gets removed
+- In hosted mode: also delete project on server via `DELETE /api/projects/demo`
 
-**3. Ändra `doLoad`** — om blob/data URL-laddning misslyckas (XHR error), försök ladda från catalogens `fileData` via `loader.parse()` istället för att ge upp eller loopa.
+**A2: "localStorage enforcement i HOSTED"**
+- In `initHostedMode()` (useAppStore.ts): after bootstrap loads, run a one-time `localStorage.removeItem('hometwin-store')` cleanup
+- Add a "Storage Mode" indicator in Settings showing HOSTED/DEV + last sync time
+- Ensure `partialize` returns `{}` in hosted mode (already done, but verify edge cases)
 
-```typescript
-// New helper — parse base64 directly, no network
-function loadFromBase64(base64: string): Promise<THREE.Group> {
-  return new Promise((resolve, reject) => {
-    try {
-      const binary = atob(base64);
-      const bytes = new Uint8Array(binary.length);
-      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-      loader.parse(bytes.buffer, '', (gltf) => resolve(gltf.scene), (err) => reject(err));
-    } catch (e) { reject(e); }
-  });
-}
-```
+**Files:** `DataBackupCard.tsx`, `useAppStore.ts`, `DashboardGrid.tsx` (settings section)
 
-```typescript
-// In doLoad catch block — try fileData fallback
-.catch((err) => {
-  // If blob URL failed, try loading from catalog fileData directly
-  const state = useAppStore.getState();
-  const propItem = state.props.items.find(p => p.id === id);
-  const catItem = propItem ? state.props.catalog.find(c => c.id === propItem.catalogId) : null;
-  const fileData = (catItem as any)?.fileData;
-  
-  if (fileData) {
-    console.info(`[Props3D] Blob failed, loading from fileData for "${modelName}"`);
-    loadFromBase64(fileData)
-      .then((loadedScene) => { /* same success logic */ })
-      .catch(() => setStatus('error'));
-  } else {
-    setStatus('error');
-  }
-});
-```
+---
 
-**4. Förenkla `useValidPropUrl`** — ta bort fetch(HEAD) helt. Blob URLs passeras genom direkt. Om de misslyckas hanteras det i `doLoad`.
+### Sprint 2: EPIC B -- HA connection stability
 
-```typescript
-function useValidPropUrl(propId: string, originalUrl: string): string {
-  // No validation needed — if blob fails, doLoad handles fallback
-  return originalUrl;
-}
-```
+**B1: "Reconnect / Reload entities / Reset HA config"**
+- Enhance `HAConnectionPanel.tsx` with 3 action buttons:
+  - **Reconnect**: calls `disconnect()` then `connect()` with stored credentials
+  - **Reload entities**: re-sends `get_states` over existing WS (or re-polls in hosted)
+  - **Reset HA config**: clears wsUrl/token, disconnects, clears entities
+- Add auto-reconnect status indicator with retry count
 
-Egentligen kan vi ta bort hela hooken och bara använda `rawUrl` direkt.
+**B2: "Rate-limit / debounce service calls"**
+- Create `src/lib/serviceThrottle.ts`:
+  - Per-entity throttle (max 10 calls/sec per entity, last-write-wins)
+  - Circuit breaker: if >5 errors in 10s, pause and show toast
+- Wrap `haServiceCaller.current` through throttle in `Index.tsx`
+- Apply throttle to slider `onValueChange` handlers in `DeviceControlCard.tsx` (lights, fans, volume)
 
-### `src/components/build/furnish/FurnishTools.tsx`
+**Files:** `HAConnectionPanel.tsx`, new `serviceThrottle.ts`, `Index.tsx`, `useHABridge.ts`
 
-**5. `handlePlaceFromCatalog`** — om catItem har fileData, skapa en FÄRSK blob URL (det aktuella scopet kanske stödjer det) eller bara skicka en markör-URL som signalerar att fileData ska användas.
+---
 
-## Filer
+### Sprint 3: EPIC C1-C2 -- Entity remapping + RGB color picker
 
-| Fil | Ändring |
-|-----|--------|
-| `src/components/build/Props3D.tsx` | Ta bort `useValidPropUrl`, lägg till `loadFromBase64`, fileData-fallback i `doLoad` |
+**C1: "Edit HA entity mapping from dashboard"**
+- Add "Edit mapping" button in expanded `DevicesSection.tsx` device cards
+- Show searchable entity dropdown (reuse `HAEntityPicker` from build mode)
+- On change: call `updateDevice(id, { ha: { entityId } })` + re-map state from liveStates
 
+**C2: "RGB color picker"**
+- Replace R/G/B sliders in `LightControl` with an HSV color wheel (canvas-based)
+- Keep brightness slider separate
+- Send `rgb_color` or `hs_color` based on entity's `supported_color_modes`
+
+**Files:** `DeviceControlCard.tsx`, `DevicesSection.tsx`, new `ColorPicker.tsx`
+
+---
+
+### Sprint 4: EPIC C3-C5 -- Energy sensors + Fan + Climate improvements
+
+**C3: "Energy sensors"**
+- Extend `EnergyWidget` + `EnergyDeviceList` to pull from HA `sensor.*_power` / `sensor.*_energy` entities
+- Add entity picker in energy settings to select which sensors to track
+- Show "Nu", "Idag", "Manad" tabs in energy panel
+
+**C4: "Fan extended controls"**
+- Extend `FanState` with `oscillate`, `direction`, `preset_modes`, `available_preset_modes`
+- Update `FanControl` UI: preset mode buttons, oscillate toggle, direction toggle
+- Gate UI elements on entity attributes (`supported_features`)
+
+**C5: "Climate overhaul"**
+- Extend `ClimateState` with `hvac_modes`, `fan_mode`, `swing_mode`, `preset_mode`, `target_temp_low/high`
+- Add quick action buttons ("Heat 21", "Cool 23", "Auto")
+- Show `current_humidity` if available
+- Gate UI on entity's `supported_features`
+
+**Files:** `types.ts`, `DeviceControlCard.tsx`, `EnergyWidget.tsx`, `EnergyDeviceList.tsx`, `haMapping.ts`, `useHABridge.ts`
+
+---
+
+### Sprint 5: EPIC D -- Camera & media
+
+**D1: "Camera stream fallback chain"**
+- In `CameraControl`: attempt MJPEG stream URL from HA entity attributes (`entity_picture`)
+- In hosted mode: proxy through `/api/ha/camera_proxy/<entity_id>`
+- Fallback chain: stream -> snapshot polling (5s) -> static placeholder
+- Show clear error state with reason
+
+**D2: "Camera freeze after refresh"**
+- Defer OrbitControls re-binding until scene is fully mounted (add `ready` state in `Scene3D.tsx`)
+- Ensure pointer event listeners are removed and re-added cleanly on HMR/reload
+
+**D3: "Media/screen widget with image entities + AndroidTV"**
+- New widget type in dashboard: `MediaScreenWidget`
+- Pull `entity_picture`, `media_image_url` from HA attributes
+- Display app artwork, media title, app_name from `media_player` attributes
+
+**Files:** `DeviceControlCard.tsx`, `Scene3D.tsx`, `DeviceMarkers3D.tsx`, new `MediaScreenWidget.tsx`
+
+---
+
+### Sprint 6: EPIC E -- Weather override
+
+**E1: "Precipitation mode override"**
+- Add `precipitationOverride` to `EnvironmentState`: `'auto' | 'rain' | 'snow' | 'off'`
+- UI in settings under environment: 4 toggle buttons
+- `WeatherEffects3D.tsx` reads override; if not `auto`, forces that condition regardless of HA/API data
+- Location source remains separate (HA/manual)
+
+**Files:** `types.ts`, `useAppStore.ts`, `WeatherEffects3D.tsx`, `DashboardGrid.tsx` (settings section)
+
+---
+
+### Sprint 7: EPIC F -- Standby + Vio mode
+
+**F1: "Vio mode + motion sensor wake"**
+- Extend standby state machine: `Active -> Standby -> Vio`
+  - Standby: current behavior (dim camera, info overlay)
+  - Vio: near-black screen, minimal clock only, GPU paused (stop R3F render loop)
+- Add `vioTimeout` setting (minutes after standby -> vio)
+- Add `motionEntityId` setting: pick a `binary_sensor.*` from HA entities
+- In `useIdleTimer`: subscribe to motion entity state changes; if `on` -> exit standby/vio
+- Wake transition: vio -> active (skip standby on motion)
+
+**Files:** `types.ts`, `StandbyMode.tsx`, `useIdleTimer.ts`, `DashboardGrid.tsx` (standby settings)
+
+---
+
+### Sprint 8: EPIC G -- Navigation & Home UI
+
+**G1: "Expanding FAB navigation"**
+- Replace `HomeNav` pill with a single center button that expands into 3 buttons on tap
+- Animation: radial expand with spring transition
+- Move camera FAB to consistent bottom-right position
+
+**G2: "Device marker visibility"**
+- Add outline/glow shader to markers in `DeviceMarkers3D.tsx` for better contrast
+- Add `markerSize` setting in preferences: S/M/L (scales marker geometry)
+
+**G3: "Build devices: better categorization"**
+- Group device placement tools by category in `DevicePlacementTools.tsx`
+- Categories: Lights, Switches, Climate, Fans, Sensors, Cameras, Vacuum, Media, Security, Other
+
+**Files:** `HomeNav.tsx`, `CameraFab.tsx`, `DeviceMarkers3D.tsx`, `DevicePlacementTools.tsx`, `types.ts`
+
+---
+
+### Sprint 9: EPIC H -- Vacuum 3D movement
+
+**H1: "Vacuum movement in 3D"**
+- Debug current vacuum animation in `DeviceMarkers3D.tsx` (VacuumMarker section)
+- Verify position source: check if `lawnmower pattern` movement code is still running
+- Add debug overlay (toggle in vacuum control card) showing position/timestamp/status
+- Ensure `useFrame` animation loop only runs when `status === 'cleaning'`
+
+**Files:** `DeviceMarkers3D.tsx`, `DeviceControlCard.tsx`
+
+---
+
+### Sprint 10: EPIC I -- Performance (RPi)
+
+**I1: "Default tablet mode for weak hardware"**
+- On first boot (no persisted state): run hardware detection
+- If `navigator.hardwareConcurrency <= 4` or `deviceMemory <= 4`: auto-set `tabletMode: true`
+- Store flag `_autoDetectedPerformance` to avoid re-applying on subsequent boots
+
+**I2: "RPi optimization package"**
+- Lower DPR floor to 0.75 in tablet mode
+- Add `maxLights` setting: in tablet mode, cap number of active pointLights in scene
+- Batch entity state updates (collect changes over 100ms, apply once)
+- Add "Performance HUD" toggle in settings: shows FPS, tri-count, material count overlay
+
+**Files:** `PerformanceSettings.tsx`, `useAppStore.ts`, `Scene3D.tsx`, `DeviceMarkers3D.tsx`
+
+---
+
+### Sprint 11: Climate Tab (Extra)
+
+- New dashboard tab "Klimat" in `DashboardGrid.tsx`
+- "Comfort engine" UI:
+  - Select temperature sources (climate/sensor entities)
+  - Select controllable devices (fan/climate)
+  - Define rules: "If temp > X -> device Y at Z%"
+  - Hysteresis setting (default 0.5C)
+  - Schedule: day/night mode
+- Widgets: "Comfort status" card, "Next action", "Override 30 min" button
+- Client-side rule engine (runs in `useEffect` loop, checks every 30s)
+- Store rules in `automations` slice with type `comfort_rule`
+
+**Files:** `types.ts`, `DashboardGrid.tsx`, new `ClimateTab.tsx`, new `ComfortEngine.ts`
+
+---
+
+### Implementation Order
+
+Each sprint will be implemented as 1-2 messages. Total: ~11-14 messages to complete everything. Ready to start with Sprint 1 (EPIC A) on approval.
