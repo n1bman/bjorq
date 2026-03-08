@@ -183,37 +183,19 @@ function findMinimalCycles(graph: Graph): string[][] {
 
   if (validCycles.length <= 1) return validCycles;
 
-  const centroids = validCycles.map((cycle) => {
-    const pts = cycle.map((k) => graph[k].node);
-    const cx = pts.reduce((a, p) => a + p[0], 0) / pts.length;
-    const cy = pts.reduce((a, p) => a + p[1], 0) / pts.length;
-    return [cx, cy] as [number, number];
-  });
+  // The outer face is always the cycle with the largest area — remove it
+  let maxArea = 0;
+  let maxIdx = -1;
+  for (let i = 0; i < validCycles.length; i++) {
+    const pts = validCycles[i].map((k) => graph[k].node);
+    const a = polygonArea(pts);
+    if (a > maxArea) { maxArea = a; maxIdx = i; }
+  }
 
-  const polyForCycle = (cycle: string[]) => cycle.map((k) => graph[k].node);
-
-  const pip = (px: number, py: number, poly: [number, number][]) => {
-    let inside = false;
-    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
-      const xi = poly[i][0], yi = poly[i][1];
-      const xj = poly[j][0], yj = poly[j][1];
-      if ((yi > py) !== (yj > py) && px < ((xj - xi) * (py - yi)) / (yj - yi) + xi) {
-        inside = !inside;
-      }
-    }
-    return inside;
-  };
-
-  // A cycle is a supercycle if another cycle's centroid is inside it
-  const filtered = validCycles.filter((cycle, i) => {
-    const poly = polyForCycle(cycle);
-    for (let j = 0; j < validCycles.length; j++) {
-      if (i === j) continue;
-      if (pip(centroids[j][0], centroids[j][1], poly)) {
-        const pts = cycle.map((k) => graph[k].node);
-        console.log(`[findMinimalCycles] REJECTED (supercycle): nodes=[${cycle.join(',')}] area=${polygonArea(pts).toFixed(2)}m² — contains centroid of cycle ${j}`);
-        return false;
-      }
+  const filtered = validCycles.filter((_, i) => {
+    if (i === maxIdx) {
+      console.log(`[findMinimalCycles] REJECTED (outer face): nodes=[${validCycles[i].join(',')}] area=${maxArea.toFixed(2)}m²`);
+      return false;
     }
     return true;
   });
