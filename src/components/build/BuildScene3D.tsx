@@ -213,7 +213,7 @@ function SceneContent() {
         setBuildTool('select');
       }
     },
-    [activeTool, wallDrawing, snapToGrid, setWallDrawing, setSelection, activeFloorId, addDevice, setBuildTool, floors]
+    [activeTool, wallDrawing, snapToGrid, setWallDrawing, setSelection, activeFloorId, activeFloor, addDevice, setBuildTool, floors, pushUndo, addWall]
   );
 
   const handleGroundPointerMove = useCallback(
