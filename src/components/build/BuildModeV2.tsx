@@ -4,6 +4,7 @@ import BuildTopToolbar from './BuildTopToolbar';
 import BuildInspector from './BuildInspector';
 import BuildCanvas2D from './BuildCanvas2D';
 import BuildScene3D from './BuildScene3D';
+import AssetCatalog from './furnish/AssetCatalog';
 import type { BuildTool, BuildTab } from '../../store/types';
 import { openingPresets } from '../../lib/openingPresets';
 import { getAllMaterials } from '../../lib/materials';
@@ -21,7 +22,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 
 const ImportPreview3D = lazy(() => import('./ImportPreview3D'));
 const ImportTools = lazy(() => import('./import/ImportTools'));
-const AssetCatalog = lazy(() => import('./furnish/AssetCatalog'));
 
 const generateId = () => Math.random().toString(36).slice(2, 10);
 
@@ -578,9 +578,7 @@ export default function BuildModeV2() {
         {/* Furnish side panel */}
         {showFurnishPanel && !showDevicePanel && (
           <div className="absolute left-0 top-0 bottom-0 w-[260px] bg-card/95 backdrop-blur-sm border-r border-border z-20 overflow-y-auto py-3 px-2">
-            <Suspense fallback={null}>
-              <AssetCatalog />
-            </Suspense>
+            <AssetCatalog />
           </div>
         )}
         {cameraMode === 'topdown' ? (
