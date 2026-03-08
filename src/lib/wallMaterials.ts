@@ -35,7 +35,7 @@ export function resolveWallColors(wall: {
   leftMaterialId?: string;
   rightMaterialId?: string;
 }, fallbackMatId?: string) {
-  const defaultColor = '#e8a845';
+  const defaultColor = '#f5f0e8';
   const defaultRoughness = 0.8;
 
   // Left side (+z face / front / exterior)
