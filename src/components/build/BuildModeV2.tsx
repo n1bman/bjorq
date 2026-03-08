@@ -29,7 +29,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import { Label } from '../ui/label';
-import type { CatalogAssetMeta, PropCatalogItem, AssetCategory, AssetHAMapping, DeviceKind } from '../../store/types';
+import type { CatalogAssetMeta, PropCatalogItem, AssetCategory } from '../../store/types';
 import type { PipelineResult } from '../../lib/assetPipeline';
 
 const ImportPreview3D = lazy(() => import('./ImportPreview3D'));
