@@ -228,6 +228,9 @@ export default function AutomationsPanel() {
                   <p className="text-xs font-medium text-foreground truncate">{a.name}</p>
                   <p className="text-[9px] text-muted-foreground">
                     {getTriggerLabel(a)} → {a.actions.map(getActionLabel).join(', ')}
+                    {a.linkedRoomIds && a.linkedRoomIds.length > 0 && (
+                      <> · {a.linkedRoomIds.map((rid) => allRooms.find((r) => r.id === rid)?.name).filter(Boolean).join(', ')}</>
+                    )}
                   </p>
                 </div>
                 <button onClick={() => removeAutomation(a.id)} className="p-1 rounded hover:bg-destructive/20 text-muted-foreground shrink-0">
