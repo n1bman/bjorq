@@ -424,14 +424,54 @@ const storeCreator = (set: any, get: any): AppState => ({
 
   // Wall actions
   addWall: (floorId, wall) =>
-    set((s: any) => ({
-      layout: {
-        ...s.layout,
-        floors: s.layout.floors.map((f: any) =>
-          f.id === floorId ? { ...f, walls: [...f.walls, wall] } : f
-        ),
-      },
-    })),
+    set((s: any) => {
+      const floor = s.layout.floors.find((f: any) => f.id === floorId);
+      if (!floor) return s;
+
+      // Auto-split existing walls at T-junctions when new wall endpoints land on them
+      const SPLIT_EPS = 0.15;
+      let updatedWalls = [...floor.walls];
+      const endpointsToCheck: [number, number][] = [wall.from, wall.to];
+
+      for (const ep of endpointsToCheck) {
+        for (let wi = 0; wi < updatedWalls.length; wi++) {
+          const w = updatedWalls[wi];
+          // Skip if ep is near either endpoint of this wall
+          const dFrom = Math.hypot(ep[0] - w.from[0], ep[1] - w.from[1]);
+          const dTo = Math.hypot(ep[0] - w.to[0], ep[1] - w.to[1]);
+          if (dFrom < SPLIT_EPS || dTo < SPLIT_EPS) continue;
+
+          // Project ep onto wall segment
+          const dx = w.to[0] - w.from[0];
+          const dy = w.to[1] - w.from[1];
+          const len2 = dx * dx + dy * dy;
+          if (len2 === 0) continue;
+          const t = ((ep[0] - w.from[0]) * dx + (ep[1] - w.from[1]) * dy) / len2;
+          if (t <= 0.02 || t >= 0.98) continue;
+
+          const px = w.from[0] + t * dx;
+          const py = w.from[1] + t * dy;
+          const dist = Math.hypot(ep[0] - px, ep[1] - py);
+          if (dist < SPLIT_EPS) {
+            // Split this wall at the endpoint
+            const splitPoint: [number, number] = [ep[0], ep[1]];
+            const wall1: WallSegment = { ...w, id: generateId(), to: splitPoint, openings: [] };
+            const wall2: WallSegment = { ...w, id: generateId(), from: splitPoint, openings: [] };
+            updatedWalls.splice(wi, 1, wall1, wall2);
+            break; // Only split one wall per endpoint
+          }
+        }
+      }
+
+      return {
+        layout: {
+          ...s.layout,
+          floors: s.layout.floors.map((f: any) =>
+            f.id === floorId ? { ...f, walls: [...updatedWalls, wall] } : f
+          ),
+        },
+      };
+    }),
 
   updateWall: (floorId: string, wallId: string, changes: Record<string, any>) =>
     set((s: any) => ({
@@ -474,7 +514,7 @@ const storeCreator = (set: any, get: any): AppState => ({
       },
     })),
 
-  splitWall: (floorId, wallId, point) =>
+  splitWall: (floorId, wallId, point) => {
     set((s: any) => ({
       layout: {
         ...s.layout,
@@ -500,7 +540,14 @@ const storeCreator = (set: any, get: any): AppState => ({
           };
         }),
       },
-    })),
+    }));
+    // Trigger room detection after split
+    setTimeout(() => {
+      const s = useAppStore.getState();
+      const updateRooms = s.updateRoomPolygons;
+      if (updateRooms) updateRooms(floorId);
+    }, 50);
+  },
 
   // Opening actions
   addOpening: (floorId, wallId, opening) =>

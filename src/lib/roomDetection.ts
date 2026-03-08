@@ -57,7 +57,10 @@ function findMinimalCycles(graph: Graph): string[][] {
         if (current === startKey) { found = true; break; }
 
         const node = graph[current];
-        if (!node || node.neighbors.length < 2) break;
+        if (!node) break;
+        // Dead-end: only neighbor is where we came from
+        const otherNeighbors = node.neighbors.filter(nk => nk !== prev);
+        if (otherNeighbors.length === 0) break;
 
         // Pick next neighbor by turning right (smallest CCW angle from incoming direction)
         const inAngle = angle(node.node, graph[prev].node);
