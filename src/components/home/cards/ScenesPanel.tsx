@@ -121,6 +121,26 @@ export default function ScenesPanel() {
               </div>
             </div>
 
+            {/* Room linking */}
+            {allRooms.length > 0 && (
+              <div className="space-y-1">
+                <p className="text-[10px] text-muted-foreground font-medium">Länka till rum (valfritt)</p>
+                <div className="max-h-24 overflow-y-auto space-y-1">
+                  {allRooms.map((r) => (
+                    <label key={r.id} className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedRooms.includes(r.id)}
+                        onChange={() => setSelectedRooms((prev) => prev.includes(r.id) ? prev.filter((id) => id !== r.id) : [...prev, r.id])}
+                        className="rounded border-border"
+                      />
+                      <span className="text-[10px] text-foreground">{r.name}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <Button size="sm" className="w-full h-7 text-[10px]" onClick={handleAdd} disabled={!newName.trim() || selectedDevices.length === 0}>
               Spara scen ({selectedDevices.length} enheter)
             </Button>
