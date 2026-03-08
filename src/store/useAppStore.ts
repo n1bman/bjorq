@@ -1650,7 +1650,8 @@ useAppStore.subscribe((state, prev) => {
     state.layout !== prev.layout ||
     state.devices !== prev.devices ||
     state.homeGeometry !== prev.homeGeometry ||
-    state.props !== prev.props
+    state.props !== prev.props ||
+    state.terrain !== prev.terrain
   ) {
     syncProjectToServer();
   }

@@ -75,7 +75,7 @@ export function exportBuildProject(name?: string): void {
  */
 export function importBuildProject(
   data: any,
-  mode: 'replace' | 'new' = 'replace'
+  _mode: 'replace' | 'new' = 'replace'
 ): { success: boolean; error?: string; warnings: string[]; stats: ProjectStats } {
   // Validate
   const { valid, errors, warnings } = validateProjectSchema(data);

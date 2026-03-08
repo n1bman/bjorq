@@ -33,20 +33,15 @@ export default function ProjectManagerPanel() {
     name: string;
   } | null>(null);
 
-  // Current project stats
-  const layout = useAppStore((s) => s.layout);
-  const devices = useAppStore((s) => s.devices);
-  const props = useAppStore((s) => s.props);
-
+  // Current project stats — subscribe to trigger re-render on changes
+  const floorCount = useAppStore((s) => s.layout.floors.length);
   const currentProject = extractBuildProject();
   const currentStats = calculateStats(currentProject);
 
   const handleManualSave = () => {
-    // In hosted mode, trigger immediate sync
+    // Trigger store change to force sync subscriber
     if (isHostedSync()) {
-      const { syncProjectToServer } = require('../../../store/useAppStore');
-      // Force sync is handled by store subscriber, but we can trigger it
-      useAppStore.setState({ _lastManualSave: Date.now() } as any);
+      useAppStore.setState((s: any) => ({ activityLog: [...s.activityLog] }));
     }
     toast.success('Projekt sparat ✅');
   };
