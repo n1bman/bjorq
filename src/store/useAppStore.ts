@@ -5,7 +5,7 @@ import { mapHAEntityToDeviceState } from '../lib/haMapping';
 import { setFromHA } from '../hooks/useHABridge';
 import { isHostedSync, debouncedSync, debouncedProjectSync, saveProfiles, saveProject, fetchBootstrap } from '../lib/apiClient';
 import { flyTo, cameraForPolygon } from '../lib/cameraRef';
-import { DEFAULT_ENVIRONMENT_PROFILE } from '../lib/environmentEngine';
+import { DEFAULT_ENVIRONMENT_PROFILE, computeEnvironmentProfile } from '../lib/environmentEngine';
 
 export function getDefaultState(kind: DeviceKind): DeviceState {
   switch (kind) {
