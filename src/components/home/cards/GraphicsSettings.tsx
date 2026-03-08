@@ -287,6 +287,33 @@ export default function GraphicsSettings() {
           <p className="text-[10px] text-primary">Surfplatteläge aktiverades automatiskt baserat på din hårdvara.</p>
         </div>
       )}
+
+      {/* Reset to defaults */}
+      <Button
+        variant="outline"
+        size="sm"
+        className="w-full gap-2"
+        onClick={() => {
+          setPerformance({
+            quality: 'high',
+            shadows: true,
+            postprocessing: false,
+            tabletMode: false,
+            antialiasing: true,
+            toneMapping: true,
+            exposure: 1.0,
+            environmentLight: true,
+            maxLights: 0,
+            showHUD: false,
+            _autoDetectedPerformance: false,
+          });
+          setProfile({ dashboardBg: 'scene3d' });
+          toast.success('Grafikinställningar återställda ✅', { description: '3D-scenen laddas om med standardvärden.' });
+        }}
+      >
+        <RotateCcw size={14} />
+        Återställ standard
+      </Button>
     </div>
   );
 }

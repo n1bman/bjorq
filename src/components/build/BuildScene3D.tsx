@@ -359,11 +359,25 @@ export default function BuildScene3D() {
   const addWall = useAppStore((s) => s.addWall);
   const pushUndo = useAppStore((s) => s.pushUndo);
 
+  const [recoveryCount, setRecoveryCount] = useState(0);
+  const [recovering, setRecovering] = useState(false);
+
+  const handleCreated = useCallback(({ gl }: { gl: THREE.WebGLRenderer }) => {
+    gl.domElement.addEventListener('webglcontextlost', (e) => {
+      e.preventDefault();
+      console.warn('[BuildScene3D] WebGL context lost — remounting Canvas');
+      setRecovering(true);
+      setTimeout(() => {
+        setRecoveryCount((c) => c + 1);
+        setRecovering(false);
+      }, 1000);
+    });
+  }, []);
+
   const handleDoubleClick = useCallback(() => {
     if (activeTool === 'wall' && wallDrawing.isDrawing && activeFloorId) {
       pushUndo();
       let nodes = [...wallDrawing.nodes];
-      // Auto-close if last node is near first node
       if (nodes.length >= 3) {
         const first = nodes[0];
         const last = nodes[nodes.length - 1];
@@ -393,19 +407,28 @@ export default function BuildScene3D() {
   const perfTablet = useAppStore((s) => s.performance.tabletMode);
   const dpr = perfTablet ? 0.75 : perfQuality === 'low' ? 1 : perfQuality === 'medium' ? 1.5 : undefined;
 
+  const canvasKey = `build-${perfQuality}-${perfShadows}-${recoveryCount}`;
+
   return (
-    <div className="w-full h-full" onDoubleClick={handleDoubleClick}>
+    <div className="w-full h-full relative" onDoubleClick={handleDoubleClick}>
       <Canvas
+        key={canvasKey}
         shadows={perfShadows}
         camera={{ position: [12, 12, 12], fov: 45 }}
         style={{ background: 'transparent' }}
         gl={{ antialias: perfQuality !== 'low', alpha: true }}
         dpr={dpr}
+        onCreated={handleCreated}
       >
         <Suspense fallback={null}>
           <SceneContent />
         </Suspense>
       </Canvas>
+      {recovering && (
+        <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm z-50">
+          <p className="text-sm text-muted-foreground animate-pulse">Återställer 3D…</p>
+        </div>
+      )}
     </div>
   );
 }
