@@ -123,6 +123,26 @@ The 3D scene is the centerpiece of BJORQ. It renders:
 - **Zoom** — Scroll wheel (or pinch on touch)
 - **Camera presets** — Quick views from the camera FAB button
 
+### Room Navigation
+
+The **Room Navigator** (door icon FAB) lists all detected rooms with device and light counts. Clicking a room:
+
+1. Flies the camera to the room's saved camera preset (or auto-calculated top-down view)
+2. Opens a **Room Detail Panel** showing:
+   - Devices in the room with on/off toggle
+   - Scenes linked to the room with activate button
+   - Automations linked to the room with status
+
+### Device ↔ Room Assignment
+
+Devices placed in Build Mode are **automatically assigned to rooms** based on their 3D position. The assignment uses a point-in-polygon algorithm against detected room polygons. You can manually override the room in the Device Inspector ("Rum" dropdown).
+
+When rooms are re-detected (e.g., after editing walls), device assignments are automatically re-evaluated.
+
+### Scene & Automation Room Linking
+
+Scenes and automations can optionally be **linked to rooms**. When creating or editing a scene/automation, select which rooms it applies to. Linked scenes can also trigger a **camera fly-to** when activated (`cameraMode: 'first-linked-room'` or `'custom'`).
+
 ---
 
 ## Tips

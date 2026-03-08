@@ -33,7 +33,7 @@ BJORQ Dashboard is a 3D smart home control panel designed for wall-mounted table
 
 ### Frontend
 
-Built with **Vite + React + TypeScript**. The 3D scene uses **React Three Fiber** (Three.js) with support for imported GLTF/GLB models, procedural walls and rooms, device markers, weather effects, and dynamic lighting. State management is handled by **Zustand**.
+Built with **Vite + React + TypeScript**. The 3D scene uses **React Three Fiber** (Three.js) with support for imported GLTF/GLB models, procedural walls and rooms, device markers, weather effects, and dynamic lighting. State management is handled by **Zustand**. A **room context system** automatically links devices, scenes, and automations to detected rooms via point-in-polygon analysis, with per-room camera presets and a Home-view Room Navigator for quick navigation.
 
 ### Server
 

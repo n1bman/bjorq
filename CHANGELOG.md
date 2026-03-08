@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-03-08
+
+### Added
+- **Room Context System** — devices automatically assigned to rooms based on 3D position
+- **Room Detail Panel** — view and control devices, scenes, and automations per room from Home view
+- **Room Navigator FAB** — floating button in Home view listing all rooms with device counts and camera fly-to
+- **Room Camera Presets** — save and restore camera positions per room in Build Mode
+- **Scene ↔ Room linking** — scenes can target specific rooms with optional camera fly-to on activation
+- **Automation ↔ Room linking** — automations can be associated with rooms
+- **Scene camera integration** — activating a scene can fly the camera to the linked room or a custom position
+- `findRoomForPoint()` utility for point-in-polygon room lookup
+- `cameraForPolygon()` auto-generates a top-down camera view from room polygon centroid
+- Manual room override dropdown in Device Inspector
+
+### Fixed
+- `require()` calls in RoomInspector replaced with proper dynamic imports
+- Device room assignments automatically re-evaluated when rooms change
+
+### Changed
+- RoomNavigator now opens a detail panel on room selection (not just camera fly-to)
+- Room detection preserves camera presets during re-detection via overlap analysis
+
 ## [0.4.0] - 2026-03-07
 
 ### Added
