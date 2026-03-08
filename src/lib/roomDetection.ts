@@ -419,12 +419,12 @@ export function detectRooms(walls: WallSegment[], existingRooms?: Room[]): Room[
         const b = cycle[(i + 1) % cycle.length];
         // First try splitWalls, then fall back to original walls
         const wall = splitWalls.find((w) => {
-          const fk = keyFor(w.from);
-          const tk = keyFor(w.to);
+          const fk = pointIndex.getId(w.from);
+          const tk = pointIndex.getId(w.to);
           return (fk === a && tk === b) || (fk === b && tk === a);
         }) || healedWalls.find((w) => {
-          const fk = keyFor(w.from);
-          const tk = keyFor(w.to);
+          const fk = pointIndex.getId(w.from);
+          const tk = pointIndex.getId(w.to);
           return (fk === a && tk === b) || (fk === b && tk === a);
         });
         if (wall) wallIds.push(wall.id);
