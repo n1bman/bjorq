@@ -338,10 +338,7 @@ export function healWalls(walls: WallSegment[]): { walls: WallSegment[]; healed:
     cx /= members.length;
     cy /= members.length;
     // Snap to grid-friendly value
-    const snap: [number, number] = [
-      Math.round(cx / EPSILON) * EPSILON,
-      Math.round(cy / EPSILON) * EPSILON,
-    ];
+    const snap: [number, number] = [cx, cy];
     for (const m of members) {
       const entry = allPts[m];
       const w = result[entry.wallIdx];
