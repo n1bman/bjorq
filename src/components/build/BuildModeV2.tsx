@@ -4,7 +4,7 @@ import BuildTopToolbar from './BuildTopToolbar';
 import BuildInspector from './BuildInspector';
 import BuildCanvas2D from './BuildCanvas2D';
 import BuildScene3D from './BuildScene3D';
-import AssetCatalog from './furnish/AssetCatalog';
+import AssetCatalog from './AssetCatalog';
 import type { BuildTool, BuildTab } from '../../store/types';
 import { openingPresets } from '../../lib/openingPresets';
 import { getAllMaterials } from '../../lib/materials';
