@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.1] - 2026-03-08
+
+### Added
+- **Live camera snapshot polling** — real snapshots from HA cameras via `camera_proxy` with 5-second refresh in both hosted and DEV modes
+- `useCameraSnapshot` reusable hook with dual-mode fetching (server proxy blob in hosted mode, direct `<img>` URL in DEV mode to bypass CORS)
+- `entityId` field on `CameraState` for canonical camera entity identification
+- `CompactCameraCard` sub-component — live camera thumbnails in Home view widget strip
+- `CameraCard` and `ExpandedCamera` sub-components in SurveillancePanel with real snapshot rendering
+
+### Fixed
+- Camera snapshots failing in DEV mode due to CORS — switched to direct `<img>` URL using HA's signed `entity_picture` path
+- Compact camera widgets showing static placeholder icon instead of live snapshot (hooks can't be called in conditional inline code — extracted to sub-component)
+
 ## [0.7.0] - 2026-03-08
 
 ### Added

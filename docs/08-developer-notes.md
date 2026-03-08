@@ -102,6 +102,10 @@ The app uses a single Zustand store (`src/store/useAppStore.ts`) with the follow
 - **comfort** — Climate rules, comfort engine state, override timer
 - **vacuumDebug** — Debug overlay toggle and live telemetry data
 
+### Custom Hooks
+
+- **useCameraSnapshot(entityId, enabled, entityPicture?, intervalMs?)** — Polls camera snapshots. Hosted mode fetches blob via `/api/ha/camera_proxy/{entityId}`. DEV mode constructs direct `<img>` URL from `entity_picture` to bypass CORS. Returns blob/image URL or null.
+
 ## Import Conventions
 
 **Always use relative imports** (`./`, `../`). Never use the `@/` alias. This ensures compatibility across all build environments.

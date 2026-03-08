@@ -33,7 +33,7 @@ Tap the category bar or swipe to browse:
 - **Energi** — Power consumption per device. Supports both manual watt estimates and live HA energy data
 - **Automatiseringar** — Home Assistant automations, toggle on/off
 - **Scener** — Trigger HA scenes directly
-- **Övervakning** — Camera feeds (if configured)
+- **Övervakning** — Live camera snapshots with 5-second polling, expandable full-screen view, motion sensor status, and activity log
 - **Robot** — Vacuum robot control (Roborock, etc.) with room-specific cleaning and debug overlay
 - **Klimat** — Climate rules and comfort engine with automatic device control based on sensor thresholds
 - **Aktivitet** — Recent events and state changes
