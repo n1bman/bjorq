@@ -1062,6 +1062,12 @@ const storeCreator = (set: any, get: any): AppState => ({
 
   setSkyStyle: (style) => { set((s: any) => ({ environment: { ...s.environment, skyStyle: style } })); syncProfileToServer(); },
 
+  setCloudCoverage: (coverage) =>
+    set((s: any) => ({ environment: { ...s.environment, cloudCoverage: coverage } })),
+
+  setEnvironmentProfile: (profile) =>
+    set((s: any) => ({ environment: { ...s.environment, profile } })),
+
   // Opening update
   updateOpening: (floorId, wallId, openingId, changes) =>
     set((s: any) => ({
