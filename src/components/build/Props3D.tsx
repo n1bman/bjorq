@@ -347,6 +347,7 @@ function PropModel({ id, url: rawUrl, position, rotation, scale, colorOverride, 
         scale={scale}
         onPointerDown={handlePointerDown}
         onClick={handleClick}
+        onContextMenu={(e: any) => { e.nativeEvent?.preventDefault?.(); e.stopPropagation(); }}
       />
       {isSelected && (
         <mesh position={[position[0], 0.02, position[2]]} rotation={[-Math.PI / 2, 0, 0]}>

@@ -19,7 +19,7 @@ import {
   Warehouse, Footprints, Paintbrush, Sofa, Cpu,
   Import, Eraser, Upload, Search, FileImage, Box, Ruler, Trash2,
   Lightbulb, ToggleLeft, Activity, Thermometer, Camera, Bot, CookingPot, WashingMachine, Lock, Plug, Refrigerator, Monitor, ChevronDown, ChevronRight, Link2, Fan, ShieldAlert, Droplets, Flame, Bell, Grip, Wifi, Trees, Speaker, Music,
-  Zap, Archive, User, Settings, Lamp, Flower2, Bed, UtensilsCrossed, Bath, TreePine, Package, AlertTriangle, CheckCircle, Loader2, FolderPlus,
+  Archive, User, Settings, Lamp, Flower2, Bed, UtensilsCrossed, Bath, TreePine, Package, AlertTriangle, CheckCircle, Loader2, FolderPlus,
 } from 'lucide-react';
 import { domainToKind } from '../../lib/haDomainMapping';
 import VacuumMappingTools from './devices/VacuumMappingTools';
@@ -29,7 +29,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import { Label } from '../ui/label';
-import type { CatalogAssetMeta, PropCatalogItem, AssetCategory, AssetHAMapping, DeviceKind } from '../../store/types';
+import type { CatalogAssetMeta, PropCatalogItem, AssetCategory } from '../../store/types';
 import type { PipelineResult } from '../../lib/assetPipeline';
 
 const ImportPreview3D = lazy(() => import('./ImportPreview3D'));
@@ -113,14 +113,6 @@ const AC_CATEGORY_ICONS: Record<string, React.ElementType> = {
   devices: Monitor, imported: Box,
 };
 
-const AC_HA_DOMAINS: { label: string; domain: string; kind: DeviceKind }[] = [
-  { label: 'Lampa', domain: 'light', kind: 'light' },
-  { label: 'Högtalare', domain: 'media_player', kind: 'speaker' },
-  { label: 'Skärm', domain: 'media_player', kind: 'media_screen' },
-  { label: 'Strömbrytare', domain: 'switch', kind: 'switch' },
-  { label: 'Sensor', domain: 'sensor', kind: 'sensor' },
-  { label: 'Fläkt', domain: 'fan', kind: 'fan' },
-];
 
 type ACSourceFilter = 'all' | 'curated' | 'user';
 
@@ -128,7 +120,7 @@ interface ACEntry {
   id: string; name: string; thumbnail?: string; category: string;
   source: 'curated' | 'user' | 'builtin'; modelPath?: string;
   catalogItem?: PropCatalogItem; curatedMeta?: CatalogAssetMeta;
-  haMappable?: boolean; dimensions?: { width: number; depth: number; height: number };
+  dimensions?: { width: number; depth: number; height: number };
   performance?: { vertices?: number; triangles?: number; textureBytes?: number };
   subcategory?: string;
 }
@@ -161,7 +153,7 @@ function AssetCatalog() {
   const [importName, setImportName] = useState('');
   const [importCategory, setImportCategory] = useState<AssetCategory>('imported');
   const [importSubcategory, setImportSubcategory] = useState('');
-  const [importHAMapping, setImportHAMapping] = useState<string>('none');
+  
   const [isProcessing, setIsProcessing] = useState(false);
   const [saveToCatalog, setSaveToCatalog] = useState(false);
   const [manageAsset, setManageAsset] = useState<ACEntry | null>(null);
@@ -179,11 +171,11 @@ function AssetCatalog() {
     ...curatedAssets.map((c): ACEntry => ({
       id: c.id, name: c.name, thumbnail: c.thumbnail ? `/catalog/${c.thumbnail}` : undefined,
       category: c.category, source: 'curated', modelPath: `/catalog/${c.model}`, curatedMeta: c,
-      haMappable: c.ha?.mappable, dimensions: c.dimensions, performance: c.performance, subcategory: c.subcategory,
+      dimensions: c.dimensions, performance: c.performance, subcategory: c.subcategory,
     })),
     ...catalog.map((c): ACEntry => ({
       id: c.id, name: c.name, thumbnail: c.thumbnail, category: c.category || 'imported',
-      source: c.source as any, catalogItem: c, haMappable: c.haMapping?.mappable,
+      source: c.source as any, catalogItem: c,
       dimensions: c.dimensions, performance: c.performance as any, subcategory: c.subcategory,
     })),
   ];
@@ -201,7 +193,7 @@ function AssetCatalog() {
     const file = e.target.files?.[0]; if (!file) return; e.target.value = '';
     const err = validateFormat(file); if (err) { toast.error(err); return; }
     setImportFile(file); setImportName(file.name.replace(/\.(glb|gltf)$/i, ''));
-    setImportCategory('imported'); setImportSubcategory(''); setImportHAMapping('none');
+    setImportCategory('imported'); setImportSubcategory('');
     setIsProcessing(true); setImportDialogOpen(true);
     try {
       const result = await processModel(file); setImportResult(result);
@@ -225,13 +217,10 @@ function AssetCatalog() {
   const handleImportConfirm = useCallback(async () => {
     if (!importFile || !importResult || !activeFloorId || !importName.trim()) return;
     const catalogId = (() => { const b = generateId(); return (catalog.find(c => c.id === b) || curatedAssets.find(c => c.id === b)) ? b + generateId().slice(0,4) : b; })();
-    const haMapping: AssetHAMapping | undefined = importHAMapping !== 'none'
-      ? { mappable: true, defaultDomain: AC_HA_DOMAINS.find(o => o.domain === importHAMapping)?.domain, defaultKind: AC_HA_DOMAINS.find(o => o.domain === importHAMapping)?.kind }
-      : undefined;
 
     if (saveToCatalog && isHostedSync()) {
       try {
-        await ingestToCatalog(importFile, { name: importName.trim(), category: importCategory, subcategory: importSubcategory || undefined, placement: 'floor', dimensions: importResult.dimensions, performance: importResult.stats, ha: haMapping ? { mappable: true, defaultDomain: haMapping.defaultDomain, defaultKind: haMapping.defaultKind } : undefined }, importResult.thumbnail || undefined);
+        await ingestToCatalog(importFile, { name: importName.trim(), category: importCategory, subcategory: importSubcategory || undefined, placement: 'floor', dimensions: importResult.dimensions, performance: importResult.stats }, importResult.thumbnail || undefined);
         clearCatalogCache(); loadCuratedCatalog().then(setCuratedAssets); toast.success('Sparad i katalogen');
       } catch (err: any) {
         if (err?.status === 409) { if (window.confirm('Asset finns redan. Ersätt?')) { try { await ingestToCatalog(importFile, { name: importName.trim(), category: importCategory, placement: 'floor', dimensions: importResult.dimensions, performance: importResult.stats }, importResult.thumbnail || undefined, true); clearCatalogCache(); loadCuratedCatalog().then(setCuratedAssets); } catch {} } }
@@ -241,20 +230,20 @@ function AssetCatalog() {
 
     if (isHostedSync()) {
       try {
-        const result = await uploadPropAsset('home', importFile, { name: importName.trim(), category: importCategory, subcategory: importSubcategory || undefined, placement: 'floor', dimensions: importResult.dimensions, performance: importResult.stats, haMapping }, importResult.thumbnail || undefined);
+        const result = await uploadPropAsset('home', importFile, { name: importName.trim(), category: importCategory, subcategory: importSubcategory || undefined, placement: 'floor', dimensions: importResult.dimensions, performance: importResult.stats }, importResult.thumbnail || undefined);
         if (result) {
-          const item: PropCatalogItem = { id: result.assetId || catalogId, name: importName.trim(), url: result.modelUrl, source: 'user', thumbnail: result.thumbnailUrl || importResult.thumbnail || undefined, category: importCategory, subcategory: importSubcategory || undefined, dimensions: importResult.dimensions, placement: 'floor', haMapping, performance: importResult.stats };
+          const item: PropCatalogItem = { id: result.assetId || catalogId, name: importName.trim(), url: result.modelUrl, source: 'user', thumbnail: result.thumbnailUrl || importResult.thumbnail || undefined, category: importCategory, subcategory: importSubcategory || undefined, dimensions: importResult.dimensions, placement: 'floor', performance: importResult.stats };
           addToCatalog(item as any); placePropFn(item.id, result.modelUrl); setImportDialogOpen(false); setImportResult(null); setImportFile(null); return;
         }
       } catch (err) { console.warn('[AssetCatalog] Server upload failed:', err); }
     }
 
     const url = URL.createObjectURL(importFile);
-    const item: PropCatalogItem = { id: catalogId, name: importName.trim(), url, source: 'user', thumbnail: importResult.thumbnail || undefined, category: importCategory, subcategory: importSubcategory || undefined, dimensions: importResult.dimensions, placement: 'floor', haMapping, performance: importResult.stats };
+    const item: PropCatalogItem = { id: catalogId, name: importName.trim(), url, source: 'user', thumbnail: importResult.thumbnail || undefined, category: importCategory, subcategory: importSubcategory || undefined, dimensions: importResult.dimensions, placement: 'floor', performance: importResult.stats };
     if (importFile.size <= 4*1024*1024) { const r = new FileReader(); r.onload = () => { addToCatalog({ ...item, fileData: (r.result as string).split(',')[1] } as any); placePropFn(catalogId, url); }; r.readAsDataURL(importFile); }
     else { addToCatalog(item as any); placePropFn(catalogId, url); toast.info('Stor modell — sparas bara under denna session'); }
     setImportDialogOpen(false); setImportResult(null); setImportFile(null);
-  }, [importFile, importResult, activeFloorId, importName, importCategory, importSubcategory, importHAMapping, addToCatalog, saveToCatalog, catalog, curatedAssets, placePropFn]);
+  }, [importFile, importResult, activeFloorId, importName, importCategory, importSubcategory, addToCatalog, saveToCatalog, catalog, curatedAssets, placePropFn]);
 
   const handlePlaceEntry = useCallback((entry: ACEntry) => {
     if (!activeFloorId) return;
@@ -304,7 +293,7 @@ function AssetCatalog() {
         {filtered.map((entry) => (
           <button key={entry.id} onClick={() => handlePlaceEntry(entry)} className="relative flex flex-col items-center gap-0.5 p-2 rounded-lg bg-secondary/30 hover:bg-secondary/60 transition-colors text-xs group min-h-[44px]">
             {instanceCounts[entry.id] > 0 && <div className="absolute top-1 left-1 bg-primary text-primary-foreground text-[8px] font-bold rounded-full w-4 h-4 flex items-center justify-center z-20">×{instanceCounts[entry.id]}</div>}
-            {entry.haMappable && <div className={cn("absolute top-1 p-0.5 rounded bg-primary/20 text-primary z-10", instanceCounts[entry.id] > 0 ? "left-6" : "left-1")}><Zap size={10} /></div>}
+            
             <div className="absolute top-1 right-1 p-0.5 rounded text-muted-foreground/50 z-10">{entry.source === 'curated' ? <Archive size={8} /> : <User size={8} />}</div>
             {entry.thumbnail ? (
               <img src={entry.thumbnail} alt={entry.name} className="w-full h-16 object-contain rounded" loading="lazy"
@@ -380,7 +369,7 @@ function AssetCatalog() {
               <div className="space-y-1"><Label className="text-[10px]">Namn</Label><Input value={importName} onChange={(e) => setImportName(e.target.value)} className="h-7 text-xs" /></div>
               <div className="space-y-1"><Label className="text-[10px]">Kategori</Label><select value={importCategory} onChange={(e) => setImportCategory(e.target.value as AssetCategory)} className="w-full h-7 text-xs bg-secondary text-foreground rounded-md px-2 border border-border">{Object.entries(AC_CATEGORY_LABELS).map(([k,v]) => <option key={k} value={k}>{v}</option>)}</select></div>
               <div className="space-y-1"><Label className="text-[10px]">Underkategori</Label><Input value={importSubcategory} onChange={(e) => setImportSubcategory(e.target.value)} placeholder="t.ex. soffbord..." className="h-7 text-xs" /></div>
-              <div className="space-y-1"><Label className="text-[10px]">HA-mappning</Label><select value={importHAMapping} onChange={(e) => setImportHAMapping(e.target.value)} className="w-full h-7 text-xs bg-secondary text-foreground rounded-md px-2 border border-border"><option value="none">Ingen</option>{AC_HA_DOMAINS.map(o => <option key={o.domain} value={o.domain}>{o.label}</option>)}</select></div>
+              
               {isHostedSync() && <label className="flex items-center gap-2 text-[10px] text-muted-foreground cursor-pointer"><input type="checkbox" checked={saveToCatalog} onChange={(e) => setSaveToCatalog(e.target.checked)} className="rounded border-border" /><FolderPlus size={12} />Spara i permanent katalog</label>}
               {importResult.warnings.length > 0 && <div className="space-y-1">{importResult.warnings.map((w,i) => <p key={i} className="text-[10px] text-accent-foreground flex items-center gap-1"><AlertTriangle size={10} /> {w}</p>)}</div>}
               {/* Optimization verdict */}

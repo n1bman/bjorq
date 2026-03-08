@@ -447,7 +447,7 @@ export default function BuildScene3D() {
   }
 
   return (
-    <div className="w-full h-full relative" onDoubleClick={handleDoubleClick}>
+    <div className="w-full h-full relative" onDoubleClick={handleDoubleClick} onContextMenu={(e) => e.preventDefault()}>
       <Canvas
         key={canvasKey}
         shadows={perfShadows}
