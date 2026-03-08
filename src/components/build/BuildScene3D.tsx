@@ -29,7 +29,7 @@ function SceneContent() {
   const gridState = useAppStore((s) => s.build.grid);
   const sunAzimuth = useAppStore((s) => s.environment.sunAzimuth);
   const sunElevation = useAppStore((s) => s.environment.sunElevation);
-  const weatherCondition = useAppStore((s) => s.environment.weather.condition);
+  const profile = useAppStore((s) => s.environment.profile);
   const perf = useAppStore((s) => s.performance);
 
   // Calculate sun position from azimuth and elevation
@@ -44,13 +44,7 @@ function SceneContent() {
     ] as [number, number, number];
   }, [sunAzimuth, sunElevation]);
 
-  const isNight = sunElevation < 0;
-  const isTwilight = sunElevation >= 0 && sunElevation < 15;
-  const ambientIntensity = isNight ? 0.1 : isTwilight ? 0.25 : (weatherCondition === 'cloudy' || weatherCondition === 'rain' ? 0.5 : 0.35);
-  const ambientColor = isNight ? '#1a1a3e' : isTwilight ? '#ff9966' : '#b8c4d4';
-  const sunIntensity = isNight ? 0 : (weatherCondition === 'cloudy' ? 0.4 : weatherCondition === 'rain' ? 0.2 : weatherCondition === 'snow' ? 0.3 : 1.2);
-
-  const enableShadows = perf.shadows && !isNight;
+  const enableShadows = perf.shadows && profile.shadowEnabled;
   const shadowMapSize = perf.quality === 'low' ? 512 : perf.quality === 'medium' ? 1024 : 2048;
 
   const setWallDrawing = useAppStore((s) => s.setWallDrawing);
