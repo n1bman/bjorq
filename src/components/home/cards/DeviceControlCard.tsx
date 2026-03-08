@@ -1,6 +1,7 @@
 import { useAppStore } from '../../../store/useAppStore';
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState } from 'react';
 import type { DeviceMarker, LightState, ClimateState, MediaState, VacuumState, LockState, SensorState, GenericDeviceState, CameraState, FanState, CoverState, SceneState, AlarmState, WaterHeaterState, HumidifierState, ValveState, LawnMowerState, SpeakerState } from '../../../store/types';
+import { useCameraSnapshot } from '../../../hooks/useCameraSnapshot';
 import { Switch } from '../../ui/switch';
 import { Slider } from '../../ui/slider';
 import { Button } from '../../ui/button';
@@ -234,54 +235,11 @@ function CompactMediaControl({ id, data, update, label }: { id: string; data: Me
 
 function CameraControl({ id, data, update }: { id: string; data: CameraState; update: UpdateFn }) {
   const marker = useAppStore((s) => s.devices.markers.find((m) => m.id === id));
-  const liveStates = useAppStore((s) => s.homeAssistant.liveStates);
-  const haStatus = useAppStore((s) => s.homeAssistant.status);
-  const isHosted = useAppStore((s) => s._hostedMode);
+  const entityId = data.entityId || marker?.ha?.entityId;
+  const snapshotUrl = useCameraSnapshot(entityId, data.on && data.streaming);
   const [imgError, setImgError] = useState(false);
-  const [snapshotUrl, setSnapshotUrl] = useState<string | null>(null);
-  const snapshotTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const entityId = marker?.ha?.entityId;
-  const live = entityId ? liveStates[entityId] : undefined;
-  const entityPicture = live?.attributes?.entity_picture as string | undefined;
-
-  // Build stream/snapshot URL
-  const getImageUrl = useCallback(() => {
-    if (!entityId || haStatus !== 'connected') return null;
-    if (isHosted) {
-      // Proxy through server
-      return `/api/ha/camera_proxy/${entityId}?t=${Date.now()}`;
-    }
-    if (entityPicture) {
-      // entityPicture is relative path like /api/camera_proxy/camera.xxx
-      const wsUrl = useAppStore.getState().homeAssistant.wsUrl;
-      const baseUrl = wsUrl.replace(/^ws/, 'http').replace(/\/api\/websocket$/, '');
-      return `${baseUrl}${entityPicture}?t=${Date.now()}`;
-    }
-    return null;
-  }, [entityId, haStatus, isHosted, entityPicture]);
-
-  // Snapshot polling (every 5s when streaming)
-  useEffect(() => {
-    if (data.on && data.streaming) {
-      const poll = () => {
-        const url = getImageUrl();
-        if (url) {
-          setSnapshotUrl(url);
-          setImgError(false);
-        }
-      };
-      poll();
-      snapshotTimerRef.current = setInterval(poll, 5000);
-    } else {
-      setSnapshotUrl(null);
-    }
-    return () => {
-      if (snapshotTimerRef.current) clearInterval(snapshotTimerRef.current);
-    };
-  }, [data.on, data.streaming, getImageUrl]);
-
-  const streamSource: 'live' | 'snapshot' | 'placeholder' = snapshotUrl && !imgError ? 'snapshot' : 'placeholder';
+  const streamSource: 'snapshot' | 'placeholder' = snapshotUrl && !imgError ? 'snapshot' : 'placeholder';
 
   return (
     <div className="space-y-3 pt-2">
