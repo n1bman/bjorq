@@ -193,7 +193,7 @@ function AssetCatalog() {
     const file = e.target.files?.[0]; if (!file) return; e.target.value = '';
     const err = validateFormat(file); if (err) { toast.error(err); return; }
     setImportFile(file); setImportName(file.name.replace(/\.(glb|gltf)$/i, ''));
-    setImportCategory('imported'); setImportSubcategory(''); setImportHAMapping('none');
+    setImportCategory('imported'); setImportSubcategory('');
     setIsProcessing(true); setImportDialogOpen(true);
     try {
       const result = await processModel(file); setImportResult(result);
