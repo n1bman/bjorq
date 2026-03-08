@@ -25,8 +25,7 @@ import CalendarWidget from './cards/CalendarWidget';
 import RobotPanel from './cards/RobotPanel';
 import CameraStartSettings from './cards/CameraStartSettings';
 import GraphicsSettings from './cards/GraphicsSettings';
-import SunCalibrationPanel from './cards/SunCalibrationPanel';
-import WeatherAtmospherePanel from './cards/WeatherAtmospherePanel';
+import SunWeatherPanel from './cards/SunWeatherPanel';
 import EnvironmentPanel from './cards/EnvironmentPanel';
 import DisplaySettings from './cards/DisplaySettings';
 import WifiPanel from './cards/WifiPanel';
@@ -184,39 +183,15 @@ function HomeCategory() {
 }
 
 function WeatherCategory() {
-  const precipOverride = useAppStore((s) => s.environment.precipitationOverride);
-  const setPrecipitationOverride = useAppStore((s) => s.setPrecipitationOverride);
-  const overrideOptions: { key: import('../../store/types').PrecipitationOverride; label: string; emoji: string }[] = [
-    { key: 'auto', label: 'Auto', emoji: '🌤️' },
-    { key: 'rain', label: 'Regn', emoji: '🌧️' },
-    { key: 'snow', label: 'Snö', emoji: '❄️' },
-    { key: 'off', label: 'Av', emoji: '🚫' },
-  ];
   return (
     <div className="space-y-4">
       <WeatherWidget expanded />
-      {/* Precipitation override */}
-      <div className="glass-panel rounded-2xl p-4 space-y-3">
-        <h4 className="text-xs font-semibold text-foreground">Nederbördseffekt i 3D</h4>
-        <div className="flex gap-1">
-          {overrideOptions.map(({ key, label, emoji }) => (
-            <Button key={key} size="sm"
-              variant={precipOverride === key ? 'default' : 'outline'}
-              className="flex-1 h-8 text-[10px] gap-1"
-              onClick={() => setPrecipitationOverride(key)}>
-              <span>{emoji}</span>{label}
-            </Button>
-          ))}
-        </div>
-        <p className="text-[10px] text-muted-foreground">
-          Auto följer väderdata. Välj Regn/Snö för att tvinga effekt oavsett väder.
-        </p>
-      </div>
       <div className="glass-panel rounded-2xl p-4">
         <p className="text-xs text-muted-foreground">
           Väderprognosen synkas automatiskt med din plats.
           Aktivera "Live väder" för att synka med Open-Meteo.
           Ändra plats under Inställningar → Plats.
+          Nederbördseffekter i 3D hanteras under Grafik & Miljö.
         </p>
       </div>
     </div>
@@ -479,13 +454,10 @@ function SettingsCategory() {
 
 function GraphicsCategory() {
   return (
-    <div className="max-w-[1100px] mx-auto space-y-[var(--space-section)]">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
-        <GraphicsSettings />
-        <SunCalibrationPanel />
-        <WeatherAtmospherePanel />
-        <EnvironmentPanel />
-      </div>
+    <div className="max-w-[700px] mx-auto space-y-4">
+      <GraphicsSettings />
+      <SunWeatherPanel />
+      <EnvironmentPanel />
     </div>
   );
 }
