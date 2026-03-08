@@ -17,6 +17,7 @@ import { domainToKind } from '../../lib/haDomainMapping';
 import VacuumMappingTools from './devices/VacuumMappingTools';
 import { cn } from '../../lib/utils';
 import { toast } from 'sonner';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from '../ui/dialog';
 
 const ImportPreview3D = lazy(() => import('./ImportPreview3D'));
 const ImportTools = lazy(() => import('./import/ImportTools'));
