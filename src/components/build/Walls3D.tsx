@@ -375,7 +375,7 @@ export default function Walls3D() {
               <mesh key={`${wall.id}-pass-fl-${i}`} position={new THREE.Vector3(localX - op.width / 2 + pFrameW / 2, 0, 0)
                 .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
                 .add(new THREE.Vector3(origCx, opBottom + op.height / 2 + elevation, origCz)).toArray()}
-                rotation={[0, -angle, 0]} castShadow>
+                rotation={[0, -angle, 0]}>
                 <boxGeometry args={[pFrameW, op.height, pFrameDepth]} />
                 <meshStandardMaterial color={pFrameColor} roughness={0.4} />
               </mesh>
@@ -385,7 +385,7 @@ export default function Walls3D() {
               <mesh key={`${wall.id}-pass-fr-${i}`} position={new THREE.Vector3(localX + op.width / 2 - pFrameW / 2, 0, 0)
                 .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
                 .add(new THREE.Vector3(origCx, opBottom + op.height / 2 + elevation, origCz)).toArray()}
-                rotation={[0, -angle, 0]} castShadow>
+                rotation={[0, -angle, 0]}>
                 <boxGeometry args={[pFrameW, op.height, pFrameDepth]} />
                 <meshStandardMaterial color={pFrameColor} roughness={0.4} />
               </mesh>

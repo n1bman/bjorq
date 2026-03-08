@@ -186,7 +186,7 @@ function SceneContent() {
 
   // Base ambient — cloudiness can dim it
   const cloudDim = atmosphere.cloudinessAffectsLight && (weatherCondition === 'cloudy' || weatherCondition === 'rain') ? 1 : 0;
-  const ambientIntensity = (isNight ? 0.1 : isTwilight ? 0.25 : (cloudDim ? 0.5 : 0.35)) * atmosphere.atmosphereIntensity;
+  // ambientIntensity computed inline below (increased daytime to 0.45)
   const ambientColor = isNight ? '#1a1a3e' : isTwilight ? '#ff9966' : '#b8c4d4';
 
   // Sun intensity with calibration multiplier
