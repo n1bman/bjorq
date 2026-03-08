@@ -293,7 +293,7 @@ function AssetCatalog() {
         {filtered.map((entry) => (
           <button key={entry.id} onClick={() => handlePlaceEntry(entry)} className="relative flex flex-col items-center gap-0.5 p-2 rounded-lg bg-secondary/30 hover:bg-secondary/60 transition-colors text-xs group min-h-[44px]">
             {instanceCounts[entry.id] > 0 && <div className="absolute top-1 left-1 bg-primary text-primary-foreground text-[8px] font-bold rounded-full w-4 h-4 flex items-center justify-center z-20">×{instanceCounts[entry.id]}</div>}
-            {entry.haMappable && <div className={cn("absolute top-1 p-0.5 rounded bg-primary/20 text-primary z-10", instanceCounts[entry.id] > 0 ? "left-6" : "left-1")}><Zap size={10} /></div>}
+            
             <div className="absolute top-1 right-1 p-0.5 rounded text-muted-foreground/50 z-10">{entry.source === 'curated' ? <Archive size={8} /> : <User size={8} />}</div>
             {entry.thumbnail ? (
               <img src={entry.thumbnail} alt={entry.name} className="w-full h-16 object-contain rounded" loading="lazy"
