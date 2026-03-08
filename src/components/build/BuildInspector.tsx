@@ -708,8 +708,10 @@ function RoomInspector({ floorId, roomId, floor, close }: { floorId: string; roo
   const removeRoom = useAppStore((s) => s.removeRoom);
   const renameRoom = useAppStore((s) => s.renameRoom);
   const setRoomMaterial = useAppStore((s) => s.setRoomMaterial);
+  const setRoomCameraPreset = useAppStore((s) => s.setRoomCameraPreset);
   const pushUndo = useAppStore((s) => s.pushUndo);
   const setSelection = useAppStore((s) => s.setSelection);
+  const markers = useAppStore((s) => s.devices.markers);
 
   const room = floor.rooms.find((r: any) => r.id === roomId);
   if (!room) return null;
@@ -724,17 +726,37 @@ function RoomInspector({ floorId, roomId, floor, close }: { floorId: string; roo
     area = Math.abs(area) / 2;
   }
 
+  const roomDevices = markers.filter((m) => m.roomId === roomId);
+
   const handleDelete = () => {
     pushUndo();
     removeRoom(floorId, room.id);
     setSelection({ type: null, id: null });
   };
 
+  const handleSaveCamera = () => {
+    const { cameraRef } = require('../../lib/cameraRef');
+    setRoomCameraPreset(floorId, room.id, {
+      position: [cameraRef.position.x, cameraRef.position.y, cameraRef.position.z],
+      target: [cameraRef.target.x, cameraRef.target.y, cameraRef.target.z],
+    });
+  };
+
+  const handleGoToCamera = () => {
+    const { flyTo, cameraForPolygon } = require('../../lib/cameraRef');
+    if (room.cameraPreset) {
+      flyTo(room.cameraPreset.position, room.cameraPreset.target);
+    } else if (room.polygon) {
+      const auto = cameraForPolygon(room.polygon);
+      flyTo(auto.position, auto.target);
+    }
+  };
+
   const floorMats = presetMaterials.filter((m) => m.type === 'wood' || m.type === 'tile' || m.type === 'concrete');
   const wallMats = presetMaterials.filter((m) => m.type === 'paint' || m.type === 'concrete' || m.type === 'tile');
 
   return (
-    <div className="absolute top-3 right-3 w-56 glass-panel rounded-xl p-3 space-y-3 text-xs z-10">
+    <div className="absolute top-3 right-3 w-56 glass-panel rounded-xl p-3 space-y-3 text-xs z-10 max-h-[80vh] overflow-y-auto">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-foreground font-display flex items-center gap-1">
           <Home size={14} /> Rum
@@ -753,6 +775,42 @@ function RoomInspector({ floorId, roomId, floor, close }: { floorId: string; roo
       <div className="grid grid-cols-2 gap-2 text-muted-foreground">
         <span>Area:</span><span className="text-foreground">{area.toFixed(1)} m²</span>
         <span>Väggar:</span><span className="text-foreground">{room.wallIds.length}</span>
+        <span>Enheter:</span><span className="text-foreground">{roomDevices.length}</span>
+      </div>
+
+      {/* Devices in this room */}
+      {roomDevices.length > 0 && (
+        <div className="space-y-1">
+          <span className="text-muted-foreground text-[10px]">Enheter i rum</span>
+          <div className="space-y-0.5">
+            {roomDevices.map((d) => (
+              <div key={d.id} className="text-[10px] text-foreground px-1.5 py-0.5 bg-secondary/30 rounded">
+                {d.name || d.kind}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Camera preset */}
+      <div className="space-y-1">
+        <span className="text-muted-foreground text-[10px]">Kameravy</span>
+        <div className="flex gap-1">
+          <button onClick={handleSaveCamera}
+            className="flex-1 py-1.5 rounded-md text-[10px] font-medium bg-primary/15 text-primary hover:bg-primary/25 transition-colors">
+            Spara vy
+          </button>
+          <button onClick={handleGoToCamera}
+            className="flex-1 py-1.5 rounded-md text-[10px] font-medium bg-secondary/50 text-foreground hover:bg-secondary transition-colors">
+            Gå till vy
+          </button>
+          {room.cameraPreset && (
+            <button onClick={() => setRoomCameraPreset(floorId, room.id, undefined)}
+              className="px-2 py-1.5 rounded-md text-[10px] text-muted-foreground hover:text-foreground bg-secondary/30 transition-colors">
+              ✕
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="space-y-1">
