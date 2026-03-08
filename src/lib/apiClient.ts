@@ -201,6 +201,51 @@ export async function callHAService(
   return res;
 }
 
+// ── Asset upload (hosted mode) ──
+
+export async function uploadPropAsset(
+  projectId: string,
+  file: File,
+  metadata: {
+    name: string;
+    category?: string;
+    subcategory?: string;
+    placement?: string;
+    dimensions?: object;
+    performance?: object;
+    haMapping?: object;
+  },
+  thumbnailDataUrl?: string
+): Promise<{ modelUrl: string; thumbnailUrl?: string; assetId: string } | null> {
+  if (!isHostedSync()) return null;
+
+  const form = new FormData();
+  form.append('model', file);
+  form.append('name', metadata.name);
+  if (metadata.category) form.append('category', metadata.category);
+  if (metadata.subcategory) form.append('subcategory', metadata.subcategory);
+  if (metadata.placement) form.append('placement', metadata.placement);
+  if (metadata.dimensions) form.append('dimensions', JSON.stringify(metadata.dimensions));
+  if (metadata.performance) form.append('performance', JSON.stringify(metadata.performance));
+  if (metadata.haMapping) form.append('haMapping', JSON.stringify(metadata.haMapping));
+
+  // Convert thumbnail data URL to blob if provided
+  if (thumbnailDataUrl) {
+    try {
+      const res = await fetch(thumbnailDataUrl);
+      const blob = await res.blob();
+      form.append('thumbnail', blob, 'thumb.png');
+    } catch { /* skip thumbnail */ }
+  }
+
+  const res = await fetch(`/api/projects/${projectId}/assets/props/upload`, {
+    method: 'POST',
+    body: form,
+  });
+  if (!res.ok) throw new Error('Failed to upload asset');
+  return res.json();
+}
+
 // ── Debounced sync helpers ──
 
 let _profileSyncTimer: ReturnType<typeof setTimeout> | null = null;
