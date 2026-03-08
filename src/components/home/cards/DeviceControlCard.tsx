@@ -1,6 +1,7 @@
 import { useAppStore } from '../../../store/useAppStore';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { DeviceMarker, LightState, ClimateState, MediaState, VacuumState, LockState, SensorState, GenericDeviceState, CameraState, FanState, CoverState, SceneState, AlarmState, WaterHeaterState, HumidifierState, ValveState, LawnMowerState, SpeakerState } from '../../../store/types';
+import { useCameraSnapshot } from '../../../hooks/useCameraSnapshot';
 import { Switch } from '../../ui/switch';
 import { Slider } from '../../ui/slider';
 import { Button } from '../../ui/button';
