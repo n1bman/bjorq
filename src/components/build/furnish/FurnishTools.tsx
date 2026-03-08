@@ -1,4 +1,5 @@
 import { useAppStore } from '../../../store/useAppStore';
+import { toast } from 'sonner';
 import { useRef, useState } from 'react';
 import { Upload, Trash2, RotateCcw, Search, FolderOpen } from 'lucide-react';
 import { Slider } from '../../ui/slider';
@@ -42,20 +43,40 @@ export default function FurnishTools() {
 
   const handleImport = () => {
     if (!pendingFile || !activeFloorId || !importName.trim()) return;
+
+    const MAX_FILE_DATA = 4 * 1024 * 1024;
+    const MAX_WARN_SIZE = 10 * 1024 * 1024;
+
+    if (pendingFile.size > MAX_WARN_SIZE) {
+      toast.warning('Stor fil (>10 MB) — modellen kan vara tung att rendera');
+    }
+
     const url = URL.createObjectURL(pendingFile);
     const catalogId = generateId();
-    addToCatalog({ id: catalogId, name: importName.trim(), url, source: 'user', category: importCategory });
-    addProp({
-      id: generateId(),
-      catalogId,
-      floorId: activeFloorId,
-      url,
-      position: [0, 0, 0],
-      rotation: [0, 0, 0],
-      scale: [1, 1, 1],
-    });
-    setPendingFile(null);
-    setImportName('');
+
+    if (pendingFile.size <= MAX_FILE_DATA) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64 = (reader.result as string).split(',')[1];
+        addToCatalog({ id: catalogId, name: importName.trim(), url, source: 'user', category: importCategory, fileData: base64 } as any);
+        addProp({
+          id: generateId(), catalogId, floorId: activeFloorId, url,
+          position: [0, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1],
+        });
+        setPendingFile(null);
+        setImportName('');
+      };
+      reader.readAsDataURL(pendingFile);
+    } else {
+      addToCatalog({ id: catalogId, name: importName.trim(), url, source: 'user', category: importCategory } as any);
+      addProp({
+        id: generateId(), catalogId, floorId: activeFloorId, url,
+        position: [0, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1],
+      });
+      toast.info('Modellen är stor och sparas bara under denna session');
+      setPendingFile(null);
+      setImportName('');
+    }
   };
 
   const handlePlaceFromCatalog = (catItem: typeof catalog[0]) => {

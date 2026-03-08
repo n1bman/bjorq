@@ -260,6 +260,24 @@ function PropModel({ id, url: rawUrl, position, rotation, scale }: {
     window.addEventListener('pointerup', onPointerUp);
   }, [appMode, activeTool, tab, id, position, camera, raycaster, gl, updateProp, setSelection]);
 
+  // Memoize scene clone — only re-clone when scene or selection changes, NOT every render
+  const displayScene = useMemo(() => {
+    if (!scene) return null;
+    const clone = scene.clone();
+    clone.traverse((child: any) => {
+      if (child.isMesh) {
+        child.castShadow = false;
+        child.receiveShadow = true;
+        if (isSelected) {
+          child.material = child.material.clone();
+          child.material.emissive = new THREE.Color('#4a9eff');
+          child.material.emissiveIntensity = 0.3;
+        }
+      }
+    });
+    return clone;
+  }, [scene, isSelected]);
+
   // Loading state
   if (status === 'loading' || status === 'idle') {
     return (
@@ -306,25 +324,12 @@ function PropModel({ id, url: rawUrl, position, rotation, scale }: {
     );
   }
 
-  if (!scene) return null;
-
-  const clonedScene = scene.clone();
-  clonedScene.traverse((child: any) => {
-    if (child.isMesh) {
-      child.castShadow = false;
-      child.receiveShadow = true;
-      if (isSelected) {
-        child.material = child.material.clone();
-        child.material.emissive = new THREE.Color('#4a9eff');
-        child.material.emissiveIntensity = 0.3;
-      }
-    }
-  });
+  if (!displayScene) return null;
 
   return (
     <group ref={groupRef}>
       <primitive
-        object={clonedScene}
+        object={displayScene}
         position={position}
         rotation={rotation}
         scale={scale}

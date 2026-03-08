@@ -103,15 +103,30 @@ function FurnishCatalog() {
   const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    const MAX_FILE_DATA = 4 * 1024 * 1024; // 4 MB
+    const MAX_WARN_SIZE = 10 * 1024 * 1024; // 10 MB
+
+    if (file.size > MAX_WARN_SIZE) {
+      toast.warning('Stor fil (>10 MB) — modellen kan vara tung att rendera');
+    }
+
     const blobUrl = URL.createObjectURL(file);
-    const reader = new FileReader();
-    reader.onload = () => {
-      const base64 = (reader.result as string).split(',')[1];
-      const name = file.name.replace(/\.[^.]+$/, '');
-      useAppStore.getState().addToCatalog({ id: generateId(), name, url: blobUrl, fileData: base64, source: 'user' as const, category: 'imported' } as any);
-      toast.success(`Importerad: ${name}`);
-    };
-    reader.readAsDataURL(file);
+    const name = file.name.replace(/\.[^.]+$/, '');
+    const id = generateId();
+
+    if (file.size <= MAX_FILE_DATA) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64 = (reader.result as string).split(',')[1];
+        useAppStore.getState().addToCatalog({ id, name, url: blobUrl, fileData: base64, source: 'user' as const, category: 'imported' } as any);
+        toast.success(`Importerad: ${name}`);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      useAppStore.getState().addToCatalog({ id, name, url: blobUrl, source: 'user' as const, category: 'imported' } as any);
+      toast.info('Modellen är stor och sparas bara under denna session');
+    }
     e.target.value = '';
   };
   return (
