@@ -113,14 +113,6 @@ const AC_CATEGORY_ICONS: Record<string, React.ElementType> = {
   devices: Monitor, imported: Box,
 };
 
-const AC_HA_DOMAINS: { label: string; domain: string; kind: DeviceKind }[] = [
-  { label: 'Lampa', domain: 'light', kind: 'light' },
-  { label: 'Högtalare', domain: 'media_player', kind: 'speaker' },
-  { label: 'Skärm', domain: 'media_player', kind: 'media_screen' },
-  { label: 'Strömbrytare', domain: 'switch', kind: 'switch' },
-  { label: 'Sensor', domain: 'sensor', kind: 'sensor' },
-  { label: 'Fläkt', domain: 'fan', kind: 'fan' },
-];
 
 type ACSourceFilter = 'all' | 'curated' | 'user';
 
