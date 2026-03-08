@@ -98,8 +98,13 @@ function findMinimalCycles(graph: Graph): string[][] {
     }
   }
 
-  // Filter out supercycles that contain other cycles
-  if (cycles.length <= 1) return cycles;
+  // Filter out tiny degenerate cycles BEFORE supercycle check
+  const validCycles = cycles.filter((cycle) => {
+    const pts = cycle.map((k) => graph[k].node);
+    return polygonArea(pts) >= 0.5;
+  });
+
+  if (validCycles.length <= 1) return validCycles;
 
   const centroids = cycles.map((cycle) => {
     const pts = cycle.map((k) => graph[k].node);
