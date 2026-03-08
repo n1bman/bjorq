@@ -347,6 +347,8 @@ function InlineTerrain3D() {
       ))}
     </group>
   );
+}
+
 const MAX_RECOVERY = 3;
 
 export default function BuildScene3D() {
