@@ -64,7 +64,7 @@ function StandbyStaticCamera() {
   return null;
 }
 
-function CameraController() {
+const CameraController = React.forwardRef(function CameraController(_props, _ref) {
   const cameraPreset = useAppStore((s) => s.homeView.cameraPreset);
   const appMode = useAppStore((s) => s.appMode);
   const customStartPos = useAppStore((s) => s.homeView.customStartPos);
