@@ -193,7 +193,7 @@ function PropModel({ id, url: rawUrl, position, rotation, scale }: {
     lastLoadedUrl.current = baseUrl;
     retryCount.current = 0;
     loadingRef.current = false; // Reset guard
-    doLoad(url);
+    doLoad(id, url);
 
     return () => {
       lastLoadedUrl.current = '';
