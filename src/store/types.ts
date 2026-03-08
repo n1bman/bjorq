@@ -62,6 +62,11 @@ export interface WallSegment {
   openings: WallOpening[];
 }
 
+export interface RoomCameraPreset {
+  position: [number, number, number];
+  target: [number, number, number];
+}
+
 export interface Room {
   id: string;
   name: string;
@@ -69,6 +74,7 @@ export interface Room {
   floorMaterialId?: string;
   wallMaterialId?: string;
   polygon?: [number, number][]; // cached polygon for rendering
+  cameraPreset?: RoomCameraPreset;
 }
 
 export interface StairItem {
