@@ -9,7 +9,9 @@ import type { BuildTool, BuildTab } from '../../store/types';
 import { openingPresets } from '../../lib/openingPresets';
 import { getAllMaterials } from '../../lib/materials';
 import { loadCuratedCatalog, clearCatalogCache } from '../../lib/catalogLoader';
-import { processModel, validateFormat, formatStats, ratePerformance } from '../../lib/assetPipeline';
+import { processModel, validateFormat, formatStats, ratePerformance, formatSize, getOptimizationLevel, optimizeModel } from '../../lib/assetPipeline';
+import type { OptimizationResult, OptimizationLevel } from '../../lib/assetPipeline';
+import { Progress } from '../ui/progress';
 import {
   isHostedSync, uploadPropAsset, ingestToCatalog,
   updateCatalogMeta, replaceCatalogThumbnail, deleteCatalogAsset,
