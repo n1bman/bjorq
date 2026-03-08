@@ -347,7 +347,7 @@ function InlineTerrain3D() {
       ))}
     </group>
   );
-}
+const MAX_RECOVERY = 3;
 
 export default function BuildScene3D() {
   const activeTool = useAppStore((s) => s.build.activeTool);
@@ -360,16 +360,28 @@ export default function BuildScene3D() {
 
   const [recoveryCount, setRecoveryCount] = useState(0);
   const [recovering, setRecovering] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const lastSuccessRef = useRef(Date.now());
 
   const handleCreated = useCallback(({ gl }: { gl: THREE.WebGLRenderer }) => {
+    lastSuccessRef.current = Date.now();
     gl.domElement.addEventListener('webglcontextlost', (e) => {
       e.preventDefault();
-      console.warn('[BuildScene3D] WebGL context lost — remounting Canvas');
-      setRecovering(true);
-      setTimeout(() => {
-        setRecoveryCount((c) => c + 1);
-        setRecovering(false);
-      }, 1000);
+      console.warn('[BuildScene3D] WebGL context lost — recovering...');
+      const elapsed = Date.now() - lastSuccessRef.current;
+      setRecoveryCount((prev) => {
+        const next = elapsed > 10000 ? 1 : prev + 1;
+        if (next > MAX_RECOVERY) {
+          setFailed(true);
+          return prev;
+        }
+        setRecovering(true);
+        const delay = Math.min(1000 * Math.pow(2, next - 1), 4000);
+        setTimeout(() => {
+          setRecovering(false);
+        }, delay);
+        return next;
+      });
     });
   }, []);
 
@@ -407,6 +419,20 @@ export default function BuildScene3D() {
   const dpr = perfTablet ? 0.75 : perfQuality === 'low' ? 1 : perfQuality === 'medium' ? 1.5 : undefined;
 
   const canvasKey = `build-${perfQuality}-${perfShadows}-${recoveryCount}`;
+
+  if (failed) {
+    return (
+      <div className="w-full h-full flex flex-col items-center justify-center gap-4 bg-gradient-to-br from-primary/10 to-secondary/10">
+        <p className="text-sm text-muted-foreground">3D-scenen kunde inte startas</p>
+        <button
+          onClick={() => { setFailed(false); setRecoveryCount(0); lastSuccessRef.current = Date.now(); }}
+          className="px-4 py-2 text-sm rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+        >
+          Försök igen
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full h-full relative" onDoubleClick={handleDoubleClick}>
