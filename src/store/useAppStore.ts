@@ -281,7 +281,7 @@ const storeCreator = (set: any, get: any): AppState => ({
   standby: { enabled: false, idleMinutes: 2, vioMinutes: 5, cameraView: 'standard' as const, phase: 'standby' as const },
   _preStandbyMode: 'home' as AppMode,
   profile: { name: '', theme: 'dark', accentColor: '#f59e0b', dashboardBg: 'scene3d' },
-  performance: { quality: 'high', shadows: true, postprocessing: false, tabletMode: false, showHUD: false, maxLights: 0, antialiasing: true, toneMapping: true, exposure: 1.0, performance: { quality: 'high', shadows: true, postprocessing: false, tabletMode: false, showHUD: false, maxLights: 0, antialiasing: true, toneMapping: true, exposure: 1.0, environmentLight: false }, },
+  performance: { quality: 'high', shadows: true, postprocessing: false, tabletMode: false, showHUD: false, maxLights: 0, antialiasing: true, toneMapping: true, exposure: 1.0, environmentLight: false },
   wifi: { ssid: '', password: '', visible: false },
   energyConfig: { pricePerKwh: 1.5, currency: 'kr' },
   calendar: {
