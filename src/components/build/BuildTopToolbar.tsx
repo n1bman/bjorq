@@ -4,6 +4,7 @@ import {
   Undo2, Redo2, Eye, Box, Layers, Settings2,
   ArrowLeft, Ghost,
   Grid3X3, XCircle, Sun, Check, HelpCircle, Sparkles, DoorOpen, Trash2, Edit3, Wrench,
+  Save, Download, Upload, FolderOpen,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Slider } from '../ui/slider';
@@ -11,9 +12,11 @@ import { Popover, PopoverTrigger, PopoverContent } from '../ui/popover';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../ui/alert-dialog';
 import FloorPicker from './FloorPicker';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { detectRooms, healWalls, polygonArea } from '../../lib/roomDetection';
+import { exportBuildProject, importBuildProject, readProjectFile, extractBuildProject, calculateStats } from '../../lib/projectIO';
+import { validateProjectSchema } from '../../lib/projectMigrations';
 
 /* ═══════════════════════════════════════════════
    RoomManager — inlined to avoid Vite resolve issues
@@ -94,8 +97,27 @@ export default function BuildTopToolbar() {
   const setWeather = useAppStore((s) => s.setWeather);
   const envSource = useAppStore((s) => s.environment.source);
   const setWeatherSource = useAppStore((s) => s.setWeatherSource);
+  const importFileRef = useRef<HTMLInputElement>(null);
 
-  
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+    try {
+      const data = await readProjectFile(file);
+      const { valid, errors } = validateProjectSchema(data);
+      if (!valid) { toast.error(`Ogiltig fil: ${errors.join(', ')}`); return; }
+      const result = importBuildProject(data, 'replace');
+      if (result.success) {
+        toast.success('Projekt importerat ✅', { description: `${result.stats.floors} våningar, ${result.stats.rooms} rum, ${result.stats.devices} enheter` });
+      } else {
+        toast.error(`Import misslyckades: ${result.error}`);
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Kunde inte läsa filen');
+    }
+  };
+
 
   return (
     <div className="relative z-50 flex items-center gap-1.5 px-2 py-1 border-b border-border bg-card/90 backdrop-blur-sm h-12">
@@ -290,24 +312,52 @@ export default function BuildTopToolbar() {
         <Ghost size={16} />
       </button>
 
-      {/* Clear all */}
-      <AlertDialog>
-        <AlertDialogTrigger asChild>
-          <button title="Rensa allt" className="p-2.5 rounded-xl text-destructive/70 hover:text-destructive hover:bg-destructive/10 transition-all min-w-[44px] min-h-[44px] flex items-center justify-center">
-            <Trash2 size={16} />
+      {/* Project menu popover */}
+      <Popover>
+        <PopoverTrigger asChild>
+          <button title="Projekthantering" className="p-2.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary/40 transition-all min-w-[44px] min-h-[44px] flex items-center justify-center">
+            <FolderOpen size={16} />
           </button>
-        </AlertDialogTrigger>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Är du säker?</AlertDialogTitle>
-            <AlertDialogDescription>Alla väggar, rum och möbler tas bort permanent.</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Nej</AlertDialogCancel>
-            <AlertDialogAction onClick={() => clearAllFloors()} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Ja, rensa</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        </PopoverTrigger>
+        <PopoverContent side="bottom" align="end" className="w-56 p-2 space-y-1 bg-card border-border">
+          <button
+            onClick={() => { useAppStore.setState((s: any) => ({ activityLog: [...s.activityLog] })); toast.success('Projekt sparat ✅'); }}
+            className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-xs text-foreground hover:bg-secondary/40 transition-colors"
+          >
+            <Save size={14} /> Spara projekt
+          </button>
+          <button
+            onClick={() => { exportBuildProject(); toast.success('Projekt exporterat ✅'); }}
+            className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-xs text-foreground hover:bg-secondary/40 transition-colors"
+          >
+            <Download size={14} /> Exportera projekt
+          </button>
+          <button
+            onClick={() => importFileRef.current?.click()}
+            className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-xs text-foreground hover:bg-secondary/40 transition-colors"
+          >
+            <Upload size={14} /> Importera projekt
+          </button>
+          <div className="border-t border-border my-1" />
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <button className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-xs text-destructive/70 hover:text-destructive hover:bg-destructive/10 transition-colors">
+                <Trash2 size={14} /> Rensa allt
+              </button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Är du säker?</AlertDialogTitle>
+                <AlertDialogDescription>Alla väggar, rum och möbler tas bort permanent.</AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Nej</AlertDialogCancel>
+                <AlertDialogAction onClick={() => clearAllFloors()} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Ja, rensa</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </PopoverContent>
+      </Popover>
 
       {/* Settings popover */}
       <Popover>
@@ -384,6 +434,9 @@ export default function BuildTopToolbar() {
         <Check size={16} />
         <span className="hidden sm:inline">Klar</span>
       </button>
+
+      {/* Hidden file input for project import */}
+      <input ref={importFileRef} type="file" accept=".json" className="hidden" onChange={handleImportFile} />
     </div>
   );
 }
