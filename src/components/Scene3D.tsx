@@ -197,7 +197,7 @@ function SceneContent() {
         shadow-camera-right={20}
         shadow-camera-top={20}
         shadow-camera-bottom={-20}
-        shadow-bias={-0.002}
+        shadow-bias={profile.shadowSoftness > 0.3 ? -0.003 : -0.002}
       />
 
       <hemisphereLight

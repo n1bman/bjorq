@@ -248,12 +248,28 @@ function SceneContent() {
 
   return (
     <>
-      <ambientLight intensity={ambientIntensity} color={ambientColor} />
-      <directionalLight position={sunPos} intensity={sunIntensity} color="#ffd699" castShadow={enableShadows}
-        shadow-mapSize-width={shadowMapSize} shadow-mapSize-height={shadowMapSize}
+      <ambientLight
+        intensity={profile.ambientIntensity}
+        color={new THREE.Color(profile.ambientColor[0], profile.ambientColor[1], profile.ambientColor[2])}
+      />
+      <directionalLight
+        position={sunPos}
+        intensity={profile.sunIntensity}
+        color={new THREE.Color(profile.sunColor[0], profile.sunColor[1], profile.sunColor[2])}
+        castShadow={enableShadows}
+        shadow-mapSize-width={shadowMapSize}
+        shadow-mapSize-height={shadowMapSize}
         shadow-camera-far={50} shadow-camera-left={-20} shadow-camera-right={20}
-        shadow-camera-top={20} shadow-camera-bottom={-20} shadow-bias={-0.002} />
-      {!isNight && perf.quality !== 'low' && <pointLight position={[0, 8, 0]} intensity={0.15} color="#4a9eff" />}
+        shadow-camera-top={20} shadow-camera-bottom={-20}
+        shadow-bias={profile.shadowSoftness > 0.3 ? -0.003 : -0.002}
+      />
+      <hemisphereLight
+        args={[
+          new THREE.Color(profile.hemisphereSkyColor[0], profile.hemisphereSkyColor[1], profile.hemisphereSkyColor[2]),
+          new THREE.Color(profile.hemisphereGroundColor[0], profile.hemisphereGroundColor[1], profile.hemisphereGroundColor[2]),
+          profile.hemisphereIntensity,
+        ]}
+      />
 
       <GroundPlane onPointerDown={handleGroundPointerDown} onPointerMove={handleGroundPointerMove} />
 

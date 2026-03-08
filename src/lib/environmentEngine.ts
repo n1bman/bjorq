@@ -199,13 +199,13 @@ export function computeEnvironmentProfile(input: EnvironmentInput): EnvironmentP
   // 2. Get weather-based profile
   let weatherProfile = getWeatherProfile(weatherCondition);
 
-  // 3. Apply cloud coverage interpolation
-  if (atmosphere.cloudinessAffectsLight && cloudCoverage > 0 && weatherCondition === 'clear') {
-    // Interpolate clear → partly cloudy → cloudy based on cloud coverage
+  // 3. Apply cloud coverage interpolation (always blend based on cloudCoverage)
+  if (atmosphere.cloudinessAffectsLight && cloudCoverage > 0) {
+    const baseProfile = getWeatherProfile(weatherCondition);
     if (cloudCoverage <= 0.5) {
-      weatherProfile = blendProfiles(CLEAR, PARTLY_CLOUDY, cloudCoverage * 2);
+      weatherProfile = blendProfiles(CLEAR, blendProfiles(PARTLY_CLOUDY, baseProfile, 0.5), cloudCoverage * 2);
     } else {
-      weatherProfile = blendProfiles(PARTLY_CLOUDY, CLOUDY, (cloudCoverage - 0.5) * 2);
+      weatherProfile = blendProfiles(blendProfiles(PARTLY_CLOUDY, baseProfile, 0.5), CLOUDY, (cloudCoverage - 0.5) * 2);
     }
   }
 
