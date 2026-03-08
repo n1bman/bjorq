@@ -1,10 +1,9 @@
-import { lazy, Suspense, useRef, useState, useMemo } from 'react';
+import { lazy, Suspense, useRef, useState, useMemo, useEffect, useCallback } from 'react';
 import { useAppStore } from '../../store/useAppStore';
 import BuildTopToolbar from './BuildTopToolbar';
 import BuildInspector from './BuildInspector';
 import BuildCanvas2D from './BuildCanvas2D';
 import BuildScene3D from './BuildScene3D';
-import AssetCatalog from './AssetCatalog.tsx';
 import type { BuildTool, BuildTab } from '../../store/types';
 import { openingPresets } from '../../lib/openingPresets';
 import { getAllMaterials } from '../../lib/materials';
