@@ -229,7 +229,7 @@ const storeCreator = (set: any, get: any): AppState => ({
       const live = s.homeAssistant.liveStates[entityId];
       if (live) {
         const domain = entityId.split('.')[0];
-        const mapped = mapHAEntityToDeviceState(domain, live.state, live.attributes);
+        const mapped = mapHAEntityToDeviceState(domain, live.state, live.attributes, entityId);
         if (mapped) {
           newDeviceStates = { ...newDeviceStates, [id]: mapped };
         }
