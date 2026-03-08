@@ -72,6 +72,44 @@ function downscaleTexture(tex: THREE.Texture, maxRes: number): boolean {
   return true;
 }
 
+/** Ensure texture is on a canvas, then re-encode as JPEG for smaller GLB export */
+async function reencodeTextureAsJPEG(tex: THREE.Texture, quality = 0.85): Promise<boolean> {
+  const img = tex.image;
+  if (!img) return false;
+
+  const w = img.width || 0;
+  const h = img.height || 0;
+  if (w === 0 || h === 0) return false;
+
+  // Render to canvas if not already
+  let canvas: HTMLCanvasElement;
+  if (img instanceof HTMLCanvasElement) {
+    canvas = img;
+  } else {
+    canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return false;
+    ctx.drawImage(img as any, 0, 0, w, h);
+  }
+
+  // Convert canvas to JPEG data URL
+  const jpegDataUrl = canvas.toDataURL('image/jpeg', quality);
+
+  // Load JPEG data URL back as an Image element
+  const jpegImg = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const el = new Image();
+    el.onload = () => resolve(el);
+    el.onerror = reject;
+    el.src = jpegDataUrl;
+  });
+
+  tex.image = jpegImg;
+  tex.needsUpdate = true;
+  return true;
+}
+
 // ─── Analysis helpers ───
 
 function analyzeScene(scene: THREE.Object3D): { triangles: number; materialSet: Set<string>; maxTexRes: number } {
@@ -220,23 +258,33 @@ export async function optimizeModel(
     }
   });
 
-  // 2) Texture downscaling (all maps to maxTexRes)
+  // 2) Texture downscaling (all maps to maxTexRes) + JPEG re-encoding
   const processedTextures = new Set<string>();
+  const jpegReencodeQueue: THREE.Texture[] = [];
+
   cloned.traverse((child) => {
     if (child instanceof THREE.Mesh) {
       const mats = Array.isArray(child.material) ? child.material : [child.material];
       for (const mat of mats) {
         if (!mat) continue;
+        const isTransparent = (mat as any).transparent === true;
         for (const prop of TEX_PROPS) {
           const tex = (mat as any)[prop] as THREE.Texture | undefined;
           if (tex?.image && !processedTextures.has(tex.uuid)) {
             processedTextures.add(tex.uuid);
             downscaleTexture(tex, maxTexRes);
+            // Queue non-normal-map, non-transparent textures for JPEG re-encoding
+            if (prop !== 'normalMap' && !isTransparent) {
+              jpegReencodeQueue.push(tex);
+            }
           }
         }
       }
     }
   });
+
+  // Re-encode queued textures as JPEG for much smaller GLB output
+  await Promise.all(jpegReencodeQueue.map(tex => reencodeTextureAsJPEG(tex, 0.85)));
 
   // 3) Material deduplication — key by visual properties
   const matKeyMap = new Map<string, THREE.Material>();
