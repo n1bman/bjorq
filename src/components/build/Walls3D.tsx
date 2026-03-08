@@ -334,7 +334,7 @@ export default function Walls3D() {
             const gFrameW = 0.05;
             segments.push(
               <mesh key={`${wall.id}-garage-ft-${i}`} position={[opPos.x, opBottom + op.height - gFrameW / 2 + elevation, opPos.z]}
-                rotation={[0, -angle, 0]} castShadow>
+                rotation={[0, -angle, 0]}>
                 <boxGeometry args={[op.width, gFrameW, 0.07]} />
                 <meshStandardMaterial color="#555" roughness={0.4} metalness={0.3} />
               </mesh>
