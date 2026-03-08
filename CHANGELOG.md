@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2026-03-08
+
+### Added
+- **Selective shadow casting** on imported 3D models — opaque meshes cast shadows while glass/window materials let sunlight through, creating realistic indoor light patterns
+- Glass detection heuristic: checks `material.transparent`, `opacity < 0.9`, and name patterns (`glass`, `window`, `glas`, `fönster`)
+- **Consolidated Graphics & Environment view** — "Grafik & Miljö" in Settings now has 3 collapsible sections: Rendering, Sol & Väder, Miljö & Terräng
+- **Reactive environment profile** — sun/weather changes instantly update the 3D scene via `recomputeEnvProfile`
+- **SunWeatherPanel** — unified panel replacing separate SunCalibrationPanel and WeatherAtmospherePanel
+
+### Removed
+- `SunCalibrationPanel.tsx` — superseded by SunWeatherPanel
+- `WeatherAtmospherePanel.tsx` — superseded by SunWeatherPanel
+
+### Fixed
+- React ref warnings on CollapsibleSection and EnvironmentPanel (wrapped with `React.forwardRef`)
+
 ## [0.6.1] - 2026-03-08
 
 ### Fixed

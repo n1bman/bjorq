@@ -46,11 +46,14 @@ Access via **Inställningar** in the category grid:
 | Setting | What It Controls |
 |---------|-----------------|
 | **Profil** | Name, theme (dark/light), accent color, dashboard background |
-| **Prestanda** | 3D quality, shadows, effects, tablet mode, performance score |
+| **Grafik & Miljö** | Rendering quality, shadows, sun & weather calibration, terrain, sky style — 3 collapsible sections |
 | **Standby** | Idle timeout, standby clock screen, camera view |
 | **Skärm** | App mode commands, fullscreen toggle, OS kiosk instructions |
 | **Home Assistant** | HA URL, access token, connection status |
 | **Plats** | Latitude/longitude for sun position and weather |
+| **WiFi** | Network info display |
+| **Widgetar** | Toggle which widgets appear on the home screen |
+| **Data & Backup** | Save, restore, clear data, load demo project |
 | **WiFi** | Network info display |
 | **Widgetar** | Toggle which widgets appear on the home screen |
 | **Data & Backup** | Save, restore, clear data, load demo project |

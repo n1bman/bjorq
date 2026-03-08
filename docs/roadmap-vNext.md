@@ -318,3 +318,23 @@ Simplified to 4 clear light types: Tak, Strip, Vägg, Spot.
 
 **Files modified:** `src/store/types.ts`, `src/store/useAppStore.ts`, `src/components/home/DashboardGrid.tsx`, `src/pages/Index.tsx`
 **New files:** `src/hooks/useComfortEngine.ts`, `src/components/home/cards/ClimateTab.tsx`
+
+---
+
+## 🔵 Phase 11 — Consolidated Graphics & Selective Shadows ✅
+
+### 11.1 Consolidated Graphics & Environment View
+
+- Merged Prestanda, Sol & Väder, and Miljö panels into single "Grafik & Miljö" settings card
+- Three collapsible sections: Rendering, Sol & Väder, Miljö & Terräng
+- `SunWeatherPanel` replaces `SunCalibrationPanel` + `WeatherAtmospherePanel`
+- Reactive environment profile via `recomputeEnvProfile` — changes apply instantly to 3D
+
+### 11.2 Selective Shadow Casting
+
+- Imported 3D models now cast shadows selectively: opaque meshes block light, glass/window meshes let it through
+- Glass detection heuristic: `material.transparent`, `opacity < 0.9`, name regex `/glass|window|glas|fönster/i`
+- Applied in both initial load and re-apply cycles for consistency
+
+**Files modified:** `src/components/build/ImportedHome3D.tsx`, `src/components/home/cards/SunWeatherPanel.tsx`, `src/components/home/cards/EnvironmentPanel.tsx`
+**Files removed:** `src/components/home/cards/SunCalibrationPanel.tsx`, `src/components/home/cards/WeatherAtmospherePanel.tsx`
