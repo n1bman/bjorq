@@ -206,7 +206,9 @@ function splitAtTJunctions(walls: WallSegment[]): WallSegment[] {
         const len2 = dx * dx + dy * dy;
         if (len2 === 0) continue;
         const t = ((ep[0] - wall.from[0]) * dx + (ep[1] - wall.from[1]) * dy) / len2;
-        if (t <= EPSILON || t >= 1 - EPSILON) continue;
+        const wallLen = Math.sqrt(len2);
+        const tEps = EPSILON / wallLen;
+        if (t <= tEps || t >= 1 - tEps) continue;
 
         // Check distance from ep to projected point
         const px = wall.from[0] + t * dx;
