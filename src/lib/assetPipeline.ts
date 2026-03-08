@@ -12,7 +12,6 @@ export interface PipelineResult {
   thumbnail: string;
   warnings: string[];
   unitScaleFactor: number;
-  texturesDownscaled: number;
 }
 
 export type OptimizationLevel = 'ok' | 'recommended' | 'strongly-recommended';
@@ -23,6 +22,7 @@ export interface OptimizationResult {
   stats: AssetPerformanceStats;
   beforeStats: AssetPerformanceStats;
   thumbnail: string;
+  noImprovement?: boolean;
   savings: {
     fileSizePct: number;
     materialsPct: number;
@@ -109,9 +109,9 @@ function analyzeScene(scene: THREE.Object3D): { triangles: number; materialSet: 
 
 // ─── processModel ───
 
-export async function processModel(file: File, options?: { maxTextureRes?: number }): Promise<PipelineResult> {
+export async function processModel(file: File, _options?: { maxTextureRes?: number }): Promise<PipelineResult> {
   const warnings: string[] = [];
-  const maxTextureRes = options?.maxTextureRes ?? 2048;
+  
 
   const buffer = await file.arrayBuffer();
   const loader = new GLTFLoader();
@@ -150,58 +150,19 @@ export async function processModel(file: File, options?: { maxTextureRes?: numbe
   scene.position.set(-center.x, -box.min.y, -center.z);
   scene.updateMatrixWorld(true);
 
-  // Analyze + downscale textures (analysis pass)
-  const processedTextures = new Set<string>();
-  let maxTexRes = 0;
-  let texturesDownscaled = 0;
-  let triangles = 0;
-  const materialSet = new Set<string>();
-
-  scene.traverse((child) => {
-    if (child instanceof THREE.Mesh) {
-      const geo = child.geometry;
-      if (geo.index) {
-        triangles += geo.index.count / 3;
-      } else if (geo.attributes.position) {
-        triangles += geo.attributes.position.count / 3;
-      }
-      const mats = Array.isArray(child.material) ? child.material : [child.material];
-      for (const mat of mats) {
-        if (mat) {
-          materialSet.add(mat.uuid);
-          for (const prop of TEX_PROPS) {
-            const tex = (mat as any)[prop] as THREE.Texture | undefined;
-            if (tex?.image && !processedTextures.has(tex.uuid)) {
-              processedTextures.add(tex.uuid);
-              const w = tex.image.width || 0;
-              const h = tex.image.height || 0;
-              maxTexRes = Math.max(maxTexRes, w, h);
-              if (Math.max(w, h) > maxTextureRes) {
-                if (downscaleTexture(tex, maxTextureRes)) texturesDownscaled++;
-              }
-            }
-          }
-        }
-      }
-    }
-  });
-
-  const triCount = Math.round(triangles);
+  // Analyze only — do NOT mutate textures
+  const analysis = analyzeScene(scene);
   const fileSizeKB = Math.round(file.size / 1024);
 
-  if (triCount > 500000) warnings.push(`Hög polygonantal: ${(triCount / 1000).toFixed(0)}k trianglar`);
+  if (analysis.triangles > 500000) warnings.push(`Hög polygonantal: ${(analysis.triangles / 1000).toFixed(0)}k trianglar`);
   if (fileSizeKB > 10240) warnings.push(`Stor fil: ${(fileSizeKB / 1024).toFixed(1)} MB`);
-  if (texturesDownscaled > 0) {
-    warnings.push(`${texturesDownscaled} textur${texturesDownscaled > 1 ? 'er' : ''} nedskalade till ${maxTextureRes}px`);
-  } else if (maxTexRes > maxTextureRes) {
-    warnings.push(`Stora texturer: ${maxTexRes}px`);
-  }
+  if (analysis.maxTexRes > 2048) warnings.push(`Stora texturer: ${analysis.maxTexRes}px`);
 
   const stats: AssetPerformanceStats = {
-    triangles: triCount,
-    materials: materialSet.size,
+    triangles: analysis.triangles,
+    materials: analysis.materialSet.size,
     fileSizeKB,
-    maxTextureRes: maxTexRes,
+    maxTextureRes: analysis.maxTexRes,
   };
 
   const dimensions: AssetDimensions = {
@@ -212,7 +173,7 @@ export async function processModel(file: File, options?: { maxTextureRes?: numbe
 
   const thumbnail = generateThumbnail(scene, box);
 
-  return { scene, stats, dimensions, thumbnail, warnings, unitScaleFactor, texturesDownscaled };
+  return { scene, stats, dimensions, thumbnail, warnings, unitScaleFactor };
 }
 
 // ─── Optimization level ───
@@ -228,12 +189,19 @@ export function getOptimizationLevel(stats: AssetPerformanceStats): Optimization
 // ─── V1 Optimize ───
 
 export async function optimizeModel(
-  scene: THREE.Group,
+  file: File,
   originalStats: AssetPerformanceStats,
   options?: { maxTextureRes?: number }
 ): Promise<OptimizationResult> {
   const maxTexRes = options?.maxTextureRes ?? 1024;
-  const cloned = scene.clone(true);
+
+  // Re-parse from the original file to get pristine, unmodified textures
+  const buffer = await file.arrayBuffer();
+  const loader = new GLTFLoader();
+  const gltf = await new Promise<any>((resolve, reject) => {
+    loader.parse(buffer, '', resolve, reject);
+  });
+  const cloned = gltf.scene as THREE.Group;
 
   // 1) Collect all materials and check global usage flags
   let anyAoMap = false;
@@ -360,13 +328,19 @@ export async function optimizeModel(
 
   // Calculate savings
   const pct = (before: number, after: number) => before > 0 ? Math.round(((before - after) / before) * 100) : 0;
+
+  // If optimized blob is not smaller, return original and flag noImprovement
+  const noImprovement = blob.size >= file.size;
+  const finalBlob = noImprovement ? new Blob([buffer], { type: 'model/gltf-binary' }) : blob;
+  const finalStats = noImprovement ? originalStats : afterStats;
+
   const savings = {
-    fileSizePct: pct(originalStats.fileSizeKB, afterStats.fileSizeKB),
-    materialsPct: pct(originalStats.materials, afterStats.materials),
-    texResPct: pct(originalStats.maxTextureRes ?? 0, afterStats.maxTextureRes ?? 0),
+    fileSizePct: pct(originalStats.fileSizeKB, finalStats.fileSizeKB),
+    materialsPct: pct(originalStats.materials, finalStats.materials),
+    texResPct: pct(originalStats.maxTextureRes ?? 0, finalStats.maxTextureRes ?? 0),
   };
 
-  return { scene: cloned, blob, stats: afterStats, beforeStats: originalStats, thumbnail, savings };
+  return { scene: cloned, blob: finalBlob, stats: finalStats, beforeStats: originalStats, thumbnail, noImprovement, savings };
 }
 
 // ─── GLB Export ───
