@@ -15,11 +15,15 @@ export default function ScenesPanel() {
   const activateScene = useAppStore((s) => s.activateScene);
   const markers = useAppStore((s) => s.devices.markers);
   const deviceStates = useAppStore((s) => s.devices.deviceStates);
+  const floors = useAppStore((s) => s.layout.floors);
+
+  const allRooms = floors.flatMap((f) => f.rooms ?? []);
 
   const [showAdd, setShowAdd] = useState(false);
   const [newName, setNewName] = useState('');
   const [newIcon, setNewIcon] = useState('🌅');
   const [selectedDevices, setSelectedDevices] = useState<string[]>([]);
+  const [selectedRooms, setSelectedRooms] = useState<string[]>([]);
 
   const handleAdd = () => {
     if (!newName.trim()) return;
