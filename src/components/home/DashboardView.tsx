@@ -6,7 +6,7 @@ import { useAppStore } from '../../store/useAppStore';
 
 export default function DashboardView() {
   useWeatherSync();
-  const dashboardBg = useAppStore((s) => s.profile.dashboardBg);
+  const dashboardBg = useAppStore((s) => s.profile.dashboardBg) ?? 'scene3d';
 
   return (
     <div className="fixed inset-0 bg-background flex flex-col">

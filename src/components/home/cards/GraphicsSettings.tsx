@@ -1,10 +1,11 @@
 import { useMemo } from 'react';
 import { useAppStore } from '../../../store/useAppStore';
-import { Gauge, Monitor, Sun, Sparkles, RefreshCw, Cpu, AlertTriangle, CheckCircle, Activity, Lightbulb, Eye, Contrast } from 'lucide-react';
+import { Gauge, Monitor, Sun, Sparkles, RefreshCw, Cpu, AlertTriangle, CheckCircle, Activity, Lightbulb, Eye, Contrast, RotateCcw } from 'lucide-react';
 import { Switch } from '../../ui/switch';
 import { Slider } from '../../ui/slider';
 import { Progress } from '../../ui/progress';
 import OptionButton from '../../ui/OptionButton';
+import { Button } from '../../ui/button';
 import { toast } from 'sonner';
 import type { QualityLevel } from '../../../store/types';
 
@@ -63,6 +64,7 @@ function getRecommendation(score: number, cores: number, memGB: number | null) {
 export default function GraphicsSettings() {
   const perf = useAppStore((s) => s.performance);
   const setPerformance = useAppStore((s) => s.setPerformance);
+  const setProfile = useAppStore((s) => s.setProfile);
 
   const score = useMemo(() => computeScore(perf.quality, perf.shadows, perf.postprocessing, perf.tabletMode), [perf]);
   const scoreInfo = getScoreInfo(score);
@@ -285,6 +287,33 @@ export default function GraphicsSettings() {
           <p className="text-[10px] text-primary">Surfplatteläge aktiverades automatiskt baserat på din hårdvara.</p>
         </div>
       )}
+
+      {/* Reset to defaults */}
+      <Button
+        variant="outline"
+        size="sm"
+        className="w-full gap-2"
+        onClick={() => {
+          setPerformance({
+            quality: 'high',
+            shadows: true,
+            postprocessing: false,
+            tabletMode: false,
+            antialiasing: true,
+            toneMapping: true,
+            exposure: 1.0,
+            environmentLight: true,
+            maxLights: 0,
+            showHUD: false,
+            _autoDetectedPerformance: false,
+          });
+          setProfile({ dashboardBg: 'scene3d' });
+          toast.success('Grafikinställningar återställda ✅', { description: '3D-scenen laddas om med standardvärden.' });
+        }}
+      >
+        <RotateCcw size={14} />
+        Återställ standard
+      </Button>
     </div>
   );
 }
