@@ -546,7 +546,7 @@ const MediaScreenMarker = React.forwardRef<THREE.Group, MediaScreenMarkerProps>(
       )}
     </group>
   );
-}
+});
 
 function VacuumMarker3D({ position, id, onSelect, onDragStart, selected }: MarkerProps) {
   const state = useAppStore((s) => s.devices.deviceStates[id]);
