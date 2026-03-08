@@ -243,7 +243,7 @@ function AssetCatalog() {
     if (importFile.size <= 4*1024*1024) { const r = new FileReader(); r.onload = () => { addToCatalog({ ...item, fileData: (r.result as string).split(',')[1] } as any); placePropFn(catalogId, url); }; r.readAsDataURL(importFile); }
     else { addToCatalog(item as any); placePropFn(catalogId, url); toast.info('Stor modell — sparas bara under denna session'); }
     setImportDialogOpen(false); setImportResult(null); setImportFile(null);
-  }, [importFile, importResult, activeFloorId, importName, importCategory, importSubcategory, importHAMapping, addToCatalog, saveToCatalog, catalog, curatedAssets, placePropFn]);
+  }, [importFile, importResult, activeFloorId, importName, importCategory, importSubcategory, addToCatalog, saveToCatalog, catalog, curatedAssets, placePropFn]);
 
   const handlePlaceEntry = useCallback((entry: ACEntry) => {
     if (!activeFloorId) return;
