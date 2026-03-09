@@ -173,6 +173,16 @@ function AssetCatalog() {
 
   useEffect(() => { loadCuratedCatalog().then(setCuratedAssets); }, []);
 
+  // Wizard assets
+  const wizardStatus = useAppStore((s) => s.wizard.status);
+  const [wizardAssets, setWizardAssets] = useState<import('../../lib/wizardClient').WizardAsset[]>([]);
+  useEffect(() => {
+    if (wizardStatus !== 'connected') { setWizardAssets([]); return; }
+    import('../../lib/wizardClient').then(({ fetchWizardCatalog }) => {
+      fetchWizardCatalog().then(setWizardAssets).catch((err) => { console.warn('[Wizard] Catalog fetch failed:', err); setWizardAssets([]); });
+    });
+  }, [wizardStatus]);
+
   const allEntries: ACEntry[] = [
     ...curatedAssets.map((c): ACEntry => ({
       id: c.id, name: c.name, thumbnail: c.thumbnail ? `/catalog/${c.thumbnail}` : undefined,
