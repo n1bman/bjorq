@@ -116,15 +116,16 @@ const AC_CATEGORY_ICONS: Record<string, React.ElementType> = {
 };
 
 
-type ACSourceFilter = 'all' | 'curated' | 'user';
+type ACSourceFilter = 'all' | 'curated' | 'user' | 'wizard';
 
 interface ACEntry {
   id: string; name: string; thumbnail?: string; category: string;
-  source: 'curated' | 'user' | 'builtin'; modelPath?: string;
+  source: 'curated' | 'user' | 'builtin' | 'wizard'; modelPath?: string;
   catalogItem?: PropCatalogItem; curatedMeta?: CatalogAssetMeta;
   dimensions?: { width: number; depth: number; height: number };
   performance?: { vertices?: number; triangles?: number; textureBytes?: number };
   subcategory?: string;
+  wizardMeta?: import('../../lib/wizardClient').WizardAsset;
 }
 
 function AssetCatalog() {
