@@ -194,6 +194,18 @@ function AssetCatalog() {
       source: c.source as any, catalogItem: c,
       dimensions: c.dimensions, performance: c.performance as any, subcategory: c.subcategory,
     })),
+    ...wizardAssets.map((w): ACEntry => {
+      const { getWizardThumbnailUrl } = require('../../lib/wizardClient');
+      const bb = w.boundingBox;
+      const dims = bb ? { width: +(bb.max[0] - bb.min[0]).toFixed(2), depth: +(bb.max[2] - bb.min[2]).toFixed(2), height: +(bb.max[1] - bb.min[1]).toFixed(2) } : undefined;
+      return {
+        id: `wizard-${w.id}`, name: w.name, thumbnail: getWizardThumbnailUrl(w),
+        category: w.category || 'imported', source: 'wizard', subcategory: w.subcategory,
+        dimensions: dims,
+        performance: w.triangleCount ? { triangles: w.triangleCount } : undefined,
+        wizardMeta: w,
+      };
+    }),
   ];
 
   const categories = [...new Set(allEntries.map((e) => e.category))].sort();
