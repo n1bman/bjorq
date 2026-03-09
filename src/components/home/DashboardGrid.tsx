@@ -29,6 +29,7 @@ import SunWeatherPanel from './cards/SunWeatherPanel';
 import EnvironmentPanel from './cards/EnvironmentPanel';
 import DisplaySettings from './cards/DisplaySettings';
 import WifiPanel from './cards/WifiPanel';
+import WizardConnectionPanel from './cards/WizardConnectionPanel';
 import WifiWidget from './cards/WifiWidget';
 import AutomationsPanel from './cards/AutomationsPanel';
 import ScenesPanel from './cards/ScenesPanel';
