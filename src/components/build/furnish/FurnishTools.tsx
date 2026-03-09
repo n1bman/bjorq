@@ -14,8 +14,7 @@ export default function FurnishTools() {
 
   return (
     <div className="space-y-4 px-1">
-      {/* Asset Catalog (search, c{/* AssetCatalog rendered from BuildModeV2 */}nails, import) */}
-      <AssetCatalog />
+      {/* AssetCatalog rendered from BuildModeV2 left panel */}
 
       {/* Placed items */}
       {floorItems.length > 0 && (
