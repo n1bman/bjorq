@@ -302,13 +302,40 @@ function AssetCatalog() {
     setImportDialogOpen(false); setImportResult(null); setImportFile(null); setOptimizedResult(null);
   }, [importFile, importResult, activeFloorId, importName, importCategory, importSubcategory, addToCatalog, saveToCatalog, catalog, curatedAssets, placePropFn, optimizedResult]);
 
-  const handlePlaceEntry = useCallback((entry: ACEntry) => {
+  const handlePlaceEntry = useCallback(async (entry: ACEntry) => {
     if (!activeFloorId) return;
+    if (entry.source === 'wizard' && entry.wizardMeta) {
+      // Fetch model from Wizard and place
+      try {
+        const { getWizardModelUrl } = await import('../../lib/wizardClient');
+        const modelUrl = getWizardModelUrl(entry.wizardMeta.id);
+        const res = await fetch(modelUrl, { signal: AbortSignal.timeout(15000) });
+        if (!res.ok) throw new Error(`Model fetch failed: ${res.status}`);
+        const blob = await res.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        const catalogId = entry.id;
+        if (!catalog.find(c => c.id === catalogId)) {
+          addToCatalog({ id: catalogId, name: entry.name, url: blobUrl, source: 'user', thumbnail: entry.thumbnail, category: entry.category, subcategory: entry.subcategory, placement: 'floor', dimensions: entry.dimensions, performance: entry.performance } as any);
+        }
+        // Use wizard metadata for scale and floor placement
+        const wm = entry.wizardMeta;
+        const scale = wm.estimatedScale || 1;
+        const yOffset = -(wm.center?.y ?? 0) * scale;
+        const tx = Math.round(cameraRef.target.x * 10) / 10;
+        const tz = Math.round(cameraRef.target.z * 10) / 10;
+        addProp({ id: generateId(), catalogId, floorId: activeFloorId, url: blobUrl, position: [tx, yOffset, tz], rotation: [0, 0, 0], scale: [scale, scale, scale] });
+        toast.success(`${entry.name} placerad`);
+      } catch (err) {
+        console.error('[Wizard] Model load failed:', err);
+        toast.error('Kunde inte ladda Wizard-modell');
+      }
+      return;
+    }
     if (entry.source === 'curated' && entry.modelPath) {
       if (!catalog.find(c => c.id === entry.id)) addToCatalog({ id: entry.id, name: entry.name, url: entry.modelPath, source: 'curated', thumbnail: entry.thumbnail, category: entry.category, placement: entry.curatedMeta?.placement, dimensions: entry.curatedMeta?.dimensions, haMapping: entry.curatedMeta?.ha, performance: entry.curatedMeta?.performance } as any);
       placePropFn(entry.id, entry.modelPath);
     } else if (entry.catalogItem) { placePropFn(entry.catalogItem.id, entry.catalogItem.url); }
-  }, [activeFloorId, catalog, addToCatalog, placePropFn]);
+  }, [activeFloorId, catalog, addToCatalog, placePropFn, addProp]);
 
   const openManageDialog = useCallback((entry: ACEntry) => { setManageAsset(entry); setManageName(entry.name); setManageCategory((entry.category as AssetCategory) || 'imported'); setManageSubcategory(entry.subcategory || ''); setManagePlacement(entry.curatedMeta?.placement || 'floor'); setManageDialogOpen(true); }, []);
   const handleSaveMeta = useCallback(async () => { if (!manageAsset) return; try { await updateCatalogMeta(manageAsset.id, { name: manageName.trim() || manageAsset.name, category: manageCategory, subcategory: manageSubcategory || undefined, placement: managePlacement }); clearCatalogCache(); loadCuratedCatalog().then(setCuratedAssets); toast.success('Metadata uppdaterad'); setManageDialogOpen(false); } catch { toast.error('Kunde inte uppdatera'); } }, [manageAsset, manageName, manageCategory, manageSubcategory, managePlacement]);
