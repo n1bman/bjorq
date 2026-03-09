@@ -354,11 +354,11 @@ function AssetCatalog() {
         <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Sök modell..." className="h-7 text-xs pl-7" />
       </div>
 
-      {(hasUser && hasCurated) && (
-        <div className="flex gap-1">
-          {(['all', 'curated', 'user'] as ACSourceFilter[]).map((sf) => (
+      {(hasUser || hasCurated || hasWizard) && (
+        <div className="flex gap-1 flex-wrap">
+          {(['all', ...(hasCurated ? ['curated'] : []), ...(hasUser ? ['user'] : []), ...(hasWizard ? ['wizard'] : [])] as ACSourceFilter[]).map((sf) => (
             <Button key={sf} size="sm" variant={sourceFilter === sf ? 'default' : 'outline'} className="h-5 text-[9px] px-2 shrink-0" onClick={() => setSourceFilter(sf)}>
-              {sf === 'all' ? 'Alla' : sf === 'curated' ? 'Katalog' : 'Mina'}
+              {sf === 'all' ? 'Alla' : sf === 'curated' ? 'Katalog' : sf === 'user' ? 'Mina' : '✨ Wizard'}
             </Button>
           ))}
         </div>
