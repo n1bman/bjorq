@@ -1,7 +1,7 @@
 import { useAppStore } from '../../../store/useAppStore';
 import { Trash2, RotateCcw } from 'lucide-react';
 import { Slider } from '../../ui/slider';
-import AssetCatalog from './AssetCatalog';
+// AssetCatalog is rendered inline in BuildModeV2, not as a separate component here
 
 export default function FurnishTools() {
   const activeFloorId = useAppStore((s) => s.layout.activeFloorId);
