@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.2] - 2026-03-09
+
+### Added
+- **BJORQ Asset Wizard integration** — connect to the Wizard add-on and use Wizard-processed assets directly in the furniture workflow
+- `WizardConnectionPanel` in Settings → Anslutning — configure Wizard URL, test connection, view version
+- `wizardClient.ts` — API client for Wizard health checks, catalog fetching, and model loading (ingress-safe)
+- Wizard source filter (`✨ Wizard`) in the AssetCatalog alongside existing Katalog/Mina filters
+- Wizard assets appear with thumbnails, dimensions (from `boundingBox`), triangle counts, and category/subcategory
+- Smart placement using Wizard metadata: `estimatedScale` for initial scale, `center` for floor-level alignment
+- `WizardConnection` state slice in Zustand store with server profile sync
+
+### Fixed
+- `FurnishTools.tsx` referencing non-existent `./AssetCatalog` module (AssetCatalog is inlined in BuildModeV2)
+
 ## [0.7.1] - 2026-03-08
 
 ### Added

@@ -1,7 +1,7 @@
 import { useAppStore } from '../../../store/useAppStore';
 import { Trash2, RotateCcw } from 'lucide-react';
 import { Slider } from '../../ui/slider';
-import AssetCatalog from './AssetCatalog';
+// AssetCatalog is rendered inline in BuildModeV2, not as a separate component heredModeV2, not as a separate component here
 
 export default function FurnishTools() {
   const activeFloorId = useAppStore((s) => s.layout.activeFloorId);
@@ -14,8 +14,7 @@ export default function FurnishTools() {
 
   return (
     <div className="space-y-4 px-1">
-      {/* Asset Catalog (search, categories, thumbnails, import) */}
-      <AssetCatalog />
+      {/* AssetCatalog rendered from BuildModeV2 left panel */}
 
       {/* Placed items */}
       {floorItems.length > 0 && (

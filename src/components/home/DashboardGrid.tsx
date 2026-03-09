@@ -29,6 +29,7 @@ import SunWeatherPanel from './cards/SunWeatherPanel';
 import EnvironmentPanel from './cards/EnvironmentPanel';
 import DisplaySettings from './cards/DisplaySettings';
 import WifiPanel from './cards/WifiPanel';
+import WizardConnectionPanel from './cards/WizardConnectionPanel';
 import WifiWidget from './cards/WifiWidget';
 import AutomationsPanel from './cards/AutomationsPanel';
 import ScenesPanel from './cards/ScenesPanel';
@@ -435,6 +436,7 @@ function SettingsCategory() {
         <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1">Anslutning</h2>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
           <HAConnectionPanel />
+          <WizardConnectionPanel />
           <LocationSettings />
           <WifiPanel />
         </div>

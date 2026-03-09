@@ -116,15 +116,16 @@ const AC_CATEGORY_ICONS: Record<string, React.ElementType> = {
 };
 
 
-type ACSourceFilter = 'all' | 'curated' | 'user';
+type ACSourceFilter = 'all' | 'curated' | 'user' | 'wizard';
 
 interface ACEntry {
   id: string; name: string; thumbnail?: string; category: string;
-  source: 'curated' | 'user' | 'builtin'; modelPath?: string;
+  source: 'curated' | 'user' | 'builtin' | 'wizard'; modelPath?: string;
   catalogItem?: PropCatalogItem; curatedMeta?: CatalogAssetMeta;
   dimensions?: { width: number; depth: number; height: number };
   performance?: { vertices?: number; triangles?: number; textureBytes?: number };
   subcategory?: string;
+  wizardMeta?: import('../../lib/wizardClient').WizardAsset;
 }
 
 function AssetCatalog() {
@@ -172,6 +173,16 @@ function AssetCatalog() {
 
   useEffect(() => { loadCuratedCatalog().then(setCuratedAssets); }, []);
 
+  // Wizard assets
+  const wizardStatus = useAppStore((s) => s.wizard.status);
+  const [wizardAssets, setWizardAssets] = useState<import('../../lib/wizardClient').WizardAsset[]>([]);
+  useEffect(() => {
+    if (wizardStatus !== 'connected') { setWizardAssets([]); return; }
+    import('../../lib/wizardClient').then(({ fetchWizardCatalog }) => {
+      fetchWizardCatalog().then(setWizardAssets).catch((err) => { console.warn('[Wizard] Catalog fetch failed:', err); setWizardAssets([]); });
+    });
+  }, [wizardStatus]);
+
   const allEntries: ACEntry[] = [
     ...curatedAssets.map((c): ACEntry => ({
       id: c.id, name: c.name, thumbnail: c.thumbnail ? `/catalog/${c.thumbnail}` : undefined,
@@ -183,11 +194,28 @@ function AssetCatalog() {
       source: c.source as any, catalogItem: c,
       dimensions: c.dimensions, performance: c.performance as any, subcategory: c.subcategory,
     })),
+    ...wizardAssets.map((w): ACEntry => {
+      const bb = w.boundingBox;
+      const dims = bb ? { width: +(bb.max[0] - bb.min[0]).toFixed(2), depth: +(bb.max[2] - bb.min[2]).toFixed(2), height: +(bb.max[1] - bb.min[1]).toFixed(2) } : undefined;
+      let thumb: string | undefined;
+      if (w.thumbnail) {
+        const base = useAppStore.getState().wizard.url.replace(/\/+$/, '');
+        thumb = w.thumbnail.startsWith('http') ? w.thumbnail : `${base}${w.thumbnail.startsWith('/') ? w.thumbnail : '/' + w.thumbnail}`;
+      }
+      return {
+        id: `wizard-${w.id}`, name: w.name, thumbnail: thumb,
+        category: w.category || 'imported', source: 'wizard', subcategory: w.subcategory,
+        dimensions: dims,
+        performance: w.triangleCount ? { triangles: w.triangleCount } : undefined,
+        wizardMeta: w,
+      };
+    }),
   ];
 
   const categories = [...new Set(allEntries.map((e) => e.category))].sort();
   const hasUser = allEntries.some((e) => e.source === 'user');
   const hasCurated = allEntries.some((e) => e.source === 'curated');
+  const hasWizard = wizardAssets.length > 0;
   const filtered = allEntries
     .filter((e) => !searchQuery || e.name.toLowerCase().includes(searchQuery.toLowerCase()))
     .filter((e) => !filterCategory || e.category === filterCategory)
@@ -275,13 +303,40 @@ function AssetCatalog() {
     setImportDialogOpen(false); setImportResult(null); setImportFile(null); setOptimizedResult(null);
   }, [importFile, importResult, activeFloorId, importName, importCategory, importSubcategory, addToCatalog, saveToCatalog, catalog, curatedAssets, placePropFn, optimizedResult]);
 
-  const handlePlaceEntry = useCallback((entry: ACEntry) => {
+  const handlePlaceEntry = useCallback(async (entry: ACEntry) => {
     if (!activeFloorId) return;
+    if (entry.source === 'wizard' && entry.wizardMeta) {
+      // Fetch model from Wizard and place
+      try {
+        const { getWizardModelUrl } = await import('../../lib/wizardClient');
+        const modelUrl = getWizardModelUrl(entry.wizardMeta.id);
+        const res = await fetch(modelUrl, { signal: AbortSignal.timeout(15000) });
+        if (!res.ok) throw new Error(`Model fetch failed: ${res.status}`);
+        const blob = await res.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        const catalogId = entry.id;
+        if (!catalog.find(c => c.id === catalogId)) {
+          addToCatalog({ id: catalogId, name: entry.name, url: blobUrl, source: 'user', thumbnail: entry.thumbnail, category: entry.category, subcategory: entry.subcategory, placement: 'floor', dimensions: entry.dimensions, performance: entry.performance } as any);
+        }
+        // Use wizard metadata for scale and floor placement
+        const wm = entry.wizardMeta;
+        const scale = wm.estimatedScale || 1;
+        const yOffset = -(wm.center?.y ?? 0) * scale;
+        const tx = Math.round(cameraRef.target.x * 10) / 10;
+        const tz = Math.round(cameraRef.target.z * 10) / 10;
+        addProp({ id: generateId(), catalogId, floorId: activeFloorId, url: blobUrl, position: [tx, yOffset, tz], rotation: [0, 0, 0], scale: [scale, scale, scale] });
+        toast.success(`${entry.name} placerad`);
+      } catch (err) {
+        console.error('[Wizard] Model load failed:', err);
+        toast.error('Kunde inte ladda Wizard-modell');
+      }
+      return;
+    }
     if (entry.source === 'curated' && entry.modelPath) {
       if (!catalog.find(c => c.id === entry.id)) addToCatalog({ id: entry.id, name: entry.name, url: entry.modelPath, source: 'curated', thumbnail: entry.thumbnail, category: entry.category, placement: entry.curatedMeta?.placement, dimensions: entry.curatedMeta?.dimensions, haMapping: entry.curatedMeta?.ha, performance: entry.curatedMeta?.performance } as any);
       placePropFn(entry.id, entry.modelPath);
     } else if (entry.catalogItem) { placePropFn(entry.catalogItem.id, entry.catalogItem.url); }
-  }, [activeFloorId, catalog, addToCatalog, placePropFn]);
+  }, [activeFloorId, catalog, addToCatalog, placePropFn, addProp]);
 
   const openManageDialog = useCallback((entry: ACEntry) => { setManageAsset(entry); setManageName(entry.name); setManageCategory((entry.category as AssetCategory) || 'imported'); setManageSubcategory(entry.subcategory || ''); setManagePlacement(entry.curatedMeta?.placement || 'floor'); setManageDialogOpen(true); }, []);
   const handleSaveMeta = useCallback(async () => { if (!manageAsset) return; try { await updateCatalogMeta(manageAsset.id, { name: manageName.trim() || manageAsset.name, category: manageCategory, subcategory: manageSubcategory || undefined, placement: managePlacement }); clearCatalogCache(); loadCuratedCatalog().then(setCuratedAssets); toast.success('Metadata uppdaterad'); setManageDialogOpen(false); } catch { toast.error('Kunde inte uppdatera'); } }, [manageAsset, manageName, manageCategory, manageSubcategory, managePlacement]);
@@ -299,11 +354,11 @@ function AssetCatalog() {
         <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Sök modell..." className="h-7 text-xs pl-7" />
       </div>
 
-      {(hasUser && hasCurated) && (
-        <div className="flex gap-1">
-          {(['all', 'curated', 'user'] as ACSourceFilter[]).map((sf) => (
+      {(hasUser || hasCurated || hasWizard) && (
+        <div className="flex gap-1 flex-wrap">
+          {(['all', ...(hasCurated ? ['curated'] : []), ...(hasUser ? ['user'] : []), ...(hasWizard ? ['wizard'] : [])] as ACSourceFilter[]).map((sf) => (
             <Button key={sf} size="sm" variant={sourceFilter === sf ? 'default' : 'outline'} className="h-5 text-[9px] px-2 shrink-0" onClick={() => setSourceFilter(sf)}>
-              {sf === 'all' ? 'Alla' : sf === 'curated' ? 'Katalog' : 'Mina'}
+              {sf === 'all' ? 'Alla' : sf === 'curated' ? 'Katalog' : sf === 'user' ? 'Mina' : '✨ Wizard'}
             </Button>
           ))}
         </div>
