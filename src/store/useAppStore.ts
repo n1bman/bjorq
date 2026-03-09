@@ -89,6 +89,7 @@ function syncProfileToServer() {
       calendar: s.calendar,
       automations: s.automations,
       savedScenes: s.savedScenes,
+      wizard: s.wizard,
     }).catch((err) => console.warn('[Sync] Failed to save profiles:', err));
   });
 }

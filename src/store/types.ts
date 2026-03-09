@@ -901,6 +901,14 @@ export interface BuildProject {
 // ─── App State ───
 export type AppMode = 'home' | 'dashboard' | 'build' | 'standby';
 
+// ─── Wizard Connection ───
+export interface WizardConnection {
+  url: string;
+  status: 'disconnected' | 'connected' | 'error';
+  version?: string;
+  lastChecked?: string;
+}
+
 export interface AppState {
   _hostedMode: boolean;
   appMode: AppMode;
@@ -927,6 +935,10 @@ export interface AppState {
   savedScenes: SavedScene[];
   comfort: ComfortState;
   terrain: TerrainSettings;
+  wizard: WizardConnection;
+
+  // Wizard actions
+  setWizard: (changes: Partial<WizardConnection>) => void;
 
   // Performance actions
   setPerformance: (changes: Partial<PerformanceSettings>) => void;
