@@ -81,15 +81,17 @@ async function fetchWeather(lat: number, lon: number) {
 /** Recompute and store the environment profile from current state */
 function updateProfile() {
   const s = useAppStore.getState();
-  const env = s.environment;
+  const env = s.environment ?? {};
+  const defaultAtmo = { fogEnabled: false, fogDensity: 0.3, cloudinessAffectsLight: true, dayNightTransition: 'smooth' as const, atmosphereIntensity: 1.0 };
+  const defaultCal = { northOffset: 0, azimuthCorrection: 0, elevationCorrection: 0, intensityMultiplier: 1.0, indoorBounce: 1.0 };
   const profile = computeEnvironmentProfile({
-    sunAzimuth: env.sunAzimuth,
-    sunElevation: env.sunElevation,
-    weatherCondition: env.weather.condition,
-    cloudCoverage: env.cloudCoverage,
-    calibration: env.sunCalibration,
-    atmosphere: env.atmosphere,
-    precipitationOverride: env.precipitationOverride,
+    sunAzimuth: env.sunAzimuth ?? 180,
+    sunElevation: env.sunElevation ?? 45,
+    weatherCondition: env.weather?.condition ?? 'clear',
+    cloudCoverage: env.cloudCoverage ?? 0,
+    calibration: env.sunCalibration ?? defaultCal,
+    atmosphere: env.atmosphere ?? defaultAtmo,
+    precipitationOverride: env.precipitationOverride ?? 'auto',
   });
   s.setEnvironmentProfile(profile);
 }
