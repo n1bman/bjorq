@@ -185,12 +185,16 @@ function AssetCatalog() {
   // Wizard assets
   const wizardStatus = useAppStore((s) => s.wizard.status);
   const [wizardAssets, setWizardAssets] = useState<import('../../lib/wizardClient').WizardAsset[]>([]);
-  useEffect(() => {
-    if (wizardStatus !== 'connected') { setWizardAssets([]); return; }
+  const fetchWizardAssets = useCallback(() => {
+    if (wizardStatus !== 'connected') { setWizardAssets([]); setWizardError(null); return; }
+    setWizardLoading(true); setWizardError(null);
     import('../../lib/wizardClient').then(({ fetchWizardCatalog }) => {
-      fetchWizardCatalog().then(setWizardAssets).catch((err) => { console.warn('[Wizard] Catalog fetch failed:', err); setWizardAssets([]); });
+      fetchWizardCatalog(true).then((assets) => { setWizardAssets(assets); setWizardError(null); })
+        .catch((err) => { console.error('[Wizard] Catalog fetch failed:', err); setWizardAssets([]); setWizardError(err?.message || 'Kunde inte hämta katalogen'); toast.error('Wizard-katalog kunde inte hämtas'); })
+        .finally(() => setWizardLoading(false));
     });
   }, [wizardStatus]);
+  useEffect(() => { fetchWizardAssets(); }, [fetchWizardAssets]);
 
   // Track which wizard asset IDs have been imported locally
   const importedWizardIds = useMemo(() => new Set(
