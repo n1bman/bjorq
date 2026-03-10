@@ -86,7 +86,7 @@ export async function downloadWizardModel(assetId: string): Promise<Blob> {
 
 export async function downloadWizardThumbnail(assetId: string): Promise<Blob | null> {
   try {
-    const res = await wizardFetch(`/catalog/asset/${encodeURIComponent(assetId)}/thumbnail`, {
+    const res = await wizardFetch(`/assets/${encodeURIComponent(assetId)}/thumbnail`, {
       signal: AbortSignal.timeout(10000),
     });
     if (!res.ok) return null;

@@ -83,7 +83,7 @@ export default function WizardConnectionPanel() {
           disabled={testing}
         />
         <p className="text-[10px] text-muted-foreground">
-          URL till Wizard add-on. T.ex. http://&lt;HA-IP&gt;:8099
+          URL till Wizard add-on. T.ex. http://&lt;HA-IP&gt;:3500
         </p>
       </div>
 
