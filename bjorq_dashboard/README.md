@@ -2,7 +2,7 @@
 
 A 3D smart home dashboard for wall-mounted tablets and kiosks.
 
-![Version](https://img.shields.io/badge/version-1.0.1-blue)
+![Version](https://img.shields.io/badge/version-1.0.2-blue)
 
 ## Features
 
