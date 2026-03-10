@@ -29,6 +29,8 @@
 | 8 | Vacuum Debug & 3D Telemetry | ✅ Done | Phase 7 |
 | 9 | RPi Performance Optimization | ✅ Done | Phase 7 |
 | 10 | Climate & Comfort Engine | ✅ Done | Phase 4 |
+| 11 | Consolidated Graphics & Selective Shadows | ✅ Done | Phase 7 |
+| 12 | Asset Wizard Integration | ✅ Done | Phase 5 |
 
 ---
 
