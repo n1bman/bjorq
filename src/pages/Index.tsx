@@ -50,7 +50,24 @@ const Index = () => {
           callHAService(domain, service, data).catch(console.warn);
         haServiceCaller.current = createThrottledCaller(rawCaller);
       }
-    }).finally(() => { autoDetectPerformance(); setInitDone(true); });
+    }).finally(() => {
+      autoDetectPerformance();
+      // Auto-verify Wizard connection if URL is configured
+      const { wizard, setWizard } = useAppStore.getState();
+      if (wizard.url) {
+        import('../lib/wizardClient').then(({ testWizardConnection, fetchWizardCatalog }) => {
+          testWizardConnection().then(result => {
+            if (result.ok) {
+              setWizard({ status: 'connected', version: result.version, lastChecked: new Date().toISOString() });
+              fetchWizardCatalog(true).catch(() => {});
+            } else {
+              setWizard({ status: 'error' });
+            }
+          });
+        });
+      }
+      setInitDone(true);
+    });
   }, []);
 
   if (!initDone) return null;

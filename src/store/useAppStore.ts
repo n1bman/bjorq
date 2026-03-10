@@ -1621,6 +1621,11 @@ export const useAppStore = create<AppState>()(
           calendar: state.calendar,
           automations: state.automations,
           savedScenes: state.savedScenes,
+          wizard: {
+            url: state.wizard.url,
+            status: 'disconnected' as const,
+            version: state.wizard.version,
+          },
           homeAssistant: {
             wsUrl: state.homeAssistant.wsUrl,
             token: state.homeAssistant.token,
@@ -1680,6 +1685,7 @@ export async function initHostedMode() {
       if (p.calendar) stateUpdate.calendar = p.calendar;
       if (p.automations) stateUpdate.automations = p.automations;
       if (p.savedScenes) stateUpdate.savedScenes = p.savedScenes;
+      if (p.wizard) stateUpdate.wizard = p.wizard;
     }
 
     // Apply project data
