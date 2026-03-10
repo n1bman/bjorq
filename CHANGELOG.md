@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.5] - 2026-03-10
+
+### Fixed
+- **Wizard thumbnails missing** — Assets from Wizard now always fall back to the direct `/assets/:id/thumbnail` endpoint when the catalog index doesn't include a thumbnail path.
+
+### Improved
+- **Asset catalog redesign for scale** — Grouped by source (Wizard / Mina / Katalog) with collapsible sections, left-border color indicators (orange = Wizard, blue = user/imported), grid/list view toggle, and sticky category filters. Handles 30-50+ models cleanly.
+
 ## [1.0.4] - 2026-03-10
 
 ### Fixed
