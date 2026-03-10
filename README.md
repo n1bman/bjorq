@@ -2,7 +2,7 @@
 
 A 3D smart home dashboard for wall-mounted tablets and kiosks, powered by Home Assistant.
 
-![Version](https://img.shields.io/badge/version-0.7.3-blue)
+![Version](https://img.shields.io/badge/version-1.0.0-blue)
 
 ## Quick Start
 
