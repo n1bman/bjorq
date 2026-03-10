@@ -78,7 +78,7 @@ export default function WizardConnectionPanel() {
         <Input
           value={localUrl}
           onChange={(e) => setLocalUrl(e.target.value)}
-          placeholder="http://homeassistant.local:8099"
+          placeholder="http://homeassistant.local:3500"
           className="h-8 text-xs bg-secondary/30"
           disabled={testing}
         />
