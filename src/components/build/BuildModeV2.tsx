@@ -177,6 +177,8 @@ function AssetCatalog() {
   const [wizardActionEntry, setWizardActionEntry] = useState<ACEntry | null>(null);
   const [wizardActionOpen, setWizardActionOpen] = useState(false);
   const [wizardImporting, setWizardImporting] = useState(false);
+  const [wizardLoading, setWizardLoading] = useState(false);
+  const [wizardError, setWizardError] = useState<string | null>(null);
 
   useEffect(() => { loadCuratedCatalog().then(setCuratedAssets); }, []);
 
