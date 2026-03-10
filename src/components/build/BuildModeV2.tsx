@@ -709,6 +709,39 @@ function AssetCatalog() {
           <DialogFooter><Button size="sm" variant="outline" onClick={() => setManageDialogOpen(false)}>Avbryt</Button><Button size="sm" onClick={handleSaveMeta}>Spara</Button></DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Wizard dual-mode action dialog */}
+      <Dialog open={wizardActionOpen} onOpenChange={(open) => { setWizardActionOpen(open); if (!open) { setWizardActionEntry(null); setWizardImporting(false); } }}>
+        <DialogContent className="max-w-xs">
+          <DialogHeader>
+            <DialogTitle className="text-sm flex items-center gap-2"><Wand2 size={14} /> {wizardActionEntry?.name}</DialogTitle>
+            <DialogDescription className="text-[10px]">Välj hur du vill använda denna Wizard-resurs.</DialogDescription>
+          </DialogHeader>
+          {wizardActionEntry && (
+            <div className="space-y-3">
+              {wizardActionEntry.thumbnail && (
+                <div className="flex justify-center"><img src={wizardActionEntry.thumbnail} alt={wizardActionEntry.name} className="w-20 h-20 object-contain rounded bg-muted/20" /></div>
+              )}
+              <div className="flex flex-wrap gap-1 text-[9px] text-muted-foreground justify-center">
+                {wizardActionEntry.dimensions && <span>{wizardActionEntry.dimensions.width}×{wizardActionEntry.dimensions.depth}×{wizardActionEntry.dimensions.height}m</span>}
+                {wizardActionEntry.performance?.triangles && <span>· {wizardActionEntry.performance.triangles > 1000 ? `${(wizardActionEntry.performance.triangles / 1000).toFixed(1)}k` : wizardActionEntry.performance.triangles} tris</span>}
+                {wizardActionEntry.wizardMeta?.fileSize && <span>· {(wizardActionEntry.wizardMeta.fileSize / 1024).toFixed(0)} KB</span>}
+              </div>
+            </div>
+          )}
+          <DialogFooter className="flex-col gap-2 sm:flex-col">
+            <Button size="sm" variant="outline" onClick={handleWizardSync} disabled={wizardImporting} className="w-full justify-start gap-2 text-xs">
+              <LinkIcon size={14} /> Använd synkad
+              <span className="ml-auto text-[8px] text-muted-foreground">live från Wizard</span>
+            </Button>
+            <Button size="sm" onClick={handleWizardImport} disabled={wizardImporting} className="w-full justify-start gap-2 text-xs">
+              {wizardImporting ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+              Importera till Dashboard
+              <span className="ml-auto text-[8px] text-muted-foreground">lokal kopia</span>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
