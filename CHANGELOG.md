@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.3] - 2026-03-10
+
+### Fixed
+- **Wizard connection lost on restart** — Wizard state (URL, status, version) was saved to server but never restored on bootstrap. Now persisted in both hosted mode and localStorage (DEV mode).
+- **No auto-reconnect** — Dashboard now auto-verifies Wizard connection on startup if a URL is configured, and fetches the catalog silently.
+
+### Improved
+- **WizardConnectionPanel UX** — Shows asset count on connect, added Reconnect/Refresh/Reset action buttons (mirrors HA panel pattern).
+
 ## [1.0.2] - 2026-03-10
 
 ### Fixed
