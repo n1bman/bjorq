@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0] - 2026-03-10
+
+### 🎉 First Stable Release
+
+BJORQ Dashboard reaches v1.0.0 — a fully featured 3D smart home dashboard for Home Assistant.
+
+### Added
+- **Onboarding guide** — new `ONBOARDING.md` with step-by-step setup instructions
+- **Asset Wizard API alignment** — routes updated to match actual Wizard endpoints (`/libraries`, `/assets/:id/model|thumbnail`)
+- **Wizard cache invalidation** — catalog cache clears automatically when Wizard URL changes
+- **Wizard documentation** — added to Settings table and roadmap (Phase 12)
+
+### Fixed
+- **XSS vulnerability** in error fallback (`main.tsx`) — replaced `innerHTML` with safe `textContent`
+- **HA proxy double-fetch** for camera streams — eliminated redundant network request
+- **Backup version hardcoded** to `0.1.5` — now reads dynamically from `package.json`
+- **Duplicate settings rows** in documentation (WiFi, Widgetar, Data & Backup listed twice)
+
+### Changed
+- Wizard connection placeholder updated to port `3500` (matching actual Wizard add-on)
+- Roadmap updated with Phase 11 (Consolidated Graphics) and Phase 12 (Asset Wizard Integration)
+- README documentation table now includes onboarding guide link
+
 ## [0.7.3] - 2026-03-10
 
 ### Added
