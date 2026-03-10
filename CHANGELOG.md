@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.3] - 2026-03-10
+
+### Added
+- **Wizard dual-mode assets** — choose between Synced (live reference to Wizard) or Imported (local copy in Dashboard) when placing Wizard assets
+- Action dialog when selecting a Wizard asset with "Använd synkad" and "Importera till Dashboard" options
+- Visual badges on asset cards: "Wizard", "Synced", "Imported" to distinguish asset sources
+- `downloadWizardModel()` and `downloadWizardThumbnail()` helpers in wizardClient for import flow
+- `getWizardThumbnailUrl()` dedicated thumbnail endpoint helper
+- `wizardAssetId`, `wizardBaseUrl`, `wizardMode`, `wizardMeta` fields on `PropCatalogItem` for dual-mode tracking
+- Imported Wizard assets persist independently — Wizard no longer required after import
+- Synced assets always fetch latest model from Wizard on placement
+
+### Changed
+- Source filters updated: "Wizard" shows synced + live catalog; "Mina" shows imports including imported Wizard assets
+- Already-imported Wizard assets no longer duplicate in the Wizard catalog view
+- Asset cards now show Wand2 icon for Wizard-related entries instead of generic User/Archive icons
+
+### Fixed
+- Wizard catalog entries deduplication — imported assets excluded from live Wizard listing
+
 ## [0.7.2] - 2026-03-09
 
 ### Added
