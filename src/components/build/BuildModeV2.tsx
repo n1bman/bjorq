@@ -190,6 +190,11 @@ function AssetCatalog() {
     });
   }, [wizardStatus]);
 
+  // Track which wizard asset IDs have been imported locally
+  const importedWizardIds = useMemo(() => new Set(
+    catalog.filter(c => c.wizardMode === 'imported' && c.wizardAssetId).map(c => c.wizardAssetId!)
+  ), [catalog]);
+
   const allEntries: ACEntry[] = [
     ...curatedAssets.map((c): ACEntry => ({
       id: c.id, name: c.name, thumbnail: c.thumbnail ? `/catalog/${c.thumbnail}` : undefined,
@@ -198,10 +203,12 @@ function AssetCatalog() {
     })),
     ...catalog.map((c): ACEntry => ({
       id: c.id, name: c.name, thumbnail: c.thumbnail, category: c.category || 'imported',
-      source: c.source as any, catalogItem: c,
+      source: c.wizardMode === 'synced' ? 'wizard' as const : c.source as any, catalogItem: c,
       dimensions: c.dimensions, performance: c.performance as any, subcategory: c.subcategory,
+      wizardMode: c.wizardMode,
     })),
-    ...wizardAssets.map((w): ACEntry => {
+    // Only show wizard catalog entries that haven't been imported already
+    ...wizardAssets.filter(w => !importedWizardIds.has(w.id)).map((w): ACEntry => {
       const bb = w.boundingBox;
       const dims = bb ? { width: +(bb.max[0] - bb.min[0]).toFixed(2), depth: +(bb.max[2] - bb.min[2]).toFixed(2), height: +(bb.max[1] - bb.min[1]).toFixed(2) } : undefined;
       let thumb: string | undefined;
@@ -220,13 +227,18 @@ function AssetCatalog() {
   ];
 
   const categories = [...new Set(allEntries.map((e) => e.category))].sort();
-  const hasUser = allEntries.some((e) => e.source === 'user');
+  const hasUser = allEntries.some((e) => e.source === 'user' || e.wizardMode === 'imported');
   const hasCurated = allEntries.some((e) => e.source === 'curated');
-  const hasWizard = wizardAssets.length > 0;
+  const hasWizard = wizardAssets.length > 0 || allEntries.some(e => e.wizardMode === 'synced');
   const filtered = allEntries
     .filter((e) => !searchQuery || e.name.toLowerCase().includes(searchQuery.toLowerCase()))
     .filter((e) => !filterCategory || e.category === filterCategory)
-    .filter((e) => sourceFilter === 'all' || e.source === sourceFilter)
+    .filter((e) => {
+      if (sourceFilter === 'all') return true;
+      if (sourceFilter === 'wizard') return e.source === 'wizard' || e.wizardMode === 'synced';
+      if (sourceFilter === 'user') return (e.source === 'user' && !e.wizardMode) || e.wizardMode === 'imported';
+      return e.source === sourceFilter;
+    })
     .sort((a, b) => a.name.localeCompare(b.name, 'sv'));
 
   const handleFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
