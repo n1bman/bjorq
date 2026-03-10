@@ -50,10 +50,8 @@ Access via **Inställningar** in the category grid:
 | **Standby** | Idle timeout, standby clock screen, camera view |
 | **Skärm** | App mode commands, fullscreen toggle, OS kiosk instructions |
 | **Home Assistant** | HA URL, access token, connection status |
+| **Wizard** | Asset Wizard URL, connection test, catalog sync |
 | **Plats** | Latitude/longitude for sun position and weather |
-| **WiFi** | Network info display |
-| **Widgetar** | Toggle which widgets appear on the home screen |
-| **Data & Backup** | Save, restore, clear data, load demo project |
 | **WiFi** | Network info display |
 | **Widgetar** | Toggle which widgets appear on the home screen |
 | **Data & Backup** | Save, restore, clear data, load demo project |
