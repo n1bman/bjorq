@@ -152,6 +152,8 @@ function AssetCatalog() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCategory, setFilterCategory] = useState<string | null>(null);
   const [sourceFilter, setSourceFilter] = useState<ACSourceFilter>('all');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [importResult, setImportResult] = useState<PipelineResult | null>(null);
   const [importFile, setImportFile] = useState<File | null>(null);
@@ -221,6 +223,11 @@ function AssetCatalog() {
       if (w.thumbnail) {
         const base = useAppStore.getState().wizard.url.replace(/\/+$/, '');
         thumb = w.thumbnail.startsWith('http') ? w.thumbnail : `${base}${w.thumbnail.startsWith('/') ? w.thumbnail : '/' + w.thumbnail}`;
+      }
+      // Always fall back to the direct thumbnail endpoint
+      if (!thumb) {
+        const base = useAppStore.getState().wizard.url.replace(/\/+$/, '');
+        thumb = `${base}/assets/${encodeURIComponent(w.id)}/thumbnail`;
       }
       return {
         id: `wizard-${w.id}`, name: w.name, thumbnail: thumb,
@@ -495,7 +502,7 @@ function AssetCatalog() {
       )}
 
       {categories.length > 1 && (
-        <div className="flex gap-1 overflow-x-auto pb-1">
+        <div className="flex gap-1 overflow-x-auto pb-1 sticky top-0 z-10 bg-card/95 backdrop-blur-sm py-1">
           <Button size="sm" variant={!filterCategory ? 'default' : 'outline'} className="h-5 text-[9px] px-2 shrink-0" onClick={() => setFilterCategory(null)}>Alla</Button>
           {categories.map((c) => (
             <Button key={c} size="sm" variant={filterCategory === c ? 'default' : 'outline'} className="h-5 text-[9px] px-2 shrink-0" onClick={() => setFilterCategory(c)}>
@@ -504,6 +511,18 @@ function AssetCatalog() {
           ))}
         </div>
       )}
+
+      {/* View mode toggle */}
+      <div className="flex justify-end">
+        <div className="flex border border-border rounded-md overflow-hidden">
+          <button onClick={() => setViewMode('grid')} className={cn("p-1", viewMode === 'grid' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted')}>
+            <Grip size={12} />
+          </button>
+          <button onClick={() => setViewMode('list')} className={cn("p-1", viewMode === 'list' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted')}>
+            <Box size={12} />
+          </button>
+        </div>
+      </div>
 
       {sourceFilter === 'wizard' && wizardLoading && (
         <div className="flex items-center justify-center gap-2 py-6 text-muted-foreground">
@@ -524,38 +543,116 @@ function AssetCatalog() {
           <span className="text-xs">Inga assets i Wizard-katalogen</span>
         </div>
       )}
-      <div className="grid grid-cols-2 gap-1.5 max-h-[60vh] overflow-y-auto">
-        {filtered.map((entry) => (
-          <button key={entry.id} onClick={() => handlePlaceEntry(entry)} className="relative flex flex-col items-center gap-0.5 p-2 rounded-lg bg-secondary/30 hover:bg-secondary/60 transition-colors text-xs group min-h-[44px]">
-            {instanceCounts[entry.id] > 0 && <div className="absolute top-1 left-1 bg-primary text-primary-foreground text-[8px] font-bold rounded-full w-4 h-4 flex items-center justify-center z-20">×{instanceCounts[entry.id]}</div>}
-            
-            <div className="absolute top-1 right-1 flex items-center gap-0.5 z-10">
-              {entry.wizardMode === 'synced' && <Badge variant="outline" className="h-3 px-1 text-[7px] border-primary/40 text-primary">Synced</Badge>}
-              {entry.wizardMode === 'imported' && <Badge variant="secondary" className="h-3 px-1 text-[7px]">Imported</Badge>}
-              {entry.source === 'wizard' && !entry.wizardMode && <Badge variant="outline" className="h-3 px-1 text-[7px] border-accent text-accent-foreground">Wizard</Badge>}
-              {entry.source === 'wizard' || entry.wizardMode ? <Wand2 size={8} className="text-muted-foreground/50" /> : entry.source === 'curated' ? <Archive size={8} className="text-muted-foreground/50" /> : <User size={8} className="text-muted-foreground/50" />}
-            </div>
-            {entry.thumbnail ? (
-              <img src={entry.thumbnail} alt={entry.name} className="w-full h-16 object-contain rounded" loading="lazy"
-                onError={(e) => { e.currentTarget.style.display = 'none'; const p = e.currentTarget.nextElementSibling; if (p) (p as HTMLElement).style.display = 'flex'; }} />
-            ) : null}
-            <div className="w-full h-16 bg-muted/30 rounded items-center justify-center text-muted-foreground" style={{ display: entry.thumbnail ? 'none' : 'flex' }}>
-              {(() => { const I = AC_CATEGORY_ICONS[entry.category] || Box; return <I size={20} strokeWidth={1.5} />; })()}
-            </div>
-            <span className="text-[10px] text-foreground truncate w-full text-center">{entry.name}</span>
-            <div className="flex items-center gap-1 w-full justify-center">
-              {entry.dimensions && <span className="text-[8px] text-muted-foreground">{entry.dimensions.width}×{entry.dimensions.depth}×{entry.dimensions.height}m</span>}
-              {getPerfColor(entry.performance) && <span className={`inline-block w-1.5 h-1.5 rounded-full ${getPerfColor(entry.performance)}`} />}
-              {entry.subcategory && entry.subcategory !== entry.category && <span className="text-[8px] text-muted-foreground/60">{entry.subcategory}</span>}
-            </div>
-            {entry.source === 'user' && !entry.wizardMode && <button onClick={(e) => { e.stopPropagation(); removeFromCatalog(entry.id); }} className="absolute bottom-1 right-1 p-0.5 rounded opacity-0 group-hover:opacity-100 hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-opacity"><Trash2 size={10} /></button>}
-            {entry.source === 'curated' && isHostedSync() && <button onClick={(e) => { e.stopPropagation(); openManageDialog(entry); }} className="absolute bottom-1 right-1 p-0.5 rounded opacity-0 group-hover:opacity-100 hover:bg-accent text-muted-foreground hover:text-foreground transition-opacity"><Settings size={10} /></button>}
-          </button>
-        ))}
-        <button onClick={() => fileRef.current?.click()} className="flex flex-col items-center justify-center gap-1 p-2 rounded-lg border-2 border-dashed border-border hover:border-primary/50 text-muted-foreground hover:text-primary transition-all min-h-[80px]">
-          <Upload size={16} /><span className="text-[10px]">Importera</span>
-        </button>
-      </div>
+
+      {/* Grouped catalog sections */}
+      {(() => {
+        const sourceGroups: { key: string; label: string; borderColor: string; icon: React.ElementType; entries: ACEntry[] }[] = [];
+        const wizardEntries = filtered.filter(e => e.source === 'wizard' || e.wizardMode === 'synced');
+        const userEntries = filtered.filter(e => (e.source === 'user' && !e.wizardMode) || e.wizardMode === 'imported');
+        const curatedEntries = filtered.filter(e => e.source === 'curated');
+
+        if (wizardEntries.length > 0) sourceGroups.push({ key: 'wizard', label: 'Wizard', borderColor: 'border-l-orange-500', icon: Wand2, entries: wizardEntries });
+        if (userEntries.length > 0) sourceGroups.push({ key: 'user', label: 'Mina', borderColor: 'border-l-blue-500', icon: User, entries: userEntries });
+        if (curatedEntries.length > 0) sourceGroups.push({ key: 'curated', label: 'Katalog', borderColor: 'border-l-muted-foreground/40', icon: Archive, entries: curatedEntries });
+
+        // If only one source group or sourceFilter is specific, skip grouping
+        const skipGrouping = sourceGroups.length <= 1 || sourceFilter !== 'all';
+
+        const renderCard = (entry: ACEntry) => {
+          const leftBorder = entry.source === 'wizard' || entry.wizardMode === 'synced' ? 'border-l-2 border-l-orange-500'
+            : entry.wizardMode === 'imported' ? 'border-l-2 border-l-blue-500'
+            : entry.source === 'user' ? 'border-l-2 border-l-blue-400'
+            : '';
+
+          if (viewMode === 'list') {
+            return (
+              <button key={entry.id} onClick={() => handlePlaceEntry(entry)} className={cn("flex items-center gap-2 w-full px-2 py-1.5 rounded-md bg-secondary/30 hover:bg-secondary/60 transition-colors text-xs group", leftBorder)}>
+                {entry.thumbnail ? (
+                  <img src={entry.thumbnail} alt={entry.name} className="w-8 h-8 object-contain rounded shrink-0" loading="lazy"
+                    onError={(e) => { e.currentTarget.style.display = 'none'; const p = e.currentTarget.nextElementSibling; if (p) (p as HTMLElement).style.display = 'flex'; }} />
+                ) : null}
+                <div className="w-8 h-8 bg-muted/30 rounded items-center justify-center text-muted-foreground shrink-0" style={{ display: entry.thumbnail ? 'none' : 'flex' }}>
+                  {(() => { const I = AC_CATEGORY_ICONS[entry.category] || Box; return <I size={14} strokeWidth={1.5} />; })()}
+                </div>
+                <div className="flex-1 min-w-0 text-left">
+                  <span className="text-[10px] text-foreground truncate block">{entry.name}</span>
+                  <div className="flex items-center gap-1">
+                    {entry.dimensions && <span className="text-[8px] text-muted-foreground">{entry.dimensions.width}×{entry.dimensions.depth}×{entry.dimensions.height}m</span>}
+                    {getPerfColor(entry.performance) && <span className={`inline-block w-1.5 h-1.5 rounded-full ${getPerfColor(entry.performance)}`} />}
+                  </div>
+                </div>
+                {instanceCounts[entry.id] > 0 && <span className="bg-primary text-primary-foreground text-[8px] font-bold rounded-full w-4 h-4 flex items-center justify-center shrink-0">×{instanceCounts[entry.id]}</span>}
+                {entry.source === 'user' && !entry.wizardMode && <button onClick={(e) => { e.stopPropagation(); removeFromCatalog(entry.id); }} className="p-0.5 rounded opacity-0 group-hover:opacity-100 hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-opacity shrink-0"><Trash2 size={10} /></button>}
+              </button>
+            );
+          }
+
+          return (
+            <button key={entry.id} onClick={() => handlePlaceEntry(entry)} className={cn("relative flex flex-col items-center gap-0.5 p-2 rounded-lg bg-secondary/30 hover:bg-secondary/60 transition-colors text-xs group min-h-[44px]", leftBorder)}>
+              {instanceCounts[entry.id] > 0 && <div className="absolute top-1 left-1 bg-primary text-primary-foreground text-[8px] font-bold rounded-full w-4 h-4 flex items-center justify-center z-20">×{instanceCounts[entry.id]}</div>}
+              {entry.thumbnail ? (
+                <img src={entry.thumbnail} alt={entry.name} className="w-full h-16 object-contain rounded" loading="lazy"
+                  onError={(e) => { e.currentTarget.style.display = 'none'; const p = e.currentTarget.nextElementSibling; if (p) (p as HTMLElement).style.display = 'flex'; }} />
+              ) : null}
+              <div className="w-full h-16 bg-muted/30 rounded items-center justify-center text-muted-foreground" style={{ display: entry.thumbnail ? 'none' : 'flex' }}>
+                {(() => { const I = AC_CATEGORY_ICONS[entry.category] || Box; return <I size={20} strokeWidth={1.5} />; })()}
+              </div>
+              <span className="text-[10px] text-foreground truncate w-full text-center">{entry.name}</span>
+              <div className="flex items-center gap-1 w-full justify-center">
+                {entry.dimensions && <span className="text-[8px] text-muted-foreground">{entry.dimensions.width}×{entry.dimensions.depth}×{entry.dimensions.height}m</span>}
+                {getPerfColor(entry.performance) && <span className={`inline-block w-1.5 h-1.5 rounded-full ${getPerfColor(entry.performance)}`} />}
+                {entry.subcategory && entry.subcategory !== entry.category && <span className="text-[8px] text-muted-foreground/60">{entry.subcategory}</span>}
+              </div>
+              {entry.source === 'user' && !entry.wizardMode && <button onClick={(e) => { e.stopPropagation(); removeFromCatalog(entry.id); }} className="absolute bottom-1 right-1 p-0.5 rounded opacity-0 group-hover:opacity-100 hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-opacity"><Trash2 size={10} /></button>}
+              {entry.source === 'curated' && isHostedSync() && <button onClick={(e) => { e.stopPropagation(); openManageDialog(entry); }} className="absolute bottom-1 right-1 p-0.5 rounded opacity-0 group-hover:opacity-100 hover:bg-accent text-muted-foreground hover:text-foreground transition-opacity"><Settings size={10} /></button>}
+            </button>
+          );
+        };
+
+        return (
+          <div className="max-h-[60vh] overflow-y-auto space-y-2">
+            {skipGrouping ? (
+              <div className={viewMode === 'grid' ? 'grid grid-cols-2 gap-1.5' : 'space-y-1'}>
+                {filtered.map(renderCard)}
+                {viewMode === 'grid' && (
+                  <button onClick={() => fileRef.current?.click()} className="flex flex-col items-center justify-center gap-1 p-2 rounded-lg border-2 border-dashed border-border hover:border-primary/50 text-muted-foreground hover:text-primary transition-all min-h-[80px]">
+                    <Upload size={16} /><span className="text-[10px]">Importera</span>
+                  </button>
+                )}
+              </div>
+            ) : (
+              sourceGroups.map((group) => (
+                <div key={group.key}>
+                  <button
+                    onClick={() => setCollapsedSections(prev => ({ ...prev, [group.key]: !prev[group.key] }))}
+                    className="flex items-center gap-1.5 w-full py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
+                  >
+                    {collapsedSections[group.key] ? <ChevronRight size={10} /> : <ChevronDown size={10} />}
+                    <group.icon size={10} />
+                    <span>{group.label}</span>
+                    <span className="text-[9px] font-normal ml-auto">{group.entries.length}</span>
+                  </button>
+                  {!collapsedSections[group.key] && (
+                    <div className={viewMode === 'grid' ? 'grid grid-cols-2 gap-1.5 mt-1' : 'space-y-1 mt-1'}>
+                      {group.entries.map(renderCard)}
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+            {viewMode === 'list' && (
+              <button onClick={() => fileRef.current?.click()} className="flex items-center gap-2 w-full px-2 py-2 rounded-md border-2 border-dashed border-border hover:border-primary/50 text-muted-foreground hover:text-primary transition-all text-xs">
+                <Upload size={14} /><span className="text-[10px]">Importera modell</span>
+              </button>
+            )}
+            {!skipGrouping && viewMode === 'grid' && (
+              <button onClick={() => fileRef.current?.click()} className="flex flex-col items-center justify-center gap-1 p-2 rounded-lg border-2 border-dashed border-border hover:border-primary/50 text-muted-foreground hover:text-primary transition-all min-h-[80px]">
+                <Upload size={16} /><span className="text-[10px]">Importera</span>
+              </button>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Placed items on this floor */}
       {floorProps.length > 0 && (
