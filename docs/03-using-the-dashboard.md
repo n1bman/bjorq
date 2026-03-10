@@ -93,6 +93,7 @@ Add furniture and props to your rooms:
 - Place props with drag-and-drop positioning
 - Adjust position, rotation, and scale per prop
 - Each prop shows its triangle count and performance impact
+- Connect the **BJORQ Asset Wizard** add-on for access to a larger, centrally managed model library (see **Inställningar → Wizard**)
 
 ### Devices (Enheter)
 
