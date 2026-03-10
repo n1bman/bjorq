@@ -504,7 +504,12 @@ function AssetCatalog() {
           <button key={entry.id} onClick={() => handlePlaceEntry(entry)} className="relative flex flex-col items-center gap-0.5 p-2 rounded-lg bg-secondary/30 hover:bg-secondary/60 transition-colors text-xs group min-h-[44px]">
             {instanceCounts[entry.id] > 0 && <div className="absolute top-1 left-1 bg-primary text-primary-foreground text-[8px] font-bold rounded-full w-4 h-4 flex items-center justify-center z-20">×{instanceCounts[entry.id]}</div>}
             
-            <div className="absolute top-1 right-1 p-0.5 rounded text-muted-foreground/50 z-10">{entry.source === 'curated' ? <Archive size={8} /> : <User size={8} />}</div>
+            <div className="absolute top-1 right-1 flex items-center gap-0.5 z-10">
+              {entry.wizardMode === 'synced' && <Badge variant="outline" className="h-3 px-1 text-[7px] border-primary/40 text-primary">Synced</Badge>}
+              {entry.wizardMode === 'imported' && <Badge variant="secondary" className="h-3 px-1 text-[7px]">Imported</Badge>}
+              {entry.source === 'wizard' && !entry.wizardMode && <Badge variant="outline" className="h-3 px-1 text-[7px] border-accent text-accent-foreground">Wizard</Badge>}
+              {entry.source === 'wizard' || entry.wizardMode ? <Wand2 size={8} className="text-muted-foreground/50" /> : entry.source === 'curated' ? <Archive size={8} className="text-muted-foreground/50" /> : <User size={8} className="text-muted-foreground/50" />}
+            </div>
             {entry.thumbnail ? (
               <img src={entry.thumbnail} alt={entry.name} className="w-full h-16 object-contain rounded" loading="lazy"
                 onError={(e) => { e.currentTarget.style.display = 'none'; const p = e.currentTarget.nextElementSibling; if (p) (p as HTMLElement).style.display = 'flex'; }} />
@@ -518,7 +523,7 @@ function AssetCatalog() {
               {getPerfColor(entry.performance) && <span className={`inline-block w-1.5 h-1.5 rounded-full ${getPerfColor(entry.performance)}`} />}
               {entry.subcategory && entry.subcategory !== entry.category && <span className="text-[8px] text-muted-foreground/60">{entry.subcategory}</span>}
             </div>
-            {entry.source === 'user' && <button onClick={(e) => { e.stopPropagation(); removeFromCatalog(entry.id); }} className="absolute bottom-1 right-1 p-0.5 rounded opacity-0 group-hover:opacity-100 hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-opacity"><Trash2 size={10} /></button>}
+            {entry.source === 'user' && !entry.wizardMode && <button onClick={(e) => { e.stopPropagation(); removeFromCatalog(entry.id); }} className="absolute bottom-1 right-1 p-0.5 rounded opacity-0 group-hover:opacity-100 hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-opacity"><Trash2 size={10} /></button>}
             {entry.source === 'curated' && isHostedSync() && <button onClick={(e) => { e.stopPropagation(); openManageDialog(entry); }} className="absolute bottom-1 right-1 p-0.5 rounded opacity-0 group-hover:opacity-100 hover:bg-accent text-muted-foreground hover:text-foreground transition-opacity"><Settings size={10} /></button>}
           </button>
         ))}
