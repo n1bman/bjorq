@@ -14,14 +14,24 @@ router.all('/ha/*', async (req, res) => {
       return res.status(400).json({ error: 'Home Assistant not configured' });
     }
 
-    // Strip /api/ha/ prefix and forward
-    const haPath = req.params[0]; // everything after /ha/
+    const haPath = req.params[0];
     const url = `${baseUrl.replace(/\/$/, '')}/api/${haPath}`;
 
     const headers = {
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json',
     };
+
+    // Camera proxy: return image data directly (no double-fetch)
+    if (haPath.startsWith('camera_proxy/')) {
+      const imgResponse = await fetch(url, { method: 'GET', headers: { 'Authorization': `Bearer ${token}` } });
+      if (!imgResponse.ok) {
+        return res.status(imgResponse.status).json({ error: 'Camera proxy failed' });
+      }
+      const ct = imgResponse.headers.get('content-type') || 'image/jpeg';
+      const buffer = Buffer.from(await imgResponse.arrayBuffer());
+      return res.status(200).type(ct).send(buffer);
+    }
 
     const fetchOptions = {
       method: req.method,
@@ -33,17 +43,6 @@ router.all('/ha/*', async (req, res) => {
 
     const response = await fetch(url, fetchOptions);
     const contentType = response.headers.get('content-type') || '';
-
-    // Camera proxy: return image data as-is
-    if (haPath.startsWith('camera_proxy/')) {
-      const imgResponse = await fetch(url, { method: 'GET', headers: { 'Authorization': `Bearer ${token}` } });
-      if (!imgResponse.ok) {
-        return res.status(imgResponse.status).json({ error: 'Camera proxy failed' });
-      }
-      const ct = imgResponse.headers.get('content-type') || 'image/jpeg';
-      const buffer = Buffer.from(await imgResponse.arrayBuffer());
-      return res.status(200).type(ct).send(buffer);
-    }
 
     if (contentType.includes('application/json')) {
       const data = await response.json();

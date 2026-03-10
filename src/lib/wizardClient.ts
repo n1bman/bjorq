@@ -17,6 +17,7 @@ export interface WizardAsset {
 }
 
 let _catalogCache: WizardAsset[] | null = null;
+let _catalogCacheUrl: string = '';
 
 function getBaseUrl(): string {
   return useAppStore.getState().wizard.url.replace(/\/+$/, '');

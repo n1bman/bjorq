@@ -8,5 +8,8 @@ try {
   createRoot(document.getElementById("root")!).render(<App />);
 } catch (err) {
   console.error('[App] Failed to render:', err);
-  document.body.innerHTML = `<pre style="color:red;padding:2rem">${err}</pre>`;
+  const pre = document.createElement('pre');
+  pre.style.cssText = 'color:red;padding:2rem';
+  pre.textContent = String(err);
+  document.body.appendChild(pre);
 }
