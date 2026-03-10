@@ -49,10 +49,10 @@ export async function testWizardConnection(): Promise<{ ok: boolean; version?: s
 
 export async function fetchWizardCatalog(force = false): Promise<WizardAsset[]> {
   if (_catalogCache && !force) return _catalogCache;
-  const res = await wizardFetch('/catalog/index');
+  const res = await wizardFetch('/libraries');
   if (!res.ok) throw new Error(`Wizard catalog fetch failed: ${res.status}`);
   const data = await res.json();
-  const assets: WizardAsset[] = Array.isArray(data) ? data : (data.assets ?? data.items ?? []);
+  const assets: WizardAsset[] = Array.isArray(data) ? data : (data.assets ?? data.items ?? data.libraries ?? []);
   _catalogCache = assets;
   return assets;
 }
@@ -62,11 +62,11 @@ export function clearWizardCatalogCache() {
 }
 
 export function getWizardModelUrl(assetId: string): string {
-  return `${getBaseUrl()}/catalog/asset/${encodeURIComponent(assetId)}/model`;
+  return `${getBaseUrl()}/assets/${encodeURIComponent(assetId)}/model`;
 }
 
 export function getWizardThumbnailUrl(assetId: string): string {
-  return `${getBaseUrl()}/catalog/asset/${encodeURIComponent(assetId)}/thumbnail`;
+  return `${getBaseUrl()}/assets/${encodeURIComponent(assetId)}/thumbnail`;
 }
 
 export function getWizardAssetThumbnail(asset: WizardAsset): string | undefined {
@@ -77,7 +77,7 @@ export function getWizardAssetThumbnail(asset: WizardAsset): string | undefined 
 }
 
 export async function downloadWizardModel(assetId: string): Promise<Blob> {
-  const res = await wizardFetch(`/catalog/asset/${encodeURIComponent(assetId)}/model`, {
+  const res = await wizardFetch(`/assets/${encodeURIComponent(assetId)}/model`, {
     signal: AbortSignal.timeout(30000),
   });
   if (!res.ok) throw new Error(`Model download failed: ${res.status}`);
@@ -86,7 +86,7 @@ export async function downloadWizardModel(assetId: string): Promise<Blob> {
 
 export async function downloadWizardThumbnail(assetId: string): Promise<Blob | null> {
   try {
-    const res = await wizardFetch(`/catalog/asset/${encodeURIComponent(assetId)}/thumbnail`, {
+    const res = await wizardFetch(`/assets/${encodeURIComponent(assetId)}/thumbnail`, {
       signal: AbortSignal.timeout(10000),
     });
     if (!res.ok) return null;

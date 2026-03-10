@@ -78,12 +78,12 @@ export default function WizardConnectionPanel() {
         <Input
           value={localUrl}
           onChange={(e) => setLocalUrl(e.target.value)}
-          placeholder="http://homeassistant.local:8099"
+          placeholder="http://homeassistant.local:3500"
           className="h-8 text-xs bg-secondary/30"
           disabled={testing}
         />
         <p className="text-[10px] text-muted-foreground">
-          URL till Wizard add-on. T.ex. http://&lt;HA-IP&gt;:8099
+          URL till Wizard add-on. T.ex. http://&lt;HA-IP&gt;:3500
         </p>
       </div>
 
