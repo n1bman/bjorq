@@ -49,7 +49,7 @@ export async function testWizardConnection(): Promise<{ ok: boolean; version?: s
 
 export async function fetchWizardCatalog(force = false): Promise<WizardAsset[]> {
   if (_catalogCache && !force) return _catalogCache;
-  const res = await wizardFetch('/catalog/index');
+  const res = await wizardFetch('/libraries');
   if (!res.ok) throw new Error(`Wizard catalog fetch failed: ${res.status}`);
   const data = await res.json();
   const assets: WizardAsset[] = Array.isArray(data) ? data : (data.assets ?? data.items ?? []);
