@@ -51,13 +51,32 @@ export async function testWizardConnection(): Promise<{ ok: boolean; version?: s
 export async function fetchWizardCatalog(force = false): Promise<WizardAsset[]> {
   const currentUrl = getBaseUrl();
   if (_catalogCache && !force && _catalogCacheUrl === currentUrl) return _catalogCache;
-  const res = await wizardFetch('/libraries');
-  if (!res.ok) throw new Error(`Wizard catalog fetch failed: ${res.status}`);
-  const data = await res.json();
-  const assets: WizardAsset[] = Array.isArray(data) ? data : (data.assets ?? data.items ?? data.libraries ?? []);
-  _catalogCache = assets;
+
+  // Step 1: Get library list
+  const libRes = await wizardFetch('/libraries');
+  if (!libRes.ok) throw new Error(`Wizard libraries fetch failed: ${libRes.status}`);
+  const libData = await libRes.json();
+  const libraries: string[] = Array.isArray(libData)
+    ? libData.map((l: any) => typeof l === 'string' ? l : l.name || l.id || 'default')
+    : ['default'];
+
+  // Step 2: Fetch catalog index for each library
+  const allAssets: WizardAsset[] = [];
+  for (const lib of libraries) {
+    try {
+      const res = await wizardFetch(`/libraries/${encodeURIComponent(lib)}/index`);
+      if (!res.ok) continue;
+      const data = await res.json();
+      const entries = Array.isArray(data) ? data : (data.assets ?? data.items ?? []);
+      for (const entry of entries) {
+        if (entry.id) allAssets.push(entry);
+      }
+    } catch { /* skip unreachable library */ }
+  }
+
+  _catalogCache = allAssets;
   _catalogCacheUrl = currentUrl;
-  return assets;
+  return allAssets;
 }
 
 export function clearWizardCatalogCache() {
