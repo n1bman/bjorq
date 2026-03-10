@@ -52,26 +52,50 @@ export async function fetchWizardCatalog(force = false): Promise<WizardAsset[]> 
   const currentUrl = getBaseUrl();
   if (_catalogCache && !force && _catalogCacheUrl === currentUrl) return _catalogCache;
 
-  // Step 1: Get library list
-  const libRes = await wizardFetch('/libraries');
-  if (!libRes.ok) throw new Error(`Wizard libraries fetch failed: ${libRes.status}`);
-  const libData = await libRes.json();
-  const libraries: string[] = Array.isArray(libData)
-    ? libData.map((l: any) => typeof l === 'string' ? l : l.name || l.id || 'default')
-    : ['default'];
-
-  // Step 2: Fetch catalog index for each library
   const allAssets: WizardAsset[] = [];
-  for (const lib of libraries) {
-    try {
-      const res = await wizardFetch(`/libraries/${encodeURIComponent(lib)}/index`);
-      if (!res.ok) continue;
+
+  // Strategy 1: Try /catalog/index (single call, most reliable)
+  try {
+    const res = await wizardFetch('/catalog/index', { signal: AbortSignal.timeout(10000) });
+    if (res.ok) {
       const data = await res.json();
       const entries = Array.isArray(data) ? data : (data.assets ?? data.items ?? []);
       for (const entry of entries) {
         if (entry.id) allAssets.push(entry);
       }
-    } catch { /* skip unreachable library */ }
+    } else {
+      console.warn(`[Wizard] /catalog/index → ${res.status}`);
+    }
+  } catch (e) {
+    console.warn('[Wizard] /catalog/index failed:', e);
+  }
+
+  // Strategy 2: If /catalog/index returned nothing, try /libraries/:lib/index
+  if (allAssets.length === 0) {
+    try {
+      const libRes = await wizardFetch('/libraries');
+      if (libRes.ok) {
+        const libData = await libRes.json();
+        const libraries: string[] = Array.isArray(libData)
+          ? libData.map((l: any) => typeof l === 'string' ? l : l.name || l.id || 'default')
+          : ['default'];
+        for (const lib of libraries) {
+          try {
+            const res = await wizardFetch(`/libraries/${encodeURIComponent(lib)}/index`, { signal: AbortSignal.timeout(10000) });
+            if (!res.ok) { console.warn(`[Wizard] /libraries/${lib}/index → ${res.status}`); continue; }
+            const data = await res.json();
+            const entries = Array.isArray(data) ? data : (data.assets ?? data.items ?? []);
+            for (const entry of entries) {
+              if (entry.id) allAssets.push(entry);
+            }
+          } catch (e) { console.warn(`[Wizard] /libraries/${lib}/index error:`, e); }
+        }
+      } else {
+        console.warn(`[Wizard] /libraries → ${libRes.status}`);
+      }
+    } catch (e) {
+      console.warn('[Wizard] /libraries fetch failed:', e);
+    }
   }
 
   _catalogCache = allAssets;
