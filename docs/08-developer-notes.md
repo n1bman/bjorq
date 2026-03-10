@@ -105,7 +105,7 @@ The app uses a single Zustand store (`src/store/useAppStore.ts`) with the follow
 ### Custom Hooks
 
 - **useCameraSnapshot(entityId, enabled, entityPicture?, intervalMs?)** — Polls camera snapshots. Hosted mode fetches blob via `/api/ha/camera_proxy/{entityId}`. DEV mode constructs direct `<img>` URL from `entity_picture` to bypass CORS. Returns blob/image URL or null.
-- **wizardClient** (`src/lib/wizardClient.ts`) — API client for BJORQ Asset Wizard. Functions: `testWizardConnection()` (health + version), `fetchWizardCatalog()` (cached catalog index), `getWizardModelUrl(assetId)` (model download URL). All URLs built relative to configured base URL for ingress safety. Connection state stored in `wizard` Zustand slice.
+- **wizardClient** (`src/lib/wizardClient.ts`) — API client for BJORQ Asset Wizard. Functions: `testWizardConnection()` (health + version), `fetchWizardCatalog()` (cached catalog index), `getWizardModelUrl(assetId)` (model download URL), `getWizardThumbnailUrl(assetId)` (thumbnail URL), `downloadWizardModel(assetId)` (model as blob for import), `downloadWizardThumbnail(assetId)` (thumbnail as blob). All URLs built relative to configured base URL for ingress safety. Connection state stored in `wizard` Zustand slice. `PropCatalogItem` supports dual-mode tracking via `wizardMode: 'synced' | 'imported'`, `wizardAssetId`, `wizardBaseUrl`, and `wizardMeta` snapshot fields.
 
 ## Import Conventions
 
