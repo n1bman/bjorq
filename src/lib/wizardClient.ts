@@ -77,7 +77,7 @@ export function getWizardAssetThumbnail(asset: WizardAsset): string | undefined 
 }
 
 export async function downloadWizardModel(assetId: string): Promise<Blob> {
-  const res = await wizardFetch(`/catalog/asset/${encodeURIComponent(assetId)}/model`, {
+  const res = await wizardFetch(`/assets/${encodeURIComponent(assetId)}/model`, {
     signal: AbortSignal.timeout(30000),
   });
   if (!res.ok) throw new Error(`Model download failed: ${res.status}`);
