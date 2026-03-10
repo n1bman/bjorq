@@ -152,6 +152,8 @@ function AssetCatalog() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCategory, setFilterCategory] = useState<string | null>(null);
   const [sourceFilter, setSourceFilter] = useState<ACSourceFilter>('all');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [importResult, setImportResult] = useState<PipelineResult | null>(null);
   const [importFile, setImportFile] = useState<File | null>(null);
