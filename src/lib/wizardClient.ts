@@ -52,7 +52,7 @@ export async function fetchWizardCatalog(force = false): Promise<WizardAsset[]> 
   const res = await wizardFetch('/libraries');
   if (!res.ok) throw new Error(`Wizard catalog fetch failed: ${res.status}`);
   const data = await res.json();
-  const assets: WizardAsset[] = Array.isArray(data) ? data : (data.assets ?? data.items ?? []);
+  const assets: WizardAsset[] = Array.isArray(data) ? data : (data.assets ?? data.items ?? data.libraries ?? []);
   _catalogCache = assets;
   return assets;
 }
