@@ -1680,6 +1680,7 @@ export async function initHostedMode() {
       if (p.calendar) stateUpdate.calendar = p.calendar;
       if (p.automations) stateUpdate.automations = p.automations;
       if (p.savedScenes) stateUpdate.savedScenes = p.savedScenes;
+      if (p.wizard) stateUpdate.wizard = p.wizard;
     }
 
     // Apply project data
