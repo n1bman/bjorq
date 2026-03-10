@@ -62,7 +62,7 @@ export function clearWizardCatalogCache() {
 }
 
 export function getWizardModelUrl(assetId: string): string {
-  return `${getBaseUrl()}/catalog/asset/${encodeURIComponent(assetId)}/model`;
+  return `${getBaseUrl()}/assets/${encodeURIComponent(assetId)}/model`;
 }
 
 export function getWizardThumbnailUrl(assetId: string): string {
