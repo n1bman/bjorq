@@ -127,6 +127,7 @@ interface ACEntry {
   performance?: { vertices?: number; triangles?: number; textureBytes?: number };
   subcategory?: string;
   wizardMeta?: import('../../lib/wizardClient').WizardAsset;
+  wizardMode?: 'synced' | 'imported';
 }
 
 function AssetCatalog() {
