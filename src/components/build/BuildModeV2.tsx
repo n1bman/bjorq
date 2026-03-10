@@ -324,38 +324,143 @@ function AssetCatalog() {
 
   const handlePlaceEntry = useCallback(async (entry: ACEntry) => {
     if (!activeFloorId) return;
-    if (entry.source === 'wizard' && entry.wizardMeta) {
-      // Fetch model from Wizard and place
+
+    // Wizard assets from live catalog → show dual-mode action dialog
+    if (entry.source === 'wizard' && entry.wizardMeta && !entry.catalogItem) {
+      setWizardActionEntry(entry);
+      setWizardActionOpen(true);
+      return;
+    }
+
+    // Synced wizard asset already in catalog → fetch from wizard and place
+    if (entry.catalogItem?.wizardMode === 'synced' && entry.catalogItem.wizardAssetId) {
       try {
         const { getWizardModelUrl } = await import('../../lib/wizardClient');
-        const modelUrl = getWizardModelUrl(entry.wizardMeta.id);
+        const modelUrl = getWizardModelUrl(entry.catalogItem.wizardAssetId);
         const res = await fetch(modelUrl, { signal: AbortSignal.timeout(15000) });
         if (!res.ok) throw new Error(`Model fetch failed: ${res.status}`);
         const blob = await res.blob();
         const blobUrl = URL.createObjectURL(blob);
-        const catalogId = entry.id;
-        if (!catalog.find(c => c.id === catalogId)) {
-          addToCatalog({ id: catalogId, name: entry.name, url: blobUrl, source: 'user', thumbnail: entry.thumbnail, category: entry.category, subcategory: entry.subcategory, placement: 'floor', dimensions: entry.dimensions, performance: entry.performance } as any);
-        }
-        // Use wizard metadata for scale and floor placement
-        const wm = entry.wizardMeta;
-        const scale = wm.estimatedScale || 1;
-        const yOffset = -(wm.center?.y ?? 0) * scale;
+        const wm = entry.catalogItem.wizardMeta;
+        const scale = wm?.estimatedScale || 1;
+        const yOffset = -(wm?.center?.y ?? 0) * scale;
         const tx = Math.round(cameraRef.target.x * 10) / 10;
         const tz = Math.round(cameraRef.target.z * 10) / 10;
-        addProp({ id: generateId(), catalogId, floorId: activeFloorId, url: blobUrl, position: [tx, yOffset, tz], rotation: [0, 0, 0], scale: [scale, scale, scale] });
+        addProp({ id: generateId(), catalogId: entry.id, floorId: activeFloorId, url: blobUrl, position: [tx, yOffset, tz], rotation: [0, 0, 0], scale: [scale, scale, scale] });
         toast.success(`${entry.name} placerad`);
       } catch (err) {
-        console.error('[Wizard] Model load failed:', err);
-        toast.error('Kunde inte ladda Wizard-modell');
+        console.error('[Wizard] Synced model load failed:', err);
+        toast.error('Wizard ej tillgänglig — modell kan inte laddas');
       }
       return;
     }
+
     if (entry.source === 'curated' && entry.modelPath) {
       if (!catalog.find(c => c.id === entry.id)) addToCatalog({ id: entry.id, name: entry.name, url: entry.modelPath, source: 'curated', thumbnail: entry.thumbnail, category: entry.category, placement: entry.curatedMeta?.placement, dimensions: entry.curatedMeta?.dimensions, haMapping: entry.curatedMeta?.ha, performance: entry.curatedMeta?.performance } as any);
       placePropFn(entry.id, entry.modelPath);
     } else if (entry.catalogItem) { placePropFn(entry.catalogItem.id, entry.catalogItem.url); }
   }, [activeFloorId, catalog, addToCatalog, placePropFn, addProp]);
+
+  // Wizard dual-mode: Use as Synced
+  const handleWizardSync = useCallback(async () => {
+    if (!wizardActionEntry?.wizardMeta || !activeFloorId) return;
+    const wm = wizardActionEntry.wizardMeta;
+    try {
+      const { getWizardModelUrl, getWizardThumbnailUrl: getWizThumb } = await import('../../lib/wizardClient');
+      const modelUrl = getWizardModelUrl(wm.id);
+      const res = await fetch(modelUrl, { signal: AbortSignal.timeout(15000) });
+      if (!res.ok) throw new Error(`Model fetch failed: ${res.status}`);
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const catalogId = `wizard-sync-${wm.id}`;
+      const wizardBaseUrl = useAppStore.getState().wizard.url.replace(/\/+$/, '');
+      if (!catalog.find(c => c.id === catalogId)) {
+        addToCatalog({
+          id: catalogId, name: wizardActionEntry.name, url: blobUrl, source: 'user',
+          thumbnail: wizardActionEntry.thumbnail, category: wizardActionEntry.category,
+          subcategory: wizardActionEntry.subcategory, placement: 'floor',
+          dimensions: wizardActionEntry.dimensions, performance: wizardActionEntry.performance,
+          wizardAssetId: wm.id, wizardBaseUrl, wizardMode: 'synced',
+          wizardMeta: { boundingBox: wm.boundingBox, center: wm.center, estimatedScale: wm.estimatedScale, triangleCount: wm.triangleCount, fileSize: wm.fileSize, category: wm.category, subcategory: wm.subcategory },
+        } as any);
+      }
+      const scale = wm.estimatedScale || 1;
+      const yOffset = -(wm.center?.y ?? 0) * scale;
+      const tx = Math.round(cameraRef.target.x * 10) / 10;
+      const tz = Math.round(cameraRef.target.z * 10) / 10;
+      addProp({ id: generateId(), catalogId, floorId: activeFloorId, url: blobUrl, position: [tx, yOffset, tz], rotation: [0, 0, 0], scale: [scale, scale, scale] });
+      toast.success(`${wizardActionEntry.name} synkad och placerad`);
+    } catch (err) {
+      console.error('[Wizard] Sync failed:', err);
+      toast.error('Kunde inte ladda Wizard-modell');
+    }
+    setWizardActionOpen(false); setWizardActionEntry(null);
+  }, [wizardActionEntry, activeFloorId, catalog, addToCatalog, addProp]);
+
+  // Wizard dual-mode: Import to Dashboard
+  const handleWizardImport = useCallback(async () => {
+    if (!wizardActionEntry?.wizardMeta || !activeFloorId) return;
+    const wm = wizardActionEntry.wizardMeta;
+    setWizardImporting(true);
+    try {
+      const { downloadWizardModel, downloadWizardThumbnail } = await import('../../lib/wizardClient');
+      const [modelBlob, thumbBlob] = await Promise.all([
+        downloadWizardModel(wm.id),
+        downloadWizardThumbnail(wm.id),
+      ]);
+      const catalogId = `wizard-imp-${wm.id}`;
+      let modelUrl: string;
+      let thumbnailUrl: string | undefined = wizardActionEntry.thumbnail;
+
+      if (isHostedSync()) {
+        try {
+          const modelFile = new File([modelBlob], `${wm.id}.glb`, { type: 'model/gltf-binary' });
+          const result = await uploadPropAsset('home', modelFile, { name: wizardActionEntry.name, category: (wizardActionEntry.category as AssetCategory) || 'imported', placement: 'floor', dimensions: wizardActionEntry.dimensions }, thumbBlob ? URL.createObjectURL(thumbBlob) : undefined);
+          if (result) { modelUrl = result.modelUrl; thumbnailUrl = result.thumbnailUrl || thumbnailUrl; }
+          else { modelUrl = URL.createObjectURL(modelBlob); }
+        } catch { modelUrl = URL.createObjectURL(modelBlob); }
+      } else {
+        modelUrl = URL.createObjectURL(modelBlob);
+        if (thumbBlob) thumbnailUrl = URL.createObjectURL(thumbBlob);
+      }
+
+      const item: PropCatalogItem = {
+        id: catalogId, name: wizardActionEntry.name, url: modelUrl, source: 'user',
+        thumbnail: thumbnailUrl, category: (wizardActionEntry.category as AssetCategory) || 'imported',
+        subcategory: wizardActionEntry.subcategory, placement: 'floor',
+        dimensions: wizardActionEntry.dimensions, performance: wizardActionEntry.performance as any,
+        wizardAssetId: wm.id, wizardMode: 'imported',
+        wizardMeta: { boundingBox: wm.boundingBox, center: wm.center, estimatedScale: wm.estimatedScale, triangleCount: wm.triangleCount, fileSize: wm.fileSize, category: wm.category, subcategory: wm.subcategory },
+      };
+
+      // Store base64 if small enough for persistence
+      if (modelBlob.size <= 4 * 1024 * 1024) {
+        const reader = new FileReader();
+        reader.onload = () => {
+          addToCatalog({ ...item, fileData: (reader.result as string).split(',')[1] } as any);
+          const scale = wm.estimatedScale || 1;
+          const yOffset = -(wm.center?.y ?? 0) * scale;
+          const tx = Math.round(cameraRef.target.x * 10) / 10;
+          const tz = Math.round(cameraRef.target.z * 10) / 10;
+          addProp({ id: generateId(), catalogId, floorId: activeFloorId, url: modelUrl, position: [tx, yOffset, tz], rotation: [0, 0, 0], scale: [scale, scale, scale] });
+          toast.success(`${wizardActionEntry.name} importerad och placerad`);
+        };
+        reader.readAsDataURL(new Blob([modelBlob]));
+      } else {
+        addToCatalog(item as any);
+        const scale = wm.estimatedScale || 1;
+        const yOffset = -(wm.center?.y ?? 0) * scale;
+        const tx = Math.round(cameraRef.target.x * 10) / 10;
+        const tz = Math.round(cameraRef.target.z * 10) / 10;
+        addProp({ id: generateId(), catalogId, floorId: activeFloorId, url: modelUrl, position: [tx, yOffset, tz], rotation: [0, 0, 0], scale: [scale, scale, scale] });
+        toast.success(`${wizardActionEntry.name} importerad (stor modell — sessionsbaserad)`);
+      }
+    } catch (err) {
+      console.error('[Wizard] Import failed:', err);
+      toast.error('Kunde inte importera Wizard-modell');
+    }
+    setWizardImporting(false); setWizardActionOpen(false); setWizardActionEntry(null);
+  }, [wizardActionEntry, activeFloorId, catalog, addToCatalog, addProp]);
 
   const openManageDialog = useCallback((entry: ACEntry) => { setManageAsset(entry); setManageName(entry.name); setManageCategory((entry.category as AssetCategory) || 'imported'); setManageSubcategory(entry.subcategory || ''); setManagePlacement(entry.curatedMeta?.placement || 'floor'); setManageDialogOpen(true); }, []);
   const handleSaveMeta = useCallback(async () => { if (!manageAsset) return; try { await updateCatalogMeta(manageAsset.id, { name: manageName.trim() || manageAsset.name, category: manageCategory, subcategory: manageSubcategory || undefined, placement: managePlacement }); clearCatalogCache(); loadCuratedCatalog().then(setCuratedAssets); toast.success('Metadata uppdaterad'); setManageDialogOpen(false); } catch { toast.error('Kunde inte uppdatera'); } }, [manageAsset, manageName, manageCategory, manageSubcategory, managePlacement]);
