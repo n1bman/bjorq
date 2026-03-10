@@ -1,12 +1,11 @@
 import { Router } from 'express';
 import path from 'path';
-import { readFileSync } from 'fs';
 import { dataDir, profilesPath } from '../storage/paths.js';
 import { readJSON, writeJSON, ensureDir } from '../storage/readWrite.js';
 
 const router = Router();
 
-const pkg = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf-8'));
+const APP_VERSION = '1.0.0';
 
 router.post('/backup', async (_req, res) => {
   try {
