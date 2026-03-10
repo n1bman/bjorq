@@ -235,7 +235,7 @@ function AssetCatalog() {
   const categories = [...new Set(allEntries.map((e) => e.category))].sort();
   const hasUser = allEntries.some((e) => e.source === 'user' || e.wizardMode === 'imported');
   const hasCurated = allEntries.some((e) => e.source === 'curated');
-  const hasWizard = wizardAssets.length > 0 || allEntries.some(e => e.wizardMode === 'synced');
+  const hasWizard = wizardStatus === 'connected' || wizardAssets.length > 0 || allEntries.some(e => e.wizardMode === 'synced');
   const filtered = allEntries
     .filter((e) => !searchQuery || e.name.toLowerCase().includes(searchQuery.toLowerCase()))
     .filter((e) => !filterCategory || e.category === filterCategory)
