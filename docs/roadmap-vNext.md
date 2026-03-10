@@ -1,7 +1,7 @@
 # bjorQ Dashboard — Roadmap vNext
 
 > Living document tracking all planned features and improvements.
-> Updated: 2026-03-08
+> Updated: 2026-03-10
 
 ---
 
@@ -29,6 +29,8 @@
 | 8 | Vacuum Debug & 3D Telemetry | ✅ Done | Phase 7 |
 | 9 | RPi Performance Optimization | ✅ Done | Phase 7 |
 | 10 | Climate & Comfort Engine | ✅ Done | Phase 4 |
+| 11 | Consolidated Graphics & Selective Shadows | ✅ Done | Phase 7 |
+| 12 | Asset Wizard Integration | ✅ Done | Phase 5 |
 
 ---
 
@@ -338,3 +340,27 @@ Simplified to 4 clear light types: Tak, Strip, Vägg, Spot.
 
 **Files modified:** `src/components/build/ImportedHome3D.tsx`, `src/components/home/cards/SunWeatherPanel.tsx`, `src/components/home/cards/EnvironmentPanel.tsx`
 **Files removed:** `src/components/home/cards/SunCalibrationPanel.tsx`, `src/components/home/cards/WeatherAtmospherePanel.tsx`
+
+---
+
+## 🟠 Phase 12 — Asset Wizard Integration ✅
+
+### 12.1 Wizard Connection
+
+- `WizardConnectionPanel` in Settings for URL configuration and connection testing
+- Health check + version detection via `/health` and `/version` endpoints
+- Default port: `3500` (BJORQ Asset Wizard add-on)
+
+### 12.2 Dual-Mode Asset System
+
+- **Synced mode** — Live references to Wizard API; assets stream on demand
+- **Import mode** — Local copies stored in Dashboard for offline use
+- Badges in furniture catalog: Wizard, Synced, Imported
+
+### 12.3 Wizard API Client
+
+- `wizardClient.ts`: catalog fetch (`/libraries`), model download (`/assets/:id/model`), thumbnail (`/assets/:id/thumbnail`), metadata (`/assets/:id/meta`)
+- Cache invalidation on URL change
+- Wizard metadata (estimatedScale, center, boundingBox) used for correct placement
+
+**Files modified:** `src/lib/wizardClient.ts`, `src/components/build/furnish/FurnishTools.tsx`, `src/components/home/cards/WizardConnectionPanel.tsx`

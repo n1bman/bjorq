@@ -17,6 +17,7 @@ export interface WizardAsset {
 }
 
 let _catalogCache: WizardAsset[] | null = null;
+let _catalogCacheUrl: string = '';
 
 function getBaseUrl(): string {
   return useAppStore.getState().wizard.url.replace(/\/+$/, '');
@@ -48,12 +49,14 @@ export async function testWizardConnection(): Promise<{ ok: boolean; version?: s
 }
 
 export async function fetchWizardCatalog(force = false): Promise<WizardAsset[]> {
-  if (_catalogCache && !force) return _catalogCache;
+  const currentUrl = getBaseUrl();
+  if (_catalogCache && !force && _catalogCacheUrl === currentUrl) return _catalogCache;
   const res = await wizardFetch('/libraries');
   if (!res.ok) throw new Error(`Wizard catalog fetch failed: ${res.status}`);
   const data = await res.json();
   const assets: WizardAsset[] = Array.isArray(data) ? data : (data.assets ?? data.items ?? data.libraries ?? []);
   _catalogCache = assets;
+  _catalogCacheUrl = currentUrl;
   return assets;
 }
 

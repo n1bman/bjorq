@@ -38,6 +38,7 @@ Full handbook available in [`/docs`](./docs/):
 
 | Guide | Description |
 |-------|-------------|
+| [**Getting Started**](ONBOARDING.md) | Step-by-step onboarding guide |
 | [Overview](docs/01-overview.md) | Architecture, modes, supported platforms |
 | [Installation](docs/02-installation.md) | Setup for Windows, Linux, Raspberry Pi |
 | [Using the Dashboard](docs/03-using-the-dashboard.md) | Features, Build Mode, Settings |

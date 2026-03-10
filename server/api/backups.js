@@ -1,9 +1,12 @@
 import { Router } from 'express';
 import path from 'path';
+import { readFileSync } from 'fs';
 import { dataDir, profilesPath } from '../storage/paths.js';
 import { readJSON, writeJSON, ensureDir } from '../storage/readWrite.js';
 
 const router = Router();
+
+const pkg = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf-8'));
 
 router.post('/backup', async (_req, res) => {
   try {
@@ -15,7 +18,7 @@ router.post('/backup', async (_req, res) => {
     const filename = `bjorq-backup-${timestamp}.json`;
 
     await writeJSON(path.join(backupsDir, filename), {
-      _meta: { version: '0.1.5', createdAt: new Date().toISOString() },
+      _meta: { version: pkg.version, createdAt: new Date().toISOString() },
       profiles,
     });
 
