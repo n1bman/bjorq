@@ -505,6 +505,25 @@ function AssetCatalog() {
         </div>
       )}
 
+      {sourceFilter === 'wizard' && wizardLoading && (
+        <div className="flex items-center justify-center gap-2 py-6 text-muted-foreground">
+          <Loader2 size={16} className="animate-spin" />
+          <span className="text-xs">Hämtar Wizard-katalog...</span>
+        </div>
+      )}
+      {sourceFilter === 'wizard' && wizardError && !wizardLoading && (
+        <div className="flex flex-col items-center gap-2 py-6 text-center">
+          <AlertTriangle size={18} className="text-destructive" />
+          <span className="text-xs text-destructive">{wizardError}</span>
+          <Button size="sm" variant="outline" className="h-6 text-[10px]" onClick={fetchWizardAssets}>Försök igen</Button>
+        </div>
+      )}
+      {sourceFilter === 'wizard' && !wizardLoading && !wizardError && filtered.length === 0 && (
+        <div className="flex flex-col items-center gap-2 py-6 text-center text-muted-foreground">
+          <Wand2 size={18} />
+          <span className="text-xs">Inga assets i Wizard-katalogen</span>
+        </div>
+      )}
       <div className="grid grid-cols-2 gap-1.5 max-h-[60vh] overflow-y-auto">
         {filtered.map((entry) => (
           <button key={entry.id} onClick={() => handlePlaceEntry(entry)} className="relative flex flex-col items-center gap-0.5 p-2 rounded-lg bg-secondary/30 hover:bg-secondary/60 transition-colors text-xs group min-h-[44px]">
