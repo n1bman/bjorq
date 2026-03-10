@@ -177,18 +177,24 @@ function AssetCatalog() {
   const [wizardActionEntry, setWizardActionEntry] = useState<ACEntry | null>(null);
   const [wizardActionOpen, setWizardActionOpen] = useState(false);
   const [wizardImporting, setWizardImporting] = useState(false);
+  const [wizardLoading, setWizardLoading] = useState(false);
+  const [wizardError, setWizardError] = useState<string | null>(null);
 
   useEffect(() => { loadCuratedCatalog().then(setCuratedAssets); }, []);
 
   // Wizard assets
   const wizardStatus = useAppStore((s) => s.wizard.status);
   const [wizardAssets, setWizardAssets] = useState<import('../../lib/wizardClient').WizardAsset[]>([]);
-  useEffect(() => {
-    if (wizardStatus !== 'connected') { setWizardAssets([]); return; }
+  const fetchWizardAssets = useCallback(() => {
+    if (wizardStatus !== 'connected') { setWizardAssets([]); setWizardError(null); return; }
+    setWizardLoading(true); setWizardError(null);
     import('../../lib/wizardClient').then(({ fetchWizardCatalog }) => {
-      fetchWizardCatalog().then(setWizardAssets).catch((err) => { console.warn('[Wizard] Catalog fetch failed:', err); setWizardAssets([]); });
+      fetchWizardCatalog(true).then((assets) => { setWizardAssets(assets); setWizardError(null); })
+        .catch((err) => { console.error('[Wizard] Catalog fetch failed:', err); setWizardAssets([]); setWizardError(err?.message || 'Kunde inte hämta katalogen'); toast.error('Wizard-katalog kunde inte hämtas'); })
+        .finally(() => setWizardLoading(false));
     });
   }, [wizardStatus]);
+  useEffect(() => { fetchWizardAssets(); }, [fetchWizardAssets]);
 
   // Track which wizard asset IDs have been imported locally
   const importedWizardIds = useMemo(() => new Set(
@@ -229,7 +235,7 @@ function AssetCatalog() {
   const categories = [...new Set(allEntries.map((e) => e.category))].sort();
   const hasUser = allEntries.some((e) => e.source === 'user' || e.wizardMode === 'imported');
   const hasCurated = allEntries.some((e) => e.source === 'curated');
-  const hasWizard = wizardAssets.length > 0 || allEntries.some(e => e.wizardMode === 'synced');
+  const hasWizard = wizardStatus === 'connected' || wizardAssets.length > 0 || allEntries.some(e => e.wizardMode === 'synced');
   const filtered = allEntries
     .filter((e) => !searchQuery || e.name.toLowerCase().includes(searchQuery.toLowerCase()))
     .filter((e) => !filterCategory || e.category === filterCategory)
@@ -499,6 +505,25 @@ function AssetCatalog() {
         </div>
       )}
 
+      {sourceFilter === 'wizard' && wizardLoading && (
+        <div className="flex items-center justify-center gap-2 py-6 text-muted-foreground">
+          <Loader2 size={16} className="animate-spin" />
+          <span className="text-xs">Hämtar Wizard-katalog...</span>
+        </div>
+      )}
+      {sourceFilter === 'wizard' && wizardError && !wizardLoading && (
+        <div className="flex flex-col items-center gap-2 py-6 text-center">
+          <AlertTriangle size={18} className="text-destructive" />
+          <span className="text-xs text-destructive">{wizardError}</span>
+          <Button size="sm" variant="outline" className="h-6 text-[10px]" onClick={fetchWizardAssets}>Försök igen</Button>
+        </div>
+      )}
+      {sourceFilter === 'wizard' && !wizardLoading && !wizardError && filtered.length === 0 && (
+        <div className="flex flex-col items-center gap-2 py-6 text-center text-muted-foreground">
+          <Wand2 size={18} />
+          <span className="text-xs">Inga assets i Wizard-katalogen</span>
+        </div>
+      )}
       <div className="grid grid-cols-2 gap-1.5 max-h-[60vh] overflow-y-auto">
         {filtered.map((entry) => (
           <button key={entry.id} onClick={() => handlePlaceEntry(entry)} className="relative flex flex-col items-center gap-0.5 p-2 rounded-lg bg-secondary/30 hover:bg-secondary/60 transition-colors text-xs group min-h-[44px]">
