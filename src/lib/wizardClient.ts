@@ -66,7 +66,7 @@ export function getWizardModelUrl(assetId: string): string {
 }
 
 export function getWizardThumbnailUrl(assetId: string): string {
-  return `${getBaseUrl()}/catalog/asset/${encodeURIComponent(assetId)}/thumbnail`;
+  return `${getBaseUrl()}/assets/${encodeURIComponent(assetId)}/thumbnail`;
 }
 
 export function getWizardAssetThumbnail(asset: WizardAsset): string | undefined {
