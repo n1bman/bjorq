@@ -56,6 +56,7 @@ export async function fetchWizardCatalog(force = false): Promise<WizardAsset[]> 
   const data = await res.json();
   const assets: WizardAsset[] = Array.isArray(data) ? data : (data.assets ?? data.items ?? data.libraries ?? []);
   _catalogCache = assets;
+  _catalogCacheUrl = currentUrl;
   return assets;
 }
 
