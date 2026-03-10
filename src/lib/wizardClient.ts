@@ -65,10 +65,43 @@ export function getWizardModelUrl(assetId: string): string {
   return `${getBaseUrl()}/catalog/asset/${encodeURIComponent(assetId)}/model`;
 }
 
-export function getWizardThumbnailUrl(asset: WizardAsset): string | undefined {
+export function getWizardThumbnailUrl(assetId: string): string {
+  return `${getBaseUrl()}/catalog/asset/${encodeURIComponent(assetId)}/thumbnail`;
+}
+
+export function getWizardAssetThumbnail(asset: WizardAsset): string | undefined {
   if (!asset.thumbnail) return undefined;
   const base = getBaseUrl();
-  // If thumbnail is already absolute, return as-is
   if (asset.thumbnail.startsWith('http')) return asset.thumbnail;
   return `${base}${asset.thumbnail.startsWith('/') ? asset.thumbnail : '/' + asset.thumbnail}`;
+}
+
+export async function downloadWizardModel(assetId: string): Promise<Blob> {
+  const res = await wizardFetch(`/catalog/asset/${encodeURIComponent(assetId)}/model`, {
+    signal: AbortSignal.timeout(30000),
+  });
+  if (!res.ok) throw new Error(`Model download failed: ${res.status}`);
+  return res.blob();
+}
+
+export async function downloadWizardThumbnail(assetId: string): Promise<Blob | null> {
+  try {
+    const res = await wizardFetch(`/catalog/asset/${encodeURIComponent(assetId)}/thumbnail`, {
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!res.ok) return null;
+    return res.blob();
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchWizardAssetMeta(assetId: string): Promise<Record<string, unknown> | null> {
+  try {
+    const res = await wizardFetch(`/assets/${encodeURIComponent(assetId)}/meta`);
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
 }

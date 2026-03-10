@@ -607,6 +607,19 @@ export interface PropCatalogItem {
   haMapping?: AssetHAMapping;
   fileData?: string;           // base64 for user imports
   performance?: AssetPerformanceStats;
+  // Wizard dual-mode tracking
+  wizardAssetId?: string;      // original Wizard asset ID
+  wizardBaseUrl?: string;      // Wizard URL at time of import/sync
+  wizardMode?: 'synced' | 'imported';
+  wizardMeta?: {
+    boundingBox?: { min: [number, number, number]; max: [number, number, number] };
+    center?: { x: number; y: number; z: number };
+    estimatedScale?: number;
+    triangleCount?: number;
+    fileSize?: number;
+    category?: string;
+    subcategory?: string;
+  };
 }
 
 export interface PropModelStats {
