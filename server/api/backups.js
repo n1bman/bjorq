@@ -17,7 +17,7 @@ router.post('/backup', async (_req, res) => {
     const filename = `bjorq-backup-${timestamp}.json`;
 
     await writeJSON(path.join(backupsDir, filename), {
-      _meta: { version: pkg.version, createdAt: new Date().toISOString() },
+      _meta: { version: APP_VERSION, createdAt: new Date().toISOString() },
       profiles,
     });
 
