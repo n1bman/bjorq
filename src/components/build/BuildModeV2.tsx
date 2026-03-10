@@ -222,6 +222,11 @@ function AssetCatalog() {
         const base = useAppStore.getState().wizard.url.replace(/\/+$/, '');
         thumb = w.thumbnail.startsWith('http') ? w.thumbnail : `${base}${w.thumbnail.startsWith('/') ? w.thumbnail : '/' + w.thumbnail}`;
       }
+      // Always fall back to the direct thumbnail endpoint
+      if (!thumb) {
+        const base = useAppStore.getState().wizard.url.replace(/\/+$/, '');
+        thumb = `${base}/assets/${encodeURIComponent(w.id)}/thumbnail`;
+      }
       return {
         id: `wizard-${w.id}`, name: w.name, thumbnail: thumb,
         category: w.category || 'imported', source: 'wizard', subcategory: w.subcategory,
