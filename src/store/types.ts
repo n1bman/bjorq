@@ -610,7 +610,7 @@ export interface PropCatalogItem {
   // Wizard dual-mode tracking
   wizardAssetId?: string;      // original Wizard asset ID
   wizardBaseUrl?: string;      // Wizard URL at time of import/sync
-  wizardMode?: 'synced' | 'imported';
+  wizardMode?: 'synced' | 'imported'; // 'synced' is deprecated — treated as needing re-import
   wizardMeta?: {
     boundingBox?: { min: [number, number, number]; max: [number, number, number] };
     center?: { x: number; y: number; z: number };
