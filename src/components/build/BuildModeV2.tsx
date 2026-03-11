@@ -176,12 +176,8 @@ function AssetCatalog() {
   const [manageSubcategory, setManageSubcategory] = useState('');
   const [managePlacement, setManagePlacement] = useState('floor');
 
-  // Wizard dual-mode dialog state
-  const [wizardActionEntry, setWizardActionEntry] = useState<ACEntry | null>(null);
-  const [wizardActionOpen, setWizardActionOpen] = useState(false);
-  const [wizardImporting, setWizardImporting] = useState(false);
-  const [wizardLoading, setWizardLoading] = useState(false);
-  const [wizardError, setWizardError] = useState<string | null>(null);
+  // Wizard import state (no more dual-mode dialog)
+  const [wizardImporting, setWizardImporting] = useState<string | null>(null); // asset ID being imported
 
   useEffect(() => { loadCuratedCatalog().then(setCuratedAssets); }, []);
 
