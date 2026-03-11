@@ -686,12 +686,12 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
                 </div>
               ))
             )}
-            {viewMode === 'list' && (
+            {sourceFilter !== 'wizard' && viewMode === 'list' && (
               <button onClick={() => fileRef.current?.click()} className="flex items-center gap-2 w-full px-2 py-2 rounded-md border-2 border-dashed border-border hover:border-primary/50 text-muted-foreground hover:text-primary transition-all text-xs">
                 <Upload size={14} /><span className="text-[10px]">Importera modell</span>
               </button>
             )}
-            {!skipGrouping && viewMode === 'grid' && (
+            {sourceFilter !== 'wizard' && !skipGrouping && viewMode === 'grid' && (
               <button onClick={() => fileRef.current?.click()} className="flex flex-col items-center justify-center gap-1 p-2 rounded-lg border-2 border-dashed border-border hover:border-primary/50 text-muted-foreground hover:text-primary transition-all min-h-[80px]">
                 <Upload size={16} /><span className="text-[10px]">Importera</span>
               </button>
