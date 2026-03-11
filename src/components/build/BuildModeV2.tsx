@@ -128,6 +128,7 @@ interface ACEntry {
   subcategory?: string;
   wizardMeta?: import('../../lib/wizardClient').WizardAsset;
   wizardMode?: 'synced' | 'imported';
+  staleSync?: boolean; // true if wizardMode=synced (deprecated, needs re-import)
 }
 
 function AssetCatalog() {
