@@ -455,6 +455,7 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
     // Wizard assets from live catalog → open import dialog (like file import)
     if (entry.source === 'wizard' && entry.wizardMeta && !entry.catalogItem) {
       setWizardImportingId(entry.wizardMeta.id);
+      setWizardSourceMeta(entry.wizardMeta);
       setIsProcessing(true);
       setImportDialogOpen(true);
       setImportName(entry.name);
