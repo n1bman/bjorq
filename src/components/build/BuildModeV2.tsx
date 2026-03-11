@@ -141,7 +141,6 @@ function AssetCatalog() {
   const removeFromCatalog = useAppStore((s) => s.removeFromCatalog);
   const setSelection = useAppStore((s) => s.setSelection);
 
-  // Count instances per catalogId on this floor
   const floorProps = useMemo(() => propItems.filter((p: any) => p.floorId === activeFloorId), [propItems, activeFloorId]);
   const instanceCounts = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -176,8 +175,10 @@ function AssetCatalog() {
   const [manageSubcategory, setManageSubcategory] = useState('');
   const [managePlacement, setManagePlacement] = useState('floor');
 
-  // Wizard import state (no more dual-mode dialog)
-  const [wizardImporting, setWizardImporting] = useState<string | null>(null); // asset ID being imported
+  // Wizard import state (import-only, no sync mode)
+  const [wizardImportingId, setWizardImportingId] = useState<string | null>(null);
+  const [wizardLoading, setWizardLoading] = useState(false);
+  const [wizardError, setWizardError] = useState<string | null>(null);
 
   useEffect(() => { loadCuratedCatalog().then(setCuratedAssets); }, []);
 
@@ -206,12 +207,17 @@ function AssetCatalog() {
       category: c.category, source: 'curated', modelPath: `/catalog/${c.model}`, curatedMeta: c,
       dimensions: c.dimensions, performance: c.performance, subcategory: c.subcategory,
     })),
-    ...catalog.map((c): ACEntry => ({
-      id: c.id, name: c.name, thumbnail: c.thumbnail, category: c.category || 'imported',
-      source: c.wizardMode === 'synced' ? 'wizard' as const : c.source as any, catalogItem: c,
-      dimensions: c.dimensions, performance: c.performance as any, subcategory: c.subcategory,
-      wizardMode: c.wizardMode,
-    })),
+    ...catalog.map((c): ACEntry => {
+      // Stale synced entries get marked for re-import
+      const isStaleSync = c.wizardMode === 'synced';
+      return {
+        id: c.id, name: c.name, thumbnail: c.thumbnail, category: c.category || 'imported',
+        source: isStaleSync ? 'wizard' as const : c.source as any, catalogItem: c,
+        dimensions: c.dimensions, performance: c.performance as any, subcategory: c.subcategory,
+        wizardMode: c.wizardMode,
+        staleSync: isStaleSync,
+      };
+    }),
     // Only show wizard catalog entries that haven't been imported already
     ...wizardAssets.filter(w => !importedWizardIds.has(w.id)).map((w): ACEntry => {
       const bb = w.boundingBox;
@@ -239,14 +245,14 @@ function AssetCatalog() {
   const categories = [...new Set(allEntries.map((e) => e.category))].sort();
   const hasUser = allEntries.some((e) => e.source === 'user' || e.wizardMode === 'imported');
   const hasCurated = allEntries.some((e) => e.source === 'curated');
-  const hasWizard = wizardStatus === 'connected' || wizardAssets.length > 0 || allEntries.some(e => e.wizardMode === 'synced');
+  const hasWizard = wizardStatus === 'connected' || wizardAssets.length > 0;
   const filtered = allEntries
     .filter((e) => !searchQuery || e.name.toLowerCase().includes(searchQuery.toLowerCase()))
     .filter((e) => !filterCategory || e.category === filterCategory)
     .filter((e) => {
       if (sourceFilter === 'all') return true;
-      if (sourceFilter === 'wizard') return e.source === 'wizard' || e.wizardMode === 'synced';
-      if (sourceFilter === 'user') return (e.source === 'user' && !e.wizardMode) || e.wizardMode === 'imported';
+      if (sourceFilter === 'wizard') return e.source === 'wizard';
+      if (sourceFilter === 'user') return (e.source === 'user') || e.wizardMode === 'imported';
       return e.source === sourceFilter;
     })
     .sort((a, b) => a.name.localeCompare(b.name, 'sv'));
@@ -284,10 +290,8 @@ function AssetCatalog() {
 
   const placePropFn = useCallback((catalogId: string, url: string) => {
     if (!activeFloorId) return;
-    // Smart placement: use camera target as placement point instead of origin
     const tx = Math.round(cameraRef.target.x * 10) / 10;
     const tz = Math.round(cameraRef.target.z * 10) / 10;
-    // Offset slightly if there's already a prop at the same spot
     const existing = floorProps.filter((p: any) => p.catalogId === catalogId);
     const offset = existing.length * 0.5;
     addProp({ id: generateId(), catalogId, floorId: activeFloorId, url, position: [tx + offset, 0, tz + offset], rotation: [0,0,0], scale: [1,1,1] });
@@ -296,7 +300,6 @@ function AssetCatalog() {
   const handleImportConfirm = useCallback(async () => {
     if (!importFile || !importResult || !activeFloorId || !importName.trim()) return;
 
-    // Use optimized blob if available, otherwise original file
     const finalFile = optimizedResult
       ? new File([optimizedResult.blob], importName.trim().replace(/\s+/g, '_') + '.glb', { type: 'model/gltf-binary' })
       : importFile;
@@ -332,86 +335,21 @@ function AssetCatalog() {
     setImportDialogOpen(false); setImportResult(null); setImportFile(null); setOptimizedResult(null);
   }, [importFile, importResult, activeFloorId, importName, importCategory, importSubcategory, addToCatalog, saveToCatalog, catalog, curatedAssets, placePropFn, optimizedResult]);
 
-  const handlePlaceEntry = useCallback(async (entry: ACEntry) => {
-    if (!activeFloorId) return;
+  // Import a Wizard asset (download model + thumbnail, store locally)
+  const handleWizardImport = useCallback(async (entry: ACEntry) => {
+    if (!entry.wizardMeta || !activeFloorId) return;
+    const wm = entry.wizardMeta;
 
-    // Wizard assets from live catalog → show dual-mode action dialog
-    if (entry.source === 'wizard' && entry.wizardMeta && !entry.catalogItem) {
-      setWizardActionEntry(entry);
-      setWizardActionOpen(true);
+    // Duplicate check: if already imported, just place another instance
+    const existingCatalog = catalog.find(c => c.wizardAssetId === wm.id && c.wizardMode === 'imported');
+    if (existingCatalog) {
+      placePropFn(existingCatalog.id, existingCatalog.url);
+      toast.success(`${entry.name} placerad`);
       return;
     }
 
-    // Synced wizard asset already in catalog → fetch from wizard and place
-    if (entry.catalogItem?.wizardMode === 'synced' && entry.catalogItem.wizardAssetId) {
-      try {
-        const { getWizardModelUrl } = await import('../../lib/wizardClient');
-        const modelUrl = getWizardModelUrl(entry.catalogItem.wizardAssetId);
-        const res = await fetch(modelUrl, { signal: AbortSignal.timeout(15000) });
-        if (!res.ok) throw new Error(`Model fetch failed: ${res.status}`);
-        const blob = await res.blob();
-        const blobUrl = URL.createObjectURL(blob);
-        const wm = entry.catalogItem.wizardMeta;
-        const scale = wm?.estimatedScale || 1;
-        const yOffset = -(wm?.center?.y ?? 0) * scale;
-        const tx = Math.round(cameraRef.target.x * 10) / 10;
-        const tz = Math.round(cameraRef.target.z * 10) / 10;
-        addProp({ id: generateId(), catalogId: entry.id, floorId: activeFloorId, url: blobUrl, position: [tx, yOffset, tz], rotation: [0, 0, 0], scale: [scale, scale, scale] });
-        toast.success(`${entry.name} placerad`);
-      } catch (err) {
-        console.error('[Wizard] Synced model load failed:', err);
-        toast.error('Wizard ej tillgänglig — modell kan inte laddas');
-      }
-      return;
-    }
-
-    if (entry.source === 'curated' && entry.modelPath) {
-      if (!catalog.find(c => c.id === entry.id)) addToCatalog({ id: entry.id, name: entry.name, url: entry.modelPath, source: 'curated', thumbnail: entry.thumbnail, category: entry.category, placement: entry.curatedMeta?.placement, dimensions: entry.curatedMeta?.dimensions, haMapping: entry.curatedMeta?.ha, performance: entry.curatedMeta?.performance } as any);
-      placePropFn(entry.id, entry.modelPath);
-    } else if (entry.catalogItem) { placePropFn(entry.catalogItem.id, entry.catalogItem.url); }
-  }, [activeFloorId, catalog, addToCatalog, placePropFn, addProp]);
-
-  // Wizard dual-mode: Use as Synced
-  const handleWizardSync = useCallback(async () => {
-    if (!wizardActionEntry?.wizardMeta || !activeFloorId) return;
-    const wm = wizardActionEntry.wizardMeta;
-    try {
-      const { getWizardModelUrl, getWizardThumbnailUrl: getWizThumb } = await import('../../lib/wizardClient');
-      const modelUrl = getWizardModelUrl(wm.id);
-      const res = await fetch(modelUrl, { signal: AbortSignal.timeout(15000) });
-      if (!res.ok) throw new Error(`Model fetch failed: ${res.status}`);
-      const blob = await res.blob();
-      const blobUrl = URL.createObjectURL(blob);
-      const catalogId = `wizard-sync-${wm.id}`;
-      const wizardBaseUrl = useAppStore.getState().wizard.url.replace(/\/+$/, '');
-      if (!catalog.find(c => c.id === catalogId)) {
-        addToCatalog({
-          id: catalogId, name: wizardActionEntry.name, url: blobUrl, source: 'user',
-          thumbnail: wizardActionEntry.thumbnail, category: wizardActionEntry.category,
-          subcategory: wizardActionEntry.subcategory, placement: 'floor',
-          dimensions: wizardActionEntry.dimensions, performance: wizardActionEntry.performance,
-          wizardAssetId: wm.id, wizardBaseUrl, wizardMode: 'synced',
-          wizardMeta: { boundingBox: wm.boundingBox, center: wm.center, estimatedScale: wm.estimatedScale, triangleCount: wm.triangleCount, fileSize: wm.fileSize, category: wm.category, subcategory: wm.subcategory },
-        } as any);
-      }
-      const scale = wm.estimatedScale || 1;
-      const yOffset = -(wm.center?.y ?? 0) * scale;
-      const tx = Math.round(cameraRef.target.x * 10) / 10;
-      const tz = Math.round(cameraRef.target.z * 10) / 10;
-      addProp({ id: generateId(), catalogId, floorId: activeFloorId, url: blobUrl, position: [tx, yOffset, tz], rotation: [0, 0, 0], scale: [scale, scale, scale] });
-      toast.success(`${wizardActionEntry.name} synkad och placerad`);
-    } catch (err) {
-      console.error('[Wizard] Sync failed:', err);
-      toast.error('Kunde inte ladda Wizard-modell');
-    }
-    setWizardActionOpen(false); setWizardActionEntry(null);
-  }, [wizardActionEntry, activeFloorId, catalog, addToCatalog, addProp]);
-
-  // Wizard dual-mode: Import to Dashboard
-  const handleWizardImport = useCallback(async () => {
-    if (!wizardActionEntry?.wizardMeta || !activeFloorId) return;
-    const wm = wizardActionEntry.wizardMeta;
-    setWizardImporting(true);
+    setWizardImportingId(wm.id);
+    toast.info(`Importerar ${entry.name}...`);
     try {
       const { downloadWizardModel, downloadWizardThumbnail } = await import('../../lib/wizardClient');
       const [modelBlob, thumbBlob] = await Promise.all([
@@ -420,25 +358,36 @@ function AssetCatalog() {
       ]);
       const catalogId = `wizard-imp-${wm.id}`;
       let modelUrl: string;
-      let thumbnailUrl: string | undefined = wizardActionEntry.thumbnail;
+      let thumbnailUrl: string | undefined = entry.thumbnail;
+
+      // Convert thumbnail to base64 data URL for persistence
+      if (thumbBlob) {
+        try {
+          const thumbReader = new FileReader();
+          thumbnailUrl = await new Promise<string>((resolve) => {
+            thumbReader.onload = () => resolve(thumbReader.result as string);
+            thumbReader.onerror = () => resolve(entry.thumbnail || '');
+            thumbReader.readAsDataURL(thumbBlob);
+          });
+        } catch { /* keep original URL */ }
+      }
 
       if (isHostedSync()) {
         try {
           const modelFile = new File([modelBlob], `${wm.id}.glb`, { type: 'model/gltf-binary' });
-          const result = await uploadPropAsset('home', modelFile, { name: wizardActionEntry.name, category: (wizardActionEntry.category as AssetCategory) || 'imported', placement: 'floor', dimensions: wizardActionEntry.dimensions }, thumbBlob ? URL.createObjectURL(thumbBlob) : undefined);
+          const result = await uploadPropAsset('home', modelFile, { name: entry.name, category: (entry.category as AssetCategory) || 'imported', placement: 'floor', dimensions: entry.dimensions }, thumbnailUrl);
           if (result) { modelUrl = result.modelUrl; thumbnailUrl = result.thumbnailUrl || thumbnailUrl; }
           else { modelUrl = URL.createObjectURL(modelBlob); }
         } catch { modelUrl = URL.createObjectURL(modelBlob); }
       } else {
         modelUrl = URL.createObjectURL(modelBlob);
-        if (thumbBlob) thumbnailUrl = URL.createObjectURL(thumbBlob);
       }
 
       const item: PropCatalogItem = {
-        id: catalogId, name: wizardActionEntry.name, url: modelUrl, source: 'user',
-        thumbnail: thumbnailUrl, category: (wizardActionEntry.category as AssetCategory) || 'imported',
-        subcategory: wizardActionEntry.subcategory, placement: 'floor',
-        dimensions: wizardActionEntry.dimensions, performance: wizardActionEntry.performance as any,
+        id: catalogId, name: entry.name, url: modelUrl, source: 'user',
+        thumbnail: thumbnailUrl, category: (entry.category as AssetCategory) || 'imported',
+        subcategory: entry.subcategory, placement: 'floor',
+        dimensions: entry.dimensions, performance: entry.performance as any,
         wizardAssetId: wm.id, wizardMode: 'imported',
         wizardMeta: { boundingBox: wm.boundingBox, center: wm.center, estimatedScale: wm.estimatedScale, triangleCount: wm.triangleCount, fileSize: wm.fileSize, category: wm.category, subcategory: wm.subcategory },
       };
@@ -453,7 +402,7 @@ function AssetCatalog() {
           const tx = Math.round(cameraRef.target.x * 10) / 10;
           const tz = Math.round(cameraRef.target.z * 10) / 10;
           addProp({ id: generateId(), catalogId, floorId: activeFloorId, url: modelUrl, position: [tx, yOffset, tz], rotation: [0, 0, 0], scale: [scale, scale, scale] });
-          toast.success(`${wizardActionEntry.name} importerad och placerad`);
+          toast.success(`${entry.name} importerad och placerad`);
         };
         reader.readAsDataURL(new Blob([modelBlob]));
       } else {
@@ -463,19 +412,69 @@ function AssetCatalog() {
         const tx = Math.round(cameraRef.target.x * 10) / 10;
         const tz = Math.round(cameraRef.target.z * 10) / 10;
         addProp({ id: generateId(), catalogId, floorId: activeFloorId, url: modelUrl, position: [tx, yOffset, tz], rotation: [0, 0, 0], scale: [scale, scale, scale] });
-        toast.success(`${wizardActionEntry.name} importerad (stor modell — sessionsbaserad)`);
+        toast.success(`${entry.name} importerad (stor modell — sessionsbaserad)`);
       }
     } catch (err) {
       console.error('[Wizard] Import failed:', err);
       toast.error('Kunde inte importera Wizard-modell');
     }
-    setWizardImporting(false); setWizardActionOpen(false); setWizardActionEntry(null);
-  }, [wizardActionEntry, activeFloorId, catalog, addToCatalog, addProp]);
+    setWizardImportingId(null);
+  }, [activeFloorId, catalog, addToCatalog, addProp, placePropFn]);
+
+  const handlePlaceEntry = useCallback(async (entry: ACEntry) => {
+    if (!activeFloorId) return;
+
+    // Stale synced entries → need re-import from Wizard
+    if (entry.staleSync && entry.catalogItem?.wizardAssetId) {
+      // Try to re-import if wizard is connected
+      if (wizardStatus === 'connected') {
+        const wm = entry.catalogItem.wizardMeta;
+        if (wm) {
+          // Remove stale catalog entry, re-import fresh
+          removeFromCatalog(entry.id);
+          const fakeEntry: ACEntry = {
+            ...entry, source: 'wizard',
+            wizardMeta: { id: entry.catalogItem.wizardAssetId, name: entry.name, category: wm.category || entry.category, boundingBox: wm.boundingBox, center: wm.center, estimatedScale: wm.estimatedScale, triangleCount: wm.triangleCount, fileSize: wm.fileSize, subcategory: wm.subcategory } as any,
+          };
+          await handleWizardImport(fakeEntry);
+          return;
+        }
+      }
+      toast.error('Wizard ej ansluten — kan inte ladda synkad modell. Anslut Wizard och försök igen.');
+      return;
+    }
+
+    // Wizard assets from live catalog → import directly (no dialog)
+    if (entry.source === 'wizard' && entry.wizardMeta && !entry.catalogItem) {
+      await handleWizardImport(entry);
+      return;
+    }
+
+    // Already imported wizard asset or regular user asset → just place
+    if (entry.source === 'curated' && entry.modelPath) {
+      if (!catalog.find(c => c.id === entry.id)) addToCatalog({ id: entry.id, name: entry.name, url: entry.modelPath, source: 'curated', thumbnail: entry.thumbnail, category: entry.category, placement: entry.curatedMeta?.placement, dimensions: entry.curatedMeta?.dimensions, haMapping: entry.curatedMeta?.ha, performance: entry.curatedMeta?.performance } as any);
+      placePropFn(entry.id, entry.modelPath);
+    } else if (entry.catalogItem) {
+      placePropFn(entry.catalogItem.id, entry.catalogItem.url);
+    }
+  }, [activeFloorId, catalog, addToCatalog, placePropFn, handleWizardImport, removeFromCatalog, wizardStatus]);
 
   const openManageDialog = useCallback((entry: ACEntry) => { setManageAsset(entry); setManageName(entry.name); setManageCategory((entry.category as AssetCategory) || 'imported'); setManageSubcategory(entry.subcategory || ''); setManagePlacement(entry.curatedMeta?.placement || 'floor'); setManageDialogOpen(true); }, []);
   const handleSaveMeta = useCallback(async () => { if (!manageAsset) return; try { await updateCatalogMeta(manageAsset.id, { name: manageName.trim() || manageAsset.name, category: manageCategory, subcategory: manageSubcategory || undefined, placement: managePlacement }); clearCatalogCache(); loadCuratedCatalog().then(setCuratedAssets); toast.success('Metadata uppdaterad'); setManageDialogOpen(false); } catch { toast.error('Kunde inte uppdatera'); } }, [manageAsset, manageName, manageCategory, manageSubcategory, managePlacement]);
   const handleReplaceThumbnail = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => { const f = e.target.files?.[0]; if (!f || !manageAsset) return; try { await replaceCatalogThumbnail(manageAsset.id, f); clearCatalogCache(); loadCuratedCatalog().then(setCuratedAssets); toast.success('Thumbnail ersatt'); } catch { toast.error('Kunde inte ersätta thumbnail'); } }, [manageAsset]);
   const handleDeleteCurated = useCallback(async () => { if (!manageAsset) return; if (!window.confirm(`Ta bort "${manageAsset.name}"?`)) return; try { await deleteCatalogAsset(manageAsset.id); clearCatalogCache(); loadCuratedCatalog().then(setCuratedAssets); toast.success('Borttagen'); setManageDialogOpen(false); } catch { toast.error('Kunde inte ta bort'); } }, [manageAsset]);
+
+  // Delete handler for user/imported assets (including wizard-imported)
+  const handleDeleteEntry = useCallback((entry: ACEntry) => {
+    if (!window.confirm(`Ta bort "${entry.name}"?`)) return;
+    // Remove all placed instances of this catalog item
+    const instances = propItems.filter((p: any) => p.catalogId === entry.id);
+    instances.forEach((p: any) => removeProp(p.id));
+    removeFromCatalog(entry.id);
+    toast.success(`${entry.name} borttagen`);
+  }, [propItems, removeProp, removeFromCatalog]);
+
+  const canDelete = (entry: ACEntry) => entry.source === 'user' || entry.wizardMode === 'imported' || entry.staleSync;
 
   const rating = importResult ? ratePerformance(importResult.stats) : null;
   const optLevel: OptimizationLevel | null = importResult ? getOptimizationLevel(importResult.stats) : null;
@@ -544,26 +543,28 @@ function AssetCatalog() {
       {/* Grouped catalog sections */}
       {(() => {
         const sourceGroups: { key: string; label: string; borderColor: string; icon: React.ElementType; entries: ACEntry[] }[] = [];
-        const wizardEntries = filtered.filter(e => e.source === 'wizard' || e.wizardMode === 'synced');
-        const userEntries = filtered.filter(e => (e.source === 'user' && !e.wizardMode) || e.wizardMode === 'imported');
+        const wizardEntries = filtered.filter(e => e.source === 'wizard');
+        const userEntries = filtered.filter(e => (e.source === 'user') || e.wizardMode === 'imported');
         const curatedEntries = filtered.filter(e => e.source === 'curated');
 
         if (wizardEntries.length > 0) sourceGroups.push({ key: 'wizard', label: 'Wizard', borderColor: 'border-l-orange-500', icon: Wand2, entries: wizardEntries });
         if (userEntries.length > 0) sourceGroups.push({ key: 'user', label: 'Mina', borderColor: 'border-l-blue-500', icon: User, entries: userEntries });
         if (curatedEntries.length > 0) sourceGroups.push({ key: 'curated', label: 'Katalog', borderColor: 'border-l-muted-foreground/40', icon: Archive, entries: curatedEntries });
 
-        // If only one source group or sourceFilter is specific, skip grouping
         const skipGrouping = sourceGroups.length <= 1 || sourceFilter !== 'all';
 
         const renderCard = (entry: ACEntry) => {
-          const leftBorder = entry.source === 'wizard' || entry.wizardMode === 'synced' ? 'border-l-2 border-l-orange-500'
+          const leftBorder = entry.source === 'wizard' ? 'border-l-2 border-l-orange-500'
             : entry.wizardMode === 'imported' ? 'border-l-2 border-l-blue-500'
             : entry.source === 'user' ? 'border-l-2 border-l-blue-400'
             : '';
+          const isImporting = wizardImportingId && entry.wizardMeta?.id === wizardImportingId;
 
           if (viewMode === 'list') {
             return (
-              <button key={entry.id} onClick={() => handlePlaceEntry(entry)} className={cn("flex items-center gap-2 w-full px-2 py-1.5 rounded-md bg-secondary/30 hover:bg-secondary/60 transition-colors text-xs group", leftBorder)}>
+              <button key={entry.id} onClick={() => handlePlaceEntry(entry)} disabled={!!isImporting} className={cn("flex items-center gap-2 w-full px-2 py-1.5 rounded-md bg-secondary/30 hover:bg-secondary/60 transition-colors text-xs group", leftBorder, isImporting && 'opacity-50')}>
+                {isImporting && <Loader2 size={12} className="animate-spin shrink-0" />}
+                {entry.staleSync && <AlertTriangle size={12} className="text-destructive shrink-0" title="Kräver re-import" />}
                 {entry.thumbnail ? (
                   <img src={entry.thumbnail} alt={entry.name} className="w-8 h-8 object-contain rounded shrink-0" loading="lazy"
                     onError={(e) => { e.currentTarget.style.display = 'none'; const p = e.currentTarget.nextElementSibling; if (p) (p as HTMLElement).style.display = 'flex'; }} />
@@ -579,13 +580,15 @@ function AssetCatalog() {
                   </div>
                 </div>
                 {instanceCounts[entry.id] > 0 && <span className="bg-primary text-primary-foreground text-[8px] font-bold rounded-full w-4 h-4 flex items-center justify-center shrink-0">×{instanceCounts[entry.id]}</span>}
-                {entry.source === 'user' && !entry.wizardMode && <button onClick={(e) => { e.stopPropagation(); removeFromCatalog(entry.id); }} className="p-0.5 rounded opacity-0 group-hover:opacity-100 hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-opacity shrink-0"><Trash2 size={10} /></button>}
+                {canDelete(entry) && <button onClick={(e) => { e.stopPropagation(); handleDeleteEntry(entry); }} className="p-0.5 rounded opacity-0 group-hover:opacity-100 hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-opacity shrink-0"><Trash2 size={10} /></button>}
               </button>
             );
           }
 
           return (
-            <button key={entry.id} onClick={() => handlePlaceEntry(entry)} className={cn("relative flex flex-col items-center gap-0.5 p-2 rounded-lg bg-secondary/30 hover:bg-secondary/60 transition-colors text-xs group min-h-[44px]", leftBorder)}>
+            <button key={entry.id} onClick={() => handlePlaceEntry(entry)} disabled={!!isImporting} className={cn("relative flex flex-col items-center gap-0.5 p-2 rounded-lg bg-secondary/30 hover:bg-secondary/60 transition-colors text-xs group min-h-[44px]", leftBorder, isImporting && 'opacity-50')}>
+              {isImporting && <div className="absolute inset-0 flex items-center justify-center z-30 bg-background/60 rounded-lg"><Loader2 size={16} className="animate-spin text-primary" /></div>}
+              {entry.staleSync && <div className="absolute top-1 right-1 z-20" title="Kräver re-import"><AlertTriangle size={10} className="text-destructive" /></div>}
               {instanceCounts[entry.id] > 0 && <div className="absolute top-1 left-1 bg-primary text-primary-foreground text-[8px] font-bold rounded-full w-4 h-4 flex items-center justify-center z-20">×{instanceCounts[entry.id]}</div>}
               {entry.thumbnail ? (
                 <img src={entry.thumbnail} alt={entry.name} className="w-full h-16 object-contain rounded" loading="lazy"
@@ -600,7 +603,7 @@ function AssetCatalog() {
                 {getPerfColor(entry.performance) && <span className={`inline-block w-1.5 h-1.5 rounded-full ${getPerfColor(entry.performance)}`} />}
                 {entry.subcategory && entry.subcategory !== entry.category && <span className="text-[8px] text-muted-foreground/60">{entry.subcategory}</span>}
               </div>
-              {entry.source === 'user' && !entry.wizardMode && <button onClick={(e) => { e.stopPropagation(); removeFromCatalog(entry.id); }} className="absolute bottom-1 right-1 p-0.5 rounded opacity-0 group-hover:opacity-100 hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-opacity"><Trash2 size={10} /></button>}
+              {canDelete(entry) && <button onClick={(e) => { e.stopPropagation(); handleDeleteEntry(entry); }} className="absolute bottom-1 right-1 p-0.5 rounded opacity-0 group-hover:opacity-100 hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-opacity"><Trash2 size={10} /></button>}
               {entry.source === 'curated' && isHostedSync() && <button onClick={(e) => { e.stopPropagation(); openManageDialog(entry); }} className="absolute bottom-1 right-1 p-0.5 rounded opacity-0 group-hover:opacity-100 hover:bg-accent text-muted-foreground hover:text-foreground transition-opacity"><Settings size={10} /></button>}
             </button>
           );
@@ -701,7 +704,6 @@ function AssetCatalog() {
             </div>
           ) : optimizationStep === 'optimized' && optimizedResult ? (
             <div className="space-y-3">
-              {/* Optimized thumbnail */}
               {(optimizedResult.thumbnail || importResult?.thumbnail) ? <div className="flex justify-center"><img src={optimizedResult.thumbnail || importResult?.thumbnail || ''} alt="Optimerad" className="w-24 h-24 object-contain rounded bg-muted/20" /></div> : null}
 
               {optimizedResult.noImprovement ? (
@@ -739,7 +741,6 @@ function AssetCatalog() {
                 </div>
               )}
 
-              {/* Metadata fields still editable */}
               <div className="space-y-1"><Label className="text-[10px]">Namn</Label><Input value={importName} onChange={(e) => setImportName(e.target.value)} className="h-7 text-xs" /></div>
               <div className="space-y-1"><Label className="text-[10px]">Kategori</Label><select value={importCategory} onChange={(e) => setImportCategory(e.target.value as AssetCategory)} className="w-full h-7 text-xs bg-secondary text-foreground rounded-md px-2 border border-border">{Object.entries(AC_CATEGORY_LABELS).map(([k,v]) => <option key={k} value={k}>{v}</option>)}</select></div>
               <div className="space-y-1"><Label className="text-[10px]">Underkategori</Label><Input value={importSubcategory} onChange={(e) => setImportSubcategory(e.target.value)} placeholder="t.ex. soffbord..." className="h-7 text-xs" /></div>
@@ -747,17 +748,14 @@ function AssetCatalog() {
             </div>
           ) : importResult ? (
             <div className="space-y-3">
-              {/* Thumbnail */}
               {importResult.thumbnail ? <div className="flex justify-center"><img src={importResult.thumbnail} alt="Preview" className="w-24 h-24 object-contain rounded bg-muted/20" /></div> : <div className="flex justify-center"><div className="w-24 h-24 bg-muted/20 rounded flex items-center justify-center text-muted-foreground text-[10px]">Ingen förhandsgranskning</div></div>}
 
-              {/* Stats */}
               <div className="flex items-center gap-2 text-[10px]">
                 {rating === 'ok' && <CheckCircle size={12} className="text-primary" />}{rating === 'heavy' && <AlertTriangle size={12} className="text-accent-foreground" />}{rating === 'too-heavy' && <AlertTriangle size={12} className="text-destructive" />}
                 <span className="text-muted-foreground">{formatStats(importResult.stats)}</span>
                 {importResult.dimensions && <span className="text-muted-foreground">· {importResult.dimensions.width}×{importResult.dimensions.depth}×{importResult.dimensions.height}m</span>}
               </div>
 
-              {/* Metadata fields */}
               <div className="space-y-1"><Label className="text-[10px]">Namn</Label><Input value={importName} onChange={(e) => setImportName(e.target.value)} className="h-7 text-xs" /></div>
               <div className="space-y-1"><Label className="text-[10px]">Kategori</Label><select value={importCategory} onChange={(e) => setImportCategory(e.target.value as AssetCategory)} className="w-full h-7 text-xs bg-secondary text-foreground rounded-md px-2 border border-border">{Object.entries(AC_CATEGORY_LABELS).map(([k,v]) => <option key={k} value={k}>{v}</option>)}</select></div>
               <div className="space-y-1"><Label className="text-[10px]">Underkategori</Label><Input value={importSubcategory} onChange={(e) => setImportSubcategory(e.target.value)} placeholder="t.ex. soffbord..." className="h-7 text-xs" /></div>
@@ -765,7 +763,6 @@ function AssetCatalog() {
               {isHostedSync() && <label className="flex items-center gap-2 text-[10px] text-muted-foreground cursor-pointer"><input type="checkbox" checked={saveToCatalog} onChange={(e) => setSaveToCatalog(e.target.checked)} className="rounded border-border" /><FolderPlus size={12} />Spara i permanent katalog</label>}
               {importResult.warnings.length > 0 && <div className="space-y-1">{importResult.warnings.map((w,i) => <p key={i} className="text-[10px] text-accent-foreground flex items-center gap-1"><AlertTriangle size={10} /> {w}</p>)}</div>}
 
-              {/* Optimization recommendation */}
               <div className={cn("rounded-lg p-2 text-[10px] flex items-start gap-2",
                 optLevel === 'ok' ? 'bg-primary/10 text-primary' :
                 optLevel === 'recommended' ? 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400' :
@@ -788,7 +785,6 @@ function AssetCatalog() {
             </div>
           ) : null}
 
-          {/* Footer buttons — context-dependent */}
           <DialogFooter className="gap-1">
             <Button size="sm" variant="outline" onClick={() => setImportDialogOpen(false)}>Avbryt</Button>
 
@@ -826,39 +822,6 @@ function AssetCatalog() {
             </div>
           )}
           <DialogFooter><Button size="sm" variant="outline" onClick={() => setManageDialogOpen(false)}>Avbryt</Button><Button size="sm" onClick={handleSaveMeta}>Spara</Button></DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Wizard dual-mode action dialog */}
-      <Dialog open={wizardActionOpen} onOpenChange={(open) => { setWizardActionOpen(open); if (!open) { setWizardActionEntry(null); setWizardImporting(false); } }}>
-        <DialogContent className="max-w-xs">
-          <DialogHeader>
-            <DialogTitle className="text-sm flex items-center gap-2"><Wand2 size={14} /> {wizardActionEntry?.name}</DialogTitle>
-            <DialogDescription className="text-[10px]">Välj hur du vill använda denna Wizard-resurs.</DialogDescription>
-          </DialogHeader>
-          {wizardActionEntry && (
-            <div className="space-y-3">
-              {wizardActionEntry.thumbnail && (
-                <div className="flex justify-center"><img src={wizardActionEntry.thumbnail} alt={wizardActionEntry.name} className="w-20 h-20 object-contain rounded bg-muted/20" /></div>
-              )}
-              <div className="flex flex-wrap gap-1 text-[9px] text-muted-foreground justify-center">
-                {wizardActionEntry.dimensions && <span>{wizardActionEntry.dimensions.width}×{wizardActionEntry.dimensions.depth}×{wizardActionEntry.dimensions.height}m</span>}
-                {wizardActionEntry.performance?.triangles && <span>· {wizardActionEntry.performance.triangles > 1000 ? `${(wizardActionEntry.performance.triangles / 1000).toFixed(1)}k` : wizardActionEntry.performance.triangles} tris</span>}
-                {wizardActionEntry.wizardMeta?.fileSize && <span>· {(wizardActionEntry.wizardMeta.fileSize / 1024).toFixed(0)} KB</span>}
-              </div>
-            </div>
-          )}
-          <DialogFooter className="flex-col gap-2 sm:flex-col">
-            <Button size="sm" variant="outline" onClick={handleWizardSync} disabled={wizardImporting} className="w-full justify-start gap-2 text-xs">
-              <LinkIcon size={14} /> Använd synkad
-              <span className="ml-auto text-[8px] text-muted-foreground">live från Wizard</span>
-            </Button>
-            <Button size="sm" onClick={handleWizardImport} disabled={wizardImporting} className="w-full justify-start gap-2 text-xs">
-              {wizardImporting ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
-              Importera till Dashboard
-              <span className="ml-auto text-[8px] text-muted-foreground">lokal kopia</span>
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
