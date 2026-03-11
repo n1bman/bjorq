@@ -255,8 +255,10 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
     .filter((e) => !searchQuery || e.name.toLowerCase().includes(searchQuery.toLowerCase()))
     .filter((e) => !filterCategory || e.category === filterCategory)
     .filter((e) => {
-      if (sourceFilter === 'all') return true;
       if (sourceFilter === 'wizard') return e.source === 'wizard';
+      // Hide non-imported wizard entries from all non-wizard views
+      if (e.source === 'wizard' && !e.catalogItem) return false;
+      if (sourceFilter === 'all') return true;
       if (sourceFilter === 'user') return (e.source === 'user') || e.wizardMode === 'imported';
       return e.source === sourceFilter;
     })
