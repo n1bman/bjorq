@@ -332,7 +332,7 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
       try {
         const result = await uploadPropAsset('home', finalFile, { name: importName.trim(), category: importCategory, subcategory: importSubcategory || undefined, placement: 'floor', dimensions: importResult.dimensions, performance: finalStats }, finalThumbnail || undefined);
         if (result) {
-          const item: PropCatalogItem = { id: result.assetId || catalogId, name: importName.trim(), url: result.modelUrl, source: 'user', thumbnail: result.thumbnailUrl || finalThumbnail || undefined, category: importCategory, subcategory: importSubcategory || undefined, dimensions: importResult.dimensions, placement: 'floor', performance: finalStats };
+          const item: PropCatalogItem = { id: result.assetId || catalogId, name: importName.trim(), url: result.modelUrl, source: 'user', thumbnail: result.thumbnailUrl || finalThumbnail || undefined, category: importCategory, subcategory: importSubcategory || undefined, dimensions: importResult.dimensions, placement: 'floor', performance: finalStats, ...wizardExtras };
           addToCatalog(item as any); placePropFn(item.id, result.modelUrl); setImportDialogOpen(false); setImportResult(null); setImportFile(null); setOptimizedResult(null); return;
         }
       } catch (err) { console.warn('[AssetCatalog] Server upload failed:', err); }
