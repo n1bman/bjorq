@@ -451,9 +451,44 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
       return;
     }
 
-    // Wizard assets from live catalog → import directly (no dialog)
+    // Wizard assets from live catalog → open import dialog (like file import)
     if (entry.source === 'wizard' && entry.wizardMeta && !entry.catalogItem) {
-      await handleWizardImport(entry);
+      setWizardImportingId(entry.wizardMeta.id);
+      setIsProcessing(true);
+      setImportDialogOpen(true);
+      setImportName(entry.name);
+      // Map wizard category to local category
+      const wizCat = entry.wizardMeta.category?.toLowerCase() || '';
+      const catMap: Record<string, AssetCategory> = {
+        sofas: 'sofas', sofa: 'sofas', chairs: 'chairs', chair: 'chairs',
+        tables: 'tables', table: 'tables', beds: 'beds', bed: 'beds',
+        storage: 'storage', lighting: 'lighting', light: 'lighting',
+        decor: 'decor', decoration: 'decor', plants: 'plants', plant: 'plants',
+        kitchen: 'kitchen', bathroom: 'bathroom', outdoor: 'outdoor',
+        electronics: 'electronics', electronic: 'electronics',
+        'smart-devices': 'smart-devices', sensor: 'smart-devices', sensors: 'smart-devices',
+        devices: 'devices', furniture: 'sofas',
+      };
+      setImportCategory(catMap[wizCat] || 'imported');
+      setImportSubcategory(entry.wizardMeta.subcategory || '');
+      setOptimizedResult(null);
+      setOptimizationStep('analyze');
+      try {
+        const { downloadWizardModel } = await import('../../lib/wizardClient');
+        const modelBlob = await downloadWizardModel(entry.wizardMeta.id);
+        const modelFile = new File([modelBlob], `${entry.wizardMeta.id}.glb`, { type: 'model/gltf-binary' });
+        setImportFile(modelFile);
+        const result = await processModel(modelFile);
+        setImportResult(result);
+        result.warnings.forEach((w) => toast.warning(w));
+      } catch (err) {
+        console.error('[Wizard] Download/process failed:', err);
+        toast.error('Kunde inte hämta Wizard-modell');
+        setImportDialogOpen(false);
+      } finally {
+        setIsProcessing(false);
+        setWizardImportingId(null);
+      }
       return;
     }
 
