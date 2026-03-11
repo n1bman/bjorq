@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.8] - 2026-03-11
+
+### Added
+- **Möbler-flik drag** — Props kan nu markeras och flyttas direkt i Möbler-fliken (2D & 3D) utan att byta till Välj-verktyget.
+- **Wizard-ikon** — Importerade Wizard-modeller visas med en liten trollstavsikon (🪄) i möbelkatalogen.
+
+### Changed
+- **Wizard-flik rensat** — Importera-knapp och käll-/kategorifilter dolda i Wizard-vyn för enklare gränssnitt.
+
+### Fixed
+- **Högerklick på enheter blockerat** — Kontextmeny förhindras på alla enhetsmarkörer i 3D-vyn.
+
 ## [1.0.7] - 2026-03-11
 
 ### Added

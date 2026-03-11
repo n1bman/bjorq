@@ -611,6 +611,7 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
               <button key={entry.id} onClick={() => handlePlaceEntry(entry)} disabled={!!isImporting} className={cn("flex items-center gap-2 w-full px-2 py-1.5 rounded-md bg-secondary/30 hover:bg-secondary/60 transition-colors text-xs group", leftBorder, isImporting && 'opacity-50')}>
                 {isImporting && <Loader2 size={12} className="animate-spin shrink-0" />}
                 {entry.staleSync && <span className="shrink-0" title="Kräver re-import"><AlertTriangle size={12} className="text-destructive" /></span>}
+                {entry.wizardMode === 'imported' && !entry.staleSync && <span className="shrink-0" title="Från Wizard"><Wand2 size={10} className="text-orange-400" /></span>}
                 {entry.thumbnail ? (
                   <img src={entry.thumbnail} alt={entry.name} className="w-8 h-8 object-contain rounded shrink-0" loading="lazy"
                     onError={(e) => { e.currentTarget.style.display = 'none'; const p = e.currentTarget.nextElementSibling; if (p) (p as HTMLElement).style.display = 'flex'; }} />

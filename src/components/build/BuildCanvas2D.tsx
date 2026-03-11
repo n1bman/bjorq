@@ -705,7 +705,7 @@ export default function BuildCanvas2D({ overlayMode = false }: { overlayMode?: b
         else { setWallDrawing({ nodes: [...wallDrawing.nodes, snapped] }); } } return;
     }
 
-    if (activeTool === 'select') {
+    if (activeTool === 'select' || activeTool === 'furnish') {
       const openingHit = findOpeningAt(sx, sy); if (openingHit) { setSelection({ type: 'opening', id: openingHit.openingId }); setDragOpening({ wallId: openingHit.wall.id, openingId: openingHit.openingId }); pushUndo(); return; }
       const [swx, swz] = screenToWorld(sx, sy);
       for (const dev of deviceMarkers.filter((m) => m.floorId === activeFloorId)) { if (Math.sqrt((swx - dev.position[0]) ** 2 + (swz - dev.position[2]) ** 2) < 0.5) { setSelection({ type: 'device', id: dev.id }); setDragDeviceId(dev.id); setDragDeviceOffset([swx - dev.position[0], swz - dev.position[2]]); return; } }
