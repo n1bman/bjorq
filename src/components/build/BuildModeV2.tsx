@@ -533,7 +533,7 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
         <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Sök modell..." className="h-7 text-xs pl-7" />
       </div>
 
-      {(hasUser || hasCurated || hasWizard) && (
+      {sourceFilter !== 'wizard' && (hasUser || hasCurated || hasWizard) && (
         <div className="flex gap-1 flex-wrap">
           {(['all', ...(hasCurated ? ['curated'] : []), ...(hasUser ? ['user'] : []), ...(hasWizard ? ['wizard'] : [])] as ACSourceFilter[]).map((sf) => (
             <Button key={sf} size="sm" variant={sourceFilter === sf ? 'default' : 'outline'} className="h-5 text-[9px] px-2 shrink-0" onClick={() => setSourceFilter(sf)}>
@@ -543,7 +543,7 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
         </div>
       )}
 
-      {categories.length > 1 && (
+      {sourceFilter !== 'wizard' && categories.length > 1 && (
         <div className="flex gap-1 overflow-x-auto pb-1 sticky top-0 z-10 bg-card/95 backdrop-blur-sm py-1">
           <Button size="sm" variant={!filterCategory ? 'default' : 'outline'} className="h-5 text-[9px] px-2 shrink-0" onClick={() => setFilterCategory(null)}>Alla</Button>
           {categories.map((c) => (
