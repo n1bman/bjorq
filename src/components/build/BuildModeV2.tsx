@@ -182,6 +182,7 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
 
   // Wizard import state (import-only, no sync mode)
   const [wizardImportingId, setWizardImportingId] = useState<string | null>(null);
+  const [wizardSourceMeta, setWizardSourceMeta] = useState<import('../../lib/wizardClient').WizardAsset | null>(null);
   const [wizardLoading, setWizardLoading] = useState(false);
   const [wizardError, setWizardError] = useState<string | null>(null);
 
