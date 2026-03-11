@@ -106,14 +106,17 @@ const AC_CATEGORY_LABELS: Record<string, string> = {
   sofas: 'Soffor', chairs: 'Stolar', tables: 'Bord', beds: 'Sängar',
   storage: 'Förvaring', lighting: 'Belysning', decor: 'Dekoration',
   plants: 'Växter', kitchen: 'Kök', bathroom: 'Badrum',
-  devices: 'Enheter', outdoor: 'Utomhus', imported: 'Importerade',
+  devices: 'Enheter', outdoor: 'Utomhus',
+  electronics: 'Elektronik', 'smart-devices': 'Smarta enheter',
+  imported: 'Importerade',
 };
 
 const AC_CATEGORY_ICONS: Record<string, React.ElementType> = {
   sofas: Sofa, chairs: Sofa, tables: Box, beds: Bed,
   storage: Package, lighting: Lamp, decor: Box, plants: Flower2,
   kitchen: UtensilsCrossed, bathroom: Bath, outdoor: TreePine,
-  devices: Monitor, imported: Box,
+  devices: Monitor, electronics: Monitor, 'smart-devices': Cpu,
+  imported: Box,
 };
 
 
