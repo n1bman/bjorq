@@ -342,8 +342,8 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
     const item: PropCatalogItem = { id: catalogId, name: importName.trim(), url, source: 'user', thumbnail: finalThumbnail || undefined, category: importCategory, subcategory: importSubcategory || undefined, dimensions: importResult.dimensions, placement: 'floor', performance: finalStats, ...wizardExtras };
     if (finalFile.size <= 4*1024*1024) { const r = new FileReader(); r.onload = () => { addToCatalog({ ...item, fileData: (r.result as string).split(',')[1] } as any); placePropFn(catalogId, url); }; r.readAsDataURL(finalFile); }
     else { addToCatalog(item as any); placePropFn(catalogId, url); toast.info('Stor modell — sparas bara under denna session'); }
-    setImportDialogOpen(false); setImportResult(null); setImportFile(null); setOptimizedResult(null);
-  }, [importFile, importResult, activeFloorId, importName, importCategory, importSubcategory, addToCatalog, saveToCatalog, catalog, curatedAssets, placePropFn, optimizedResult]);
+    setImportDialogOpen(false); setImportResult(null); setImportFile(null); setOptimizedResult(null); setWizardSourceMeta(null);
+  }, [importFile, importResult, activeFloorId, importName, importCategory, importSubcategory, addToCatalog, saveToCatalog, catalog, curatedAssets, placePropFn, optimizedResult, wizardSourceMeta]);
 
   // Import a Wizard asset (download model + thumbnail, store locally)
   const handleWizardImport = useCallback(async (entry: ACEntry) => {
