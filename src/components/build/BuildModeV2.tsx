@@ -106,14 +106,17 @@ const AC_CATEGORY_LABELS: Record<string, string> = {
   sofas: 'Soffor', chairs: 'Stolar', tables: 'Bord', beds: 'Sängar',
   storage: 'Förvaring', lighting: 'Belysning', decor: 'Dekoration',
   plants: 'Växter', kitchen: 'Kök', bathroom: 'Badrum',
-  devices: 'Enheter', outdoor: 'Utomhus', imported: 'Importerade',
+  devices: 'Enheter', outdoor: 'Utomhus',
+  electronics: 'Elektronik', 'smart-devices': 'Smarta enheter',
+  imported: 'Importerade',
 };
 
 const AC_CATEGORY_ICONS: Record<string, React.ElementType> = {
   sofas: Sofa, chairs: Sofa, tables: Box, beds: Bed,
   storage: Package, lighting: Lamp, decor: Box, plants: Flower2,
   kitchen: UtensilsCrossed, bathroom: Bath, outdoor: TreePine,
-  devices: Monitor, imported: Box,
+  devices: Monitor, electronics: Monitor, 'smart-devices': Cpu,
+  imported: Box,
 };
 
 
@@ -179,6 +182,7 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
 
   // Wizard import state (import-only, no sync mode)
   const [wizardImportingId, setWizardImportingId] = useState<string | null>(null);
+  const [wizardSourceMeta, setWizardSourceMeta] = useState<import('../../lib/wizardClient').WizardAsset | null>(null);
   const [wizardLoading, setWizardLoading] = useState(false);
   const [wizardError, setWizardError] = useState<string | null>(null);
 
@@ -252,8 +256,10 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
     .filter((e) => !searchQuery || e.name.toLowerCase().includes(searchQuery.toLowerCase()))
     .filter((e) => !filterCategory || e.category === filterCategory)
     .filter((e) => {
-      if (sourceFilter === 'all') return true;
       if (sourceFilter === 'wizard') return e.source === 'wizard';
+      // Hide non-imported wizard entries from all non-wizard views
+      if (e.source === 'wizard' && !e.catalogItem) return false;
+      if (sourceFilter === 'all') return true;
       if (sourceFilter === 'user') return (e.source === 'user') || e.wizardMode === 'imported';
       return e.source === sourceFilter;
     })
@@ -308,7 +314,9 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
     const finalStats = optimizedResult ? optimizedResult.stats : importResult.stats;
     const finalThumbnail = optimizedResult ? optimizedResult.thumbnail : importResult.thumbnail;
 
-    const catalogId = (() => { const b = generateId(); return (catalog.find(c => c.id === b) || curatedAssets.find(c => c.id === b)) ? b + generateId().slice(0,4) : b; })();
+    const wizId = wizardSourceMeta?.id;
+    const catalogId = wizId ? `wizard-imp-${wizId}` : (() => { const b = generateId(); return (catalog.find(c => c.id === b) || curatedAssets.find(c => c.id === b)) ? b + generateId().slice(0,4) : b; })();
+    const wizardExtras = wizardSourceMeta ? { wizardAssetId: wizardSourceMeta.id, wizardMode: 'imported' as const, wizardMeta: { boundingBox: wizardSourceMeta.boundingBox, center: wizardSourceMeta.center, estimatedScale: wizardSourceMeta.estimatedScale, triangleCount: wizardSourceMeta.triangleCount, fileSize: wizardSourceMeta.fileSize, category: wizardSourceMeta.category, subcategory: wizardSourceMeta.subcategory } } : {};
 
     if (saveToCatalog && isHostedSync()) {
       try {
@@ -324,18 +332,18 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
       try {
         const result = await uploadPropAsset('home', finalFile, { name: importName.trim(), category: importCategory, subcategory: importSubcategory || undefined, placement: 'floor', dimensions: importResult.dimensions, performance: finalStats }, finalThumbnail || undefined);
         if (result) {
-          const item: PropCatalogItem = { id: result.assetId || catalogId, name: importName.trim(), url: result.modelUrl, source: 'user', thumbnail: result.thumbnailUrl || finalThumbnail || undefined, category: importCategory, subcategory: importSubcategory || undefined, dimensions: importResult.dimensions, placement: 'floor', performance: finalStats };
+          const item: PropCatalogItem = { id: result.assetId || catalogId, name: importName.trim(), url: result.modelUrl, source: 'user', thumbnail: result.thumbnailUrl || finalThumbnail || undefined, category: importCategory, subcategory: importSubcategory || undefined, dimensions: importResult.dimensions, placement: 'floor', performance: finalStats, ...wizardExtras };
           addToCatalog(item as any); placePropFn(item.id, result.modelUrl); setImportDialogOpen(false); setImportResult(null); setImportFile(null); setOptimizedResult(null); return;
         }
       } catch (err) { console.warn('[AssetCatalog] Server upload failed:', err); }
     }
 
     const url = URL.createObjectURL(finalFile);
-    const item: PropCatalogItem = { id: catalogId, name: importName.trim(), url, source: 'user', thumbnail: finalThumbnail || undefined, category: importCategory, subcategory: importSubcategory || undefined, dimensions: importResult.dimensions, placement: 'floor', performance: finalStats };
+    const item: PropCatalogItem = { id: catalogId, name: importName.trim(), url, source: 'user', thumbnail: finalThumbnail || undefined, category: importCategory, subcategory: importSubcategory || undefined, dimensions: importResult.dimensions, placement: 'floor', performance: finalStats, ...wizardExtras };
     if (finalFile.size <= 4*1024*1024) { const r = new FileReader(); r.onload = () => { addToCatalog({ ...item, fileData: (r.result as string).split(',')[1] } as any); placePropFn(catalogId, url); }; r.readAsDataURL(finalFile); }
     else { addToCatalog(item as any); placePropFn(catalogId, url); toast.info('Stor modell — sparas bara under denna session'); }
-    setImportDialogOpen(false); setImportResult(null); setImportFile(null); setOptimizedResult(null);
-  }, [importFile, importResult, activeFloorId, importName, importCategory, importSubcategory, addToCatalog, saveToCatalog, catalog, curatedAssets, placePropFn, optimizedResult]);
+    setImportDialogOpen(false); setImportResult(null); setImportFile(null); setOptimizedResult(null); setWizardSourceMeta(null);
+  }, [importFile, importResult, activeFloorId, importName, importCategory, importSubcategory, addToCatalog, saveToCatalog, catalog, curatedAssets, placePropFn, optimizedResult, wizardSourceMeta]);
 
   // Import a Wizard asset (download model + thumbnail, store locally)
   const handleWizardImport = useCallback(async (entry: ACEntry) => {
@@ -446,9 +454,45 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
       return;
     }
 
-    // Wizard assets from live catalog → import directly (no dialog)
+    // Wizard assets from live catalog → open import dialog (like file import)
     if (entry.source === 'wizard' && entry.wizardMeta && !entry.catalogItem) {
-      await handleWizardImport(entry);
+      setWizardImportingId(entry.wizardMeta.id);
+      setWizardSourceMeta(entry.wizardMeta);
+      setIsProcessing(true);
+      setImportDialogOpen(true);
+      setImportName(entry.name);
+      // Map wizard category to local category
+      const wizCat = entry.wizardMeta.category?.toLowerCase() || '';
+      const catMap: Record<string, AssetCategory> = {
+        sofas: 'sofas', sofa: 'sofas', chairs: 'chairs', chair: 'chairs',
+        tables: 'tables', table: 'tables', beds: 'beds', bed: 'beds',
+        storage: 'storage', lighting: 'lighting', light: 'lighting',
+        decor: 'decor', decoration: 'decor', plants: 'plants', plant: 'plants',
+        kitchen: 'kitchen', bathroom: 'bathroom', outdoor: 'outdoor',
+        electronics: 'electronics', electronic: 'electronics',
+        'smart-devices': 'smart-devices', sensor: 'smart-devices', sensors: 'smart-devices',
+        devices: 'devices', furniture: 'sofas',
+      };
+      setImportCategory(catMap[wizCat] || 'imported');
+      setImportSubcategory(entry.wizardMeta.subcategory || '');
+      setOptimizedResult(null);
+      setOptimizationStep('analyze');
+      try {
+        const { downloadWizardModel } = await import('../../lib/wizardClient');
+        const modelBlob = await downloadWizardModel(entry.wizardMeta.id);
+        const modelFile = new File([modelBlob], `${entry.wizardMeta.id}.glb`, { type: 'model/gltf-binary' });
+        setImportFile(modelFile);
+        const result = await processModel(modelFile);
+        setImportResult(result);
+        result.warnings.forEach((w) => toast.warning(w));
+      } catch (err) {
+        console.error('[Wizard] Download/process failed:', err);
+        toast.error('Kunde inte hämta Wizard-modell');
+        setImportDialogOpen(false);
+      } finally {
+        setIsProcessing(false);
+        setWizardImportingId(null);
+      }
       return;
     }
 

@@ -547,7 +547,7 @@ export interface DevicesState {
 export type AssetCategory =
   | 'sofas' | 'chairs' | 'tables' | 'beds' | 'storage'
   | 'lighting' | 'decor' | 'plants' | 'kitchen' | 'bathroom'
-  | 'devices' | 'outdoor' | 'imported';
+  | 'devices' | 'outdoor' | 'electronics' | 'smart-devices' | 'imported';
 
 export type AssetPlacement = 'floor' | 'wall' | 'ceiling' | 'table';
 
