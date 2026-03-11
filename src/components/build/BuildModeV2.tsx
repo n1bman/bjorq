@@ -131,7 +131,7 @@ interface ACEntry {
   staleSync?: boolean; // true if wizardMode=synced (deprecated, needs re-import)
 }
 
-function AssetCatalog() {
+function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceFilter }) {
   const activeFloorId = useAppStore((s) => s.layout.activeFloorId);
   const catalog = useAppStore((s) => s.props.catalog);
   const propItems = useAppStore((s) => s.props.items);
@@ -151,7 +151,9 @@ function AssetCatalog() {
   const [curatedAssets, setCuratedAssets] = useState<CatalogAssetMeta[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCategory, setFilterCategory] = useState<string | null>(null);
-  const [sourceFilter, setSourceFilter] = useState<ACSourceFilter>('all');
+  const [sourceFilter, setSourceFilter] = useState<ACSourceFilter>(initialSourceFilter ?? 'all');
+  // Reset sourceFilter when initialSourceFilter prop changes
+  useEffect(() => { setSourceFilter(initialSourceFilter ?? 'all'); }, [initialSourceFilter]);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
   const [importDialogOpen, setImportDialogOpen] = useState(false);
@@ -1257,6 +1259,7 @@ const dockItems: DockItem[] = [
   { tool: 'stairs', tab: 'structure', label: 'Trappa', icon: Footprints },
   { tool: 'measure', tab: 'structure', label: 'Mät', icon: Ruler },
   { tool: 'furnish' as BuildTool, tab: 'furnish', label: 'Möbler', icon: Sofa, hasCatalog: true },
+  { tool: 'wizard' as BuildTool, tab: 'furnish', label: 'Wizard', icon: Wand2, hasCatalog: true },
   { tool: 'place-light', tab: 'devices', label: 'Enheter', icon: Cpu, hasCatalog: true },
   { tool: 'import' as BuildTool, tab: 'import', label: 'Import', icon: Import, hasCatalog: true },
   { tool: 'erase', tab: 'structure', label: 'Radera', icon: Eraser },
@@ -1271,7 +1274,7 @@ function BuildBottomDock() {
     <div className="flex items-center justify-center gap-1 px-2 py-1.5 bg-background/95 backdrop-blur border-t border-border">
       {dockItems.map((item) => {
         const Icon = item.icon;
-        const isActive = activeTool === item.tool || (item.tool === 'place-light' && activeTool.startsWith('place-')) || (item.tool === ('furnish' as BuildTool) && activeTool === ('furnish' as BuildTool)) || (item.tool === ('import' as BuildTool) && activeTool === ('import' as BuildTool));
+        const isActive = activeTool === item.tool || (item.tool === 'place-light' && activeTool.startsWith('place-')) || (item.tool === ('furnish' as BuildTool) && activeTool === ('furnish' as BuildTool)) || (item.tool === ('wizard' as BuildTool) && activeTool === ('wizard' as BuildTool)) || (item.tool === ('import' as BuildTool) && activeTool === ('import' as BuildTool));
         return (
           <button key={item.tool} onClick={() => handleClick(item)}
             className={cn('flex flex-col items-center gap-0.5 px-2 py-1 rounded-md text-xs transition-colors min-w-[3rem]',
@@ -1298,7 +1301,7 @@ export default function BuildModeV2() {
   const activeTab = useAppStore((s) => s.build.tab);
   const showDevicePanel = activeTool.startsWith('place-') || activeTool === 'vacuum-zone' || activeTool === ('place-vacuum-dock' as any);
   const showImportPanel = activeTab === 'import' && isImported;
-  const showFurnishPanel = activeTool === ('furnish' as any);
+  const showFurnishPanel = activeTool === ('furnish' as any) || activeTool === ('wizard' as any);
 
   return (
     <div className="w-full h-full relative flex flex-col">
@@ -1321,7 +1324,7 @@ export default function BuildModeV2() {
         {/* Furnish side panel */}
         {showFurnishPanel && !showDevicePanel && (
           <div className="absolute left-0 top-0 bottom-0 w-[260px] bg-card/95 backdrop-blur-sm border-r border-border z-20 overflow-y-auto py-3 px-2">
-            <AssetCatalog />
+            <AssetCatalog initialSourceFilter={activeTool === ('wizard' as any) ? 'wizard' : 'all'} />
           </div>
         )}
         {cameraMode === 'topdown' ? (
