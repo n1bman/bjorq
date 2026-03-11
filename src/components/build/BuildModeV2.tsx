@@ -660,7 +660,7 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
             {skipGrouping ? (
               <div className={viewMode === 'grid' ? 'grid grid-cols-2 gap-1.5' : 'space-y-1'}>
                 {filtered.map(renderCard)}
-                {viewMode === 'grid' && (
+                {sourceFilter !== 'wizard' && viewMode === 'grid' && (
                   <button onClick={() => fileRef.current?.click()} className="flex flex-col items-center justify-center gap-1 p-2 rounded-lg border-2 border-dashed border-border hover:border-primary/50 text-muted-foreground hover:text-primary transition-all min-h-[80px]">
                     <Upload size={16} /><span className="text-[10px]">Importera</span>
                   </button>
