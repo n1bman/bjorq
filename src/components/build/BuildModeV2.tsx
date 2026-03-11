@@ -131,7 +131,7 @@ interface ACEntry {
   staleSync?: boolean; // true if wizardMode=synced (deprecated, needs re-import)
 }
 
-function AssetCatalog() {
+function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceFilter }) {
   const activeFloorId = useAppStore((s) => s.layout.activeFloorId);
   const catalog = useAppStore((s) => s.props.catalog);
   const propItems = useAppStore((s) => s.props.items);
@@ -151,7 +151,9 @@ function AssetCatalog() {
   const [curatedAssets, setCuratedAssets] = useState<CatalogAssetMeta[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCategory, setFilterCategory] = useState<string | null>(null);
-  const [sourceFilter, setSourceFilter] = useState<ACSourceFilter>('all');
+  const [sourceFilter, setSourceFilter] = useState<ACSourceFilter>(initialSourceFilter ?? 'all');
+  // Reset sourceFilter when initialSourceFilter prop changes
+  useEffect(() => { setSourceFilter(initialSourceFilter ?? 'all'); }, [initialSourceFilter]);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
   const [importDialogOpen, setImportDialogOpen] = useState(false);
