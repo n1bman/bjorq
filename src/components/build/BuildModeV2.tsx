@@ -314,7 +314,9 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
     const finalStats = optimizedResult ? optimizedResult.stats : importResult.stats;
     const finalThumbnail = optimizedResult ? optimizedResult.thumbnail : importResult.thumbnail;
 
-    const catalogId = (() => { const b = generateId(); return (catalog.find(c => c.id === b) || curatedAssets.find(c => c.id === b)) ? b + generateId().slice(0,4) : b; })();
+    const wizId = wizardSourceMeta?.id;
+    const catalogId = wizId ? `wizard-imp-${wizId}` : (() => { const b = generateId(); return (catalog.find(c => c.id === b) || curatedAssets.find(c => c.id === b)) ? b + generateId().slice(0,4) : b; })();
+    const wizardExtras = wizardSourceMeta ? { wizardAssetId: wizardSourceMeta.id, wizardMode: 'imported' as const, wizardMeta: { boundingBox: wizardSourceMeta.boundingBox, center: wizardSourceMeta.center, estimatedScale: wizardSourceMeta.estimatedScale, triangleCount: wizardSourceMeta.triangleCount, fileSize: wizardSourceMeta.fileSize, category: wizardSourceMeta.category, subcategory: wizardSourceMeta.subcategory } } : {};
 
     if (saveToCatalog && isHostedSync()) {
       try {
