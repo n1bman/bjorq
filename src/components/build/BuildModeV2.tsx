@@ -635,6 +635,7 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
             <button key={entry.id} onClick={() => handlePlaceEntry(entry)} disabled={!!isImporting} className={cn("relative flex flex-col items-center gap-0.5 p-2 rounded-lg bg-secondary/30 hover:bg-secondary/60 transition-colors text-xs group min-h-[44px]", leftBorder, isImporting && 'opacity-50')}>
               {isImporting && <div className="absolute inset-0 flex items-center justify-center z-30 bg-background/60 rounded-lg"><Loader2 size={16} className="animate-spin text-primary" /></div>}
               {entry.staleSync && <div className="absolute top-1 right-1 z-20" title="Kräver re-import"><AlertTriangle size={10} className="text-destructive" /></div>}
+              {entry.wizardMode === 'imported' && !entry.staleSync && <div className="absolute top-1 right-1 z-20" title="Från Wizard"><Wand2 size={10} className="text-orange-400" /></div>}
               {instanceCounts[entry.id] > 0 && <div className="absolute top-1 left-1 bg-primary text-primary-foreground text-[8px] font-bold rounded-full w-4 h-4 flex items-center justify-center z-20">×{instanceCounts[entry.id]}</div>}
               {entry.thumbnail ? (
                 <img src={entry.thumbnail} alt={entry.name} className="w-full h-16 object-contain rounded" loading="lazy"
