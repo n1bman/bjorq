@@ -206,13 +206,13 @@ function PropModel({ id, url: rawUrl, position, rotation, scale, colorOverride, 
   }, [url]);
 
   const handleClick = (e: ThreeEvent<PointerEvent>) => {
-    if (appMode !== 'build' || activeTool !== 'select') return;
+    if (appMode !== 'build' || (activeTool !== 'select' && activeTool !== 'furnish')) return;
     e.stopPropagation();
     setSelection({ type: 'prop', id });
   };
 
   const handlePointerDown = (e: ThreeEvent<PointerEvent>) => {
-    if (appMode !== 'build' || activeTool !== 'select' || tab !== 'furnish') return;
+    if (appMode !== 'build' || (activeTool !== 'select' && activeTool !== 'furnish')) return;
     e.stopPropagation();
     setSelection({ type: 'prop', id });
 

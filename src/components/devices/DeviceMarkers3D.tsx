@@ -1324,7 +1324,7 @@ export default function DeviceMarkers3D({ buildMode }: DeviceMarkers3DProps) {
         // Vacuum manages its own world-space position internally via useFrame,
         // so we must NOT set position on the outer group (causes double-offset).
         return (
-          <group key={marker.id} position={isVacuum ? [0, 0, 0] : marker.position} rotation={isVacuum ? [0, 0, 0] : rot} scale={[markerScale, markerScale, markerScale]}>
+          <group key={marker.id} position={isVacuum ? [0, 0, 0] : marker.position} rotation={isVacuum ? [0, 0, 0] : rot} scale={[markerScale, markerScale, markerScale]} onContextMenu={(e: any) => { e.nativeEvent?.preventDefault?.(); e.stopPropagation(); }}>
             <Component
               position={isVacuum ? marker.position : ([0, 0, 0] as [number, number, number])}
               id={marker.id}

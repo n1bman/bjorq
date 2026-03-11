@@ -533,7 +533,7 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
         <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Sök modell..." className="h-7 text-xs pl-7" />
       </div>
 
-      {(hasUser || hasCurated || hasWizard) && (
+      {sourceFilter !== 'wizard' && (hasUser || hasCurated || hasWizard) && (
         <div className="flex gap-1 flex-wrap">
           {(['all', ...(hasCurated ? ['curated'] : []), ...(hasUser ? ['user'] : []), ...(hasWizard ? ['wizard'] : [])] as ACSourceFilter[]).map((sf) => (
             <Button key={sf} size="sm" variant={sourceFilter === sf ? 'default' : 'outline'} className="h-5 text-[9px] px-2 shrink-0" onClick={() => setSourceFilter(sf)}>
@@ -543,7 +543,7 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
         </div>
       )}
 
-      {categories.length > 1 && (
+      {sourceFilter !== 'wizard' && categories.length > 1 && (
         <div className="flex gap-1 overflow-x-auto pb-1 sticky top-0 z-10 bg-card/95 backdrop-blur-sm py-1">
           <Button size="sm" variant={!filterCategory ? 'default' : 'outline'} className="h-5 text-[9px] px-2 shrink-0" onClick={() => setFilterCategory(null)}>Alla</Button>
           {categories.map((c) => (
@@ -611,6 +611,7 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
               <button key={entry.id} onClick={() => handlePlaceEntry(entry)} disabled={!!isImporting} className={cn("flex items-center gap-2 w-full px-2 py-1.5 rounded-md bg-secondary/30 hover:bg-secondary/60 transition-colors text-xs group", leftBorder, isImporting && 'opacity-50')}>
                 {isImporting && <Loader2 size={12} className="animate-spin shrink-0" />}
                 {entry.staleSync && <span className="shrink-0" title="Kräver re-import"><AlertTriangle size={12} className="text-destructive" /></span>}
+                {entry.wizardMode === 'imported' && !entry.staleSync && <span className="shrink-0" title="Från Wizard"><Wand2 size={10} className="text-orange-400" /></span>}
                 {entry.thumbnail ? (
                   <img src={entry.thumbnail} alt={entry.name} className="w-8 h-8 object-contain rounded shrink-0" loading="lazy"
                     onError={(e) => { e.currentTarget.style.display = 'none'; const p = e.currentTarget.nextElementSibling; if (p) (p as HTMLElement).style.display = 'flex'; }} />
@@ -635,6 +636,7 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
             <button key={entry.id} onClick={() => handlePlaceEntry(entry)} disabled={!!isImporting} className={cn("relative flex flex-col items-center gap-0.5 p-2 rounded-lg bg-secondary/30 hover:bg-secondary/60 transition-colors text-xs group min-h-[44px]", leftBorder, isImporting && 'opacity-50')}>
               {isImporting && <div className="absolute inset-0 flex items-center justify-center z-30 bg-background/60 rounded-lg"><Loader2 size={16} className="animate-spin text-primary" /></div>}
               {entry.staleSync && <div className="absolute top-1 right-1 z-20" title="Kräver re-import"><AlertTriangle size={10} className="text-destructive" /></div>}
+              {entry.wizardMode === 'imported' && !entry.staleSync && <div className="absolute top-1 right-1 z-20" title="Från Wizard"><Wand2 size={10} className="text-orange-400" /></div>}
               {instanceCounts[entry.id] > 0 && <div className="absolute top-1 left-1 bg-primary text-primary-foreground text-[8px] font-bold rounded-full w-4 h-4 flex items-center justify-center z-20">×{instanceCounts[entry.id]}</div>}
               {entry.thumbnail ? (
                 <img src={entry.thumbnail} alt={entry.name} className="w-full h-16 object-contain rounded" loading="lazy"
@@ -660,7 +662,7 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
             {skipGrouping ? (
               <div className={viewMode === 'grid' ? 'grid grid-cols-2 gap-1.5' : 'space-y-1'}>
                 {filtered.map(renderCard)}
-                {viewMode === 'grid' && (
+                {sourceFilter !== 'wizard' && viewMode === 'grid' && (
                   <button onClick={() => fileRef.current?.click()} className="flex flex-col items-center justify-center gap-1 p-2 rounded-lg border-2 border-dashed border-border hover:border-primary/50 text-muted-foreground hover:text-primary transition-all min-h-[80px]">
                     <Upload size={16} /><span className="text-[10px]">Importera</span>
                   </button>
@@ -686,12 +688,12 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
                 </div>
               ))
             )}
-            {viewMode === 'list' && (
+            {sourceFilter !== 'wizard' && viewMode === 'list' && (
               <button onClick={() => fileRef.current?.click()} className="flex items-center gap-2 w-full px-2 py-2 rounded-md border-2 border-dashed border-border hover:border-primary/50 text-muted-foreground hover:text-primary transition-all text-xs">
                 <Upload size={14} /><span className="text-[10px]">Importera modell</span>
               </button>
             )}
-            {!skipGrouping && viewMode === 'grid' && (
+            {sourceFilter !== 'wizard' && !skipGrouping && viewMode === 'grid' && (
               <button onClick={() => fileRef.current?.click()} className="flex flex-col items-center justify-center gap-1 p-2 rounded-lg border-2 border-dashed border-border hover:border-primary/50 text-muted-foreground hover:text-primary transition-all min-h-[80px]">
                 <Upload size={16} /><span className="text-[10px]">Importera</span>
               </button>
