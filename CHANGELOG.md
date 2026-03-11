@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.6] - 2026-03-11
+
+### Changed
+- **Removed Sync mode** — Wizard assets now use import-only workflow. All assets are downloaded and stored locally, eliminating runtime dependency on Wizard. Existing synced assets show a warning badge and re-import on click.
+
+### Fixed
+- **Assets survive Wizard deletion** — Imported assets are fully independent with locally stored model data and base64 thumbnails.
+- **Asset deletion working** — Delete button now appears on all user and imported assets (including Wizard-imported). Confirmation dialog added; placed instances are also removed.
+- **Duplicate assets on sync** — Clicking an already-imported Wizard asset now places a new instance instead of creating a duplicate catalog entry.
+- **Thumbnails persist across sessions** — Wizard thumbnails are converted to base64 data URLs during import instead of using expiring blob URLs.
+- **Ghost placement bug** — Eliminated by removing the dual-mode sync path that created conflicting state.
+
+### Removed
+- Wizard dual-mode action dialog ("Använd synkad" / "Importera till Dashboard")
+- `handleWizardSync` function and all `wizardMode === 'synced'` code paths
+
 ## [1.0.5] - 2026-03-10
 
 ### Fixed
