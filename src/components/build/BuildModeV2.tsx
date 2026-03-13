@@ -539,8 +539,8 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
   return (
     <div className="space-y-3 px-1">
       <div className="relative">
-        <Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
-        <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Sök modell..." className="h-7 text-xs pl-7" />
+        <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+        <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Sök modell..." className="h-8 text-xs pl-8 bg-secondary/20 rounded-lg border-border/30" />
       </div>
 
       {sourceFilter !== 'wizard' && (hasUser || hasCurated || hasWizard) && (
