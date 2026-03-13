@@ -485,6 +485,26 @@ function PropModel({ id, url: rawUrl, position, rotation, scale, colorOverride, 
         onContextMenu={(e: any) => { e.nativeEvent?.preventDefault?.(); e.stopPropagation(); }}
       />
 
+      {/* Bounding-box selection wireframe — always correct regardless of geometry */}
+      {selectionBox && (
+        <lineSegments
+          position={[
+            position[0] + selectionBox.center[0] * scale[0],
+            position[1] + selectionBox.center[1] * scale[1],
+            position[2] + selectionBox.center[2] * scale[2],
+          ]}
+          rotation={rotation}
+          raycast={() => {}}
+        >
+          <edgesGeometry args={[new THREE.BoxGeometry(
+            selectionBox.size[0] * scale[0],
+            selectionBox.size[1] * scale[1],
+            selectionBox.size[2] * scale[2],
+          )]} />
+          <lineBasicMaterial color="#ffffff" transparent opacity={0.7} linewidth={1} />
+        </lineSegments>
+      )}
+
       {/* Drag shadow indicator */}
       {isDragging && dragShadowPos && (
         <mesh position={dragShadowPos} rotation={[-Math.PI / 2, 0, 0]}>
