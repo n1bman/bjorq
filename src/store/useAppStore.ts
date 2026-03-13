@@ -51,6 +51,7 @@ const initialBuild: BuildState = {
   importOverlaySync: { zoom: 40, offsetX: 0, offsetY: 0 },
   undoStack: [],
   redoStack: [],
+  pendingWallMount: null,
 };
 
 const initialLayout: LayoutState = {
@@ -936,6 +937,7 @@ const storeCreator = (set: any, get: any): AppState => ({
         wallDrawing: { isDrawing: false, nodes: [] },
         roomDrawing: { isDrawing: false, startPoint: null, endPoint: null },
         selection: { type: null, id: null },
+        pendingWallMount: null, // Phase C1: clear pending on tool change
       },
     })),
 
@@ -968,6 +970,9 @@ const storeCreator = (set: any, get: any): AppState => ({
     set((s: any) => ({
       build: { ...s.build, calibration: { ...s.build.calibration, ...cal } },
     })),
+
+  setPendingWallMount: (pending) =>
+    set((s: any) => ({ build: { ...s.build, pendingWallMount: pending } })),
 
   setImportOverlaySync: (sync) =>
     set((s: any) => ({

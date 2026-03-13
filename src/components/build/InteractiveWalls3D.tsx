@@ -2,24 +2,33 @@
  * InteractiveWalls3D.tsx — Build-mode interactive wall renderer.
  * Phase A1: Delegates geometry to shared wallGeometry.ts module.
  * Phase B2: Face-aware paint mode with visual face highlight.
+ * Phase C1: Wall-mount placement — clicking a wall places a mounted object.
  */
 
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback, useRef } from 'react';
 import { useAppStore } from '../../store/useAppStore';
 import { generateWallSegments, generateCornerBlocks, detectClickedFace } from '../../lib/wallGeometry';
-import { ThreeEvent } from '@react-three/fiber';
+import { clickToWallMount, computeWallMountTransform } from '../../lib/wallMountPlacement';
+import { ThreeEvent, useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import { toast } from 'sonner';
+
+const generateId = () => Math.random().toString(36).slice(2, 10);
 
 export default function InteractiveWalls3D() {
   const floors = useAppStore((s) => s.layout.floors);
   const activeFloorId = useAppStore((s) => s.layout.activeFloorId);
   const selection = useAppStore((s) => s.build.selection);
   const activeTool = useAppStore((s) => s.build.activeTool);
+  const pendingWallMount = useAppStore((s) => s.build.pendingWallMount);
   const setSelection = useAppStore((s) => s.setSelection);
   const updateWall = useAppStore((s) => s.updateWall);
   const pushUndo = useAppStore((s) => s.pushUndo);
+  const addProp = useAppStore((s) => s.addProp);
+  const setPendingWallMount = useAppStore((s) => s.setPendingWallMount);
   const [hoveredWallId, setHoveredWallId] = useState<string | null>(null);
   const [hoveredFaceSide, setHoveredFaceSide] = useState<'left' | 'right' | null>(null);
+  const [mountPreviewPos, setMountPreviewPos] = useState<[number, number, number] | null>(null);
 
   const selectedWallId = selection.type === 'wall' ? selection.id : null;
   const selectedOpeningId = selection.type === 'opening' ? selection.id : null;
@@ -30,6 +39,7 @@ export default function InteractiveWalls3D() {
   const rooms = floor?.rooms ?? [];
   const elevation = floor?.elevation ?? 0;
   const isPaintMode = activeTool === 'paint';
+  const isWallMountMode = !!pendingWallMount;
 
   // Build wall-to-room material lookup
   const wallRoomMaterial = useMemo(() => {
@@ -45,6 +55,33 @@ export default function InteractiveWalls3D() {
   }, [rooms]);
 
   const handleWallClick = useCallback((e: ThreeEvent<PointerEvent>, wallId: string) => {
+    // ─── Phase C1: Wall-mount placement ───
+    if (isWallMountMode && pendingWallMount) {
+      e.stopPropagation();
+      const wall = floors.find(f => f.id === activeFloorId)?.walls.find(w => w.id === wallId);
+      if (!wall || !activeFloorId) return;
+
+      const point = e.point;
+      const mountInfo = clickToWallMount(wall, [point.x, point.y, point.z], elevation);
+      const transform = computeWallMountTransform(wall, mountInfo.faceSide, mountInfo.offsetAlongWall, mountInfo.heightOnWall, elevation);
+
+      addProp({
+        id: generateId(),
+        catalogId: pendingWallMount.catalogId,
+        floorId: activeFloorId,
+        url: pendingWallMount.url,
+        position: transform.position,
+        rotation: transform.rotation,
+        scale: [1, 1, 1],
+        wallMountInfo: mountInfo,
+      });
+
+      setPendingWallMount(null);
+      setMountPreviewPos(null);
+      toast.success('Väggmonterad');
+      return;
+    }
+
     if (activeTool !== 'select' && activeTool !== 'paint') return;
     e.stopPropagation();
 
@@ -56,31 +93,37 @@ export default function InteractiveWalls3D() {
     const faceSide = detectClickedFace(wall, [point.x, point.y, point.z], elevation);
 
     setSelection({ type: 'wall', id: wallId, faceSide });
-  }, [activeTool, setSelection, floors, activeFloorId, elevation]);
+  }, [activeTool, setSelection, floors, activeFloorId, elevation, isWallMountMode, pendingWallMount, addProp, setPendingWallMount]);
 
   const handleWallHover = useCallback((e: ThreeEvent<PointerEvent>, wallId: string) => {
-    if (!isPaintMode && activeTool !== 'select') return;
+    if (!isPaintMode && activeTool !== 'select' && !isWallMountMode) return;
     setHoveredWallId(wallId);
 
-    if (isPaintMode) {
+    if (isPaintMode || isWallMountMode) {
       const wall = floors.find(f => f.id === activeFloorId)?.walls.find(w => w.id === wallId);
       if (wall) {
         const point = e.point;
         const side = detectClickedFace(wall, [point.x, point.y, point.z], elevation);
         setHoveredFaceSide(side);
+        if (isWallMountMode) {
+          setMountPreviewPos([point.x, point.y, point.z]);
+        }
       }
     }
-  }, [isPaintMode, activeTool, floors, activeFloorId, elevation]);
+  }, [isPaintMode, activeTool, floors, activeFloorId, elevation, isWallMountMode]);
 
   const handleWallHoverMove = useCallback((e: ThreeEvent<PointerEvent>, wallId: string) => {
-    if (!isPaintMode) return;
+    if (!isPaintMode && !isWallMountMode) return;
     const wall = floors.find(f => f.id === activeFloorId)?.walls.find(w => w.id === wallId);
     if (wall) {
       const point = e.point;
       const side = detectClickedFace(wall, [point.x, point.y, point.z], elevation);
       setHoveredFaceSide(side);
+      if (isWallMountMode) {
+        setMountPreviewPos([point.x, point.y, point.z]);
+      }
     }
-  }, [isPaintMode, floors, activeFloorId, elevation]);
+  }, [isPaintMode, floors, activeFloorId, elevation, isWallMountMode]);
 
   const handleOpeningClick = useCallback((e: ThreeEvent<PointerEvent>, openingId: string) => {
     if (activeTool !== 'select') return;
@@ -92,9 +135,9 @@ export default function InteractiveWalls3D() {
     return walls.map((wall) => {
       const isSelected = wall.id === selectedWallId;
       const isHovered = wall.id === hoveredWallId;
-      const highlightColor = isSelected ? '#4a9eff' : isHovered && !isPaintMode ? '#f0c060' : null;
-      const emissive = isSelected ? '#1a3a6a' : isHovered && !isPaintMode ? '#3a2a10' : '#000000';
-      const emissiveIntensity = (isSelected || (isHovered && !isPaintMode)) ? 0.3 : 0;
+      const highlightColor = isSelected ? '#4a9eff' : isHovered && !isPaintMode && !isWallMountMode ? '#f0c060' : null;
+      const emissive = isSelected ? '#1a3a6a' : isHovered && !isPaintMode && !isWallMountMode ? '#3a2a10' : '#000000';
+      const emissiveIntensity = (isSelected || (isHovered && !isPaintMode && !isWallMountMode)) ? 0.3 : 0;
 
       const segments = generateWallSegments(wall, walls, elevation, {
         fallbackMaterialId: wallRoomMaterial[wall.id],
@@ -121,13 +164,14 @@ export default function InteractiveWalls3D() {
         </>
       ) : null;
 
-      // ─── Face highlight for paint mode ───
+      // ─── Face highlight for paint mode or wall-mount mode ───
       let faceHighlight: JSX.Element | null = null;
-      const showFaceSide = isPaintMode && isHovered && hoveredFaceSide
-        ? hoveredFaceSide
-        : isPaintMode && isSelected && selectedFaceSide
-          ? selectedFaceSide
-          : null;
+      const showFaceSide =
+        (isPaintMode || isWallMountMode) && isHovered && hoveredFaceSide
+          ? hoveredFaceSide
+          : isPaintMode && isSelected && selectedFaceSide
+            ? selectedFaceSide
+            : null;
 
       if (showFaceSide && (isHovered || isSelected)) {
         const dx = wall.to[0] - wall.from[0];
@@ -146,8 +190,9 @@ export default function InteractiveWalls3D() {
         const midY = wall.height / 2 + elevation;
 
         const isSelectedFace = isSelected && selectedFaceSide === showFaceSide;
-        const highlightAlpha = isSelectedFace ? 0.25 : 0.15;
-        const highlightCol = isSelectedFace ? '#4a9eff' : '#f0c060';
+        // Phase C1: use soft blue for wall-mount mode, orange/blue for paint
+        const highlightAlpha = isWallMountMode ? 0.2 : (isSelectedFace ? 0.25 : 0.15);
+        const highlightCol = isWallMountMode ? '#4a9eff' : (isSelectedFace ? '#4a9eff' : '#f0c060');
 
         faceHighlight = (
           <mesh
@@ -173,14 +218,14 @@ export default function InteractiveWalls3D() {
           onPointerDown={(e) => handleWallClick(e, wall.id)}
           onPointerEnter={(e) => handleWallHover(e, wall.id)}
           onPointerMove={(e) => handleWallHoverMove(e, wall.id)}
-          onPointerLeave={() => { setHoveredWallId(null); setHoveredFaceSide(null); }}>
+          onPointerLeave={() => { setHoveredWallId(null); setHoveredFaceSide(null); setMountPreviewPos(null); }}>
           {segments}
           {nodeElements}
           {faceHighlight}
         </group>
       );
     });
-  }, [walls, rooms, elevation, selectedWallId, selectedFaceSide, selectedOpeningId, hoveredWallId, hoveredFaceSide, activeTool, isPaintMode, handleWallClick, handleWallHover, handleWallHoverMove, handleOpeningClick, wallRoomMaterial]);
+  }, [walls, rooms, elevation, selectedWallId, selectedFaceSide, selectedOpeningId, hoveredWallId, hoveredFaceSide, activeTool, isPaintMode, isWallMountMode, handleWallClick, handleWallHover, handleWallHoverMove, handleOpeningClick, wallRoomMaterial]);
 
   const cornerBlocks = useMemo(() =>
     generateCornerBlocks(walls, elevation, {
@@ -188,5 +233,17 @@ export default function InteractiveWalls3D() {
     }),
     [walls, elevation, wallRoomMaterial]);
 
-  return <group renderOrder={1}>{wallMeshes}{cornerBlocks}</group>;
+  return (
+    <group renderOrder={1}>
+      {wallMeshes}
+      {cornerBlocks}
+      {/* Phase C1: Mount placement preview dot */}
+      {isWallMountMode && mountPreviewPos && (
+        <mesh position={mountPreviewPos} renderOrder={10}>
+          <sphereGeometry args={[0.04, 16, 16]} />
+          <meshBasicMaterial color="#4a9eff" transparent opacity={0.8} depthTest={false} />
+        </mesh>
+      )}
+    </group>
+  );
 }

@@ -222,6 +222,8 @@ export interface BuildState {
   importOverlaySync: ImportOverlaySync;
   undoStack: UndoSnapshot[];
   redoStack: UndoSnapshot[];
+  /** Phase C1: pending wall-mount placement (catalog item waiting for wall click) */
+  pendingWallMount: { catalogId: string; url: string } | null;
 }
 
 // ─── Undo Snapshot (covers layout + devices + props) ───
@@ -634,6 +636,14 @@ export interface PropModelStats {
   rating: string; // 'OK' | 'Tung' | 'För tung'
 }
 
+/** Wall-mount attachment info (Phase C1) */
+export interface WallMountInfo {
+  wallId: string;
+  faceSide: 'left' | 'right';
+  offsetAlongWall: number;  // 0-1 fraction along wall length
+  heightOnWall: number;     // meters from floor elevation
+}
+
 export interface PropItem {
   id: string;
   catalogId: string;
@@ -651,6 +661,8 @@ export interface PropItem {
   textureScale?: number;       // UV repeat (default 1)
   metalness?: number;           // 0-1
   roughness?: number;           // 0-1
+  /** Phase C1: wall-mount attachment data (if mounted on wall) */
+  wallMountInfo?: WallMountInfo;
 }
 
 export interface PropsState {
@@ -1071,6 +1083,8 @@ export interface AppState {
   pushUndo: () => void;
   undo: () => void;
   redo: () => void;
+  /** Phase C1: set/clear pending wall-mount placement */
+  setPendingWallMount: (pending: { catalogId: string; url: string } | null) => void;
 
   // Home Geometry actions
   setHomeGeometrySource: (source: 'procedural' | 'imported') => void;
