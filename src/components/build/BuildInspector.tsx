@@ -976,7 +976,7 @@ function RoomInspector({ floorId, roomId, floor, close }: { floorId: string; roo
         <div>
           <span className="text-[9px] text-muted-foreground uppercase tracking-wider font-medium">Stil</span>
           <div className="flex flex-wrap gap-0.5 mt-1">
-            {categories.map((cat) => (
+            {categories.map((cat: string) => (
               <button key={cat}
                 onClick={() => setSurfaceCat(cat)}
                 className={`px-2 py-1 rounded-md text-[10px] font-medium transition-all ${
