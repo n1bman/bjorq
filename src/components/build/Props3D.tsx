@@ -574,6 +574,21 @@ function PropModel({ id, url: rawUrl, position, rotation, scale, colorOverride, 
               <span style={{ fontSize: 16 }}>🗑</span>
               <span>Ta bort</span>
             </button>
+            <button
+              onClick={handleToggleFreePlacement}
+              style={{
+                background: propItem?.freePlacement ? 'hsl(140 40% 25% / 0.5)' : 'transparent',
+                border: 'none', color: propItem?.freePlacement ? '#6ee7b7' : '#94a3b8',
+                padding: '6px 10px', borderRadius: 8, cursor: 'pointer',
+                fontSize: 11, display: 'flex', flexDirection: 'column',
+                alignItems: 'center', gap: 2, whiteSpace: 'nowrap',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = propItem?.freePlacement ? 'hsl(140 40% 30% / 0.6)' : 'hsl(220 10% 25% / 0.5)')}
+              onMouseLeave={(e) => (e.currentTarget.style.background = propItem?.freePlacement ? 'hsl(140 40% 25% / 0.5)' : 'transparent')}
+            >
+              <span style={{ fontSize: 16 }}>{propItem?.freePlacement ? '🔓' : '🧱'}</span>
+              <span>Fri</span>
+            </button>
           </div>
         </Html>
       )}
