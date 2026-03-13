@@ -83,7 +83,7 @@ function OpeningInspector({ floorId, openingId, floor, close }: { floorId: strin
   };
 
   return (
-    <div className="absolute top-3 right-3 w-56 glass-panel rounded-xl p-3 space-y-3 text-xs z-10">
+    <div className="absolute top-14 right-3 bottom-3 w-56 overflow-y-auto glass-panel rounded-xl p-3 space-y-3 text-xs z-10">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-foreground font-display flex items-center gap-1">
           {isGarage ? <Warehouse size={14} /> : <DoorOpen size={14} />} {typeLabel}
@@ -344,7 +344,7 @@ function WallInspector({ floorId, wallId, floor, close }: { floorId: string; wal
     : (exteriorIsLeft ? wall.rightMaterialId : wall.leftMaterialId) ?? wall.interiorMaterialId;
 
   return (
-    <div className="absolute top-3 right-3 w-60 glass-panel rounded-xl p-3 space-y-3 text-xs z-10 max-h-[80vh] overflow-y-auto">
+    <div className="absolute top-14 right-3 bottom-3 w-60 overflow-y-auto glass-panel rounded-xl p-3 space-y-3 text-xs z-10">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-foreground font-display">Vägg</h3>
         {close}
@@ -508,7 +508,7 @@ function PropInspector({ propId, close }: { propId: string; close: React.ReactNo
   };
 
   return (
-    <div className="absolute top-3 right-3 w-56 max-h-[calc(100vh-6rem)] overflow-y-auto glass-panel rounded-xl p-3 space-y-3 text-xs z-10">
+    <div className="absolute top-14 right-3 bottom-3 w-56 overflow-y-auto glass-panel rounded-xl p-3 space-y-3 text-xs z-10">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-foreground font-display">Möbel</h3>
         {close}
@@ -790,7 +790,7 @@ function StairInspector({ floorId, stairId, floor, close }: { floorId: string; s
   };
 
   return (
-    <div className="absolute top-3 right-3 w-56 glass-panel rounded-xl p-3 space-y-3 text-xs z-10">
+    <div className="absolute top-14 right-3 bottom-3 w-56 overflow-y-auto glass-panel rounded-xl p-3 space-y-3 text-xs z-10">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-foreground font-display flex items-center gap-1">
           <Layers size={14} /> Trappa
@@ -889,7 +889,7 @@ function RoomInspector({ floorId, roomId, floor, close }: { floorId: string; roo
   const wallMats = presetMaterials.filter((m) => m.type === 'paint' || m.type === 'concrete' || m.type === 'tile');
 
   return (
-    <div className="absolute top-3 right-3 w-56 glass-panel rounded-xl p-3 space-y-3 text-xs z-10 max-h-[80vh] overflow-y-auto">
+    <div className="absolute top-14 right-3 bottom-3 w-56 overflow-y-auto glass-panel rounded-xl p-3 space-y-3 text-xs z-10">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-foreground font-display flex items-center gap-1">
           <Home size={14} /> Rum
@@ -1071,7 +1071,7 @@ function DeviceInspector({ deviceId, close }: { deviceId: string; close: React.R
   };
 
   return (
-    <div className="absolute top-3 right-3 w-60 glass-panel rounded-xl p-3 space-y-3 text-xs z-10 max-h-[80vh] overflow-y-auto">
+    <div className="absolute top-14 right-3 bottom-3 w-60 overflow-y-auto glass-panel rounded-xl p-3 space-y-3 text-xs z-10">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-foreground font-display flex items-center gap-1">
           {isScreen ? <Monitor size={14} /> : <Lightbulb size={14} />} {kindLabels[device.kind]}

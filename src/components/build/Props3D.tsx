@@ -401,23 +401,36 @@ function PropModel({ id, url: rawUrl, position, rotation, scale, colorOverride, 
           child.material.emissiveIntensity = 0.15;
 
           // Back-face outline shell for selected objects
+          // Uses adaptive scale based on mesh size to keep outline thickness consistent
           const geo = child.geometry;
           if (geo) {
-            // Safety: skip degenerate geometry
             geo.computeBoundingBox();
             const bbox = geo.boundingBox;
             if (bbox) {
               const size = new THREE.Vector3();
               bbox.getSize(size);
-              if (size.x > 0.01 && size.y > 0.01 && size.z > 0.01) {
+              const center = new THREE.Vector3();
+              bbox.getCenter(center);
+              const diagonal = size.length();
+
+              // Skip degenerate or extremely small geometry
+              if (diagonal > 0.005) {
+                // Constant outline thickness (~0.015m) regardless of mesh size
+                // Clamp scale factor to avoid extreme values on tiny/huge meshes
+                const OUTLINE_THICKNESS = 0.015;
+                const rawScale = 1 + (OUTLINE_THICKNESS / Math.max(diagonal * 0.5, 0.01));
+                const scaleFactor = Math.min(Math.max(rawScale, 1.005), 1.12);
+
                 const outlineMesh = new THREE.Mesh(geo, outlineMaterial);
-                outlineMesh.scale.setScalar(1.04);
-                outlineMesh.raycast = () => {}; // Don't interfere with picking
-                child.parent?.add(outlineMesh);
-                // Copy transform from child
-                outlineMesh.position.copy(child.position);
+                outlineMesh.scale.setScalar(scaleFactor);
+                // Compensate position so scaling happens around bbox center, not origin
+                // When scaling by S around center C: offset = C * (1 - S)
+                const posOffset = center.clone().multiplyScalar(1 - scaleFactor);
+                outlineMesh.position.copy(child.position).add(posOffset);
                 outlineMesh.rotation.copy(child.rotation);
                 outlineMesh.quaternion.copy(child.quaternion);
+                outlineMesh.raycast = () => {}; // Don't interfere with picking
+                child.parent?.add(outlineMesh);
               }
             }
           }
