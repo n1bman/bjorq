@@ -259,6 +259,17 @@ function PropModel({ id, url: rawUrl, position, rotation, scale, colorOverride, 
       gl.domElement.style.cursor = '';
     }, LONG_PRESS_MS);
 
+    // Phase C1: Skip floor-drag for wall-mounted props
+    if (propItem?.wallMountInfo) {
+      const onPointerUp = () => {
+        cancelLongPress();
+        gl.domElement.style.cursor = '';
+        window.removeEventListener('pointerup', onPointerUp);
+      };
+      window.addEventListener('pointerup', onPointerUp);
+      return;
+    }
+
     const intersectPoint = e.point;
     dragPlane.current.set(new THREE.Vector3(0, 1, 0), -position[1]);
     dragOffset.current.set(
