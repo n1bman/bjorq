@@ -937,6 +937,7 @@ const storeCreator = (set: any, get: any): AppState => ({
         wallDrawing: { isDrawing: false, nodes: [] },
         roomDrawing: { isDrawing: false, startPoint: null, endPoint: null },
         selection: { type: null, id: null },
+        pendingWallMount: null, // Phase C1: clear pending on tool change
       },
     })),
 
