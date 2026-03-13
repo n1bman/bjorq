@@ -590,6 +590,8 @@ export interface CatalogAssetMeta {
 }
 
 // ─── Props Layer ───
+export type AssetVisibility = 'visible' | 'favorite' | 'hidden';
+
 export interface PropCatalogItem {
   id: string;
   name: string;
@@ -602,7 +604,8 @@ export interface PropCatalogItem {
   style?: string;
   tags?: string[];
   dimensions?: AssetDimensions;
-  placement?: AssetPlacement;
+  placement?: AssetPlacement;      // placementHint: floor/wall/ceiling/table (stored, not enforced)
+  visibility?: AssetVisibility;    // core visibility status for library management
   defaultRotation?: [number, number, number];
   haMapping?: AssetHAMapping;
   fileData?: string;           // base64 for user imports
