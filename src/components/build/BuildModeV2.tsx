@@ -1284,8 +1284,8 @@ function BuildCatalogRow() {
 }
 
 /* ═══════════════════════════════════════════════
-   BibliotekWorkspace — inlined (Vite dynamic import workaround)
-   Full asset-management workspace without canvas
+   BibliotekWorkspace — Full asset-management workspace (Phase 4A)
+   No canvas. Content-management layout with metadata editing.
    ═══════════════════════════════════════════════ */
 
 type BibSourceFilter = 'all' | 'curated' | 'user' | 'wizard';
@@ -1293,9 +1293,13 @@ type BibSourceFilter = 'all' | 'curated' | 'user' | 'wizard';
 interface BibAssetEntry {
   id: string; name: string; thumbnail?: string; category: string; subcategory?: string;
   source: 'curated' | 'user' | 'builtin' | 'wizard';
-  catalogItem?: PropCatalogItem; curatedMeta?: CatalogAssetMeta;
+  catalogItem?: import('../../store/types').PropCatalogItem;
+  curatedMeta?: CatalogAssetMeta;
   dimensions?: { width: number; depth: number; height: number };
   performance?: { vertices?: number; triangles?: number; textureBytes?: number };
+  tags?: string[];
+  visibility?: import('../../store/types').AssetVisibility;
+  placement?: import('../../store/types').AssetPlacement;
 }
 
 const BIB_CAT_LABELS: Record<string, string> = {
@@ -1315,10 +1319,24 @@ const BIB_CAT_ICONS: Record<string, React.ElementType> = {
   imported: Box,
 };
 
+const PLACEMENT_OPTIONS: { value: import('../../store/types').AssetPlacement; label: string }[] = [
+  { value: 'floor', label: 'Golv' },
+  { value: 'wall', label: 'Vägg' },
+  { value: 'ceiling', label: 'Tak' },
+  { value: 'table', label: 'Bord/yta' },
+];
+
+const VISIBILITY_OPTIONS: { value: import('../../store/types').AssetVisibility; label: string; icon: React.ElementType }[] = [
+  { value: 'visible', label: 'Synlig', icon: Box },
+  { value: 'favorite', label: 'Favorit', icon: CheckCircle },
+  { value: 'hidden', label: 'Dold', icon: AlertTriangle },
+];
+
 function BibliotekWorkspace() {
   const catalog = useAppStore((s) => s.props.catalog);
   const addToCatalog = useAppStore((s) => s.addToCatalog);
   const removeFromCatalog = useAppStore((s) => s.removeFromCatalog);
+  const updateCatalogItem = useAppStore((s) => s.updateCatalogItem);
 
   const [curatedAssets, setCuratedAssets] = useState<CatalogAssetMeta[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -1328,6 +1346,16 @@ function BibliotekWorkspace() {
   const [selectedAsset, setSelectedAsset] = useState<BibAssetEntry | null>(null);
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
 
+  // Metadata editing state (only for user-owned assets)
+  const [editName, setEditName] = useState('');
+  const [editCategory, setEditCategory] = useState<AssetCategory>('imported');
+  const [editSubcategory, setEditSubcategory] = useState('');
+  const [editTags, setEditTags] = useState('');
+  const [editPlacement, setEditPlacement] = useState<import('../../store/types').AssetPlacement>('floor');
+  const [editVisibility, setEditVisibility] = useState<import('../../store/types').AssetVisibility>('visible');
+  const [tagInput, setTagInput] = useState('');
+
+  // Import dialog
   const [bibImportOpen, setBibImportOpen] = useState(false);
   const [bibImportResult, setBibImportResult] = useState<PipelineResult | null>(null);
   const [bibImportFile, setBibImportFile] = useState<File | null>(null);
@@ -1348,26 +1376,53 @@ function BibliotekWorkspace() {
     });
   }, [wizardStatus]);
 
+  // Sync edit state when selection changes
+  useEffect(() => {
+    if (selectedAsset?.catalogItem) {
+      const ci = selectedAsset.catalogItem;
+      setEditName(ci.name);
+      setEditCategory((ci.category || 'imported') as AssetCategory);
+      setEditSubcategory(ci.subcategory || '');
+      setEditTags((ci.tags || []).join(', '));
+      setEditPlacement(ci.placement || 'floor');
+      setEditVisibility(ci.visibility || 'visible');
+    }
+  }, [selectedAsset?.id]);
+
   const entries: BibAssetEntry[] = useMemo(() => {
     const result: BibAssetEntry[] = [];
     for (const meta of curatedAssets) {
       result.push({
-        id: `curated-${meta.id}`, name: meta.name, thumbnail: meta.thumbnail,
+        id: `curated-${meta.id}`, name: meta.name, thumbnail: meta.thumbnail ? `/catalog/${meta.thumbnail}` : undefined,
         category: meta.category, subcategory: meta.subcategory, source: 'curated',
         curatedMeta: meta, dimensions: meta.dimensions, performance: meta.performance,
+        placement: meta.placement, tags: meta.tags,
       });
     }
     for (const item of catalog) {
       result.push({
         id: item.id, name: item.name, thumbnail: item.thumbnail,
         category: item.category || 'imported', subcategory: item.subcategory, source: 'user',
-        catalogItem: item,
+        catalogItem: item, tags: item.tags, visibility: item.visibility,
+        placement: item.placement,
+        dimensions: item.dimensions as any, performance: item.performance as any,
       });
     }
     for (const wa of wizardAssets) {
       const alreadyImported = catalog.some((c) => c.wizardAssetId === wa.id);
       if (!alreadyImported) {
-        result.push({ id: `wizard-${wa.id}`, name: wa.name, thumbnail: wa.thumbnail, category: wa.category || 'imported', source: 'wizard' });
+        const bb = wa.boundingBox;
+        const dims = bb ? { width: +(bb.max[0] - bb.min[0]).toFixed(2), depth: +(bb.max[2] - bb.min[2]).toFixed(2), height: +(bb.max[1] - bb.min[1]).toFixed(2) } : undefined;
+        let thumb: string | undefined;
+        if (wa.thumbnail) {
+          const base = useAppStore.getState().wizard.url.replace(/\/+$/, '');
+          thumb = wa.thumbnail.startsWith('http') ? wa.thumbnail : `${base}${wa.thumbnail.startsWith('/') ? wa.thumbnail : '/' + wa.thumbnail}`;
+        }
+        if (!thumb) {
+          const base = useAppStore.getState().wizard.url.replace(/\/+$/, '');
+          thumb = `${base}/assets/${encodeURIComponent(wa.id)}/thumbnail`;
+        }
+        result.push({ id: `wizard-${wa.id}`, name: wa.name, thumbnail: thumb, category: wa.category || 'imported', source: 'wizard', dimensions: dims });
       }
     }
     return result;
@@ -1379,7 +1434,12 @@ function BibliotekWorkspace() {
     if (filterCategory) list = list.filter((e) => e.category === filterCategory);
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-      list = list.filter((e) => e.name.toLowerCase().includes(q) || e.category.toLowerCase().includes(q));
+      list = list.filter((e) =>
+        e.name.toLowerCase().includes(q) ||
+        e.category.toLowerCase().includes(q) ||
+        (e.tags || []).some(t => t.toLowerCase().includes(q)) ||
+        (e.subcategory || '').toLowerCase().includes(q)
+      );
     }
     return list;
   }, [entries, sourceFilter, filterCategory, searchQuery]);
@@ -1410,7 +1470,7 @@ function BibliotekWorkspace() {
         const r = await ingestToCatalog(bibImportFile, { name: bibImportName, category: bibImportCat }, bibImportResult.thumbnail);
         if (r) toast.success('Importerad till katalogen');
       } else {
-        addToCatalog({ id: `user-${Date.now()}`, name: bibImportName || bibImportFile.name, url: URL.createObjectURL(bibImportFile), source: 'user', category: bibImportCat });
+        addToCatalog({ id: `user-${Date.now()}`, name: bibImportName || bibImportFile.name, url: URL.createObjectURL(bibImportFile), source: 'user', category: bibImportCat, visibility: 'visible' });
         toast.success('Tillagd i lokalt bibliotek');
       }
     } catch { toast.error('Import misslyckades'); }
@@ -1419,15 +1479,49 @@ function BibliotekWorkspace() {
 
   const toggleSection = (cat: string) => setCollapsedSections((prev) => ({ ...prev, [cat]: !prev[cat] }));
 
+  const isEditable = selectedAsset?.source === 'user' && !!selectedAsset.catalogItem;
+
+  const saveMetadata = () => {
+    if (!selectedAsset?.catalogItem) return;
+    const parsedTags = editTags.split(',').map(t => t.trim()).filter(Boolean);
+    updateCatalogItem(selectedAsset.catalogItem.id, {
+      name: editName,
+      category: editCategory,
+      subcategory: editSubcategory || undefined,
+      tags: parsedTags.length > 0 ? parsedTags : undefined,
+      placement: editPlacement,
+      visibility: editVisibility,
+    });
+    // Update local selection to reflect changes
+    setSelectedAsset((prev) => prev ? { ...prev, name: editName, category: editCategory, subcategory: editSubcategory, tags: parsedTags, placement: editPlacement, visibility: editVisibility } : null);
+    toast.success('Metadata sparad');
+  };
+
+  const addTag = () => {
+    if (!tagInput.trim()) return;
+    const current = editTags ? editTags.split(',').map(t => t.trim()).filter(Boolean) : [];
+    if (!current.includes(tagInput.trim())) {
+      current.push(tagInput.trim());
+      setEditTags(current.join(', '));
+    }
+    setTagInput('');
+  };
+
+  const removeTag = (tag: string) => {
+    const current = editTags.split(',').map(t => t.trim()).filter(Boolean);
+    setEditTags(current.filter(t => t !== tag).join(', '));
+  };
+
   return (
     <div className="flex h-full bg-background">
-      {/* Asset list */}
+      {/* ── Left: Asset list/grid ── */}
       <div className="flex-1 flex flex-col min-w-0 border-r border-border">
+        {/* Top bar: search + import */}
         <div className="flex items-center gap-2 px-4 py-3 border-b border-border bg-card/60 backdrop-blur-sm">
           <h2 className="text-sm font-semibold text-foreground whitespace-nowrap">Bibliotek</h2>
           <div className="flex-1 relative">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-            <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Sök tillgångar..." className="pl-8 h-8 text-sm" />
+            <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Sök namn, kategori, taggar..." className="pl-8 h-8 text-sm" />
           </div>
           <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setBibImportOpen(true)}>
             <Upload className="w-4 h-4" /> Importera
@@ -1438,6 +1532,7 @@ function BibliotekWorkspace() {
           </button>
         </div>
 
+        {/* Source filter pills */}
         <div className="flex items-center gap-1.5 px-4 py-2 border-b border-border/50 bg-card/30">
           {(['all', 'curated', 'user', 'wizard'] as BibSourceFilter[]).map((sf) => (
             <button key={sf} onClick={() => setSourceFilter(sf)}
@@ -1453,6 +1548,7 @@ function BibliotekWorkspace() {
           )}
         </div>
 
+        {/* Category strip */}
         <div className="flex items-center gap-1 px-4 py-1.5 overflow-x-auto border-b border-border/30 bg-card/20">
           {categories.map((cat) => {
             const CatIcon = BIB_CAT_ICONS[cat] || Box;
@@ -1466,6 +1562,7 @@ function BibliotekWorkspace() {
           })}
         </div>
 
+        {/* Asset grid/list */}
         <div className="flex-1 overflow-y-auto px-3 py-2">
           {filtered.length === 0 && <p className="text-sm text-muted-foreground italic text-center py-8">{searchQuery ? 'Inga tillgångar matchar sökningen.' : 'Inga tillgångar i biblioteket.'}</p>}
           {grouped.map(([cat, items]) => {
@@ -1481,34 +1578,53 @@ function BibliotekWorkspace() {
                 {!isCollapsed && (
                   viewMode === 'grid' ? (
                     <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2 mt-1">
-                      {items.map((entry) => (
-                        <button key={entry.id} onClick={() => setSelectedAsset(entry)}
-                          className={cn('flex flex-col items-center gap-1 p-2 rounded-lg border transition-all text-center',
-                            selectedAsset?.id === entry.id ? 'border-primary bg-primary/5' : 'border-border/50 hover:border-border hover:bg-muted/30')}>
-                          <div className="w-full aspect-square rounded bg-muted/50 flex items-center justify-center overflow-hidden">
-                            {entry.thumbnail ? <img src={entry.thumbnail} alt={entry.name} className="w-full h-full object-contain" loading="lazy" /> : <Box className="w-6 h-6 text-muted-foreground/40" />}
-                          </div>
-                          <span className="text-[10px] text-foreground leading-tight line-clamp-2">{entry.name}</span>
-                          <div className="flex items-center gap-1">
-                            {entry.source === 'wizard' && <Wand2 className="w-2.5 h-2.5 text-muted-foreground" />}
-                            <span className="text-[9px] text-muted-foreground">{{ curated: 'Katalog', user: 'Min', wizard: 'Wizard', builtin: 'Inbyggd' }[entry.source]}</span>
-                          </div>
-                        </button>
-                      ))}
+                      {items.map((entry) => {
+                        const isHidden = entry.visibility === 'hidden';
+                        const isFav = entry.visibility === 'favorite';
+                        return (
+                          <button key={entry.id} onClick={() => setSelectedAsset(entry)}
+                            className={cn('flex flex-col items-center gap-1 p-2 rounded-lg border transition-all text-center relative',
+                              selectedAsset?.id === entry.id ? 'border-primary bg-primary/5 ring-1 ring-primary/30' : 'border-border/50 hover:border-border hover:bg-muted/30',
+                              isHidden && 'opacity-40')}>
+                            {isFav && <span className="absolute top-1 right-1 text-[10px]">⭐</span>}
+                            <div className="w-full aspect-square rounded bg-muted/50 flex items-center justify-center overflow-hidden">
+                              {entry.thumbnail ? <img src={entry.thumbnail} alt={entry.name} className="w-full h-full object-contain" loading="lazy" /> : <Box className="w-6 h-6 text-muted-foreground/40" />}
+                            </div>
+                            <span className="text-[10px] text-foreground leading-tight line-clamp-2">{entry.name}</span>
+                            <div className="flex items-center gap-1">
+                              {entry.source === 'wizard' && <Wand2 className="w-2.5 h-2.5 text-muted-foreground" />}
+                              <span className="text-[9px] text-muted-foreground">{{ curated: 'Katalog', user: 'Min', wizard: 'Wizard', builtin: 'Inbyggd' }[entry.source]}</span>
+                            </div>
+                          </button>
+                        );
+                      })}
                     </div>
                   ) : (
                     <div className="flex flex-col gap-0.5 mt-1">
-                      {items.map((entry) => (
-                        <button key={entry.id} onClick={() => setSelectedAsset(entry)}
-                          className={cn('flex items-center gap-2 px-2 py-1.5 rounded-md text-left transition-colors',
-                            selectedAsset?.id === entry.id ? 'bg-primary/10 text-primary' : 'hover:bg-muted/50 text-foreground')}>
-                          <div className="w-8 h-8 rounded bg-muted/50 flex items-center justify-center shrink-0 overflow-hidden">
-                            {entry.thumbnail ? <img src={entry.thumbnail} alt={entry.name} className="w-full h-full object-contain" loading="lazy" /> : <Box className="w-4 h-4 text-muted-foreground/40" />}
-                          </div>
-                          <div className="flex-1 min-w-0"><p className="text-xs font-medium truncate">{entry.name}</p><p className="text-[10px] text-muted-foreground">{BIB_CAT_LABELS[entry.category] || entry.category}</p></div>
-                          {entry.source === 'wizard' && <Wand2 className="w-3 h-3 text-muted-foreground shrink-0" />}
-                        </button>
-                      ))}
+                      {items.map((entry) => {
+                        const isHidden = entry.visibility === 'hidden';
+                        const isFav = entry.visibility === 'favorite';
+                        return (
+                          <button key={entry.id} onClick={() => setSelectedAsset(entry)}
+                            className={cn('flex items-center gap-2 px-2 py-1.5 rounded-md text-left transition-colors',
+                              selectedAsset?.id === entry.id ? 'bg-primary/10 text-primary' : 'hover:bg-muted/50 text-foreground',
+                              isHidden && 'opacity-40')}>
+                            <div className="w-8 h-8 rounded bg-muted/50 flex items-center justify-center shrink-0 overflow-hidden">
+                              {entry.thumbnail ? <img src={entry.thumbnail} alt={entry.name} className="w-full h-full object-contain" loading="lazy" /> : <Box className="w-4 h-4 text-muted-foreground/40" />}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-medium truncate">{isFav ? '⭐ ' : ''}{entry.name}</p>
+                              <p className="text-[10px] text-muted-foreground">{BIB_CAT_LABELS[entry.category] || entry.category}</p>
+                            </div>
+                            {entry.tags && entry.tags.length > 0 && (
+                              <div className="flex gap-0.5 shrink-0">
+                                {entry.tags.slice(0, 2).map(t => <Badge key={t} variant="outline" className="text-[8px] px-1 py-0">{t}</Badge>)}
+                              </div>
+                            )}
+                            {entry.source === 'wizard' && <Wand2 className="w-3 h-3 text-muted-foreground shrink-0" />}
+                          </button>
+                        );
+                      })}
                     </div>
                   )
                 )}
@@ -1517,39 +1633,167 @@ function BibliotekWorkspace() {
           })}
         </div>
 
+        {/* Footer status */}
         <div className="px-4 py-1.5 border-t border-border bg-card/40 text-[10px] text-muted-foreground flex items-center gap-3">
           <span>{filtered.length} av {entries.length} tillgångar</span>
           {wizardStatus === 'connected' && <span className="flex items-center gap-1"><Wand2 className="w-3 h-3" /> Wizard ansluten</span>}
         </div>
       </div>
 
-      {/* Detail panel */}
-      <div className="w-[320px] shrink-0 flex flex-col bg-card/60 backdrop-blur-sm">
+      {/* ── Right: Detail & metadata panel ── */}
+      <div className="w-[360px] shrink-0 flex flex-col bg-card/60 backdrop-blur-sm border-l border-border">
         {selectedAsset ? (
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            <div className="aspect-square rounded-xl bg-muted/30 border border-border flex items-center justify-center overflow-hidden">
-              {selectedAsset.thumbnail ? <img src={selectedAsset.thumbnail} alt={selectedAsset.name} className="w-full h-full object-contain" /> : <Box className="w-16 h-16 text-muted-foreground/30" />}
+          <div className="flex-1 overflow-y-auto">
+            {/* Preview area */}
+            <div className="p-4 border-b border-border">
+              <div className="aspect-[4/3] rounded-xl bg-muted/30 border border-border flex items-center justify-center overflow-hidden">
+                {selectedAsset.thumbnail
+                  ? <img src={selectedAsset.thumbnail} alt={selectedAsset.name} className="w-full h-full object-contain" />
+                  : <Box className="w-16 h-16 text-muted-foreground/30" />
+                }
+              </div>
             </div>
-            <div><Label className="text-[10px] text-muted-foreground">Namn</Label><p className="text-sm font-medium text-foreground">{selectedAsset.name}</p></div>
-            <div className="grid grid-cols-2 gap-2">
-              <div><Label className="text-[10px] text-muted-foreground">Kategori</Label><p className="text-xs text-foreground">{BIB_CAT_LABELS[selectedAsset.category] || selectedAsset.category}</p></div>
-              {selectedAsset.subcategory && <div><Label className="text-[10px] text-muted-foreground">Underkategori</Label><p className="text-xs text-foreground">{selectedAsset.subcategory}</p></div>}
-              <div><Label className="text-[10px] text-muted-foreground">Källa</Label><Badge variant="secondary" className="text-[10px]">{{ curated: 'Katalog', user: 'Min', wizard: 'Wizard', builtin: 'Inbyggd' }[selectedAsset.source]}</Badge></div>
-            </div>
-            {selectedAsset.dimensions && <div><Label className="text-[10px] text-muted-foreground">Dimensioner</Label><p className="text-xs text-foreground font-mono">{selectedAsset.dimensions.width.toFixed(2)} × {selectedAsset.dimensions.depth.toFixed(2)} × {selectedAsset.dimensions.height.toFixed(2)} m</p></div>}
-            {selectedAsset.performance && <div><Label className="text-[10px] text-muted-foreground">Prestanda</Label><div className="text-[10px] text-muted-foreground space-y-0.5">{selectedAsset.performance.vertices != null && <p>Vertices: {selectedAsset.performance.vertices.toLocaleString()}</p>}{selectedAsset.performance.triangles != null && <p>Trianglar: {selectedAsset.performance.triangles.toLocaleString()}</p>}</div></div>}
-            <div className="flex flex-col gap-1.5 pt-2 border-t border-border">
-              {selectedAsset.source === 'user' && selectedAsset.catalogItem && (
-                <Button variant="destructive" size="sm" className="w-full gap-1.5" onClick={() => { removeFromCatalog(selectedAsset.catalogItem!.id); setSelectedAsset(null); toast.success('Borttagen från biblioteket'); }}>
-                  <Trash2 className="w-3.5 h-3.5" /> Ta bort
-                </Button>
+
+            <div className="p-4 space-y-4">
+              {/* ── Identity ── */}
+              <div className="space-y-2">
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Identitet</h3>
+                {isEditable ? (
+                  <>
+                    <div><Label className="text-[10px] text-muted-foreground">Namn</Label>
+                      <Input value={editName} onChange={(e) => setEditName(e.target.value)} className="h-8 text-sm" /></div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div><Label className="text-[10px] text-muted-foreground">Kategori</Label>
+                        <select value={editCategory} onChange={(e) => setEditCategory(e.target.value as AssetCategory)}
+                          className="w-full h-8 rounded-md border border-input bg-background text-foreground px-2 text-sm">
+                          {Object.entries(BIB_CAT_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                        </select></div>
+                      <div><Label className="text-[10px] text-muted-foreground">Underkategori</Label>
+                        <Input value={editSubcategory} onChange={(e) => setEditSubcategory(e.target.value)} placeholder="Valfritt" className="h-8 text-sm" /></div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div><Label className="text-[10px] text-muted-foreground">Namn</Label><p className="text-sm font-medium text-foreground">{selectedAsset.name}</p></div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div><Label className="text-[10px] text-muted-foreground">Kategori</Label><p className="text-xs text-foreground">{BIB_CAT_LABELS[selectedAsset.category] || selectedAsset.category}</p></div>
+                      {selectedAsset.subcategory && <div><Label className="text-[10px] text-muted-foreground">Underkategori</Label><p className="text-xs text-foreground">{selectedAsset.subcategory}</p></div>}
+                    </div>
+                  </>
+                )}
+                <div><Label className="text-[10px] text-muted-foreground">Källa</Label>
+                  <Badge variant="secondary" className="text-[10px]">{{ curated: 'Katalog', user: 'Min', wizard: 'Wizard', builtin: 'Inbyggd' }[selectedAsset.source]}</Badge>
+                </div>
+              </div>
+
+              {/* ── Tags ── */}
+              <div className="space-y-2">
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Taggar</h3>
+                {isEditable ? (
+                  <>
+                    <div className="flex flex-wrap gap-1">
+                      {editTags.split(',').map(t => t.trim()).filter(Boolean).map(tag => (
+                        <Badge key={tag} variant="secondary" className="text-[10px] gap-1 pr-1">
+                          {tag}
+                          <button onClick={() => removeTag(tag)} className="ml-0.5 hover:text-destructive">✕</button>
+                        </Badge>
+                      ))}
+                    </div>
+                    <div className="flex gap-1">
+                      <Input value={tagInput} onChange={(e) => setTagInput(e.target.value)} placeholder="Ny tagg..."
+                        className="h-7 text-xs flex-1" onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addTag(); }}} />
+                      <Button variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={addTag}>+</Button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex flex-wrap gap-1">
+                    {(selectedAsset.tags || []).length > 0
+                      ? (selectedAsset.tags || []).map(t => <Badge key={t} variant="outline" className="text-[10px]">{t}</Badge>)
+                      : <p className="text-[10px] text-muted-foreground italic">Inga taggar</p>}
+                  </div>
+                )}
+              </div>
+
+              {/* ── Placement hint ── */}
+              <div className="space-y-2">
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Placering</h3>
+                {isEditable ? (
+                  <div className="flex gap-1">
+                    {PLACEMENT_OPTIONS.map(opt => (
+                      <button key={opt.value} onClick={() => setEditPlacement(opt.value)}
+                        className={cn('px-2.5 py-1 rounded text-xs font-medium transition-colors',
+                          editPlacement === opt.value ? 'bg-primary/15 text-primary' : 'text-muted-foreground hover:bg-muted')}>
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-foreground">{PLACEMENT_OPTIONS.find(p => p.value === (selectedAsset.placement || 'floor'))?.label || 'Golv'}</p>
+                )}
+              </div>
+
+              {/* ── Visibility ── */}
+              {isEditable && (
+                <div className="space-y-2">
+                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Synlighet</h3>
+                  <div className="flex gap-1">
+                    {VISIBILITY_OPTIONS.map(opt => {
+                      const OptIcon = opt.icon;
+                      return (
+                        <button key={opt.value} onClick={() => setEditVisibility(opt.value)}
+                          className={cn('flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium transition-colors',
+                            editVisibility === opt.value ? 'bg-primary/15 text-primary' : 'text-muted-foreground hover:bg-muted')}>
+                          <OptIcon className="w-3 h-3" /> {opt.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               )}
+
+              {/* ── Dimensions & performance ── */}
+              {selectedAsset.dimensions && (
+                <div className="space-y-1">
+                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Dimensioner</h3>
+                  <p className="text-xs text-foreground font-mono">
+                    {selectedAsset.dimensions.width.toFixed(2)} × {selectedAsset.dimensions.depth.toFixed(2)} × {selectedAsset.dimensions.height.toFixed(2)} m
+                  </p>
+                </div>
+              )}
+              {selectedAsset.performance && (
+                <div className="space-y-1">
+                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Prestanda</h3>
+                  <div className="text-[10px] text-muted-foreground space-y-0.5">
+                    {selectedAsset.performance.vertices != null && <p>Vertices: {selectedAsset.performance.vertices.toLocaleString()}</p>}
+                    {selectedAsset.performance.triangles != null && <p>Trianglar: {selectedAsset.performance.triangles.toLocaleString()}</p>}
+                  </div>
+                </div>
+              )}
+
+              {/* ── Actions ── */}
+              <div className="flex flex-col gap-1.5 pt-3 border-t border-border">
+                {isEditable && (
+                  <Button size="sm" className="w-full gap-1.5" onClick={saveMetadata}>
+                    <CheckCircle className="w-3.5 h-3.5" /> Spara ändringar
+                  </Button>
+                )}
+                {selectedAsset.source === 'user' && selectedAsset.catalogItem && (
+                  <Button variant="destructive" size="sm" className="w-full gap-1.5" onClick={() => {
+                    removeFromCatalog(selectedAsset.catalogItem!.id);
+                    setSelectedAsset(null);
+                    toast.success('Borttagen från biblioteket');
+                  }}>
+                    <Trash2 className="w-3.5 h-3.5" /> Ta bort
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground gap-3 p-8">
             <Package className="w-12 h-12 opacity-30" />
             <p className="text-sm text-center">Välj en tillgång för att se detaljer och redigera metadata.</p>
+            <p className="text-[10px] text-center text-muted-foreground/60">Du kan redigera namn, kategori, taggar, placering och synlighet för dina egna tillgångar.</p>
           </div>
         )}
       </div>
@@ -1566,7 +1810,7 @@ function BibliotekWorkspace() {
             {bibProcessing && <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" /> Analyserar...</div>}
             {bibImportResult && <div className="text-xs text-muted-foreground"><p>{formatStats(bibImportResult.stats)}</p></div>}
             <div><Label className="text-xs">Namn</Label><Input value={bibImportName} onChange={(e) => setBibImportName(e.target.value)} placeholder="Modellnamn" className="h-8" /></div>
-            <div><Label className="text-xs">Kategori</Label><select value={bibImportCat} onChange={(e) => setBibImportCat(e.target.value as AssetCategory)} className="w-full h-8 rounded-md border border-border bg-background px-2 text-sm">{Object.entries(BIB_CAT_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></div>
+            <div><Label className="text-xs">Kategori</Label><select value={bibImportCat} onChange={(e) => setBibImportCat(e.target.value as AssetCategory)} className="w-full h-8 rounded-md border border-input bg-background text-foreground px-2 text-sm">{Object.entries(BIB_CAT_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></div>
           </div>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setBibImportOpen(false)}>Avbryt</Button>
