@@ -255,10 +255,17 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
   const hasUser = allEntries.some((e) => e.source === 'user' || e.wizardMode === 'imported');
   const hasCurated = allEntries.some((e) => e.source === 'curated');
   const hasWizard = wizardStatus === 'connected' || wizardAssets.length > 0;
+  const PLACEMENT_LABELS: Record<string, string> = { floor: 'Golv', wall: 'Vägg', ceiling: 'Tak', table: 'Yta' };
+  const placementTypes = [...new Set(allEntries.map(e => e.catalogItem?.placement || e.curatedMeta?.placement).filter(Boolean))] as string[];
+
   const filtered = allEntries
     .filter((e) => !searchQuery || e.name.toLowerCase().includes(searchQuery.toLowerCase()))
     .filter((e) => !filterCategory || e.category === filterCategory)
     .filter((e) => {
+      if (placementFilter) {
+        const p = e.catalogItem?.placement || e.curatedMeta?.placement;
+        if (p !== placementFilter) return false;
+      }
       if (sourceFilter === 'wizard') return e.source === 'wizard';
       // Hide non-imported wizard entries from all non-wizard views
       if (e.source === 'wizard' && !e.catalogItem) return false;
