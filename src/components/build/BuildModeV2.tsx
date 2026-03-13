@@ -699,7 +699,7 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
                 <div key={group.key}>
                   <button
                     onClick={() => setCollapsedSections(prev => ({ ...prev, [group.key]: !prev[group.key] }))}
-                    className="flex items-center gap-1.5 w-full py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
+                    className="flex items-center gap-1.5 w-full py-1.5 mt-2 pt-2 border-t border-border/30 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
                   >
                     {collapsedSections[group.key] ? <ChevronRight size={10} /> : <ChevronDown size={10} />}
                     <group.icon size={10} />
