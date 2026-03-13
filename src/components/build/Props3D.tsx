@@ -87,14 +87,6 @@ function getFileDataForProp(propId: string): string | null {
   return (catItem as any)?.fileData ?? null;
 }
 
-// ─── Outline material (shared, never disposed) ───
-const outlineMaterial = new THREE.MeshBasicMaterial({
-  color: '#ffffff',
-  side: THREE.BackSide,
-  transparent: true,
-  opacity: 0.6,
-  depthWrite: false,
-});
 
 function PropModel({ id, url: rawUrl, position, rotation, scale, colorOverride, textureOverride, textureScale = 1, metalness: metalnessOverride, roughness: roughnessOverride }: {
   id: string;
