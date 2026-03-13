@@ -344,7 +344,7 @@ function WallInspector({ floorId, wallId, floor, close }: { floorId: string; wal
     : (exteriorIsLeft ? wall.rightMaterialId : wall.leftMaterialId) ?? wall.interiorMaterialId;
 
   return (
-    <div className="absolute top-3 right-3 w-60 glass-panel rounded-xl p-3 space-y-3 text-xs z-10 max-h-[80vh] overflow-y-auto">
+    <div className="absolute top-14 right-3 bottom-3 w-60 overflow-y-auto glass-panel rounded-xl p-3 space-y-3 text-xs z-10">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-foreground font-display">Vägg</h3>
         {close}
