@@ -107,7 +107,7 @@ function RoomZoneCards({ marker, data, update }: { marker: DeviceMarker; data: V
     if (!segId) {
       toast({
         title: 'Segment-ID saknas',
-        description: `Rummet "${roomName}" har inget segment-ID. Gå till Bygge → Robot Mapping och välj segment-ID.`,
+        description: `Rummet "${roomName}" har inget segment-ID. Gå till Design → Inredning → Enheter och välj segment-ID.`,
         variant: 'destructive',
       });
       return;
