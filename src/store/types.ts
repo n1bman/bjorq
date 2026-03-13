@@ -1083,6 +1083,8 @@ export interface AppState {
   pushUndo: () => void;
   undo: () => void;
   redo: () => void;
+  /** Phase C1: set/clear pending wall-mount placement */
+  setPendingWallMount: (pending: { catalogId: string; url: string } | null) => void;
 
   // Home Geometry actions
   setHomeGeometrySource: (source: 'procedural' | 'imported') => void;
