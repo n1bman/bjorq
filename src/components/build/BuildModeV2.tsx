@@ -1978,7 +1978,7 @@ function BibliotekWorkspace() {
               {/* Form fields */}
               <div className="space-y-1"><Label className="text-[10px]">Namn</Label><Input value={bibImportName} onChange={(e) => setBibImportName(e.target.value)} className="h-7 text-xs" /></div>
               <div className="space-y-1"><Label className="text-[10px]">Kategori</Label><select value={bibImportCat} onChange={(e) => setBibImportCat(e.target.value as AssetCategory)} className="w-full h-7 text-xs bg-secondary text-foreground rounded-md px-2 border border-border">{Object.entries(BIB_CAT_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></div>
-              <div className="space-y-1"><Label className="text-[10px]">Underkategori</Label><Input placeholder="t.ex. soffbord..." className="h-7 text-xs" /></div>
+              <div className="space-y-1"><Label className="text-[10px]">Underkategori</Label><Input value={bibImportSub} onChange={(e) => setBibImportSub(e.target.value)} placeholder="t.ex. soffbord..." className="h-7 text-xs" /></div>
             </div>
           ) : null}
 
