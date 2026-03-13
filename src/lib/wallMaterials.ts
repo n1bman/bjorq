@@ -13,6 +13,8 @@ export function createWallMaterials(opts: {
   edgeColor: string;
   exteriorRoughness: number;
   interiorRoughness: number;
+  exteriorMetalness?: number;
+  interiorMetalness?: number;
   emissive?: string;
   emissiveIntensity?: number;
 }): THREE.MeshStandardMaterial[] {
@@ -21,8 +23,18 @@ export function createWallMaterials(opts: {
 
   const offsetProps = { polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 };
   const edge = new THREE.MeshStandardMaterial({ color: opts.edgeColor, roughness: 0.9, emissive: em, emissiveIntensity: ei, ...offsetProps });
-  const exterior = new THREE.MeshStandardMaterial({ color: opts.exteriorColor, roughness: opts.exteriorRoughness, emissive: em, emissiveIntensity: ei, ...offsetProps });
-  const interior = new THREE.MeshStandardMaterial({ color: opts.interiorColor, roughness: opts.interiorRoughness, emissive: em, emissiveIntensity: ei, ...offsetProps });
+  const exterior = new THREE.MeshStandardMaterial({
+    color: opts.exteriorColor,
+    roughness: opts.exteriorRoughness,
+    metalness: opts.exteriorMetalness ?? 0,
+    emissive: em, emissiveIntensity: ei, ...offsetProps,
+  });
+  const interior = new THREE.MeshStandardMaterial({
+    color: opts.interiorColor,
+    roughness: opts.interiorRoughness,
+    metalness: opts.interiorMetalness ?? 0,
+    emissive: em, emissiveIntensity: ei, ...offsetProps,
+  });
 
   // +x, -x, +y, -y, +z (front=exterior), -z (back=interior)
   return [edge, edge, edge, edge, exterior, interior];
@@ -63,5 +75,7 @@ export function resolveWallColors(wall: {
     edgeColor: extMat?.color ?? defaultColor,
     exteriorRoughness: leftMat?.roughness ?? extMat?.roughness ?? defaultRoughness,
     interiorRoughness: hasAnyMaterial ? (rightMat?.roughness ?? intMat?.roughness ?? defaultRoughness) : (leftMat?.roughness ?? extMat?.roughness ?? defaultRoughness),
+    exteriorMetalness: leftMat?.metalness ?? extMat?.metalness ?? 0,
+    interiorMetalness: hasAnyMaterial ? (rightMat?.metalness ?? intMat?.metalness ?? 0) : (leftMat?.metalness ?? extMat?.metalness ?? 0),
   };
 }
