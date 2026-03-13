@@ -53,6 +53,8 @@ function loadTexture(path: string, repeat?: [number, number]): THREE.Texture | n
 /**
  * Apply texture maps from a Material preset to a MeshStandardMaterial.
  * B5: Uses real-world sizing via calculateRepeat for sensible scale.
+ * C1: When context is 'wall', textures are skipped by default (stylized color-only).
+ *     Walls only get textures if forceTexture is true (advanced opt-in).
  * Falls back gracefully — if textures are missing, the flat color remains.
  */
 export function applyMaterialTextures(
@@ -60,9 +62,15 @@ export function applyMaterialTextures(
   preset: Material,
   wallHeight: number = 2.5,
   wallWidth: number = 3.0,
-  sizeMode: SurfaceSizeMode = 'auto'
+  sizeMode: SurfaceSizeMode = 'auto',
+  context: 'wall' | 'floor' = 'wall',
+  forceTexture: boolean = false
 ): void {
   if (!preset.hasTexture) return;
+
+  // C1: Walls render with color/roughness/metalness only — no image textures by default.
+  // Floors continue to use textures as their standard rendering path.
+  if (context === 'wall' && !forceTexture) return;
 
   const effectiveRepeat = calculateRepeat(preset, wallWidth, wallHeight, sizeMode);
 
