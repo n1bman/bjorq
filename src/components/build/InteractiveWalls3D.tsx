@@ -4,7 +4,7 @@
  * Phase B2: Face-aware paint mode with visual face highlight.
  */
 
-import { useMemo, useState, useCallback, useRef } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import { useAppStore } from '../../store/useAppStore';
 import { generateWallSegments, generateCornerBlocks, detectClickedFace } from '../../lib/wallGeometry';
 import { ThreeEvent } from '@react-three/fiber';
