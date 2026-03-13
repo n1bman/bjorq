@@ -577,12 +577,12 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
 
       {/* View mode toggle */}
       <div className="flex justify-end">
-        <div className="flex border border-border rounded-md overflow-hidden">
-          <button onClick={() => setViewMode('grid')} className={cn("p-1", viewMode === 'grid' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted')}>
-            <Grip size={12} />
+        <div className="flex border border-border/40 rounded-lg overflow-hidden">
+          <button onClick={() => setViewMode('grid')} className={cn("p-1.5", viewMode === 'grid' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted')}>
+            <Grip size={13} />
           </button>
-          <button onClick={() => setViewMode('list')} className={cn("p-1", viewMode === 'list' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted')}>
-            <Box size={12} />
+          <button onClick={() => setViewMode('list')} className={cn("p-1.5", viewMode === 'list' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted')}>
+            <Box size={13} />
           </button>
         </div>
       </div>
