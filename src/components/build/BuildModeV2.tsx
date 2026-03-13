@@ -2132,8 +2132,9 @@ export default function BuildModeV2() {
   // In Inredning: always show catalog as primary surface, device panel overlays when device tool active
   const showDevicePanel = !isBibliotek && (activeTool.startsWith('place-') || activeTool === 'vacuum-zone' || activeTool === ('place-vacuum-dock' as any));
   const showImportPanel = !isBibliotek && activeTab === 'planritning' && isImported;
+  const showSurfacePanel = !isBibliotek && activeTool === 'paint';
   // In Inredning: catalog is always visible (primary surface). In Planritning: only when furnish/wizard tool active
-  const showCatalogPanel = !isBibliotek && (
+  const showCatalogPanel = !isBibliotek && !showSurfacePanel && (
     isInredning
       ? !showDevicePanel  // always show unless device tool is active
       : (activeTool === ('furnish' as any) || activeTool === ('wizard' as any))
