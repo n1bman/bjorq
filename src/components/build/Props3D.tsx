@@ -357,6 +357,13 @@ function PropModel({ id, url: rawUrl, position, rotation, scale, colorOverride, 
     setShowQuickMenu(false);
   };
 
+  // C4: Toggle free placement (ignore wall barriers)
+  const handleToggleFreePlacement = () => {
+    const store = useAppStore.getState();
+    const current = store.props.items.find(p => p.id === id);
+    store.updateProp(id, { freePlacement: !current?.freePlacement });
+  };
+
   // ─── Display scene with selection feedback ───
   const displayScene = useMemo(() => {
     if (!scene) return null;
