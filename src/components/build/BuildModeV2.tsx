@@ -1700,9 +1700,7 @@ export default function BuildModeV2() {
       {isBibliotek ? (
         /* Bibliotek: dedicated workspace, no canvas */
         <div className="flex-1 overflow-hidden">
-          <Suspense fallback={<div className="flex-1 flex items-center justify-center text-muted-foreground">Laddar bibliotek...</div>}>
-            <BibliotekWorkspace />
-          </Suspense>
+          <BibliotekWorkspace />
         </div>
       ) : (
         /* Planritning / Inredning: canvas-based */
