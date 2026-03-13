@@ -7,8 +7,6 @@ import * as THREE from 'three';
 import type { ThreeEvent } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
 import type { PropModelStats } from '../../store/types';
-import { findLandingPosition, getFloorElevation } from '../../lib/placementEngine';
-
 const LOAD_TIMEOUT = 30_000;
 const loader = new GLTFLoader();
 const LONG_PRESS_MS = 500;
