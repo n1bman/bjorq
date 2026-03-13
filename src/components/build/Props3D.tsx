@@ -283,8 +283,11 @@ function PropModel({ id, url: rawUrl, position, rotation, scale, colorOverride, 
         if (metalnessOverride !== undefined) child.material.metalness = metalnessOverride;
 
         if (isSelected) {
-          child.material.emissive = new THREE.Color('#4a9eff');
-          child.material.emissiveIntensity = 0.3;
+          child.material.emissive = new THREE.Color('#d4a574');
+          child.material.emissiveIntensity = 0.2;
+        } else if (isHovered) {
+          child.material.emissive = new THREE.Color('#f5e6d3');
+          child.material.emissiveIntensity = 0.08;
         }
       }
     });
