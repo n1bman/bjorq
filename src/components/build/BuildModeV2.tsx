@@ -1392,57 +1392,57 @@ export default function BuildModeV2() {
   const showImportOverlay = cameraMode === 'topdown' && isImported && hasImportedUrl;
   const activeTool = useAppStore((s) => s.build.activeTool);
   const activeTab = useAppStore((s) => s.build.tab);
-  const showDevicePanel = activeTool.startsWith('place-') || activeTool === 'vacuum-zone' || activeTool === ('place-vacuum-dock' as any);
-  const showImportPanel = activeTab === 'planritning' && isImported;
-  const showFurnishPanel = activeTool === ('furnish' as any) || activeTool === ('wizard' as any);
-  const showBibliotekPanel = activeTab === 'bibliotek';
+  const isBibliotek = activeTab === 'bibliotek';
+  const showDevicePanel = !isBibliotek && (activeTool.startsWith('place-') || activeTool === 'vacuum-zone' || activeTool === ('place-vacuum-dock' as any));
+  const showImportPanel = !isBibliotek && activeTab === 'planritning' && isImported;
+  const showFurnishPanel = !isBibliotek && (activeTool === ('furnish' as any) || activeTool === ('wizard' as any));
 
   return (
     <div className="w-full h-full relative flex flex-col">
       <BuildTopToolbar />
-      <div className="flex-1 relative overflow-hidden">
-        {/* Device side panel */}
-        {showDevicePanel && (
-          <div className="absolute left-0 top-0 bottom-0 w-[220px] bg-card/95 backdrop-blur-sm border-r border-border z-20 overflow-y-auto py-3">
-            <InlinedDevicePlacementTools />
-          </div>
-        )}
-        {/* Import tools side panel */}
-        {showImportPanel && !showDevicePanel && !showFurnishPanel && !showBibliotekPanel && (
-          <div className="absolute left-0 top-0 bottom-0 w-[220px] bg-card/95 backdrop-blur-sm border-r border-border z-20 overflow-y-auto py-3">
-            <Suspense fallback={null}>
-              <ImportTools />
-            </Suspense>
-          </div>
-        )}
-        {/* Furnish side panel (Inredning) */}
-        {showFurnishPanel && !showDevicePanel && !showBibliotekPanel && (
-          <div className="absolute left-0 top-0 bottom-0 w-[260px] bg-card/95 backdrop-blur-sm border-r border-border z-20 overflow-y-auto py-3 px-2">
-            <AssetCatalog initialSourceFilter={activeTool === ('wizard' as any) ? 'wizard' : 'all'} />
-          </div>
-        )}
-        {/* Bibliotek panel — full asset registry */}
-        {showBibliotekPanel && !showDevicePanel && (
-          <div className="absolute left-0 top-0 bottom-0 w-[280px] bg-card/95 backdrop-blur-sm border-r border-border z-20 overflow-y-auto py-3 px-2">
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1 mb-2">Bibliotek</h3>
-            <AssetCatalog />
-          </div>
-        )}
-        {cameraMode === 'topdown' ? (
-          <>
-            {showImportOverlay && (
+      {isBibliotek ? (
+        /* Bibliotek: dedicated workspace, no canvas */
+        <div className="flex-1 overflow-hidden">
+          <Suspense fallback={<div className="flex-1 flex items-center justify-center text-muted-foreground">Laddar bibliotek...</div>}>
+            <BibliotekWorkspace />
+          </Suspense>
+        </div>
+      ) : (
+        /* Planritning / Inredning: canvas-based */
+        <div className="flex-1 relative overflow-hidden">
+          {showDevicePanel && (
+            <div className="absolute left-0 top-0 bottom-0 w-[220px] bg-card/95 backdrop-blur-sm border-r border-border z-20 overflow-y-auto py-3">
+              <InlinedDevicePlacementTools />
+            </div>
+          )}
+          {showImportPanel && !showDevicePanel && !showFurnishPanel && (
+            <div className="absolute left-0 top-0 bottom-0 w-[220px] bg-card/95 backdrop-blur-sm border-r border-border z-20 overflow-y-auto py-3">
               <Suspense fallback={null}>
-                <ImportPreview3D />
+                <ImportTools />
               </Suspense>
-            )}
-            <BuildCanvas2D overlayMode={showImportOverlay} />
-          </>
-        ) : (
-          <BuildScene3D />
-        )}
-        <BuildInspector />
-      </div>
-      <BuildCatalogRow />
+            </div>
+          )}
+          {showFurnishPanel && !showDevicePanel && (
+            <div className="absolute left-0 top-0 bottom-0 w-[260px] bg-card/95 backdrop-blur-sm border-r border-border z-20 overflow-y-auto py-3 px-2">
+              <AssetCatalog initialSourceFilter={activeTool === ('wizard' as any) ? 'wizard' : 'all'} />
+            </div>
+          )}
+          {cameraMode === 'topdown' ? (
+            <>
+              {showImportOverlay && (
+                <Suspense fallback={null}>
+                  <ImportPreview3D />
+                </Suspense>
+              )}
+              <BuildCanvas2D overlayMode={showImportOverlay} />
+            </>
+          ) : (
+            <BuildScene3D />
+          )}
+          <BuildInspector />
+        </div>
+      )}
+      {!isBibliotek && <BuildCatalogRow />}
       <DesignTabBar />
     </div>
   );
