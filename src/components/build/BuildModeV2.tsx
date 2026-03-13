@@ -1887,14 +1887,40 @@ function BibliotekWorkspace() {
             <Button variant="outline" className="w-full gap-2" onClick={() => bibFileRef.current?.click()} disabled={bibProcessing}>
               <Upload className="w-4 h-4" /> {bibImportFile ? bibImportFile.name : 'Välj fil...'}
             </Button>
-            {bibProcessing && <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" /> Analyserar...</div>}
-            {bibImportResult && <div className="text-xs text-muted-foreground"><p>{formatStats(bibImportResult.stats)}</p></div>}
+            {bibProcessing && !bibIsOptimizing && <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" /> Analyserar...</div>}
+            {bibImportResult && (
+              <div className="text-xs text-muted-foreground space-y-1">
+                <p>{formatStats(bibOptimizedResult ? bibOptimizedResult.stats : bibImportResult.stats)}</p>
+                {bibOptimizedResult && bibOptimizedResult.status === 'improved' && (
+                  <p className="text-primary font-medium">✓ Optimerad: {formatSize(bibOptimizedResult.originalSize)} → {formatSize(bibOptimizedResult.blob.size)} ({Math.round((1 - bibOptimizedResult.blob.size / bibOptimizedResult.originalSize) * 100)}% mindre)</p>
+                )}
+                {bibOptimizedResult && bibOptimizedResult.status === 'noImprovement' && (
+                  <p className="text-muted-foreground">Modellen behöver ingen optimering.</p>
+                )}
+              </div>
+            )}
+            {/* Optimization button */}
+            {bibImportResult && bibOptStep === 'analyze' && (() => {
+              const level = getOptimizationLevel(bibImportResult.stats);
+              if (level === 'none') return null;
+              return (
+                <Button variant="outline" className="w-full gap-2" onClick={handleBibOptimize} disabled={bibIsOptimizing}>
+                  <Sparkles className="w-4 h-4" /> Optimera modell
+                  {level === 'heavy' && <span className="text-destructive text-[10px]">(rekommenderas)</span>}
+                </Button>
+              );
+            })()}
+            {bibIsOptimizing && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="w-4 h-4 animate-spin" /> Optimerar...
+              </div>
+            )}
             <div><Label className="text-xs">Namn</Label><Input value={bibImportName} onChange={(e) => setBibImportName(e.target.value)} placeholder="Modellnamn" className="h-8" /></div>
             <div><Label className="text-xs">Kategori</Label><select value={bibImportCat} onChange={(e) => setBibImportCat(e.target.value as AssetCategory)} className="w-full h-8 rounded-md border border-input bg-background text-foreground px-2 text-sm">{Object.entries(BIB_CAT_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></div>
           </div>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setBibImportOpen(false)}>Avbryt</Button>
-            <Button onClick={handleBibImportConfirm} disabled={!bibImportFile || bibProcessing}>{bibProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Importera'}</Button>
+            <Button onClick={handleBibImportConfirm} disabled={!bibImportFile || bibProcessing || bibIsOptimizing}>{bibProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Importera'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
