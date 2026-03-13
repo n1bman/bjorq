@@ -627,9 +627,12 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
             : '';
           const isImporting = wizardImportingId && entry.wizardMeta?.id === wizardImportingId;
 
+          const placementType = entry.catalogItem?.placement || entry.curatedMeta?.placement;
+          const placementLabel = placementType ? PLACEMENT_LABELS[placementType] : null;
+
           if (viewMode === 'list') {
             return (
-              <button key={entry.id} onClick={() => handlePlaceEntry(entry)} disabled={!!isImporting} className={cn("flex items-center gap-2 w-full px-2 py-1.5 rounded-md bg-secondary/30 hover:bg-secondary/60 transition-colors text-xs group", leftBorder, isImporting && 'opacity-50')}>
+              <button key={entry.id} onClick={() => handlePlaceEntry(entry)} disabled={!!isImporting} className={cn("flex items-center gap-2 w-full px-2 py-2 rounded-lg bg-secondary/20 hover:bg-secondary/40 border border-transparent hover:border-border/30 transition-colors text-xs group", leftBorder, isImporting && 'opacity-50')}>
                 {isImporting && <Loader2 size={12} className="animate-spin shrink-0" />}
                 {entry.staleSync && <span className="shrink-0" title="Kräver re-import"><AlertTriangle size={12} className="text-destructive" /></span>}
                 {entry.wizardMode === 'imported' && !entry.staleSync && <span className="shrink-0" title="Från Wizard"><Wand2 size={10} className="text-orange-400" /></span>}
@@ -641,10 +644,11 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
                   {(() => { const I = AC_CATEGORY_ICONS[entry.category] || Box; return <I size={14} strokeWidth={1.5} />; })()}
                 </div>
                 <div className="flex-1 min-w-0 text-left">
-                  <span className="text-[10px] text-foreground truncate block">{entry.name}</span>
+                  <span className="text-[11px] text-foreground truncate block">{entry.name}</span>
                   <div className="flex items-center gap-1">
                     {entry.dimensions && <span className="text-[8px] text-muted-foreground">{entry.dimensions.width}×{entry.dimensions.depth}×{entry.dimensions.height}m</span>}
                     {getPerfColor(entry.performance) && <span className={`inline-block w-1.5 h-1.5 rounded-full ${getPerfColor(entry.performance)}`} />}
+                    {placementLabel && <span className="text-[8px] bg-muted/40 rounded px-1 py-0.5 text-muted-foreground">{placementLabel}</span>}
                   </div>
                 </div>
                 {instanceCounts[entry.id] > 0 && <span className="bg-primary text-primary-foreground text-[8px] font-bold rounded-full w-4 h-4 flex items-center justify-center shrink-0">×{instanceCounts[entry.id]}</span>}
