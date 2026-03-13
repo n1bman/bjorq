@@ -634,6 +634,14 @@ export interface PropModelStats {
   rating: string; // 'OK' | 'Tung' | 'För tung'
 }
 
+/** Wall-mount attachment info (Phase C1) */
+export interface WallMountInfo {
+  wallId: string;
+  faceSide: 'left' | 'right';
+  offsetAlongWall: number;  // 0-1 fraction along wall length
+  heightOnWall: number;     // meters from floor elevation
+}
+
 export interface PropItem {
   id: string;
   catalogId: string;
@@ -651,6 +659,8 @@ export interface PropItem {
   textureScale?: number;       // UV repeat (default 1)
   metalness?: number;           // 0-1
   roughness?: number;           // 0-1
+  /** Phase C1: wall-mount attachment data (if mounted on wall) */
+  wallMountInfo?: WallMountInfo;
 }
 
 export interface PropsState {
