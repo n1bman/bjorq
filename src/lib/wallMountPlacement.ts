@@ -13,8 +13,8 @@ const WALL_MOUNT_CATEGORIES = new Set(['lighting', 'decor']);
 /** Small offset from wall surface to prevent z-fighting */
 const WALL_MOUNT_OFFSET = 0.02; // meters
 
-/** Default height for wall-mounted objects */
-const DEFAULT_MOUNT_HEIGHT = 1.5; // meters from floor
+/** Default mount height for wall objects (meters from floor) */
+export const DEFAULT_MOUNT_HEIGHT = 1.5;
 
 /**
  * Check if a catalog item is eligible for wall mounting.

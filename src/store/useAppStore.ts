@@ -51,6 +51,7 @@ const initialBuild: BuildState = {
   importOverlaySync: { zoom: 40, offsetX: 0, offsetY: 0 },
   undoStack: [],
   redoStack: [],
+  pendingWallMount: null,
 };
 
 const initialLayout: LayoutState = {
