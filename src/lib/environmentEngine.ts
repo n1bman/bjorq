@@ -222,7 +222,7 @@ export function computeEnvironmentProfile(input: EnvironmentInput): EnvironmentP
   const sunIntensity = finalProfile.sunIntensity * calibration.intensityMultiplier;
 
   // 6. Indoor fill — based on hemisphere + indoorBounce calibration
-  const indoorBounce = Math.max(calibration.indoorBounce, 0.3); // minimum 0.3 for believable fill
+  const indoorBounce = Math.max(calibration.indoorBounce, 0.35); // minimum 0.35 for warmer indoor fill
   const hemisphereIntensity = finalProfile.hemisphereIntensity * indoorBounce;
   const indoorFillIntensity = hemisphereIntensity;
 
