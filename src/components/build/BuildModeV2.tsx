@@ -323,14 +323,30 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
     }
   }, [importResult, importFile]);
 
+  const setPendingWallMount = useAppStore((s) => s.setPendingWallMount);
+
   const placePropFn = useCallback((catalogId: string, url: string) => {
     if (!activeFloorId) return;
+
+    // Phase C1: Check if the item is wall-mountable
+    const catItem = useAppStore.getState().props.catalog.find((c: any) => c.id === catalogId);
+    const curatedItem = curatedAssets?.find?.((c: any) => c.id === catalogId);
+    const placement = catItem?.placement || curatedItem?.placement;
+    const category = catItem?.category || curatedItem?.category;
+
+    const { isWallMountable } = require('../../lib/wallMountPlacement');
+    if (isWallMountable({ placement, category })) {
+      setPendingWallMount({ catalogId, url });
+      toast.info('Klicka på en vägg för att placera');
+      return;
+    }
+
     const tx = Math.round(cameraRef.target.x * 10) / 10;
     const tz = Math.round(cameraRef.target.z * 10) / 10;
     const existing = floorProps.filter((p: any) => p.catalogId === catalogId);
     const offset = existing.length * 0.5;
     addProp({ id: generateId(), catalogId, floorId: activeFloorId, url, position: [tx + offset, 0, tz + offset], rotation: [0,0,0], scale: [1,1,1] });
-  }, [activeFloorId, addProp, floorProps]);
+  }, [activeFloorId, addProp, floorProps, setPendingWallMount]);
 
   const handleImportConfirm = useCallback(async () => {
     if (!importFile || !importResult || !activeFloorId || !importName.trim()) return;
