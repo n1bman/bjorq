@@ -7,9 +7,15 @@ import * as THREE from 'three';
 import type { ThreeEvent } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
 import type { PropModelStats } from '../../store/types';
+import { findLandingPosition, getFloorElevation } from '../../lib/placementEngine';
 
 const LOAD_TIMEOUT = 30_000;
 const loader = new GLTFLoader();
+const LONG_PRESS_MS = 500;
+const LONG_PRESS_MOVE_THRESHOLD = 5;
+
+// Module-level map of loaded scenes for placement engine
+export const sceneRefs = new Map<string, THREE.Group>();
 
 function disposeScene(scene: THREE.Group) {
   scene.traverse((child: any) => {
@@ -56,7 +62,6 @@ function analyzeModel(scene: THREE.Group): PropModelStats {
   return { triangles: Math.round(triangles), meshCount, materialCount: materials.size, rating };
 }
 
-/** Parse base64 fileData directly into a THREE.Group — no network needed */
 function loadFromBase64(base64: string): Promise<THREE.Group> {
   return new Promise((resolve, reject) => {
     try {
@@ -68,14 +73,12 @@ function loadFromBase64(base64: string): Promise<THREE.Group> {
   });
 }
 
-/** Load a GLB/GLTF via network (non-blob URLs only) */
 function loadGltfFromUrl(url: string): Promise<THREE.Group> {
   return new Promise((resolve, reject) => {
     loader.load(url, (gltf) => resolve(gltf.scene), undefined, (err) => reject(err));
   });
 }
 
-/** Look up base64 fileData from the catalog for a given prop id */
 function getFileDataForProp(propId: string): string | null {
   const state = useAppStore.getState();
   const propItem = state.props.items.find((p) => p.id === propId);
@@ -83,6 +86,15 @@ function getFileDataForProp(propId: string): string | null {
   const catItem = state.props.catalog.find((c: any) => c.id === propItem.catalogId);
   return (catItem as any)?.fileData ?? null;
 }
+
+// ─── Outline material (shared, never disposed) ───
+const outlineMaterial = new THREE.MeshBasicMaterial({
+  color: '#ffffff',
+  side: THREE.BackSide,
+  transparent: true,
+  opacity: 0.6,
+  depthWrite: false,
+});
 
 function PropModel({ id, url: rawUrl, position, rotation, scale, colorOverride, textureOverride, textureScale = 1, metalness: metalnessOverride, roughness: roughnessOverride }: {
   id: string;
@@ -101,14 +113,19 @@ function PropModel({ id, url: rawUrl, position, rotation, scale, colorOverride, 
   const selection = useAppStore((s) => s.build.selection);
   const setSelection = useAppStore((s) => s.setSelection);
   const activeTool = useAppStore((s) => s.build.activeTool);
-  const tab = useAppStore((s) => s.build.tab);
+  const activeFloorId = useAppStore((s) => s.layout.activeFloorId);
 
   const isSelected = appMode === 'build' && selection.type === 'prop' && selection.id === id;
   const [isHovered, setIsHovered] = useState(false);
-  const groupRef = useRef<THREE.Group>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [dragShadowPos, setDragShadowPos] = useState<[number, number, number] | null>(null);
+  const [showQuickMenu, setShowQuickMenu] = useState(false);
+  const groupRef = useRef<THREE.Group>(null);
   const dragPlane = useRef(new THREE.Plane(new THREE.Vector3(0, 1, 0), 0));
   const dragOffset = useRef(new THREE.Vector3());
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pointerDownPos = useRef<{ x: number; y: number } | null>(null);
+  const longPressTriggered = useRef(false);
   const { camera, raycaster, gl } = useThree();
 
   const [status, setStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
@@ -117,12 +134,30 @@ function PropModel({ id, url: rawUrl, position, rotation, scale, colorOverride, 
   const lastLoadedUrl = useRef('');
   const retryCount = useRef(0);
 
-  // Find model name for logging
   const items = useAppStore((s) => s.props.items);
   const propItem = items.find((p) => p.id === id);
   const modelName = propItem?.name || 'Modell';
 
-  // Plain function — no useCallback to avoid circular deps
+  // Dismiss quick menu on deselect or escape
+  useEffect(() => {
+    if (!isSelected) setShowQuickMenu(false);
+  }, [isSelected]);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setShowQuickMenu(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
+
+  const cancelLongPress = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  };
+
   const doLoad = (propId: string, loadUrl: string) => {
     if (loadingRef.current) return;
     loadingRef.current = true;
@@ -142,6 +177,8 @@ function PropModel({ id, url: rawUrl, position, rotation, scale, colorOverride, 
       const info = analyzeModel(loadedScene);
       console.info(`[Props3D] Loaded "${modelName}": ${info.triangles.toLocaleString()} △ · ${info.meshCount} mesh · ${info.materialCount} mat — ${info.rating}`);
       useAppStore.getState().updateProp(propId, { modelStats: info });
+      // Store in module-level map for placement engine
+      sceneRefs.set(propId, loadedScene);
       setScene(loadedScene);
       setStatus('ready');
     };
@@ -152,7 +189,6 @@ function PropModel({ id, url: rawUrl, position, rotation, scale, colorOverride, 
       setStatus('error');
     };
 
-    // Strategy 1: Try loading from catalog fileData (base64) — works everywhere
     const fileData = getFileDataForProp(propId);
     if (fileData) {
       console.info(`[Props3D] Loading "${modelName}" from fileData (base64)`);
@@ -163,7 +199,6 @@ function PropModel({ id, url: rawUrl, position, rotation, scale, colorOverride, 
       return;
     }
 
-    // Strategy 2: Non-blob URL — load via network
     if (!isBlobOrDataUrl(loadUrl)) {
       loadGltfFromUrl(loadUrl).then(handleSuccess).catch((err: unknown) => {
         console.warn(`[Props3D] Network load failed for "${modelName}":`, err);
@@ -180,29 +215,23 @@ function PropModel({ id, url: rawUrl, position, rotation, scale, colorOverride, 
       return;
     }
 
-    // Strategy 3: blob/data URL with no fileData — unlikely to work in sandbox but try
     console.warn(`[Props3D] No fileData for "${modelName}", blob URL may fail`);
     handleError();
   };
 
-  // Load effect — only runs when url actually changes
   useEffect(() => {
     if (!url) { setStatus('idle'); return; }
-
-    // Don't reload if same URL
     const baseUrl = url.split('?')[0];
     if (baseUrl === lastLoadedUrl.current) return;
-
-    // Dispose old scene
     if (scene) { disposeScene(scene); setScene(null); }
-
     lastLoadedUrl.current = baseUrl;
     retryCount.current = 0;
-    loadingRef.current = false; // Reset guard
+    loadingRef.current = false;
     doLoad(id, url);
 
     return () => {
       lastLoadedUrl.current = '';
+      sceneRefs.delete(id);
     };
   }, [url]);
 
@@ -211,6 +240,10 @@ function PropModel({ id, url: rawUrl, position, rotation, scale, colorOverride, 
   const handleClick = (e: ThreeEvent<PointerEvent>) => {
     if (!canInteract) return;
     e.stopPropagation();
+    if (longPressTriggered.current) {
+      longPressTriggered.current = false;
+      return;
+    }
     setSelection({ type: 'prop', id });
   };
 
@@ -221,6 +254,20 @@ function PropModel({ id, url: rawUrl, position, rotation, scale, colorOverride, 
     if (appMode !== 'build' || (activeTool !== 'select' && activeTool !== 'furnish')) return;
     e.stopPropagation();
     setSelection({ type: 'prop', id });
+    setShowQuickMenu(false);
+    longPressTriggered.current = false;
+
+    // Record pointer position for long-press detection
+    pointerDownPos.current = { x: e.nativeEvent.clientX, y: e.nativeEvent.clientY };
+
+    // Start long-press timer
+    cancelLongPress();
+    longPressTimer.current = setTimeout(() => {
+      longPressTriggered.current = true;
+      setShowQuickMenu(true);
+      setIsDragging(false);
+      gl.domElement.style.cursor = '';
+    }, LONG_PRESS_MS);
 
     const intersectPoint = e.point;
     dragPlane.current.set(new THREE.Vector3(0, 1, 0), -position[1]);
@@ -232,7 +279,20 @@ function PropModel({ id, url: rawUrl, position, rotation, scale, colorOverride, 
     setIsDragging(true);
     gl.domElement.style.cursor = 'grabbing';
 
+    const floorId = activeFloorId || '';
+
     const onPointerMove = (moveEvent: PointerEvent) => {
+      // Check long-press movement threshold
+      if (pointerDownPos.current && longPressTimer.current) {
+        const dx = moveEvent.clientX - pointerDownPos.current.x;
+        const dy = moveEvent.clientY - pointerDownPos.current.y;
+        if (Math.sqrt(dx * dx + dy * dy) > LONG_PRESS_MOVE_THRESHOLD) {
+          cancelLongPress();
+        }
+      }
+
+      if (longPressTriggered.current) return;
+
       const rect = gl.domElement.getBoundingClientRect();
       const mouse = new THREE.Vector2(
         ((moveEvent.clientX - rect.left) / rect.width) * 2 - 1,
@@ -242,28 +302,78 @@ function PropModel({ id, url: rawUrl, position, rotation, scale, colorOverride, 
       const target = new THREE.Vector3();
       raycaster.ray.intersectPlane(dragPlane.current, target);
       if (target) {
-        useAppStore.getState().updateProp(id, {
-          position: [
-            target.x - dragOffset.current.x,
-            Math.max(0, position[1]),
-            target.z - dragOffset.current.z,
-          ],
-        });
+        const dragX = target.x - dragOffset.current.x;
+        const dragZ = target.z - dragOffset.current.z;
+
+        // Use placement engine for smart Y
+        const result = findLandingPosition(id, [dragX, dragZ], position[1], floorId, sceneRefs);
+
+        useAppStore.getState().updateProp(id, { position: result.position });
+
+        // Update drag shadow position
+        const floorElev = getFloorElevation(floorId);
+        setDragShadowPos([dragX, floorElev + 0.02, dragZ]);
       }
     };
 
     const onPointerUp = () => {
+      cancelLongPress();
       setIsDragging(false);
+      setDragShadowPos(null);
       gl.domElement.style.cursor = '';
       window.removeEventListener('pointermove', onPointerMove);
       window.removeEventListener('pointerup', onPointerUp);
+
+      // Final snap on drop
+      if (!longPressTriggered.current) {
+        const currentProp = useAppStore.getState().props.items.find(p => p.id === id);
+        if (currentProp) {
+          const result = findLandingPosition(
+            id,
+            [currentProp.position[0], currentProp.position[2]],
+            currentProp.position[1],
+            floorId,
+            sceneRefs,
+          );
+          useAppStore.getState().updateProp(id, { position: result.position });
+        }
+      }
     };
 
     window.addEventListener('pointermove', onPointerMove);
     window.addEventListener('pointerup', onPointerUp);
   };
 
-  // Memoize scene clone — apply material overrides
+  // ─── Quick menu actions ───
+  const handleQuickRotate = () => {
+    const newRot: [number, number, number] = [rotation[0], rotation[1] + Math.PI / 4, rotation[2]];
+    useAppStore.getState().updateProp(id, { rotation: newRot });
+  };
+
+  const handleQuickDuplicate = () => {
+    const store = useAppStore.getState();
+    const srcProp = store.props.items.find(p => p.id === id);
+    if (!srcProp) return;
+    const newId = `prop-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    store.addProp({
+      ...srcProp,
+      id: newId,
+      position: [srcProp.position[0] + 0.5, srcProp.position[1], srcProp.position[2]],
+      modelStats: undefined,
+      haEntityId: undefined,
+      linkedDeviceId: undefined,
+    });
+    setShowQuickMenu(false);
+    store.setSelection({ type: 'prop', id: newId });
+  };
+
+  const handleQuickDelete = () => {
+    useAppStore.getState().removeProp(id);
+    useAppStore.getState().setSelection({ type: null, id: null });
+    setShowQuickMenu(false);
+  };
+
+  // ─── Display scene with outline shell ───
   const displayScene = useMemo(() => {
     if (!scene) return null;
     const clone = scene.clone();
@@ -271,7 +381,6 @@ function PropModel({ id, url: rawUrl, position, rotation, scale, colorOverride, 
       if (child.isMesh) {
         child.castShadow = false;
         child.receiveShadow = true;
-        // Always clone material to avoid mutating original
         child.material = child.material.clone();
 
         if (colorOverride) {
@@ -289,7 +398,29 @@ function PropModel({ id, url: rawUrl, position, rotation, scale, colorOverride, 
 
         if (isSelected) {
           child.material.emissive = new THREE.Color('#d4a574');
-          child.material.emissiveIntensity = 0.2;
+          child.material.emissiveIntensity = 0.15;
+
+          // Back-face outline shell for selected objects
+          const geo = child.geometry;
+          if (geo) {
+            // Safety: skip degenerate geometry
+            geo.computeBoundingBox();
+            const bbox = geo.boundingBox;
+            if (bbox) {
+              const size = new THREE.Vector3();
+              bbox.getSize(size);
+              if (size.x > 0.01 && size.y > 0.01 && size.z > 0.01) {
+                const outlineMesh = new THREE.Mesh(geo, outlineMaterial);
+                outlineMesh.scale.setScalar(1.04);
+                outlineMesh.raycast = () => {}; // Don't interfere with picking
+                child.parent?.add(outlineMesh);
+                // Copy transform from child
+                outlineMesh.position.copy(child.position);
+                outlineMesh.rotation.copy(child.rotation);
+                outlineMesh.quaternion.copy(child.quaternion);
+              }
+            }
+          }
         } else if (isHovered) {
           child.material.emissive = new THREE.Color('#f5e6d3');
           child.material.emissiveIntensity = 0.08;
@@ -360,17 +491,79 @@ function PropModel({ id, url: rawUrl, position, rotation, scale, colorOverride, 
         onPointerLeave={handlePointerLeave}
         onContextMenu={(e: any) => { e.nativeEvent?.preventDefault?.(); e.stopPropagation(); }}
       />
-      {isSelected && (
-        <>
-          <mesh position={[position[0], 0.02, position[2]]} rotation={[-Math.PI / 2, 0, 0]}>
-            <ringGeometry args={[0.4 * scale[0], 0.5 * scale[0], 32]} />
-            <meshBasicMaterial color="#d4a574" transparent opacity={0.5} side={THREE.DoubleSide} />
-          </mesh>
-          <mesh position={[position[0], 0.02, position[2]]} rotation={[-Math.PI / 2, 0, 0]}>
-            <ringGeometry args={[0.55 * scale[0], 0.65 * scale[0], 32]} />
-            <meshBasicMaterial color="#d4a574" transparent opacity={0.15} side={THREE.DoubleSide} />
-          </mesh>
-        </>
+
+      {/* Drag shadow indicator */}
+      {isDragging && dragShadowPos && (
+        <mesh position={dragShadowPos} rotation={[-Math.PI / 2, 0, 0]}>
+          <circleGeometry args={[0.3, 24]} />
+          <meshBasicMaterial color="#000000" transparent opacity={0.15} side={THREE.DoubleSide} />
+        </mesh>
+      )}
+
+      {/* Long-press quick action menu */}
+      {showQuickMenu && isSelected && (
+        <Html
+          center
+          position={[position[0], position[1] + 1.2, position[2]]}
+          style={{ pointerEvents: 'auto' }}
+        >
+          <div
+            style={{
+              background: 'hsl(220 18% 13% / 0.95)',
+              borderRadius: 12,
+              padding: '6px 4px',
+              display: 'flex',
+              gap: 2,
+              backdropFilter: 'blur(8px)',
+              border: '1px solid hsl(220 10% 25% / 0.5)',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={handleQuickRotate}
+              style={{
+                background: 'transparent', border: 'none', color: '#fff',
+                padding: '6px 10px', borderRadius: 8, cursor: 'pointer',
+                fontSize: 11, display: 'flex', flexDirection: 'column',
+                alignItems: 'center', gap: 2, whiteSpace: 'nowrap',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = 'hsl(220 10% 25% / 0.5)')}
+              onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+            >
+              <span style={{ fontSize: 16 }}>↻</span>
+              <span>Rotera</span>
+            </button>
+            <button
+              onClick={handleQuickDuplicate}
+              style={{
+                background: 'transparent', border: 'none', color: '#fff',
+                padding: '6px 10px', borderRadius: 8, cursor: 'pointer',
+                fontSize: 11, display: 'flex', flexDirection: 'column',
+                alignItems: 'center', gap: 2, whiteSpace: 'nowrap',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = 'hsl(220 10% 25% / 0.5)')}
+              onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+            >
+              <span style={{ fontSize: 16 }}>⊕</span>
+              <span>Duplicera</span>
+            </button>
+            <button
+              onClick={handleQuickDelete}
+              style={{
+                background: 'transparent', border: 'none', color: '#ef4444',
+                padding: '6px 10px', borderRadius: 8, cursor: 'pointer',
+                fontSize: 11, display: 'flex', flexDirection: 'column',
+                alignItems: 'center', gap: 2, whiteSpace: 'nowrap',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = 'hsl(0 60% 30% / 0.3)')}
+              onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+            >
+              <span style={{ fontSize: 16 }}>🗑</span>
+              <span>Ta bort</span>
+            </button>
+          </div>
+        </Html>
       )}
     </group>
   );

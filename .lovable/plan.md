@@ -1,104 +1,216 @@
 
 
-# Phase 7 — Smart Placement, Surface Snapping, and Direct Object Controls
+## Build Mode Refactoring Plan (Active)
 
-## Summary
+### Sprint 1: Canvas2D Refaktorisering + Undo/Redo ✅ DONE
+- BuildCanvas2D split into canvas2d/ module (Canvas2DView, useCanvas2DCamera, useCanvas2DDraw, useCanvas2DDrag, constants)
+- Shared buildUtils.ts with snap/grid/hit-test utilities
+- UndoSnapshot expanded to cover layout + devices + props (30 levels)
+- pushUndo auto-called on addDevice, removeDevice, addProp, removeProp
 
-Four incremental changes: (A) back-face outline shell for selection, (B) surface-aware placement engine using floor elevation + support-surface snapping, (C) long-press quick-action menu, (D) quick rotate buttons in inspector.
+### Sprint 2: Väggsystem + Live Room Detection (NEXT)
+### Sprint 3: Dörrar, Fönster, Garageportar
+### Sprint 4: Referensritning + Material + Mark
+### Sprint 5: Multi-select, Copy/Paste
+### Sprint 6: HA-koppling openings + Dashboard-synk
+### Sprint 7: Polish och Stabilitet
 
-## Step 1: Selection Outline (`Props3D.tsx`)
+---
 
-In `displayScene` useMemo (line 267-300), when `isSelected`:
-- For each mesh child, create a **clone** with `MeshBasicMaterial({ color: '#ffffff', side: THREE.BackSide, transparent: true, opacity: 0.6 })`, scale clone by `1.04` on all axes, and add as child of the same parent
-- Add a safety check: skip outline for meshes with no geometry or very small bounding boxes (< 0.01 units) to avoid artifacts
-- Keep warm emissive (`#d4a574`, 0.15) on original mesh for warmth
-- **Remove** the floor ring geometry (lines 363-374) — replaced by outline
-- Hover: keep existing `#f5e6d3` emissive at 0.08, no outline (cost)
+## Full Roadmap: EPIC A through I + Klimat-flik
 
-## Step 2: Placement Engine (`src/lib/placementEngine.ts` — new file)
+Since this is ~20 features across 9 epics, each implementation message will handle 2-3 tasks. Here is the complete plan split into implementation sprints.
 
-```typescript
-// Categories that can act as support surfaces
-const SUPPORT_CATEGORIES = new Set(['tables', 'storage', 'kitchen']);
-// Only 'table' placement items snap onto support surfaces
-// 'floor' items snap to floor elevation
-// 'wall'/'ceiling' — passthrough (future)
+---
 
-function getFloorElevation(floorId: string): number {
-  const floor = useAppStore.getState().layout.floors.find(f => f.id === floorId);
-  return floor?.elevation ?? 0;
-}
+### Sprint 1: EPIC A -- Data, profiler & multi-device consistency
 
-function findLandingPosition(
-  propId: string,
-  dragXZ: [number, number],
-  currentY: number,
-  floorId: string,
-  sceneRefs: Map<string, THREE.Group>
-): { position: [number, number, number]; snappedTo: 'floor' | 'surface' | 'free' }
-```
+**A1: "Ta bort demo-projekt"**
+- Add "Ta bort demo-projekt" button in `DataBackupCard.tsx`
+- If demo is the active project: reset to empty initial state (reuse existing `clearAllFloors` + clear devices)
+- Confirmation dialog with warning about what gets removed
+- In hosted mode: also delete project on server via `DELETE /api/projects/demo`
 
-Logic:
-1. Get floor `elevation` from store (not hardcoded 0)
-2. Look up dragged prop's `placement` from catalog
-3. **floor** placement → Y = floor elevation
-4. **table** placement → scan other props on same floor with `SUPPORT_CATEGORIES`. For each, compute bounding box from `sceneRefs`. If drag XZ is within the horizontal bounds and prop is close enough, Y = top of support's bounding box + floor elevation. Fallback: floor elevation
-5. **wall/ceiling** → return current Y (future-ready)
-6. **no metadata** → Y = max(floor elevation, currentY) (free)
+**A2: "localStorage enforcement i HOSTED"**
+- In `initHostedMode()` (useAppStore.ts): after bootstrap loads, run a one-time `localStorage.removeItem('hometwin-store')` cleanup
+- Add a "Storage Mode" indicator in Settings showing HOSTED/DEV + last sync time
+- Ensure `partialize` returns `{}` in hosted mode (already done, but verify edge cases)
 
-## Step 3: Wire Placement into Props3D (`Props3D.tsx`)
+**Files:** `DataBackupCard.tsx`, `useAppStore.ts`, `DashboardGrid.tsx` (settings section)
 
-- Add module-level `const sceneRefs = new Map<string, THREE.Group>()` — populated in `handleSuccess` of `doLoad`, cleaned in unmount effect
-- In drag `onPointerMove` (line 235-253): replace `Math.max(0, position[1])` with call to `findLandingPosition()`
-- On `onPointerUp`: final snap check, update position
-- Show a subtle drag shadow during drag: a `<mesh>` with `CircleGeometry(0.3)` + transparent dark material at the landing XZ position, Y = floor elevation + 0.02
+---
 
-## Step 4: Long-Press Quick Menu (`Props3D.tsx`)
+### Sprint 2: EPIC B -- HA connection stability
 
-State: `const [showQuickMenu, setShowQuickMenu] = useState(false)`
-Refs: `longPressTimer`, `pointerDownPos`
+**B1: "Reconnect / Reload entities / Reset HA config"**
+- Enhance `HAConnectionPanel.tsx` with 3 action buttons:
+  - **Reconnect**: calls `disconnect()` then `connect()` with stored credentials
+  - **Reload entities**: re-sends `get_states` over existing WS (or re-polls in hosted)
+  - **Reset HA config**: clears wsUrl/token, disconnects, clears entities
+- Add auto-reconnect status indicator with retry count
 
-In `handlePointerDown`:
-- Record `pointerDownPos` and start 500ms timer
-- If pointer moves > 5px during timer, cancel
-- On timer fire: `setShowQuickMenu(true)`, cancel drag
+**B2: "Rate-limit / debounce service calls"**
+- Create `src/lib/serviceThrottle.ts`:
+  - Per-entity throttle (max 10 calls/sec per entity, last-write-wins)
+  - Circuit breaker: if >5 errors in 10s, pause and show toast
+- Wrap `haServiceCaller.current` through throttle in `Index.tsx`
+- Apply throttle to slider `onValueChange` handlers in `DeviceControlCard.tsx` (lights, fans, volume)
 
-Menu (via `<Html center>` at object position):
-- **Rotera** — rotates 45° per tap
-- **Duplicera** — clones prop with +0.5m X offset
-- **Ta bort** — removes prop, deselects
+**Files:** `HAConnectionPanel.tsx`, new `serviceThrottle.ts`, `Index.tsx`, `useHABridge.ts`
 
-Dismiss: on any click outside, Escape key, or deselect.
+---
 
-Desktop: same long-press (no right-click). Touch: identical behavior.
+### Sprint 3: EPIC C1-C2 -- Entity remapping + RGB color picker
 
-## Step 5: Quick Rotate in Inspector (`BuildInspector.tsx`)
+**C1: "Edit HA entity mapping from dashboard"**
+- Add "Edit mapping" button in expanded `DevicesSection.tsx` device cards
+- Show searchable entity dropdown (reuse `HAEntityPicker` from build mode)
+- On change: call `updateDevice(id, { ha: { entityId } })` + re-map state from liveStates
 
-After the rotation slider (line 592-600), add a row of 4 small icon buttons:
-- `-90°`, `-45°`, `+45°`, `+90°`
-- Each sets rotation directly: `updateProp(prop.id, { rotation: [0, currentRad + delta, 0] })`
-- Styled: `h-7 text-[10px] rounded-lg bg-secondary/30 hover:bg-secondary/50`
+**C2: "RGB color picker"**
+- Replace R/G/B sliders in `LightControl` with an HSV color wheel (canvas-based)
+- Keep brightness slider separate
+- Send `rgb_color` or `hs_color` based on entity's `supported_color_modes`
 
-## Files Changed
+**Files:** `DeviceControlCard.tsx`, `DevicesSection.tsx`, new `ColorPicker.tsx`
 
-| File | Change |
-|------|--------|
-| `src/components/build/Props3D.tsx` | Outline shell, sceneRefs map, placement engine integration, drag shadow, long-press quick menu |
-| `src/lib/placementEngine.ts` | **New** — surface landing logic with floor elevation + support surface bbox checks |
-| `src/components/build/BuildInspector.tsx` | Quick rotate buttons |
+---
 
-## Key Corrections Applied
+### Sprint 4: EPIC C3-C5 -- Energy sensors + Fan + Climate improvements
 
-1. **Floor height**: Uses `floor.elevation` from store, not hardcoded `0`
-2. **Support surfaces**: Only `tables`, `storage`, `kitchen` categories qualify — small decor never becomes a surface
-3. **Outline safety**: Skip outline for degenerate meshes; fallback is emissive-only
-4. **Interaction rules**: Right-click = camera only (unchanged). Left-click = select/drag. Long-press = quick menu (no right-click)
-5. **Touch**: Long-press works identically. Selected state is primary feedback (outline), not hover-dependent
+**C3: "Energy sensors"**
+- Extend `EnergyWidget` + `EnergyDeviceList` to pull from HA `sensor.*_power` / `sensor.*_energy` entities
+- Add entity picker in energy settings to select which sensors to track
+- Show "Nu", "Idag", "Manad" tabs in energy panel
 
-## Performance
+**C4: "Fan extended controls"**
+- Extend `FanState` with `oscillate`, `direction`, `preset_modes`, `available_preset_modes`
+- Update `FanControl` UI: preset mode buttons, oscillate toggle, direction toggle
+- Gate UI elements on entity attributes (`supported_features`)
 
-- Outline: 1 extra draw call per mesh in single selected object only
-- Placement: bbox checks only during active drag events (event-driven, not per-frame)
-- Quick menu: single `<Html>` when open
-- No new dependencies
+**C5: "Climate overhaul"**
+- Extend `ClimateState` with `hvac_modes`, `fan_mode`, `swing_mode`, `preset_mode`, `target_temp_low/high`
+- Add quick action buttons ("Heat 21", "Cool 23", "Auto")
+- Show `current_humidity` if available
+- Gate UI on entity's `supported_features`
 
+**Files:** `types.ts`, `DeviceControlCard.tsx`, `EnergyWidget.tsx`, `EnergyDeviceList.tsx`, `haMapping.ts`, `useHABridge.ts`
+
+---
+
+### Sprint 5: EPIC D -- Camera & media
+
+**D1: "Camera stream fallback chain"**
+- In `CameraControl`: attempt MJPEG stream URL from HA entity attributes (`entity_picture`)
+- In hosted mode: proxy through `/api/ha/camera_proxy/<entity_id>`
+- Fallback chain: stream -> snapshot polling (5s) -> static placeholder
+- Show clear error state with reason
+
+**D2: "Camera freeze after refresh"**
+- Defer OrbitControls re-binding until scene is fully mounted (add `ready` state in `Scene3D.tsx`)
+- Ensure pointer event listeners are removed and re-added cleanly on HMR/reload
+
+**D3: "Media/screen widget with image entities + AndroidTV"**
+- New widget type in dashboard: `MediaScreenWidget`
+- Pull `entity_picture`, `media_image_url` from HA attributes
+- Display app artwork, media title, app_name from `media_player` attributes
+
+**Files:** `DeviceControlCard.tsx`, `Scene3D.tsx`, `DeviceMarkers3D.tsx`, new `MediaScreenWidget.tsx`
+
+---
+
+### Sprint 6: EPIC E -- Weather override
+
+**E1: "Precipitation mode override"**
+- Add `precipitationOverride` to `EnvironmentState`: `'auto' | 'rain' | 'snow' | 'off'`
+- UI in settings under environment: 4 toggle buttons
+- `WeatherEffects3D.tsx` reads override; if not `auto`, forces that condition regardless of HA/API data
+- Location source remains separate (HA/manual)
+
+**Files:** `types.ts`, `useAppStore.ts`, `WeatherEffects3D.tsx`, `DashboardGrid.tsx` (settings section)
+
+---
+
+### Sprint 7: EPIC F -- Standby + Vio mode
+
+**F1: "Vio mode + motion sensor wake"**
+- Extend standby state machine: `Active -> Standby -> Vio`
+  - Standby: current behavior (dim camera, info overlay)
+  - Vio: near-black screen, minimal clock only, GPU paused (stop R3F render loop)
+- Add `vioTimeout` setting (minutes after standby -> vio)
+- Add `motionEntityId` setting: pick a `binary_sensor.*` from HA entities
+- In `useIdleTimer`: subscribe to motion entity state changes; if `on` -> exit standby/vio
+- Wake transition: vio -> active (skip standby on motion)
+
+**Files:** `types.ts`, `StandbyMode.tsx`, `useIdleTimer.ts`, `DashboardGrid.tsx` (standby settings)
+
+---
+
+### Sprint 8: EPIC G -- Navigation & Home UI
+
+**G1: "Expanding FAB navigation"**
+- Replace `HomeNav` pill with a single center button that expands into 3 buttons on tap
+- Animation: radial expand with spring transition
+- Move camera FAB to consistent bottom-right position
+
+**G2: "Device marker visibility"**
+- Add outline/glow shader to markers in `DeviceMarkers3D.tsx` for better contrast
+- Add `markerSize` setting in preferences: S/M/L (scales marker geometry)
+
+**G3: "Build devices: better categorization"**
+- Group device placement tools by category in `DevicePlacementTools.tsx`
+- Categories: Lights, Switches, Climate, Fans, Sensors, Cameras, Vacuum, Media, Security, Other
+
+**Files:** `HomeNav.tsx`, `CameraFab.tsx`, `DeviceMarkers3D.tsx`, `DevicePlacementTools.tsx`, `types.ts`
+
+---
+
+### Sprint 9: EPIC H -- Vacuum 3D movement
+
+**H1: "Vacuum movement in 3D"**
+- Debug current vacuum animation in `DeviceMarkers3D.tsx` (VacuumMarker section)
+- Verify position source: check if `lawnmower pattern` movement code is still running
+- Add debug overlay (toggle in vacuum control card) showing position/timestamp/status
+- Ensure `useFrame` animation loop only runs when `status === 'cleaning'`
+
+**Files:** `DeviceMarkers3D.tsx`, `DeviceControlCard.tsx`
+
+---
+
+### Sprint 10: EPIC I -- Performance (RPi)
+
+**I1: "Default tablet mode for weak hardware"**
+- On first boot (no persisted state): run hardware detection
+- If `navigator.hardwareConcurrency <= 4` or `deviceMemory <= 4`: auto-set `tabletMode: true`
+- Store flag `_autoDetectedPerformance` to avoid re-applying on subsequent boots
+
+**I2: "RPi optimization package"**
+- Lower DPR floor to 0.75 in tablet mode
+- Add `maxLights` setting: in tablet mode, cap number of active pointLights in scene
+- Batch entity state updates (collect changes over 100ms, apply once)
+- Add "Performance HUD" toggle in settings: shows FPS, tri-count, material count overlay
+
+**Files:** `PerformanceSettings.tsx`, `useAppStore.ts`, `Scene3D.tsx`, `DeviceMarkers3D.tsx`
+
+---
+
+### Sprint 11: Climate Tab (Extra)
+
+- New dashboard tab "Klimat" in `DashboardGrid.tsx`
+- "Comfort engine" UI:
+  - Select temperature sources (climate/sensor entities)
+  - Select controllable devices (fan/climate)
+  - Define rules: "If temp > X -> device Y at Z%"
+  - Hysteresis setting (default 0.5C)
+  - Schedule: day/night mode
+- Widgets: "Comfort status" card, "Next action", "Override 30 min" button
+- Client-side rule engine (runs in `useEffect` loop, checks every 30s)
+- Store rules in `automations` slice with type `comfort_rule`
+
+**Files:** `types.ts`, `DashboardGrid.tsx`, new `ClimateTab.tsx`, new `ComfortEngine.ts`
+
+---
+
+### Implementation Order
+
+Each sprint will be implemented as 1-2 messages. Total: ~11-14 messages to complete everything. Ready to start with Sprint 1 (EPIC A) on approval.
