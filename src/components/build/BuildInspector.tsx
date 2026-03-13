@@ -448,14 +448,19 @@ function WallInspector({ floorId, wallId, floor, close }: { floorId: string; wal
                   key={m.id}
                   onClick={() => handleSetMaterial(m.id)}
                   title={m.name}
-                  className={`w-7 h-7 rounded border-2 transition-all relative group ${
+                  className={cn(
+                    'w-7 h-7 rounded border-2 transition-all relative group',
                     isActive ? 'border-primary scale-110 ring-1 ring-primary/30' : 'border-transparent hover:border-muted-foreground/30'
-                  }`}
+                  )}
                   style={{ backgroundColor: m.color }}
                 >
+                  {/* Texture indicator */}
+                  {m.hasTexture && (
+                    <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-accent border border-background" />
+                  )}
                   {/* Tooltip */}
                   <span className="absolute -top-6 left-1/2 -translate-x-1/2 px-1.5 py-0.5 rounded bg-popover text-popover-foreground text-[8px] whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity shadow-sm border border-border z-20">
-                    {m.name}
+                    {m.name}{m.hasTexture ? ' ✦' : ''}
                   </span>
                 </button>
               );
