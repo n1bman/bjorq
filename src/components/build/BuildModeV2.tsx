@@ -2172,8 +2172,16 @@ export default function BuildModeV2() {
               <InlinedDevicePlacementTools />
             </div>
           )}
+          {/* Surface Editor — paint tool active */}
+          {showSurfacePanel && (
+            <div className="absolute left-0 top-0 bottom-0 w-[240px] bg-card/95 backdrop-blur-sm border-r border-border z-20 overflow-y-auto py-3 px-2">
+              <Suspense fallback={null}>
+                <SurfaceEditor />
+              </Suspense>
+            </div>
+          )}
           {/* Import tools (Planritning only) */}
-          {showImportPanel && !showDevicePanel && !showCatalogPanel && (
+          {showImportPanel && !showDevicePanel && !showCatalogPanel && !showSurfacePanel && (
             <div className="absolute left-0 top-0 bottom-0 w-[220px] bg-card/95 backdrop-blur-sm border-r border-border z-20 overflow-y-auto py-3">
               <Suspense fallback={null}>
                 <ImportTools />
