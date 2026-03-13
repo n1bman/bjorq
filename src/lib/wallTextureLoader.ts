@@ -114,6 +114,7 @@ export function applyMaterialTextures(
 
 /**
  * B5: Apply textures to floor surfaces using the same system.
+ * C1: Floors always use context 'floor' so textures are applied by default.
  */
 export function applyFloorTextures(
   threeMat: THREE.MeshStandardMaterial,
@@ -122,7 +123,7 @@ export function applyFloorTextures(
   floorDepth: number = 4.0,
   sizeMode: SurfaceSizeMode = 'auto'
 ): void {
-  applyMaterialTextures(threeMat, preset, floorDepth, floorWidth, sizeMode);
+  applyMaterialTextures(threeMat, preset, floorDepth, floorWidth, sizeMode, 'floor');
 }
 
 /** Clear the texture cache (useful for hot-reload or memory cleanup) */

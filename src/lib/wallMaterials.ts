@@ -43,14 +43,16 @@ export function createWallMaterials(opts: {
     emissive: em, emissiveIntensity: ei, ...offsetProps,
   });
 
-  // B4: Apply texture maps if material presets have them
+  // C1: Wall textures are disabled by default (stylized color/roughness only).
+  // Texture application is kept as opt-in for future advanced use.
+  // applyMaterialTextures calls with context='wall' will return early unless forceTexture is set.
   if (opts.exteriorMatId) {
     const preset = getMaterialById(opts.exteriorMatId);
-    if (preset) applyMaterialTextures(exterior, preset, wh);
+    if (preset) applyMaterialTextures(exterior, preset, wh, 3.0, 'auto', 'wall');
   }
   if (opts.interiorMatId) {
     const preset = getMaterialById(opts.interiorMatId);
-    if (preset) applyMaterialTextures(interior, preset, wh);
+    if (preset) applyMaterialTextures(interior, preset, wh, 3.0, 'auto', 'wall');
   }
 
   // +x, -x, +y, -y, +z (front=exterior), -z (back=interior)
