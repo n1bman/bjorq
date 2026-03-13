@@ -344,6 +344,16 @@ function WallInspector({ floorId, wallId, floor, close }: { floorId: string; wal
     : (exteriorIsLeft ? wall.rightMaterialId : wall.leftMaterialId) ?? wall.interiorMaterialId;
 
 
+  // C3: Wall finish presets (matt/satin/gloss) — replaces full texture categories for walls
+  const wallFinishes = [
+    { label: 'Matt', roughness: 0.92, metalness: 0 },
+    { label: 'Satin', roughness: 0.65, metalness: 0 },
+    { label: 'Glans', roughness: 0.30, metalness: 0.05 },
+  ];
+
+  // C3: Simplified wall categories — only paint, wallpaper, and texture (no tile/stone/metal for walls by default)
+  const wallSimpleCategories = ['paint', 'texture'] as const;
+
   return (
     <div className="absolute top-14 right-3 bottom-3 w-60 overflow-y-auto glass-panel rounded-xl p-3 space-y-3 text-xs z-10">
       <div className="flex items-center justify-between">
@@ -351,39 +361,39 @@ function WallInspector({ floorId, wallId, floor, close }: { floorId: string; wal
         {close}
       </div>
 
-      {/* ─── B5: Surface Material first (design-oriented order) ─── */}
+      {/* ─── C3: Simplified surface styling — color + finish ─── */}
       <div className="space-y-2">
-        <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Ytmaterial</span>
+        <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Ytfärg</span>
 
         <div className="flex items-center gap-1">
           <button onClick={() => setMaterialTarget('exterior')}
-            className={`flex-1 py-1.5 rounded-lg text-[10px] font-medium transition-all ${materialTarget === 'exterior' ? 'bg-primary/15 text-primary border border-primary/30' : 'bg-secondary/30 text-muted-foreground hover:text-foreground border border-transparent'}`}>
+            className={cn('flex-1 py-2 rounded-lg text-[11px] font-medium transition-all min-h-[36px]',
+              materialTarget === 'exterior' ? 'bg-primary/15 text-primary border border-primary/30' : 'bg-secondary/30 text-muted-foreground hover:text-foreground border border-transparent')}>
             Utsida
           </button>
           <button onClick={() => setMaterialTarget('interior')}
-            className={`flex-1 py-1.5 rounded-lg text-[10px] font-medium transition-all ${materialTarget === 'interior' ? 'bg-primary/15 text-primary border border-primary/30' : 'bg-secondary/30 text-muted-foreground hover:text-foreground border border-transparent'}`}>
+            className={cn('flex-1 py-2 rounded-lg text-[11px] font-medium transition-all min-h-[36px]',
+              materialTarget === 'interior' ? 'bg-primary/15 text-primary border border-primary/30' : 'bg-secondary/30 text-muted-foreground hover:text-foreground border border-transparent')}>
             Insida
           </button>
         </div>
 
-        <div>
-          <span className="text-[9px] text-muted-foreground uppercase tracking-wider font-medium">Stil</span>
-          <div className="flex flex-wrap gap-0.5 mt-1">
-            {wallSurfaceCategories.map((cat) => (
-              <button key={cat}
-                onClick={() => setSurfaceCat(cat)}
-                className={`px-2 py-1 rounded-md text-[10px] font-medium transition-all ${
-                  surfaceCat === cat
-                    ? 'bg-primary/20 text-primary shadow-sm'
-                    : 'bg-secondary/20 text-muted-foreground hover:text-foreground hover:bg-secondary/40'
-                }`}>
-                {surfaceCategoryLabels[cat]}
-              </button>
-            ))}
-          </div>
+        {/* C3: Category tabs — simplified for walls */}
+        <div className="flex flex-wrap gap-1">
+          {wallSimpleCategories.map((cat) => (
+            <button key={cat}
+              onClick={() => setSurfaceCat(cat)}
+              className={cn('px-2.5 py-1.5 rounded-md text-[10px] font-medium transition-all min-h-[32px]',
+                surfaceCat === cat
+                  ? 'bg-primary/20 text-primary shadow-sm'
+                  : 'bg-secondary/20 text-muted-foreground hover:text-foreground hover:bg-secondary/40')}>
+              {surfaceCategoryLabels[cat]}
+            </button>
+          ))}
         </div>
 
-        <div className="flex flex-wrap gap-1.5">
+        {/* Color swatches — larger touch targets */}
+        <div className="flex flex-wrap gap-2">
           {getMaterialsByCategory(surfaceCat).map((m) => {
             const isActive = currentMatId === m.id;
             return (
@@ -392,26 +402,41 @@ function WallInspector({ floorId, wallId, floor, close }: { floorId: string; wal
                 onClick={() => handleSetMaterial(m.id)}
                 title={m.name}
                 className={cn(
-                  'w-7 h-7 rounded-md border-2 transition-all relative group',
+                  'w-8 h-8 rounded-lg border-2 transition-all relative group',
                   isActive ? 'border-primary scale-110 ring-1 ring-primary/30' : 'border-transparent hover:border-muted-foreground/30'
                 )}
                 style={{ backgroundColor: m.color }}
               >
-                {m.hasTexture && (
-                  <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-accent border border-background" />
-                )}
                 <span className="absolute -top-6 left-1/2 -translate-x-1/2 px-1.5 py-0.5 rounded bg-popover text-popover-foreground text-[8px] whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity shadow-sm border border-border z-20">
-                  {m.name}{m.hasTexture ? ' ✦' : ''}
+                  {m.name}
                 </span>
               </button>
             );
           })}
         </div>
 
+        {/* C3: Finish selector (matt/satin/gloss) */}
+        <div className="space-y-1">
+          <span className="text-[9px] text-muted-foreground uppercase tracking-wider font-medium">Finish</span>
+          <div className="flex gap-1">
+            {wallFinishes.map((f) => (
+              <button key={f.label}
+                onClick={() => {
+                  // Apply finish by selecting closest matching material or adjusting roughness
+                  // For now, visual indicator only — future: per-wall roughness override
+                }}
+                className="flex-1 py-1.5 rounded-md text-[10px] font-medium bg-secondary/20 text-muted-foreground hover:text-foreground hover:bg-secondary/40 transition-all min-h-[32px]">
+                {f.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Advanced: custom texture upload — kept as opt-in */}
         <input ref={textureInputRef} type="file" accept="image/*" className="hidden" onChange={handleTextureUpload} />
         <button onClick={() => textureInputRef.current?.click()}
-          className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg bg-secondary/40 text-muted-foreground hover:text-foreground text-[10px] transition-colors">
-          <Upload size={12} /> Importera textur
+          className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg bg-secondary/30 text-muted-foreground hover:text-foreground text-[10px] transition-colors min-h-[36px]">
+          <Upload size={12} /> Egen textur
         </button>
       </div>
 
@@ -958,55 +983,56 @@ function RoomInspector({ floorId, roomId, floor, close }: { floorId: string; roo
         placeholder="Rumsnamn"
       />
 
-      {/* ─── B5: Unified surface material section ─── */}
+      {/* ─── C3: Unified surface material — floor-focused with texture categories, wall simplified ─── */}
       <div className="space-y-2">
         <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Ytmaterial</span>
 
         <div className="flex items-center gap-1">
           <button onClick={() => handleTargetChange('floor')}
-            className={`flex-1 py-1.5 rounded-lg text-[10px] font-medium transition-all ${surfaceTarget === 'floor' ? 'bg-primary/15 text-primary border border-primary/30' : 'bg-secondary/30 text-muted-foreground hover:text-foreground border border-transparent'}`}>
+            className={cn('flex-1 py-2 rounded-lg text-[11px] font-medium transition-all min-h-[36px]',
+              surfaceTarget === 'floor' ? 'bg-primary/15 text-primary border border-primary/30' : 'bg-secondary/30 text-muted-foreground hover:text-foreground border border-transparent')}>
             Golv
           </button>
           <button onClick={() => handleTargetChange('wall')}
-            className={`flex-1 py-1.5 rounded-lg text-[10px] font-medium transition-all ${surfaceTarget === 'wall' ? 'bg-primary/15 text-primary border border-primary/30' : 'bg-secondary/30 text-muted-foreground hover:text-foreground border border-transparent'}`}>
+            className={cn('flex-1 py-2 rounded-lg text-[11px] font-medium transition-all min-h-[36px]',
+              surfaceTarget === 'wall' ? 'bg-primary/15 text-primary border border-primary/30' : 'bg-secondary/30 text-muted-foreground hover:text-foreground border border-transparent')}>
             Vägg
           </button>
         </div>
 
         <div>
           <span className="text-[9px] text-muted-foreground uppercase tracking-wider font-medium">Stil</span>
-          <div className="flex flex-wrap gap-0.5 mt-1">
+          <div className="flex flex-wrap gap-1 mt-1">
             {categories.map((cat: string) => (
               <button key={cat}
                 onClick={() => setSurfaceCat(cat)}
-                className={`px-2 py-1 rounded-md text-[10px] font-medium transition-all ${
+                className={cn('px-2.5 py-1.5 rounded-md text-[10px] font-medium transition-all min-h-[32px]',
                   surfaceCat === cat
                     ? 'bg-primary/20 text-primary shadow-sm'
-                    : 'bg-secondary/20 text-muted-foreground hover:text-foreground hover:bg-secondary/40'
-                }`}>
+                    : 'bg-secondary/20 text-muted-foreground hover:text-foreground hover:bg-secondary/40')}>
                 {surfaceCategoryLabels[cat]}
               </button>
             ))}
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-2">
           {mats.map((m) => (
             <button
               key={m.id}
               onClick={() => { pushUndo(); setRoomMaterial(floorId, room.id, surfaceTarget, m.id); }}
               title={m.name}
               className={cn(
-                'w-7 h-7 rounded-md border-2 transition-all relative group',
+                'w-8 h-8 rounded-lg border-2 transition-all relative group',
                 currentMatId === m.id ? 'border-primary scale-110 ring-1 ring-primary/30' : 'border-transparent hover:border-muted-foreground/30'
               )}
               style={{ backgroundColor: m.color }}
             >
-              {m.hasTexture && (
+              {m.hasTexture && surfaceTarget === 'floor' && (
                 <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-accent border border-background" />
               )}
               <span className="absolute -top-6 left-1/2 -translate-x-1/2 px-1.5 py-0.5 rounded bg-popover text-popover-foreground text-[8px] whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity shadow-sm border border-border z-20">
-                {m.name}{m.hasTexture ? ' ✦' : ''}
+                {m.name}{m.hasTexture && surfaceTarget === 'floor' ? ' ✦' : ''}
               </span>
             </button>
           ))}

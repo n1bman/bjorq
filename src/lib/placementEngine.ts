@@ -1,22 +1,19 @@
 import * as THREE from 'three';
 import { useAppStore } from '../store/useAppStore';
-import type { PropItem, PropCatalogItem } from '../store/types';
+import type { PropItem, PropCatalogItem, WallSegment } from '../store/types';
 
 /**
  * Categories whose props can act as support surfaces for "table" placement items.
- * Only reasonable furniture surfaces — not decor, plants, etc.
  */
 const SUPPORT_CATEGORIES = new Set([
   'tables', 'storage', 'kitchen', 'bathroom',
 ]);
 
-/** Check if a catalog item qualifies as a support surface */
 function isSupportSurface(cat: PropCatalogItem): boolean {
   if (!cat.category) return false;
   return SUPPORT_CATEGORIES.has(cat.category);
 }
 
-/** Get the floor elevation from the store (not hardcoded 0) */
 export function getFloorElevation(floorId: string): number {
   const floor = useAppStore.getState().layout.floors.find(f => f.id === floorId);
   return floor?.elevation ?? 0;
@@ -28,16 +25,52 @@ export interface PlacementResult {
 }
 
 /**
+ * C4: Check if a position intersects any wall on the active floor.
+ * Returns the wall and push-out vector if collision detected.
+ */
+export function checkWallCollision(
+  x: number, z: number,
+  walls: WallSegment[],
+  margin: number = 0.15,
+): { collides: boolean; pushX: number; pushZ: number } {
+  for (const wall of walls) {
+    const wx = wall.to[0] - wall.from[0];
+    const wz = wall.to[1] - wall.from[1];
+    const len = Math.sqrt(wx * wx + wz * wz);
+    if (len < 0.01) continue;
+
+    const dx = wx / len;
+    const dz = wz / len;
+
+    // Project point onto wall line
+    const px = x - wall.from[0];
+    const pz = z - wall.from[1];
+    const proj = px * dx + pz * dz;
+
+    // Check if point is along the wall segment
+    if (proj < -margin || proj > len + margin) continue;
+
+    // Perpendicular distance from wall center line
+    const perpDist = px * (-dz) + pz * dx; // cross product gives signed distance
+    const halfThickness = (wall.thickness ?? 0.15) / 2 + margin;
+
+    if (Math.abs(perpDist) < halfThickness) {
+      // Push out along the normal
+      const sign = perpDist >= 0 ? 1 : -1;
+      const pushAmount = halfThickness - Math.abs(perpDist);
+      return {
+        collides: true,
+        pushX: -dz * sign * pushAmount,
+        pushZ: dx * sign * pushAmount,
+      };
+    }
+  }
+  return { collides: false, pushX: 0, pushZ: 0 };
+}
+
+/**
  * Find the best landing Y position for a prop being dragged.
- * 
- * Rules:
- * - 'floor' placement → Y = floor elevation
- * - 'table' placement → try to snap on top of support surfaces, fallback to floor elevation
- * - 'wall'/'ceiling' → passthrough (keep current Y)
- * - no metadata → max(floor elevation, currentY)
- * 
- * Uses bounding boxes from loaded scene refs for surface detection.
- * Event-driven — only called during drag, not per-frame.
+ * C4: Also applies wall collision barriers for non-free-placement props.
  */
 export function findLandingPosition(
   propId: string,
@@ -49,7 +82,6 @@ export function findLandingPosition(
   const state = useAppStore.getState();
   const floorElevation = getFloorElevation(floorId);
 
-  // Look up the dragged prop and its catalog entry
   const propItem = state.props.items.find(p => p.id === propId);
   if (!propItem) {
     return { position: [dragXZ[0], Math.max(floorElevation, currentY), dragXZ[1]], snappedTo: 'free' };
@@ -58,28 +90,39 @@ export function findLandingPosition(
   const catItem = state.props.catalog.find(c => c.id === propItem.catalogId);
   const placement = catItem?.placement;
 
-  // Floor placement — snap to floor elevation
-  if (placement === 'floor') {
-    return { position: [dragXZ[0], floorElevation, dragXZ[1]], snappedTo: 'floor' };
-  }
-
-  // Table/surface placement — try to land on a support surface
-  if (placement === 'table') {
-    const surfaceY = findSupportSurfaceY(propId, dragXZ, floorId, floorElevation, sceneRefs, state);
-    if (surfaceY !== null) {
-      return { position: [dragXZ[0], surfaceY, dragXZ[1]], snappedTo: 'surface' };
+  // C4: Wall collision check for non-wall-mounted, non-free-placement props
+  let finalX = dragXZ[0];
+  let finalZ = dragXZ[1];
+  if (!propItem.freePlacement && !propItem.wallMountInfo && placement !== 'wall' && placement !== 'ceiling') {
+    const floor = state.layout.floors.find(f => f.id === floorId);
+    const walls = floor?.walls ?? [];
+    if (walls.length > 0) {
+      const collision = checkWallCollision(finalX, finalZ, walls);
+      if (collision.collides) {
+        finalX += collision.pushX;
+        finalZ += collision.pushZ;
+      }
     }
-    // Fallback: floor elevation
-    return { position: [dragXZ[0], floorElevation, dragXZ[1]], snappedTo: 'floor' };
   }
 
-  // Wall/ceiling — passthrough for now (future-ready)
+  if (placement === 'floor') {
+    return { position: [finalX, floorElevation, finalZ], snappedTo: 'floor' };
+  }
+
+  if (placement === 'table') {
+    const surfaceY = findSupportSurfaceY(propId, [finalX, finalZ], floorId, floorElevation, sceneRefs, state);
+    if (surfaceY !== null) {
+      return { position: [finalX, surfaceY, finalZ], snappedTo: 'surface' };
+    }
+    return { position: [finalX, floorElevation, finalZ], snappedTo: 'floor' };
+  }
+
   if (placement === 'wall' || placement === 'ceiling') {
-    return { position: [dragXZ[0], Math.max(floorElevation, currentY), dragXZ[1]], snappedTo: 'free' };
+    return { position: [finalX, Math.max(floorElevation, currentY), finalZ], snappedTo: 'free' };
   }
 
   // No placement metadata — free placement, but clamp to floor minimum
-  return { position: [dragXZ[0], Math.max(floorElevation, currentY), dragXZ[1]], snappedTo: 'free' };
+  return { position: [finalX, Math.max(floorElevation, currentY), finalZ], snappedTo: 'free' };
 }
 
 /**

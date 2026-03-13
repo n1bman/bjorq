@@ -7,6 +7,7 @@ import * as THREE from 'three';
 import type { ThreeEvent } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
 import type { PropModelStats } from '../../store/types';
+import { findLandingPosition } from '../../lib/placementEngine';
 const LOAD_TIMEOUT = 30_000;
 const loader = new GLTFLoader();
 const LONG_PRESS_MS = 500;
@@ -307,8 +308,10 @@ function PropModel({ id, url: rawUrl, position, rotation, scale, colorOverride, 
         const currentProp = store.props.items.find((p) => p.id === id);
         const stableY = currentProp?.position[1] ?? position[1];
 
-        store.updateProp(id, { position: [dragX, stableY, dragZ] });
-        setDragShadowPos([dragX, stableY + 0.02, dragZ]);
+        // C4: Apply wall collision + placement rules via placement engine
+        const result = findLandingPosition(id, [dragX, dragZ], stableY, currentProp?.floorId || '', sceneRefs);
+        store.updateProp(id, { position: result.position });
+        setDragShadowPos([result.position[0], result.position[1] + 0.02, result.position[2]]);
       }
     };
 
@@ -352,6 +355,13 @@ function PropModel({ id, url: rawUrl, position, rotation, scale, colorOverride, 
     useAppStore.getState().removeProp(id);
     useAppStore.getState().setSelection({ type: null, id: null });
     setShowQuickMenu(false);
+  };
+
+  // C4: Toggle free placement (ignore wall barriers)
+  const handleToggleFreePlacement = () => {
+    const store = useAppStore.getState();
+    const current = store.props.items.find(p => p.id === id);
+    store.updateProp(id, { freePlacement: !current?.freePlacement });
   };
 
   // ─── Display scene with selection feedback ───
@@ -563,6 +573,21 @@ function PropModel({ id, url: rawUrl, position, rotation, scale, colorOverride, 
             >
               <span style={{ fontSize: 16 }}>🗑</span>
               <span>Ta bort</span>
+            </button>
+            <button
+              onClick={handleToggleFreePlacement}
+              style={{
+                background: propItem?.freePlacement ? 'hsl(140 40% 25% / 0.5)' : 'transparent',
+                border: 'none', color: propItem?.freePlacement ? '#6ee7b7' : '#94a3b8',
+                padding: '6px 10px', borderRadius: 8, cursor: 'pointer',
+                fontSize: 11, display: 'flex', flexDirection: 'column',
+                alignItems: 'center', gap: 2, whiteSpace: 'nowrap',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = propItem?.freePlacement ? 'hsl(140 40% 30% / 0.6)' : 'hsl(220 10% 25% / 0.5)')}
+              onMouseLeave={(e) => (e.currentTarget.style.background = propItem?.freePlacement ? 'hsl(140 40% 25% / 0.5)' : 'transparent')}
+            >
+              <span style={{ fontSize: 16 }}>{propItem?.freePlacement ? '🔓' : '🧱'}</span>
+              <span>Fri</span>
             </button>
           </div>
         </Html>
