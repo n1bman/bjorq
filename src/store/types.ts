@@ -1,12 +1,17 @@
 // ─── Materials ───
+export type MaterialType = 'paint' | 'concrete' | 'wood' | 'tile' | 'metal' | 'wallpaper' | 'texture' | 'custom';
+
 export interface Material {
   id: string;
   name: string;
-  type: 'paint' | 'concrete' | 'wood' | 'tile' | 'metal' | 'custom';
+  type: MaterialType;
   color: string; // hex
   roughness: number;
+  metalness?: number; // 0-1, default 0
   textureUrl?: string; // user-uploaded texture image
   textureScale?: number; // UV repeat factor (default 1)
+  /** Visual category for UI grouping (e.g. 'Väggfärg', 'Tapet', 'Kakel') */
+  surfaceCategory?: 'paint' | 'wallpaper' | 'tile' | 'stone' | 'wood' | 'metal' | 'texture';
 }
 
 // ─── Reference Drawing ───
