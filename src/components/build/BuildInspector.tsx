@@ -83,7 +83,7 @@ function OpeningInspector({ floorId, openingId, floor, close }: { floorId: strin
   };
 
   return (
-    <div className="absolute top-3 right-3 w-56 glass-panel rounded-xl p-3 space-y-3 text-xs z-10">
+    <div className="absolute top-14 right-3 bottom-3 w-56 overflow-y-auto glass-panel rounded-xl p-3 space-y-3 text-xs z-10">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-foreground font-display flex items-center gap-1">
           {isGarage ? <Warehouse size={14} /> : <DoorOpen size={14} />} {typeLabel}
