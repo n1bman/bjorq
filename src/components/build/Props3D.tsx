@@ -460,7 +460,7 @@ function PropModel({ id, url: rawUrl, position, rotation, scale, colorOverride, 
         onClick={handleClick}
         onPointerEnter={handlePointerEnter}
         onPointerLeave={handlePointerLeave}
-        onContextMenu={(e: any) => { e.nativeEvent?.preventDefault?.(); e.stopPropagation(); }}
+        onContextMenu={(e: any) => { e.nativeEvent?.preventDefault?.(); }}
       />
 
       {/* Bounding-box selection wireframe — always correct regardless of geometry */}
