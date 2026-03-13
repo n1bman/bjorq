@@ -1419,6 +1419,9 @@ function BibliotekWorkspace() {
   const [bibImportName, setBibImportName] = useState('');
   const [bibImportCat, setBibImportCat] = useState<AssetCategory>('imported');
   const [bibProcessing, setBibProcessing] = useState(false);
+  const [bibOptimizedResult, setBibOptimizedResult] = useState<OptimizationResult | null>(null);
+  const [bibIsOptimizing, setBibIsOptimizing] = useState(false);
+  const [bibOptStep, setBibOptStep] = useState<'analyze' | 'optimizing' | 'optimized'>('analyze');
   const bibFileRef = useRef<HTMLInputElement>(null);
 
   const wizardStatus = useAppStore((s) => s.wizard.status);
@@ -1514,24 +1517,44 @@ function BibliotekWorkspace() {
     if (err) { toast.error(err); return; }
     setBibImportFile(file);
     setBibImportName(file.name.replace(/\.(glb|gltf)$/i, ''));
+    setBibOptimizedResult(null); setBibOptStep('analyze');
     setBibProcessing(true);
     try { setBibImportResult(await processModel(file)); } catch { toast.error('Kunde inte analysera modellen'); }
     finally { setBibProcessing(false); }
   };
 
+  const handleBibOptimize = useCallback(async () => {
+    if (!bibImportResult || !bibImportFile) return;
+    setBibIsOptimizing(true); setBibOptStep('optimizing');
+    try {
+      const result = await optimizeModel(bibImportFile, bibImportResult.stats, { maxTextureRes: 1024 });
+      setBibOptimizedResult(result);
+      setBibOptStep('optimized');
+    } catch (err) {
+      console.error('[Bibliotek Optimize] Failed:', err);
+      toast.error('Optimering misslyckades — du kan fortfarande importera originalet.');
+      setBibOptStep('analyze');
+    } finally {
+      setBibIsOptimizing(false);
+    }
+  }, [bibImportResult, bibImportFile]);
+
   const handleBibImportConfirm = async () => {
     if (!bibImportFile || !bibImportResult) return;
+    const finalFile = bibOptimizedResult
+      ? new File([bibOptimizedResult.blob], bibImportName.trim().replace(/\s+/g, '_') + '.glb', { type: 'model/gltf-binary' })
+      : bibImportFile;
     setBibProcessing(true);
     try {
       if (isHostedSync()) {
-        const r = await ingestToCatalog(bibImportFile, { name: bibImportName, category: bibImportCat }, bibImportResult.thumbnail);
+        const r = await ingestToCatalog(finalFile, { name: bibImportName, category: bibImportCat }, bibImportResult.thumbnail);
         if (r) toast.success('Importerad till katalogen');
       } else {
-        addToCatalog({ id: `user-${Date.now()}`, name: bibImportName || bibImportFile.name, url: URL.createObjectURL(bibImportFile), source: 'user', category: bibImportCat, visibility: 'visible' });
+        addToCatalog({ id: `user-${Date.now()}`, name: bibImportName || bibImportFile.name, url: URL.createObjectURL(finalFile), source: 'user', category: bibImportCat, visibility: 'visible' });
         toast.success('Tillagd i lokalt bibliotek');
       }
     } catch { toast.error('Import misslyckades'); }
-    finally { setBibProcessing(false); setBibImportOpen(false); setBibImportFile(null); setBibImportResult(null); }
+    finally { setBibProcessing(false); setBibImportOpen(false); setBibImportFile(null); setBibImportResult(null); setBibOptimizedResult(null); }
   };
 
   const toggleSection = (cat: string) => setCollapsedSections((prev) => ({ ...prev, [cat]: !prev[cat] }));
@@ -1864,14 +1887,40 @@ function BibliotekWorkspace() {
             <Button variant="outline" className="w-full gap-2" onClick={() => bibFileRef.current?.click()} disabled={bibProcessing}>
               <Upload className="w-4 h-4" /> {bibImportFile ? bibImportFile.name : 'Välj fil...'}
             </Button>
-            {bibProcessing && <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" /> Analyserar...</div>}
-            {bibImportResult && <div className="text-xs text-muted-foreground"><p>{formatStats(bibImportResult.stats)}</p></div>}
+            {bibProcessing && !bibIsOptimizing && <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" /> Analyserar...</div>}
+            {bibImportResult && (
+              <div className="text-xs text-muted-foreground space-y-1">
+                <p>{formatStats(bibOptimizedResult ? bibOptimizedResult.stats : bibImportResult.stats)}</p>
+                {bibOptimizedResult && !bibOptimizedResult.noImprovement && (
+                  <p className="text-primary font-medium">✓ Optimerad: {formatSize(bibOptimizedResult.beforeStats.fileSizeKB)} → {formatSize(bibOptimizedResult.stats.fileSizeKB)} ({bibOptimizedResult.savings.fileSizePct}% mindre)</p>
+                )}
+                {bibOptimizedResult && bibOptimizedResult.noImprovement && (
+                  <p className="text-muted-foreground">Modellen behöver ingen optimering.</p>
+                )}
+              </div>
+            )}
+            {/* Optimization button */}
+            {bibImportResult && bibOptStep === 'analyze' && (() => {
+              const level = getOptimizationLevel(bibImportResult.stats);
+              if (level === 'ok') return null;
+              return (
+                <Button variant="outline" className="w-full gap-2" onClick={handleBibOptimize} disabled={bibIsOptimizing}>
+                  <Wand2 className="w-4 h-4" /> Optimera modell
+                  {level === 'strongly-recommended' && <span className="text-destructive text-[10px]">(rekommenderas)</span>}
+                </Button>
+              );
+            })()}
+            {bibIsOptimizing && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="w-4 h-4 animate-spin" /> Optimerar...
+              </div>
+            )}
             <div><Label className="text-xs">Namn</Label><Input value={bibImportName} onChange={(e) => setBibImportName(e.target.value)} placeholder="Modellnamn" className="h-8" /></div>
             <div><Label className="text-xs">Kategori</Label><select value={bibImportCat} onChange={(e) => setBibImportCat(e.target.value as AssetCategory)} className="w-full h-8 rounded-md border border-input bg-background text-foreground px-2 text-sm">{Object.entries(BIB_CAT_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></div>
           </div>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setBibImportOpen(false)}>Avbryt</Button>
-            <Button onClick={handleBibImportConfirm} disabled={!bibImportFile || bibProcessing}>{bibProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Importera'}</Button>
+            <Button onClick={handleBibImportConfirm} disabled={!bibImportFile || bibProcessing || bibIsOptimizing}>{bibProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Importera'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
