@@ -4,7 +4,7 @@ import { X, Plus, DoorOpen, RotateCcw, Move, Trash2, Layers, Home, Lightbulb, Ar
 import { Slider } from '../ui/slider';
 import { Input } from '../ui/input';
 import { Switch } from '../ui/switch';
-import { presetMaterials, addCustomMaterial } from '../../lib/materials';
+import { presetMaterials, addCustomMaterial, wallSurfaceCategories, surfaceCategoryLabels, getMaterialsByCategory } from '../../lib/materials';
 import { openingPresets, getPresetsByType } from '../../lib/openingPresets';
 import { useState, useRef } from 'react';
 import type { DeviceKind, DeviceSurface, ScreenConfig, LightType, WallOpening } from '../../store/types';
