@@ -1302,7 +1302,11 @@ const planritningTools: SubToolDef[] = [
   { tool: 'window', label: 'Fönster', icon: PanelTop },
   { tool: 'garage-door', label: 'Garage', icon: Warehouse },
   { tool: 'stairs', label: 'Trappa', icon: Footprints },
+  { tool: 'paint', label: 'Måla', icon: Paintbrush },
+  { tool: 'template', label: 'Mallar', icon: Package },
   { tool: 'measure', label: 'Mät', icon: Ruler },
+  { tool: 'calibrate', label: 'Skala', icon: Ruler },
+  { tool: 'copy', label: 'Kopiera', icon: Import },
   { tool: 'import' as BuildTool, label: 'Import', icon: Import },
   { tool: 'erase', label: 'Radera', icon: Eraser },
 ];
@@ -1319,11 +1323,16 @@ function DesignTabBar() {
   const activeTool = useAppStore((s) => s.build.activeTool);
   const setBuildTab = useAppStore((s) => s.setBuildTab);
   const setBuildTool = useAppStore((s) => s.setBuildTool);
+  const setCameraMode = useAppStore((s) => s.setCameraMode);
 
   const handleTabClick = (tab: BuildTab) => {
     setBuildTab(tab);
-    if (tab === 'planritning') setBuildTool('select');
-    else if (tab === 'inredning') setBuildTool('select');
+    if (tab === 'planritning') {
+      setBuildTool('select');
+      setCameraMode('topdown'); // 2D-first for structural work
+    } else if (tab === 'inredning') {
+      setBuildTool('select');
+    }
     // bibliotek has no sub-tools
   };
 
