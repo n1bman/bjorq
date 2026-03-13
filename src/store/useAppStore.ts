@@ -970,6 +970,9 @@ const storeCreator = (set: any, get: any): AppState => ({
       build: { ...s.build, calibration: { ...s.build.calibration, ...cal } },
     })),
 
+  setPendingWallMount: (pending) =>
+    set((s: any) => ({ build: { ...s.build, pendingWallMount: pending } })),
+
   setImportOverlaySync: (sync) =>
     set((s: any) => ({
       build: { ...s.build, importOverlaySync: { ...s.build.importOverlaySync, ...sync } },
