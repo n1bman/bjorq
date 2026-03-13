@@ -112,13 +112,13 @@ const CLEAR: WeatherProfile = {
 };
 
 const PARTLY_CLOUDY: WeatherProfile = {
-  sunIntensity: 0.7,
-  ambientIntensity: 0.50,
+  sunIntensity: 0.65,
+  ambientIntensity: 0.52,
   hemisphereIntensity: 0.55,
   shadowEnabled: true,
   shadowSoftness: 0.5,
-  sunColor: [0.95, 0.88, 0.7],
-  ambientColor: [0.75, 0.78, 0.82],
+  sunColor: [0.95, 0.90, 0.72],
+  ambientColor: [0.76, 0.79, 0.82],
 };
 
 const CLOUDY: WeatherProfile = {
