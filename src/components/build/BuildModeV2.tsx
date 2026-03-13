@@ -37,7 +37,7 @@ import type { PipelineResult } from '../../lib/assetPipeline';
 
 const ImportPreview3D = lazy(() => import('./ImportPreview3D'));
 const ImportTools = lazy(() => import('./import/ImportTools'));
-const BibliotekWorkspace = lazy(() => import(/* @vite-ignore */ './BibliotekWorkspace'));
+// BibliotekWorkspace is inlined below to avoid Vite/Rollup dynamic import issues
 
 const generateId = () => Math.random().toString(36).slice(2, 10);
 
