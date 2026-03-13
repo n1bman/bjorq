@@ -630,13 +630,14 @@ export function generateWallSegments(
 
   // No openings: single box
   if (wall.openings.length === 0) {
+    const miterGeo = createMiteredWallGeometry(origLength, wallHeight, wall.thickness, miterOffsets);
     segments.push(
       <mesh key={`${wall.id}-solid`}
-        position={[cx, wallHeight / 2 + elevation, cz]}
+        position={[origCx, wallHeight / 2 + elevation, origCz]}
         rotation={[0, -angle, 0]}
         castShadow receiveShadow
         material={dualMats}>
-        <boxGeometry args={[length, wallHeight, wall.thickness]} />
+        <primitive object={miterGeo} attach="geometry" />
       </mesh>
     );
   } else {
