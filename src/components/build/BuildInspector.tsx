@@ -343,7 +343,6 @@ function WallInspector({ floorId, wallId, floor, close }: { floorId: string; wal
     ? (exteriorIsLeft ? wall.leftMaterialId : wall.rightMaterialId) ?? wall.materialId
     : (exteriorIsLeft ? wall.rightMaterialId : wall.leftMaterialId) ?? wall.interiorMaterialId;
 
-  const [surfaceCat, setSurfaceCat] = useState<string>('paint');
 
   return (
     <div className="absolute top-14 right-3 bottom-3 w-60 overflow-y-auto glass-panel rounded-xl p-3 space-y-3 text-xs z-10">
