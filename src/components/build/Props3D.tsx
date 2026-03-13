@@ -104,6 +104,7 @@ function PropModel({ id, url: rawUrl, position, rotation, scale, colorOverride, 
   const tab = useAppStore((s) => s.build.tab);
 
   const isSelected = appMode === 'build' && selection.type === 'prop' && selection.id === id;
+  const [isHovered, setIsHovered] = useState(false);
   const groupRef = useRef<THREE.Group>(null);
   const [isDragging, setIsDragging] = useState(false);
   const dragPlane = useRef(new THREE.Plane(new THREE.Vector3(0, 1, 0), 0));
