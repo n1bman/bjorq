@@ -72,18 +72,35 @@ function PaintCatalog() {
   const selection = useAppStore((s) => s.build.selection);
   const updateWall = useAppStore((s) => s.updateWall);
   const setRoomMaterial = useAppStore((s) => s.setRoomMaterial);
+  const pushUndo = useAppStore((s) => s.pushUndo);
   const activeFloorId = useAppStore((s) => s.layout.activeFloorId);
   return (
     <>
+      {selection.type === 'wall' && selection.faceSide && (
+        <div className="mb-2 px-2 py-1.5 rounded-md bg-primary/10 text-primary text-[10px] font-medium text-center">
+          {selection.faceSide === 'left' ? '◀ Vänster sida' : 'Höger sida ▶'}
+        </div>
+      )}
       {materials.map((mat) => (
         <button
           key={mat.id}
           onClick={() => {
             if (!activeFloorId) return;
             if (selection.type === 'wall' && selection.id) {
-              updateWall(activeFloorId, selection.id, { interiorMaterialId: mat.id });
+              pushUndo();
+              // Apply to the clicked face side using B1 face system
+              const side = selection.faceSide;
+              if (side === 'left') {
+                updateWall(activeFloorId, selection.id, { leftMaterialId: mat.id });
+              } else if (side === 'right') {
+                updateWall(activeFloorId, selection.id, { rightMaterialId: mat.id });
+              } else {
+                // Fallback: apply to both sides
+                updateWall(activeFloorId, selection.id, { leftMaterialId: mat.id, rightMaterialId: mat.id });
+              }
               toast.success(`Material: ${mat.name}`);
             } else if (selection.type === 'room' && selection.id) {
+              pushUndo();
               setRoomMaterial(activeFloorId, selection.id, 'floor', mat.id);
               toast.success(`Golvmaterial: ${mat.name}`);
             } else {
