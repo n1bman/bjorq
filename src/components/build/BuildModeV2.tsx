@@ -554,11 +554,22 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
       )}
 
       {sourceFilter !== 'wizard' && categories.length > 1 && (
-        <div className="flex gap-1 overflow-x-auto pb-1 sticky top-0 z-10 bg-card/95 backdrop-blur-sm py-1">
-          <Button size="sm" variant={!filterCategory ? 'default' : 'outline'} className="h-5 text-[9px] px-2 shrink-0" onClick={() => setFilterCategory(null)}>Alla</Button>
+        <div className="flex gap-1.5 overflow-x-auto pb-1 sticky top-0 z-10 bg-card/95 backdrop-blur-sm py-1">
+          <Button size="sm" variant={!filterCategory ? 'default' : 'ghost'} className={cn("h-7 text-[10px] px-2.5 rounded-lg shrink-0", filterCategory !== null && 'bg-muted/30')} onClick={() => setFilterCategory(null)}>Alla</Button>
           {categories.map((c) => (
-            <Button key={c} size="sm" variant={filterCategory === c ? 'default' : 'outline'} className="h-5 text-[9px] px-2 shrink-0" onClick={() => setFilterCategory(c)}>
+            <Button key={c} size="sm" variant={filterCategory === c ? 'default' : 'ghost'} className={cn("h-7 text-[10px] px-2.5 rounded-lg shrink-0", filterCategory !== c && 'bg-muted/30')} onClick={() => setFilterCategory(c)}>
               {AC_CATEGORY_LABELS[c] || c}
+            </Button>
+          ))}
+        </div>
+      )}
+
+      {/* Placement filter chips */}
+      {sourceFilter !== 'wizard' && placementTypes.length > 1 && (
+        <div className="flex gap-1.5 flex-wrap">
+          {placementTypes.map((pt) => (
+            <Button key={pt} size="sm" variant={placementFilter === pt ? 'default' : 'ghost'} className={cn("h-6 text-[9px] px-2 rounded-lg shrink-0", placementFilter !== pt && 'bg-muted/20')} onClick={() => setPlacementFilter(placementFilter === pt ? null : pt)}>
+              {PLACEMENT_LABELS[pt] || pt}
             </Button>
           ))}
         </div>
