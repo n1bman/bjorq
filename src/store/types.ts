@@ -5,13 +5,28 @@ export interface Material {
   id: string;
   name: string;
   type: MaterialType;
-  color: string; // hex
+  color: string; // hex fallback color
   roughness: number;
   metalness?: number; // 0-1, default 0
   textureUrl?: string; // user-uploaded texture image
   textureScale?: number; // UV repeat factor (default 1)
-  /** Visual category for UI grouping (e.g. 'Väggfärg', 'Tapet', 'Kakel') */
+  /** Visual category for UI grouping */
   surfaceCategory?: 'paint' | 'wallpaper' | 'tile' | 'stone' | 'wood' | 'metal' | 'texture';
+  // ─── B4: Texture-ready fields ───
+  /** Path to albedo/color map (local asset path or URL) */
+  mapPath?: string;
+  /** Path to normal map */
+  normalMapPath?: string;
+  /** Path to roughness map */
+  roughnessMapPath?: string;
+  /** Path to ambient occlusion map */
+  aoMapPath?: string;
+  /** Texture repeat [x, y] — how many times the pattern tiles per meter */
+  repeat?: [number, number];
+  /** Whether this material has a real texture (vs flat color only) */
+  hasTexture?: boolean;
+  /** CC0 source attribution (e.g. 'ambientCG', 'Poly Haven') */
+  source?: string;
 }
 
 // ─── Reference Drawing ───

@@ -86,6 +86,10 @@ export function resolveWallColors(wall: {
   // before room detection has run.
   const hasAnyMaterial = wall.leftMaterialId || wall.rightMaterialId || wall.materialId || wall.interiorMaterialId || fallbackMatId;
 
+  // B4: Resolve material IDs for texture application
+  const resolvedExteriorMatId = wall.leftMaterialId || wall.materialId || fallbackMatId;
+  const resolvedInteriorMatId = wall.rightMaterialId || wall.interiorMaterialId || resolvedExteriorMatId;
+
   return {
     exteriorColor: resolvedExterior,
     interiorColor: hasAnyMaterial ? resolvedInterior : resolvedExterior,
@@ -94,5 +98,8 @@ export function resolveWallColors(wall: {
     interiorRoughness: hasAnyMaterial ? (rightMat?.roughness ?? intMat?.roughness ?? defaultRoughness) : (leftMat?.roughness ?? extMat?.roughness ?? defaultRoughness),
     exteriorMetalness: leftMat?.metalness ?? extMat?.metalness ?? 0,
     interiorMetalness: hasAnyMaterial ? (rightMat?.metalness ?? intMat?.metalness ?? 0) : (leftMat?.metalness ?? extMat?.metalness ?? 0),
+    // B4: Pass resolved material IDs for texture loading
+    exteriorMatId: resolvedExteriorMatId,
+    interiorMatId: hasAnyMaterial ? resolvedInteriorMatId : resolvedExteriorMatId,
   };
 }
