@@ -597,6 +597,22 @@ function PropInspector({ propId, close }: { propId: string; close: React.ReactNo
           />
           <span className="text-[10px] text-foreground w-8 text-right">{Math.round(prop.rotation[1] * (180 / Math.PI))}°</span>
         </div>
+        <div className="flex items-center gap-1">
+          {[
+            { label: '-90°', delta: -Math.PI / 2 },
+            { label: '-45°', delta: -Math.PI / 4 },
+            { label: '+45°', delta: Math.PI / 4 },
+            { label: '+90°', delta: Math.PI / 2 },
+          ].map(({ label, delta }) => (
+            <button
+              key={label}
+              onClick={() => updateProp(prop.id, { rotation: [0, prop.rotation[1] + delta, 0] })}
+              className="flex-1 h-7 text-[10px] rounded-lg bg-secondary/30 hover:bg-secondary/50 text-foreground transition-colors"
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="space-y-1.5">
