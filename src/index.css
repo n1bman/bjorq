@@ -6,52 +6,52 @@
 
 @layer base {
   :root {
-    --background: 220 20% 10%;
-    --foreground: 210 30% 95%;
+    --background: 222 18% 11%;
+    --foreground: 210 25% 95%;
 
-    --card: 220 18% 13%;
-    --card-foreground: 210 30% 95%;
+    --card: 222 16% 14%;
+    --card-foreground: 210 25% 95%;
 
-    --popover: 220 18% 13%;
-    --popover-foreground: 210 30% 95%;
+    --popover: 222 16% 14%;
+    --popover-foreground: 210 25% 95%;
 
-    --primary: 36 90% 55%;
+    --primary: 34 80% 52%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 220 16% 18%;
-    --secondary-foreground: 210 20% 85%;
+    --secondary: 220 14% 19%;
+    --secondary-foreground: 215 18% 86%;
 
-    --muted: 220 14% 16%;
-    --muted-foreground: 215 12% 55%;
+    --muted: 220 12% 17%;
+    --muted-foreground: 218 10% 52%;
 
-    --accent: 205 80% 55%;
+    --accent: 200 65% 52%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 72% 51%;
+    --destructive: 0 68% 50%;
     --destructive-foreground: 210 20% 98%;
 
-    --border: 220 14% 20%;
-    --input: 220 14% 20%;
-    --ring: 36 90% 55%;
+    --border: 222 12% 21%;
+    --input: 222 12% 21%;
+    --ring: 34 80% 52%;
 
     --radius: 1rem;
 
-    --sidebar-background: 220 18% 11%;
-    --sidebar-foreground: 210 20% 85%;
-    --sidebar-primary: 36 90% 55%;
-    --sidebar-primary-foreground: 220 20% 8%;
-    --sidebar-accent: 220 14% 16%;
-    --sidebar-accent-foreground: 210 20% 85%;
-    --sidebar-border: 220 14% 20%;
-    --sidebar-ring: 36 90% 55%;
+    --sidebar-background: 222 16% 12%;
+    --sidebar-foreground: 215 18% 86%;
+    --sidebar-primary: 34 80% 52%;
+    --sidebar-primary-foreground: 222 18% 9%;
+    --sidebar-accent: 220 12% 17%;
+    --sidebar-accent-foreground: 215 18% 86%;
+    --sidebar-border: 222 12% 21%;
+    --sidebar-ring: 34 80% 52%;
 
     /* Custom tokens */
-    --glass: 220 18% 14% / 0.7;
-    --glass-border: 220 14% 24%;
-    --amber-glow: 36 90% 55% / 0.15;
-    --info: 205 80% 55%;
-    --info-foreground: 220 20% 8%;
-    --surface: 220 16% 15%;
+    --glass: 222 16% 15% / 0.72;
+    --glass-border: 222 12% 25%;
+    --amber-glow: 34 80% 52% / 0.12;
+    --info: 200 65% 52%;
+    --info-foreground: 222 18% 9%;
+    --surface: 222 14% 16%;
 
     /* Spacing tokens */
     --space-panel: 1rem;
