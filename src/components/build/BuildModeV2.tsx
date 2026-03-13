@@ -1517,24 +1517,44 @@ function BibliotekWorkspace() {
     if (err) { toast.error(err); return; }
     setBibImportFile(file);
     setBibImportName(file.name.replace(/\.(glb|gltf)$/i, ''));
+    setBibOptimizedResult(null); setBibOptStep('analyze');
     setBibProcessing(true);
     try { setBibImportResult(await processModel(file)); } catch { toast.error('Kunde inte analysera modellen'); }
     finally { setBibProcessing(false); }
   };
 
+  const handleBibOptimize = useCallback(async () => {
+    if (!bibImportResult || !bibImportFile) return;
+    setBibIsOptimizing(true); setBibOptStep('optimizing');
+    try {
+      const result = await optimizeModel(bibImportFile, bibImportResult.stats, { maxTextureRes: 1024 });
+      setBibOptimizedResult(result);
+      setBibOptStep('optimized');
+    } catch (err) {
+      console.error('[Bibliotek Optimize] Failed:', err);
+      toast.error('Optimering misslyckades — du kan fortfarande importera originalet.');
+      setBibOptStep('analyze');
+    } finally {
+      setBibIsOptimizing(false);
+    }
+  }, [bibImportResult, bibImportFile]);
+
   const handleBibImportConfirm = async () => {
     if (!bibImportFile || !bibImportResult) return;
+    const finalFile = bibOptimizedResult
+      ? new File([bibOptimizedResult.blob], bibImportName.trim().replace(/\s+/g, '_') + '.glb', { type: 'model/gltf-binary' })
+      : bibImportFile;
     setBibProcessing(true);
     try {
       if (isHostedSync()) {
-        const r = await ingestToCatalog(bibImportFile, { name: bibImportName, category: bibImportCat }, bibImportResult.thumbnail);
+        const r = await ingestToCatalog(finalFile, { name: bibImportName, category: bibImportCat }, bibImportResult.thumbnail);
         if (r) toast.success('Importerad till katalogen');
       } else {
-        addToCatalog({ id: `user-${Date.now()}`, name: bibImportName || bibImportFile.name, url: URL.createObjectURL(bibImportFile), source: 'user', category: bibImportCat, visibility: 'visible' });
+        addToCatalog({ id: `user-${Date.now()}`, name: bibImportName || bibImportFile.name, url: URL.createObjectURL(finalFile), source: 'user', category: bibImportCat, visibility: 'visible' });
         toast.success('Tillagd i lokalt bibliotek');
       }
     } catch { toast.error('Import misslyckades'); }
-    finally { setBibProcessing(false); setBibImportOpen(false); setBibImportFile(null); setBibImportResult(null); }
+    finally { setBibProcessing(false); setBibImportOpen(false); setBibImportFile(null); setBibImportResult(null); setBibOptimizedResult(null); }
   };
 
   const toggleSection = (cat: string) => setCollapsedSections((prev) => ({ ...prev, [cat]: !prev[cat] }));
