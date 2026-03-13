@@ -9,6 +9,7 @@ import type { BuildTool, BuildTab } from '../../store/types';
 import { openingPresets } from '../../lib/openingPresets';
 import { getAllMaterials } from '../../lib/materials';
 import { loadCuratedCatalog, clearCatalogCache } from '../../lib/catalogLoader';
+import { isWallMountable } from '../../lib/wallMountPlacement';
 import { processModel, validateFormat, formatStats, ratePerformance, formatSize, getOptimizationLevel, optimizeModel } from '../../lib/assetPipeline';
 import type { OptimizationResult, OptimizationLevel } from '../../lib/assetPipeline';
 import { Progress } from '../ui/progress';
