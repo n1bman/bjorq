@@ -56,6 +56,7 @@ export default function Floors3D() {
         const threeMat = new THREE.MeshStandardMaterial({
           color: isSelected ? '#4a9eff' : color,
           roughness: mat?.roughness ?? 0.9,
+          metalness: mat?.metalness ?? 0,
           side: THREE.FrontSide,
           polygonOffset: true,
           polygonOffsetFactor: -1,
@@ -64,9 +65,10 @@ export default function Floors3D() {
           emissiveIntensity: isSelected ? 0.4 : 0,
         });
 
-        // B5: Apply floor textures with real-world sizing
+        // C2: Apply floor textures with real-world sizing and per-room sizeMode
         if (mat && !isSelected) {
-          applyFloorTextures(threeMat, mat, floorW || 4, floorD || 4);
+          const sizeMode = room.floorSizeMode ?? 'auto';
+          applyFloorTextures(threeMat, mat, floorW || 4, floorD || 4, sizeMode);
         }
 
         return (

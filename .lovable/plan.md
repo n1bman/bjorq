@@ -7,11 +7,12 @@
 - All preset data (mapPath, normalMapPath, realWorldSize) preserved for future opt-in
 - Face-aware editing preserved, save/load compatible
 
-## Fas C2 — Floor Texture Defaults & Scaling (NEXT)
-- Verify Floors3D applies textures with realWorldSize-based repeat
-- Ensure floor categories have working texture files
-- Add sizeMode support for floors if missing
-- Fallback to flat color when texture file missing
+## Fas C2 — Floor Texture Defaults & Scaling ✅ DONE
+- Floors3D now passes per-room `floorSizeMode` to `applyFloorTextures`
+- Added `floorSizeMode?: SurfaceSizeMode` to Room interface
+- Floor materials now apply `metalness` from presets (polished concrete, etc.)
+- Texture files verified for wood (oak/walnut/pine/herringbone), tile (subway/white/dark/marble), stone (concrete/limestone/slate/polished), texture (stucco/venetian/limewash/microcement)
+- Presets without texture files (ash, birch, cedar, sandstone, clay) fall back to flat color gracefully
 
 ## Fas C3 — Surface Editor UX Cleanup
 - Inspector: surface style first, technical dimensions last
