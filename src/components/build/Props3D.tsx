@@ -206,11 +206,16 @@ function PropModel({ id, url: rawUrl, position, rotation, scale, colorOverride, 
     };
   }, [url]);
 
+  const canInteract = appMode === 'build' && (activeTool === 'select' || activeTool === 'furnish');
+
   const handleClick = (e: ThreeEvent<PointerEvent>) => {
-    if (appMode !== 'build' || (activeTool !== 'select' && activeTool !== 'furnish')) return;
+    if (!canInteract) return;
     e.stopPropagation();
     setSelection({ type: 'prop', id });
   };
+
+  const handlePointerEnter = () => { if (canInteract) { setIsHovered(true); gl.domElement.style.cursor = 'pointer'; } };
+  const handlePointerLeave = () => { setIsHovered(false); if (!isDragging) gl.domElement.style.cursor = ''; };
 
   const handlePointerDown = (e: ThreeEvent<PointerEvent>) => {
     if (appMode !== 'build' || (activeTool !== 'select' && activeTool !== 'furnish')) return;
