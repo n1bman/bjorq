@@ -1568,7 +1568,7 @@ export const useAppStore = create<AppState>()(
     {
       name: 'hometwin-store',
       version: 16,
-      migrate: (persisted: any, version: number) => {
+      migrate: (persisted: any, _version: number) => {
         // v15→v16: BuildTab rename
         if (persisted && persisted.build?.tab) {
           const tabMap: Record<string, string> = {
