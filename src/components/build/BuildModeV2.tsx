@@ -1418,6 +1418,7 @@ function BibliotekWorkspace() {
   const [bibImportFile, setBibImportFile] = useState<File | null>(null);
   const [bibImportName, setBibImportName] = useState('');
   const [bibImportCat, setBibImportCat] = useState<AssetCategory>('imported');
+  const [bibImportSub, setBibImportSub] = useState('');
   const [bibProcessing, setBibProcessing] = useState(false);
   const [bibOptimizedResult, setBibOptimizedResult] = useState<OptimizationResult | null>(null);
   const [bibIsOptimizing, setBibIsOptimizing] = useState(false);
