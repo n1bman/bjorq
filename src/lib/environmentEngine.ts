@@ -102,23 +102,23 @@ interface WeatherProfile {
 }
 
 const CLEAR: WeatherProfile = {
-  sunIntensity: 1.2,
-  ambientIntensity: 0.35,
-  hemisphereIntensity: 0.4,
+  sunIntensity: 1.1,
+  ambientIntensity: 0.40,
+  hemisphereIntensity: 0.45,
   shadowEnabled: true,
-  shadowSoftness: 0.1,
-  sunColor: [1.0, 0.85, 0.6],        // warm gold
-  ambientColor: [0.72, 0.77, 0.83],   // cool sky
+  shadowSoftness: 0.15,
+  sunColor: [1.0, 0.88, 0.65],        // warm golden — slightly softer
+  ambientColor: [0.75, 0.78, 0.82],   // warmer sky fill
 };
 
 const PARTLY_CLOUDY: WeatherProfile = {
-  sunIntensity: 0.7,
-  ambientIntensity: 0.50,
+  sunIntensity: 0.65,
+  ambientIntensity: 0.52,
   hemisphereIntensity: 0.55,
   shadowEnabled: true,
   shadowSoftness: 0.5,
-  sunColor: [0.95, 0.88, 0.7],
-  ambientColor: [0.75, 0.78, 0.82],
+  sunColor: [0.95, 0.90, 0.72],
+  ambientColor: [0.76, 0.79, 0.82],
 };
 
 const CLOUDY: WeatherProfile = {
@@ -153,12 +153,12 @@ const SNOW: WeatherProfile = {
 
 const NIGHT: WeatherProfile = {
   sunIntensity: 0,
-  ambientIntensity: 0.08,
-  hemisphereIntensity: 0.05,
+  ambientIntensity: 0.10,
+  hemisphereIntensity: 0.06,
   shadowEnabled: false,
   shadowSoftness: 1.0,
-  sunColor: [0.2, 0.2, 0.35],
-  ambientColor: [0.1, 0.1, 0.24],
+  sunColor: [0.18, 0.18, 0.30],
+  ambientColor: [0.12, 0.12, 0.22],  // slightly warmer night
 };
 
 function getWeatherProfile(condition: WeatherCondition): WeatherProfile {
