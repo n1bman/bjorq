@@ -544,9 +544,9 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
       </div>
 
       {sourceFilter !== 'wizard' && (hasUser || hasCurated || hasWizard) && (
-        <div className="flex gap-1 flex-wrap">
+        <div className="flex gap-1.5 flex-wrap">
           {(['all', ...(hasCurated ? ['curated'] : []), ...(hasUser ? ['user'] : []), ...(hasWizard ? ['wizard'] : [])] as ACSourceFilter[]).map((sf) => (
-            <Button key={sf} size="sm" variant={sourceFilter === sf ? 'default' : 'outline'} className="h-5 text-[9px] px-2 shrink-0" onClick={() => setSourceFilter(sf)}>
+            <Button key={sf} size="sm" variant={sourceFilter === sf ? 'default' : 'ghost'} className={cn("h-7 text-[10px] px-2.5 rounded-lg shrink-0", sourceFilter !== sf && 'bg-muted/30')} onClick={() => setSourceFilter(sf)}>
               {sf === 'all' ? 'Alla' : sf === 'curated' ? 'Katalog' : sf === 'user' ? 'Mina' : '✨ Wizard'}
             </Button>
           ))}
