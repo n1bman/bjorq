@@ -718,10 +718,16 @@ export function generateWallSegments(
       const pos = new THREE.Vector3(localX, 0, 0)
         .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
         .add(new THREE.Vector3(origCx, wallHeight / 2 + elevation, origCz));
+      // Last sub-segment touches wall's to endpoint → apply to-end miter
+      const lastSegMiter: MiterResult = {
+        fromLeft: 0, fromRight: 0,
+        toLeft: miterOffsets.toLeft, toRight: miterOffsets.toRight,
+      };
+      const lastSegGeo = createMiteredWallGeometry(segLen, wallHeight, wall.thickness, lastSegMiter);
       segments.push(
         <mesh key={`${wall.id}-seg-last`} position={pos.toArray()} rotation={[0, -angle, 0]}
           castShadow material={dualMats}>
-          <boxGeometry args={[segLen, wallHeight, wall.thickness]} />
+          <primitive object={lastSegGeo} attach="geometry" />
         </mesh>
       );
     }
