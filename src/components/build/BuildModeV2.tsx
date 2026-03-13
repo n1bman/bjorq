@@ -37,6 +37,7 @@ import type { PipelineResult } from '../../lib/assetPipeline';
 
 const ImportPreview3D = lazy(() => import('./ImportPreview3D'));
 const ImportTools = lazy(() => import('./import/ImportTools'));
+const BibliotekWorkspace = lazy(() => import('./BibliotekWorkspace'));
 
 const generateId = () => Math.random().toString(36).slice(2, 10);
 
