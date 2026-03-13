@@ -1567,8 +1567,23 @@ export const useAppStore = create<AppState>()(
     storeCreator,
     {
       name: 'hometwin-store',
-      version: 15,
-      migrate: (persisted: any) => {
+      version: 16,
+      migrate: (persisted: any, version: number) => {
+        // v15→v16: BuildTab rename
+        if (persisted && persisted.build?.tab) {
+          const tabMap: Record<string, string> = {
+            structure: 'planritning',
+            import: 'planritning',
+            furnish: 'inredning',
+            devices: 'inredning',
+          };
+          const oldTab = persisted.build.tab;
+          if (tabMap[oldTab]) {
+            persisted.build.tab = tabMap[oldTab];
+          }
+        }
+
+        // Legacy device state migration (kept from v15)
         if (persisted && persisted.devices?.deviceStates) {
           const oldStates = persisted.devices.deviceStates;
           const newStates: Record<string, DeviceState> = {};

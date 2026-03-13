@@ -3,8 +3,9 @@ import { detectRooms } from '../../lib/roomDetection';
 import type { BuildTool, BuildTab } from '../../store/types';
 import {
   Minus, Square, DoorOpen, SquareStack, Paintbrush,
-  Ruler, Layers, RefreshCw, Hammer, Upload, Sofa, Lightbulb,
+  Ruler, Layers, RefreshCw,
   Package, MousePointer2, Trash2, Copy,
+  Archive, Sofa,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
@@ -14,11 +15,10 @@ interface ToolDef {
   icon: typeof Minus;
 }
 
-const categoryTabs: { key: BuildTab; label: string; icon: typeof Hammer }[] = [
-  { key: 'structure', label: 'Struktur', icon: Hammer },
-  { key: 'import', label: 'Importera', icon: Upload },
-  { key: 'furnish', label: 'Möblera', icon: Sofa },
-  { key: 'devices', label: 'Enheter', icon: Lightbulb },
+const categoryTabs: { key: BuildTab; label: string; icon: typeof Ruler }[] = [
+  { key: 'planritning', label: 'Planritning', icon: Ruler },
+  { key: 'inredning', label: 'Inredning', icon: Sofa },
+  { key: 'bibliotek', label: 'Bibliotek', icon: Archive },
 ];
 
 const structureTools: ToolDef[] = [
@@ -48,7 +48,7 @@ export default function BuildLeftPanel() {
   const pushUndo = useAppStore((s) => s.pushUndo);
 
   const floor = floors.find((f) => f.id === activeFloorId);
-  const isStructureReadOnly = tab === 'structure' && homeGeometrySource === 'imported';
+  const isStructureReadOnly = tab === 'planritning' && homeGeometrySource === 'imported';
 
   return (
     <div className="w-14 border-r border-border bg-card/60 backdrop-blur-sm flex flex-col items-center py-1 gap-0.5 overflow-y-auto shrink-0">
@@ -72,8 +72,8 @@ export default function BuildLeftPanel() {
       {/* Divider */}
       <div className="w-7 h-px bg-border my-1" />
 
-      {/* Sub-tools for structure tab */}
-      {tab === 'structure' && (
+      {/* Sub-tools for planritning tab */}
+      {tab === 'planritning' && (
         <>
           {structureTools.map(({ key, label, icon: Icon }) => (
             <button

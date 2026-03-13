@@ -804,7 +804,7 @@ export default function BuildCanvas2D({ overlayMode = false }: { overlayMode?: b
         {showGhost && <span className="text-muted-foreground/60">Visar andra våningars väggar som skuggor</span>}
       </div>
 
-      {referenceDrawing?.url && (activeTool === 'import' || useAppStore.getState().build.tab === 'import') && <ReferenceControls />}
+      {referenceDrawing?.url && (activeTool === 'import' || useAppStore.getState().build.tab === 'planritning') && <ReferenceControls />}
     </div>
   );
 }
