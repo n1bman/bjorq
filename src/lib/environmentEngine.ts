@@ -102,13 +102,13 @@ interface WeatherProfile {
 }
 
 const CLEAR: WeatherProfile = {
-  sunIntensity: 1.2,
-  ambientIntensity: 0.35,
-  hemisphereIntensity: 0.4,
+  sunIntensity: 1.1,
+  ambientIntensity: 0.40,
+  hemisphereIntensity: 0.45,
   shadowEnabled: true,
-  shadowSoftness: 0.1,
-  sunColor: [1.0, 0.85, 0.6],        // warm gold
-  ambientColor: [0.72, 0.77, 0.83],   // cool sky
+  shadowSoftness: 0.15,
+  sunColor: [1.0, 0.88, 0.65],        // warm golden — slightly softer
+  ambientColor: [0.75, 0.78, 0.82],   // warmer sky fill
 };
 
 const PARTLY_CLOUDY: WeatherProfile = {
