@@ -1340,6 +1340,9 @@ function BuildCatalogRow() {
   );
 }
 
+/* Surface Editor panel — shown when paint tool active */
+const SurfaceEditor = lazy(() => import('./SurfaceEditor'));
+
 /* ═══════════════════════════════════════════════
    BibliotekWorkspace — Full asset-management workspace (Phase 4A)
    No canvas. Content-management layout with metadata editing.
