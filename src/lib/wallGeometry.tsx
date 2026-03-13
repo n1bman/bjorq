@@ -98,6 +98,171 @@ export function computeWallMitering(wall: WallSegment, allWalls: WallSegment[]) 
   return { dx, dz, origLength, angle, origCx, origCz, length, cx, cz };
 }
 
+// ─── Miter Computation (Phase A3) ───
+
+interface MiterResult {
+  fromLeft: number;
+  fromRight: number;
+  toLeft: number;
+  toRight: number;
+}
+
+/**
+ * Compute per-corner miter offsets for a wall at its from/to endpoints.
+ * Each offset is how far the corner vertex shifts along the wall's local X axis
+ * (positive = extend into body, negative = extend outward past junction).
+ *
+ * Junction logic:
+ * - Dead end (0 neighbors): flat (offset = 0)
+ * - L-corner (1 non-parallel neighbor): miter at bisector angle
+ * - T-junction (2+ non-parallel neighbors that agree): use shared miter
+ * - Disagreement (e.g. + junction): flat end, corner blocks handle it
+ */
+export function computeMiterOffsets(wall: WallSegment, allWalls: WallSegment[], eps = 0.05): MiterResult {
+  const dx = wall.to[0] - wall.from[0];
+  const dz = wall.to[1] - wall.from[1];
+  const len = Math.sqrt(dx * dx + dz * dz);
+  if (len < 0.001) return { fromLeft: 0, fromRight: 0, toLeft: 0, toRight: 0 };
+
+  const dirX = dx / len, dirZ = dz / len;
+  // Left normal (CCW rotation of wall direction)
+  const normX = -dirZ, normZ = dirX;
+  const halfT = wall.thickness / 2;
+  const result: MiterResult = { fromLeft: 0, fromRight: 0, toLeft: 0, toRight: 0 };
+
+  for (const end of ['from', 'to'] as const) {
+    const point = wall[end];
+    // Direction from this endpoint INTO the wall body
+    const wInX = end === 'from' ? dirX : -dirX;
+    const wInZ = end === 'from' ? dirZ : -dirZ;
+
+    const candidates: number[] = [];
+
+    for (const other of allWalls) {
+      if (other.id === wall.id) continue;
+      const odf = Math.abs(other.from[0] - point[0]) + Math.abs(other.from[1] - point[1]);
+      const odt = Math.abs(other.to[0] - point[0]) + Math.abs(other.to[1] - point[1]);
+      if (odf >= eps && odt >= eps) continue;
+
+      const isOtherFrom = odf < eps;
+      const odx = other.to[0] - other.from[0], odz = other.to[1] - other.from[1];
+      const olen = Math.sqrt(odx * odx + odz * odz);
+      if (olen < 0.001) continue;
+
+      const oDirX = odx / olen, oDirZ = odz / olen;
+      const oNormX = -oDirZ, oNormZ = oDirX;
+      const oHalfT = other.thickness / 2;
+
+      // Neighbor's inward direction from junction
+      const nInX = isOtherFrom ? oDirX : -oDirX;
+      const nInZ = isOtherFrom ? oDirZ : -oDirZ;
+
+      // Cross product — zero means parallel, skip
+      const cross = wInX * nInZ - wInZ * nInX;
+      if (Math.abs(cross) < 0.01) continue;
+
+      // Left-edge intersection: solve for t along wallInDir
+      const rhsX = oNormX * oHalfT - normX * halfT;
+      const rhsZ = oNormZ * oHalfT - normZ * halfT;
+      const tLeft = (rhsX * nInZ - rhsZ * nInX) / cross;
+
+      candidates.push(tLeft);
+    }
+
+    if (candidates.length === 0) continue;
+
+    // Check if all candidates agree (T-junction: both halves give same offset)
+    let useOffset = candidates[0];
+    let agree = true;
+    for (let i = 1; i < candidates.length; i++) {
+      if (Math.abs(candidates[i] - useOffset) > 0.02) { agree = false; break; }
+    }
+    if (!agree) continue; // Disagreement (+ junction) → flat end
+
+    // Clamp to avoid extreme miters at very acute angles
+    const maxOffset = len * 0.4;
+    useOffset = Math.max(-maxOffset, Math.min(maxOffset, useOffset));
+
+    // Convert t (along wallInDir) to local X offsets
+    // At 'from' end: wallInDir = +localX → offset = t
+    // At 'to' end: wallInDir = -localX → offset = -t
+    if (end === 'from') {
+      result.fromLeft = useOffset;
+      result.fromRight = -useOffset;
+    } else {
+      result.toLeft = -useOffset;
+      result.toRight = useOffset;
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Create a mitered wall BufferGeometry with per-corner vertex offsets.
+ * Material groups match BoxGeometry convention:
+ *   0: +x (to end), 1: -x (from end), 2: +y (top), 3: -y (bottom),
+ *   4: +z (left/exterior), 5: -z (right/interior)
+ */
+function createMiteredWallGeometry(
+  length: number, height: number, thickness: number, miter: MiterResult,
+): THREE.BufferGeometry {
+  const hl = length / 2, hh = height / 2, ht = thickness / 2;
+
+  // 8 corner vertices — left = +z, right = -z, from = -x, to = +x
+  const V = {
+    FLB: [-hl + miter.fromLeft,  -hh, +ht] as number[],
+    FLT: [-hl + miter.fromLeft,  +hh, +ht] as number[],
+    FRB: [-hl + miter.fromRight, -hh, -ht] as number[],
+    FRT: [-hl + miter.fromRight, +hh, -ht] as number[],
+    TLB: [+hl + miter.toLeft,    -hh, +ht] as number[],
+    TLT: [+hl + miter.toLeft,    +hh, +ht] as number[],
+    TRB: [+hl + miter.toRight,   -hh, -ht] as number[],
+    TRT: [+hl + miter.toRight,   +hh, -ht] as number[],
+  };
+
+  const positions: number[] = [];
+  const normals: number[] = [];
+  const uvs: number[] = [];
+  const indices: number[] = [];
+  let vc = 0;
+
+  // Add a quad face (v0-v1-v2-v3 in order that produces outward normal)
+  function addFace(v0: number[], v1: number[], v2: number[], v3: number[]) {
+    const e1 = [v1[0] - v0[0], v1[1] - v0[1], v1[2] - v0[2]];
+    const e2 = [v3[0] - v0[0], v3[1] - v0[1], v3[2] - v0[2]];
+    let nx = e1[1] * e2[2] - e1[2] * e2[1];
+    let ny = e1[2] * e2[0] - e1[0] * e2[2];
+    let nz = e1[0] * e2[1] - e1[1] * e2[0];
+    const nl = Math.sqrt(nx * nx + ny * ny + nz * nz) || 1;
+    nx /= nl; ny /= nl; nz /= nl;
+
+    const b = vc;
+    positions.push(...v0, ...v1, ...v2, ...v3);
+    normals.push(nx, ny, nz, nx, ny, nz, nx, ny, nz, nx, ny, nz);
+    uvs.push(0, 0, 1, 0, 1, 1, 0, 1);
+    indices.push(b, b + 1, b + 2, b, b + 2, b + 3);
+    vc += 4;
+  }
+
+  // 6 faces — vertex order verified to produce correct outward normals
+  addFace(V.TRB, V.TRT, V.TLT, V.TLB); // Group 0: +x (to end)
+  addFace(V.FLB, V.FLT, V.FRT, V.FRB); // Group 1: -x (from end)
+  addFace(V.FRT, V.FLT, V.TLT, V.TRT); // Group 2: +y (top)
+  addFace(V.FLB, V.FRB, V.TRB, V.TLB); // Group 3: -y (bottom)
+  addFace(V.FLB, V.TLB, V.TLT, V.FLT); // Group 4: +z (left/exterior)
+  addFace(V.FRB, V.FRT, V.TRT, V.TRB); // Group 5: -z (right/interior)
+
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geo.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+  geo.setIndex(indices);
+  for (let g = 0; g < 6; g++) geo.addGroup(g * 6, 6, g);
+
+  return geo;
+}
+
 // ─── Opening Rendering ───
 
 function renderOpeningModels(
