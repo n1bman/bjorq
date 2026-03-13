@@ -623,6 +623,7 @@ export function generateWallSegments(
         ...wallColors,
         emissive: options?.emissive,
         emissiveIntensity: options?.emissiveIntensity,
+        wallHeight: wall.height,
       });
 
   const wallHeight = wall.height;

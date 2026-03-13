@@ -92,8 +92,11 @@ export default function PaintTool() {
                   )}
                   style={{ backgroundColor: mat.color }}
                 >
+                  {mat.hasTexture && (
+                    <span className="absolute -bottom-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-accent border border-background" />
+                  )}
                   <span className="absolute -top-5 left-1/2 -translate-x-1/2 px-1 py-0.5 rounded bg-popover text-popover-foreground text-[8px] whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity shadow-sm border border-border z-20">
-                    {mat.name}
+                    {mat.name}{mat.hasTexture ? ' ✦' : ''}
                   </span>
                 </button>
               ))}
