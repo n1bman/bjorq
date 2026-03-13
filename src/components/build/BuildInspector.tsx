@@ -351,11 +351,174 @@ function WallInspector({ floorId, wallId, floor, close }: { floorId: string; wal
         {close}
       </div>
 
-      <div className="grid grid-cols-2 gap-2 text-muted-foreground">
-        <span>Längd:</span><span className="text-foreground">{length.toFixed(2)} m</span>
-        <span>Höjd:</span><span className="text-foreground">{wall.height} m</span>
-        <span>Tjocklek:</span><span className="text-foreground">{wall.thickness} m</span>
+      {/* ─── B5: Surface Material first (design-oriented order) ─── */}
+      <div className="space-y-2">
+        <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Ytmaterial</span>
+
+        <div className="flex items-center gap-1">
+          <button onClick={() => setMaterialTarget('exterior')}
+            className={`flex-1 py-1.5 rounded-lg text-[10px] font-medium transition-all ${materialTarget === 'exterior' ? 'bg-primary/15 text-primary border border-primary/30' : 'bg-secondary/30 text-muted-foreground hover:text-foreground border border-transparent'}`}>
+            Utsida
+          </button>
+          <button onClick={() => setMaterialTarget('interior')}
+            className={`flex-1 py-1.5 rounded-lg text-[10px] font-medium transition-all ${materialTarget === 'interior' ? 'bg-primary/15 text-primary border border-primary/30' : 'bg-secondary/30 text-muted-foreground hover:text-foreground border border-transparent'}`}>
+            Insida
+          </button>
+        </div>
+
+        <div>
+          <span className="text-[9px] text-muted-foreground uppercase tracking-wider font-medium">Stil</span>
+          <div className="flex flex-wrap gap-0.5 mt-1">
+            {wallSurfaceCategories.map((cat) => (
+              <button key={cat}
+                onClick={() => setSurfaceCat(cat)}
+                className={`px-2 py-1 rounded-md text-[10px] font-medium transition-all ${
+                  surfaceCat === cat
+                    ? 'bg-primary/20 text-primary shadow-sm'
+                    : 'bg-secondary/20 text-muted-foreground hover:text-foreground hover:bg-secondary/40'
+                }`}>
+                {surfaceCategoryLabels[cat]}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-1.5">
+          {getMaterialsByCategory(surfaceCat).map((m) => {
+            const isActive = currentMatId === m.id;
+            return (
+              <button
+                key={m.id}
+                onClick={() => handleSetMaterial(m.id)}
+                title={m.name}
+                className={cn(
+                  'w-7 h-7 rounded-md border-2 transition-all relative group',
+                  isActive ? 'border-primary scale-110 ring-1 ring-primary/30' : 'border-transparent hover:border-muted-foreground/30'
+                )}
+                style={{ backgroundColor: m.color }}
+              >
+                {m.hasTexture && (
+                  <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-accent border border-background" />
+                )}
+                <span className="absolute -top-6 left-1/2 -translate-x-1/2 px-1.5 py-0.5 rounded bg-popover text-popover-foreground text-[8px] whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity shadow-sm border border-border z-20">
+                  {m.name}{m.hasTexture ? ' ✦' : ''}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        <input ref={textureInputRef} type="file" accept="image/*" className="hidden" onChange={handleTextureUpload} />
+        <button onClick={() => textureInputRef.current?.click()}
+          className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg bg-secondary/40 text-muted-foreground hover:text-foreground text-[10px] transition-colors">
+          <Upload size={12} /> Importera textur
+        </button>
       </div>
+
+      {/* ─── B5: Technical dimensions lower ─── */}
+      <div className="border-t border-border pt-2 space-y-2">
+        <span className="text-[9px] text-muted-foreground uppercase tracking-wider font-medium">Dimensioner</span>
+        <div className="grid grid-cols-2 gap-2 text-muted-foreground">
+          <span>Längd:</span><span className="text-foreground">{length.toFixed(2)} m</span>
+          <span>Höjd:</span><span className="text-foreground">{wall.height} m</span>
+          <span>Tjocklek:</span><span className="text-foreground">{wall.thickness} m</span>
+        </div>
+      </div>
+
+      {/* Wall thickness presets */}
+      <div className="space-y-1">
+        <label className="text-muted-foreground text-[10px]">Väggtjocklek</label>
+        <div className="flex gap-1">
+          {[
+            { label: 'Innervägg', value: 0.10 },
+            { label: 'Standard', value: 0.15 },
+            { label: 'Yttervägg', value: 0.20 },
+          ].map((preset) => (
+            <button key={preset.label}
+              onClick={() => { pushUndo(); updateWall(floorId, wall.id, { thickness: preset.value }); }}
+              className={`flex-1 py-1.5 rounded-md text-[10px] font-medium transition-colors ${
+                wall.thickness === preset.value
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-secondary/50 hover:bg-secondary text-foreground'
+              }`}>
+              {preset.label} ({preset.value}m)
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Wall height presets */}
+      <div className="space-y-1">
+        <label className="text-muted-foreground text-[10px]">Vägghöjd</label>
+        <div className="flex gap-1">
+          {[
+            { label: 'Låg', value: 0.9 },
+            { label: 'Mellan', value: 1.2 },
+            { label: 'Hög', value: 2.5 },
+          ].map((preset) => (
+            <button key={preset.label}
+              onClick={() => { pushUndo(); updateWall(floorId, wall.id, { height: preset.value }); }}
+              className={`flex-1 py-1.5 rounded-md text-[10px] font-medium transition-colors ${
+                wall.height === preset.value
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-secondary/50 hover:bg-secondary text-foreground'
+              }`}>
+              {preset.label} ({preset.value}m)
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center gap-2 mt-1">
+          <Slider min={0.3} max={4} step={0.1} value={[wall.height]}
+            onValueChange={([v]) => { updateWall(floorId, wall.id, { height: v }); }}
+            className="flex-1" />
+          <span className="text-[10px] text-foreground w-10 text-right">{wall.height.toFixed(1)}m</span>
+        </div>
+      </div>
+
+      <div className="border-t border-border pt-2">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-muted-foreground">Öppningar</span>
+          <div className="flex gap-1 flex-wrap">
+            <button onClick={() => handleAddOpening('door')}
+              className="flex items-center gap-1 px-2 py-1 rounded-md bg-secondary/50 hover:bg-secondary text-foreground transition-colors min-h-[32px]">
+              <Plus size={12} /> Dörr
+            </button>
+            <button onClick={() => handleAddOpening('passage')}
+              className="flex items-center gap-1 px-2 py-1 rounded-md bg-secondary/50 hover:bg-secondary text-foreground transition-colors min-h-[32px]">
+              <Plus size={12} /> Passage
+            </button>
+            <button onClick={() => handleAddOpening('window')}
+              className="flex items-center gap-1 px-2 py-1 rounded-md bg-secondary/50 hover:bg-secondary text-foreground transition-colors min-h-[32px]">
+              <Plus size={12} /> Fönster
+            </button>
+          </div>
+        </div>
+
+        {wall.openings.map((op: any) => (
+          <div key={op.id} className="bg-secondary/30 rounded-lg p-2 mb-1.5 flex items-center justify-between">
+            <button
+              onClick={() => setSelection({ type: 'opening', id: op.id })}
+              className="flex items-center gap-1 text-foreground hover:text-primary transition-colors"
+            >
+              <DoorOpen size={12} />
+              {op.type === 'door' ? 'Dörr' : op.type === 'garage-door' ? 'Garageport' : op.type === 'passage' ? 'Passage' : 'Fönster'}
+            </button>
+            <button
+              onClick={() => { pushUndo(); removeOpening(floorId, wall.id, op.id); }}
+              className="p-0.5 rounded hover:bg-destructive/20 text-destructive">
+              <X size={12} />
+            </button>
+          </div>
+        ))}
+      </div>
+
+      <button onClick={handleDelete}
+        className="w-full py-2 rounded-lg bg-destructive/20 text-destructive text-xs font-medium hover:bg-destructive/30 transition-colors min-h-[44px]">
+        Ta bort vägg
+      </button>
+    </div>
+  );
+}
 
       {/* Wall thickness presets */}
       <div className="space-y-1">
