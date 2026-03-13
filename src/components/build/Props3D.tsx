@@ -356,13 +356,21 @@ function PropModel({ id, url: rawUrl, position, rotation, scale, colorOverride, 
         scale={scale}
         onPointerDown={handlePointerDown}
         onClick={handleClick}
+        onPointerEnter={handlePointerEnter}
+        onPointerLeave={handlePointerLeave}
         onContextMenu={(e: any) => { e.nativeEvent?.preventDefault?.(); e.stopPropagation(); }}
       />
       {isSelected && (
-        <mesh position={[position[0], 0.02, position[2]]} rotation={[-Math.PI / 2, 0, 0]}>
-          <ringGeometry args={[0.4 * scale[0], 0.5 * scale[0], 32]} />
-          <meshBasicMaterial color="#4a9eff" transparent opacity={0.6} side={THREE.DoubleSide} />
-        </mesh>
+        <>
+          <mesh position={[position[0], 0.02, position[2]]} rotation={[-Math.PI / 2, 0, 0]}>
+            <ringGeometry args={[0.4 * scale[0], 0.5 * scale[0], 32]} />
+            <meshBasicMaterial color="#d4a574" transparent opacity={0.5} side={THREE.DoubleSide} />
+          </mesh>
+          <mesh position={[position[0], 0.02, position[2]]} rotation={[-Math.PI / 2, 0, 0]}>
+            <ringGeometry args={[0.55 * scale[0], 0.65 * scale[0], 32]} />
+            <meshBasicMaterial color="#d4a574" transparent opacity={0.15} side={THREE.DoubleSide} />
+          </mesh>
+        </>
       )}
     </group>
   );

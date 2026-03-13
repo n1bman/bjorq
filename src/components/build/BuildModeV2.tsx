@@ -2019,18 +2019,19 @@ export default function BuildModeV2() {
             )}>
               {/* Soft room context hint (Inredning only) */}
               {isInredning && (
-                <div className="px-3 py-2 border-b border-border/50 bg-card/40">
+                <div className="px-3 py-3 border-b border-border/40 bg-secondary/10">
                   <div className="flex items-center gap-2">
                     <Sofa className="w-4 h-4 text-primary" />
-                    <span className="text-xs font-medium text-foreground">Inredning</span>
+                    <span className="text-sm font-medium text-foreground">Inredning</span>
                     {selectedRoom && (
-                      <Badge variant="outline" className="text-[9px] px-1.5 py-0 ml-auto">
-                        📍 {(selectedRoom as any).name}
+                      <Badge variant="outline" className="text-[9px] px-1.5 py-0.5 ml-auto gap-1">
+                        <MapPin size={9} />
+                        {(selectedRoom as any).name}
                       </Badge>
                     )}
                   </div>
                   {selectedRoom && (
-                    <p className="text-[10px] text-muted-foreground mt-1">
+                    <p className="text-[10px] text-muted-foreground mt-1.5">
                       Förslag visas för {(selectedRoom as any).name}, men alla tillgångar kan placeras fritt.
                     </p>
                   )}

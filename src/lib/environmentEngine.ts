@@ -304,7 +304,7 @@ export const DEFAULT_ENVIRONMENT_PROFILE: EnvironmentProfile = {
   ambientColor: [0.72, 0.77, 0.83],
   hemisphereIntensity: 0.4,
   hemisphereSkyColor: [1.0, 0.96, 0.88],
-  hemisphereGroundColor: [0.23, 0.35, 0.16],
+  hemisphereGroundColor: [0.28, 0.35, 0.14],
   indoorFillIntensity: 0.4,
   fogEnabled: false,
   fogNear: 20,
