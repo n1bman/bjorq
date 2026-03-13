@@ -102,6 +102,8 @@ export interface Room {
   wallIds: string[];
   floorMaterialId?: string;
   wallMaterialId?: string;
+  /** C2: User-selected floor texture size mode */
+  floorSizeMode?: SurfaceSizeMode;
   polygon?: [number, number][]; // cached polygon for rendering
   cameraPreset?: RoomCameraPreset;
 }
