@@ -292,7 +292,7 @@ function PropModel({ id, url: rawUrl, position, rotation, scale, colorOverride, 
       }
     });
     return clone;
-  }, [scene, isSelected, colorOverride, textureOverride, textureScale, roughnessOverride, metalnessOverride]);
+  }, [scene, isSelected, isHovered, colorOverride, textureOverride, textureScale, roughnessOverride, metalnessOverride]);
 
   // Loading state
   if (status === 'loading' || status === 'idle') {
