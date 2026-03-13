@@ -104,6 +104,7 @@ function PropModel({ id, url: rawUrl, position, rotation, scale, colorOverride, 
   const tab = useAppStore((s) => s.build.tab);
 
   const isSelected = appMode === 'build' && selection.type === 'prop' && selection.id === id;
+  const [isHovered, setIsHovered] = useState(false);
   const groupRef = useRef<THREE.Group>(null);
   const [isDragging, setIsDragging] = useState(false);
   const dragPlane = useRef(new THREE.Plane(new THREE.Vector3(0, 1, 0), 0));
@@ -205,11 +206,16 @@ function PropModel({ id, url: rawUrl, position, rotation, scale, colorOverride, 
     };
   }, [url]);
 
+  const canInteract = appMode === 'build' && (activeTool === 'select' || activeTool === 'furnish');
+
   const handleClick = (e: ThreeEvent<PointerEvent>) => {
-    if (appMode !== 'build' || (activeTool !== 'select' && activeTool !== 'furnish')) return;
+    if (!canInteract) return;
     e.stopPropagation();
     setSelection({ type: 'prop', id });
   };
+
+  const handlePointerEnter = () => { if (canInteract) { setIsHovered(true); gl.domElement.style.cursor = 'pointer'; } };
+  const handlePointerLeave = () => { setIsHovered(false); if (!isDragging) gl.domElement.style.cursor = ''; };
 
   const handlePointerDown = (e: ThreeEvent<PointerEvent>) => {
     if (appMode !== 'build' || (activeTool !== 'select' && activeTool !== 'furnish')) return;
@@ -282,13 +288,16 @@ function PropModel({ id, url: rawUrl, position, rotation, scale, colorOverride, 
         if (metalnessOverride !== undefined) child.material.metalness = metalnessOverride;
 
         if (isSelected) {
-          child.material.emissive = new THREE.Color('#4a9eff');
-          child.material.emissiveIntensity = 0.3;
+          child.material.emissive = new THREE.Color('#d4a574');
+          child.material.emissiveIntensity = 0.2;
+        } else if (isHovered) {
+          child.material.emissive = new THREE.Color('#f5e6d3');
+          child.material.emissiveIntensity = 0.08;
         }
       }
     });
     return clone;
-  }, [scene, isSelected, colorOverride, textureOverride, textureScale, roughnessOverride, metalnessOverride]);
+  }, [scene, isSelected, isHovered, colorOverride, textureOverride, textureScale, roughnessOverride, metalnessOverride]);
 
   // Loading state
   if (status === 'loading' || status === 'idle') {
@@ -347,13 +356,21 @@ function PropModel({ id, url: rawUrl, position, rotation, scale, colorOverride, 
         scale={scale}
         onPointerDown={handlePointerDown}
         onClick={handleClick}
+        onPointerEnter={handlePointerEnter}
+        onPointerLeave={handlePointerLeave}
         onContextMenu={(e: any) => { e.nativeEvent?.preventDefault?.(); e.stopPropagation(); }}
       />
       {isSelected && (
-        <mesh position={[position[0], 0.02, position[2]]} rotation={[-Math.PI / 2, 0, 0]}>
-          <ringGeometry args={[0.4 * scale[0], 0.5 * scale[0], 32]} />
-          <meshBasicMaterial color="#4a9eff" transparent opacity={0.6} side={THREE.DoubleSide} />
-        </mesh>
+        <>
+          <mesh position={[position[0], 0.02, position[2]]} rotation={[-Math.PI / 2, 0, 0]}>
+            <ringGeometry args={[0.4 * scale[0], 0.5 * scale[0], 32]} />
+            <meshBasicMaterial color="#d4a574" transparent opacity={0.5} side={THREE.DoubleSide} />
+          </mesh>
+          <mesh position={[position[0], 0.02, position[2]]} rotation={[-Math.PI / 2, 0, 0]}>
+            <ringGeometry args={[0.55 * scale[0], 0.65 * scale[0], 32]} />
+            <meshBasicMaterial color="#d4a574" transparent opacity={0.15} side={THREE.DoubleSide} />
+          </mesh>
+        </>
       )}
     </group>
   );

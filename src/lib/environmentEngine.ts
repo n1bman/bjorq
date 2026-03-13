@@ -222,7 +222,7 @@ export function computeEnvironmentProfile(input: EnvironmentInput): EnvironmentP
   const sunIntensity = finalProfile.sunIntensity * calibration.intensityMultiplier;
 
   // 6. Indoor fill — based on hemisphere + indoorBounce calibration
-  const indoorBounce = Math.max(calibration.indoorBounce, 0.3); // minimum 0.3 for believable fill
+  const indoorBounce = Math.max(calibration.indoorBounce, 0.35); // minimum 0.35 for warmer indoor fill
   const hemisphereIntensity = finalProfile.hemisphereIntensity * indoorBounce;
   const indoorFillIntensity = hemisphereIntensity;
 
@@ -267,7 +267,7 @@ export function computeEnvironmentProfile(input: EnvironmentInput): EnvironmentP
   const hemisphereSkyColor: [number, number, number] = phase === 'night'
     ? [0.05, 0.05, 0.12]
     : [1.0, 0.96, 0.88]; // warm sky bounce
-  const hemisphereGroundColor: [number, number, number] = [0.23, 0.35, 0.16]; // green ground bounce
+  const hemisphereGroundColor: [number, number, number] = [0.28, 0.35, 0.14]; // warmer ground bounce
 
   return {
     phase,
@@ -304,7 +304,7 @@ export const DEFAULT_ENVIRONMENT_PROFILE: EnvironmentProfile = {
   ambientColor: [0.72, 0.77, 0.83],
   hemisphereIntensity: 0.4,
   hemisphereSkyColor: [1.0, 0.96, 0.88],
-  hemisphereGroundColor: [0.23, 0.35, 0.16],
+  hemisphereGroundColor: [0.28, 0.35, 0.14],
   indoorFillIntensity: 0.4,
   fogEnabled: false,
   fogNear: 20,

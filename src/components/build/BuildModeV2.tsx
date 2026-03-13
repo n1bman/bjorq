@@ -22,6 +22,7 @@ import {
   Import, Eraser, Upload, Search, FileImage, Box, Ruler, Trash2,
   Lightbulb, ToggleLeft, Activity, Thermometer, Camera, Bot, CookingPot, WashingMachine, Lock, Plug, Refrigerator, Monitor, ChevronDown, ChevronRight, Link2, Fan, ShieldAlert, Droplets, Flame, Bell, Grip, Wifi, Trees, Speaker, Music,
   Archive, User, Settings, Lamp, Flower2, Bed, UtensilsCrossed, Bath, TreePine, Package, AlertTriangle, CheckCircle, Loader2, FolderPlus, Wand2, Download, LinkIcon, List, Grid3X3,
+  MapPin,
 } from 'lucide-react';
 import { domainToKind } from '../../lib/haDomainMapping';
 import VacuumMappingTools from './devices/VacuumMappingTools';
@@ -160,6 +161,7 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
   useEffect(() => { setSourceFilter(initialSourceFilter ?? 'all'); }, [initialSourceFilter]);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
+  const [placementFilter, setPlacementFilter] = useState<string | null>(null);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [importResult, setImportResult] = useState<PipelineResult | null>(null);
   const [importFile, setImportFile] = useState<File | null>(null);
@@ -253,10 +255,17 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
   const hasUser = allEntries.some((e) => e.source === 'user' || e.wizardMode === 'imported');
   const hasCurated = allEntries.some((e) => e.source === 'curated');
   const hasWizard = wizardStatus === 'connected' || wizardAssets.length > 0;
+  const PLACEMENT_LABELS: Record<string, string> = { floor: 'Golv', wall: 'Vägg', ceiling: 'Tak', table: 'Yta' };
+  const placementTypes = [...new Set(allEntries.map(e => e.catalogItem?.placement || e.curatedMeta?.placement).filter(Boolean))] as string[];
+
   const filtered = allEntries
     .filter((e) => !searchQuery || e.name.toLowerCase().includes(searchQuery.toLowerCase()))
     .filter((e) => !filterCategory || e.category === filterCategory)
     .filter((e) => {
+      if (placementFilter) {
+        const p = e.catalogItem?.placement || e.curatedMeta?.placement;
+        if (p !== placementFilter) return false;
+      }
       if (sourceFilter === 'wizard') return e.source === 'wizard';
       // Hide non-imported wizard entries from all non-wizard views
       if (e.source === 'wizard' && !e.catalogItem) return false;
@@ -530,14 +539,14 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
   return (
     <div className="space-y-3 px-1">
       <div className="relative">
-        <Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
-        <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Sök modell..." className="h-7 text-xs pl-7" />
+        <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+        <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Sök modell..." className="h-8 text-xs pl-8 bg-secondary/20 rounded-lg border-border/30" />
       </div>
 
       {sourceFilter !== 'wizard' && (hasUser || hasCurated || hasWizard) && (
-        <div className="flex gap-1 flex-wrap">
+        <div className="flex gap-1.5 flex-wrap">
           {(['all', ...(hasCurated ? ['curated'] : []), ...(hasUser ? ['user'] : []), ...(hasWizard ? ['wizard'] : [])] as ACSourceFilter[]).map((sf) => (
-            <Button key={sf} size="sm" variant={sourceFilter === sf ? 'default' : 'outline'} className="h-5 text-[9px] px-2 shrink-0" onClick={() => setSourceFilter(sf)}>
+            <Button key={sf} size="sm" variant={sourceFilter === sf ? 'default' : 'ghost'} className={cn("h-7 text-[10px] px-2.5 rounded-lg shrink-0", sourceFilter !== sf && 'bg-muted/30')} onClick={() => setSourceFilter(sf)}>
               {sf === 'all' ? 'Alla' : sf === 'curated' ? 'Katalog' : sf === 'user' ? 'Mina' : '✨ Wizard'}
             </Button>
           ))}
@@ -545,11 +554,22 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
       )}
 
       {sourceFilter !== 'wizard' && categories.length > 1 && (
-        <div className="flex gap-1 overflow-x-auto pb-1 sticky top-0 z-10 bg-card/95 backdrop-blur-sm py-1">
-          <Button size="sm" variant={!filterCategory ? 'default' : 'outline'} className="h-5 text-[9px] px-2 shrink-0" onClick={() => setFilterCategory(null)}>Alla</Button>
+        <div className="flex gap-1.5 overflow-x-auto pb-1 sticky top-0 z-10 bg-card/95 backdrop-blur-sm py-1">
+          <Button size="sm" variant={!filterCategory ? 'default' : 'ghost'} className={cn("h-7 text-[10px] px-2.5 rounded-lg shrink-0", filterCategory !== null && 'bg-muted/30')} onClick={() => setFilterCategory(null)}>Alla</Button>
           {categories.map((c) => (
-            <Button key={c} size="sm" variant={filterCategory === c ? 'default' : 'outline'} className="h-5 text-[9px] px-2 shrink-0" onClick={() => setFilterCategory(c)}>
+            <Button key={c} size="sm" variant={filterCategory === c ? 'default' : 'ghost'} className={cn("h-7 text-[10px] px-2.5 rounded-lg shrink-0", filterCategory !== c && 'bg-muted/30')} onClick={() => setFilterCategory(c)}>
               {AC_CATEGORY_LABELS[c] || c}
+            </Button>
+          ))}
+        </div>
+      )}
+
+      {/* Placement filter chips */}
+      {sourceFilter !== 'wizard' && placementTypes.length > 1 && (
+        <div className="flex gap-1.5 flex-wrap">
+          {placementTypes.map((pt) => (
+            <Button key={pt} size="sm" variant={placementFilter === pt ? 'default' : 'ghost'} className={cn("h-6 text-[9px] px-2 rounded-lg shrink-0", placementFilter !== pt && 'bg-muted/20')} onClick={() => setPlacementFilter(placementFilter === pt ? null : pt)}>
+              {PLACEMENT_LABELS[pt] || pt}
             </Button>
           ))}
         </div>
@@ -557,12 +577,12 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
 
       {/* View mode toggle */}
       <div className="flex justify-end">
-        <div className="flex border border-border rounded-md overflow-hidden">
-          <button onClick={() => setViewMode('grid')} className={cn("p-1", viewMode === 'grid' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted')}>
-            <Grip size={12} />
+        <div className="flex border border-border/40 rounded-lg overflow-hidden">
+          <button onClick={() => setViewMode('grid')} className={cn("p-1.5", viewMode === 'grid' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted')}>
+            <Grip size={13} />
           </button>
-          <button onClick={() => setViewMode('list')} className={cn("p-1", viewMode === 'list' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted')}>
-            <Box size={12} />
+          <button onClick={() => setViewMode('list')} className={cn("p-1.5", viewMode === 'list' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted')}>
+            <Box size={13} />
           </button>
         </div>
       </div>
@@ -607,9 +627,12 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
             : '';
           const isImporting = wizardImportingId && entry.wizardMeta?.id === wizardImportingId;
 
+          const placementType = entry.catalogItem?.placement || entry.curatedMeta?.placement;
+          const placementLabel = placementType ? PLACEMENT_LABELS[placementType] : null;
+
           if (viewMode === 'list') {
             return (
-              <button key={entry.id} onClick={() => handlePlaceEntry(entry)} disabled={!!isImporting} className={cn("flex items-center gap-2 w-full px-2 py-1.5 rounded-md bg-secondary/30 hover:bg-secondary/60 transition-colors text-xs group", leftBorder, isImporting && 'opacity-50')}>
+              <button key={entry.id} onClick={() => handlePlaceEntry(entry)} disabled={!!isImporting} className={cn("flex items-center gap-2 w-full px-2 py-2 rounded-lg bg-secondary/20 hover:bg-secondary/40 border border-transparent hover:border-border/30 transition-colors text-xs group", leftBorder, isImporting && 'opacity-50')}>
                 {isImporting && <Loader2 size={12} className="animate-spin shrink-0" />}
                 {entry.staleSync && <span className="shrink-0" title="Kräver re-import"><AlertTriangle size={12} className="text-destructive" /></span>}
                 {entry.wizardMode === 'imported' && !entry.staleSync && <span className="shrink-0" title="Från Wizard"><Wand2 size={10} className="text-orange-400" /></span>}
@@ -621,10 +644,11 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
                   {(() => { const I = AC_CATEGORY_ICONS[entry.category] || Box; return <I size={14} strokeWidth={1.5} />; })()}
                 </div>
                 <div className="flex-1 min-w-0 text-left">
-                  <span className="text-[10px] text-foreground truncate block">{entry.name}</span>
+                  <span className="text-[11px] text-foreground truncate block">{entry.name}</span>
                   <div className="flex items-center gap-1">
                     {entry.dimensions && <span className="text-[8px] text-muted-foreground">{entry.dimensions.width}×{entry.dimensions.depth}×{entry.dimensions.height}m</span>}
                     {getPerfColor(entry.performance) && <span className={`inline-block w-1.5 h-1.5 rounded-full ${getPerfColor(entry.performance)}`} />}
+                    {placementLabel && <span className="text-[8px] bg-muted/40 rounded px-1 py-0.5 text-muted-foreground">{placementLabel}</span>}
                   </div>
                 </div>
                 {instanceCounts[entry.id] > 0 && <span className="bg-primary text-primary-foreground text-[8px] font-bold rounded-full w-4 h-4 flex items-center justify-center shrink-0">×{instanceCounts[entry.id]}</span>}
@@ -634,23 +658,24 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
           }
 
           return (
-            <button key={entry.id} onClick={() => handlePlaceEntry(entry)} disabled={!!isImporting} className={cn("relative flex flex-col items-center gap-0.5 p-2 rounded-lg bg-secondary/30 hover:bg-secondary/60 transition-colors text-xs group min-h-[44px]", leftBorder, isImporting && 'opacity-50')}>
-              {isImporting && <div className="absolute inset-0 flex items-center justify-center z-30 bg-background/60 rounded-lg"><Loader2 size={16} className="animate-spin text-primary" /></div>}
+            <button key={entry.id} onClick={() => handlePlaceEntry(entry)} disabled={!!isImporting} className={cn("relative flex flex-col items-center gap-1 p-2 rounded-xl bg-secondary/20 hover:bg-secondary/40 border border-transparent hover:border-border/30 transition-colors text-xs group min-h-[64px]", leftBorder, isImporting && 'opacity-50')}>
+              {isImporting && <div className="absolute inset-0 flex items-center justify-center z-30 bg-background/60 rounded-xl"><Loader2 size={16} className="animate-spin text-primary" /></div>}
               {entry.staleSync && <div className="absolute top-1 right-1 z-20" title="Kräver re-import"><AlertTriangle size={10} className="text-destructive" /></div>}
               {entry.wizardMode === 'imported' && !entry.staleSync && <div className="absolute top-1 right-1 z-20" title="Från Wizard"><Wand2 size={10} className="text-orange-400" /></div>}
               {instanceCounts[entry.id] > 0 && <div className="absolute top-1 left-1 bg-primary text-primary-foreground text-[8px] font-bold rounded-full w-4 h-4 flex items-center justify-center z-20">×{instanceCounts[entry.id]}</div>}
               {entry.thumbnail ? (
-                <img src={entry.thumbnail} alt={entry.name} className="w-full h-16 object-contain rounded" loading="lazy"
+                <img src={entry.thumbnail} alt={entry.name} className="w-full h-20 object-contain rounded p-1" loading="lazy"
                   onError={(e) => { e.currentTarget.style.display = 'none'; const p = e.currentTarget.nextElementSibling; if (p) (p as HTMLElement).style.display = 'flex'; }} />
               ) : null}
-              <div className="w-full h-16 bg-muted/30 rounded items-center justify-center text-muted-foreground" style={{ display: entry.thumbnail ? 'none' : 'flex' }}>
+              <div className="w-full h-20 bg-muted/30 rounded items-center justify-center text-muted-foreground" style={{ display: entry.thumbnail ? 'none' : 'flex' }}>
                 {(() => { const I = AC_CATEGORY_ICONS[entry.category] || Box; return <I size={20} strokeWidth={1.5} />; })()}
               </div>
-              <span className="text-[10px] text-foreground truncate w-full text-center">{entry.name}</span>
-              <div className="flex items-center gap-1 w-full justify-center">
+              <span className="text-[11px] text-foreground truncate w-full text-center">{entry.name}</span>
+              <div className="flex items-center gap-1 w-full justify-center flex-wrap">
                 {entry.dimensions && <span className="text-[8px] text-muted-foreground">{entry.dimensions.width}×{entry.dimensions.depth}×{entry.dimensions.height}m</span>}
                 {getPerfColor(entry.performance) && <span className={`inline-block w-1.5 h-1.5 rounded-full ${getPerfColor(entry.performance)}`} />}
                 {entry.subcategory && entry.subcategory !== entry.category && <span className="text-[8px] text-muted-foreground/60">{entry.subcategory}</span>}
+                {placementLabel && <span className="text-[8px] bg-muted/40 rounded px-1 py-0.5 text-muted-foreground">{placementLabel}</span>}
               </div>
               {canDelete(entry) && <button onClick={(e) => { e.stopPropagation(); handleDeleteEntry(entry); }} className="absolute bottom-1 right-1 p-0.5 rounded opacity-0 group-hover:opacity-100 hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-opacity"><Trash2 size={10} /></button>}
               {entry.source === 'curated' && isHostedSync() && <button onClick={(e) => { e.stopPropagation(); openManageDialog(entry); }} className="absolute bottom-1 right-1 p-0.5 rounded opacity-0 group-hover:opacity-100 hover:bg-accent text-muted-foreground hover:text-foreground transition-opacity"><Settings size={10} /></button>}
@@ -674,7 +699,7 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
                 <div key={group.key}>
                   <button
                     onClick={() => setCollapsedSections(prev => ({ ...prev, [group.key]: !prev[group.key] }))}
-                    className="flex items-center gap-1.5 w-full py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
+                    className="flex items-center gap-1.5 w-full py-1.5 mt-2 pt-2 border-t border-border/30 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
                   >
                     {collapsedSections[group.key] ? <ChevronRight size={10} /> : <ChevronDown size={10} />}
                     <group.icon size={10} />
@@ -705,13 +730,13 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
 
       {/* Placed items on this floor */}
       {floorProps.length > 0 && (
-        <div className="space-y-1">
-          <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Placerade ({floorProps.length})</h4>
+        <div className="space-y-1.5 border-t border-border/30 pt-3 mt-3">
+          <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Placerade ({floorProps.length})</h4>
           <div className="space-y-0.5 max-h-[30vh] overflow-y-auto">
             {floorProps.map((p: any) => {
               const catItem = catalog.find((c: any) => c.id === p.catalogId);
               return (
-                <div key={p.id} className="flex items-center gap-1.5 px-1.5 py-1 rounded hover:bg-secondary/40 group text-[10px]">
+                <div key={p.id} className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg hover:bg-secondary/40 group text-[10px]">
                   <button onClick={() => setSelection({ type: 'prop', id: p.id })} className="flex-1 text-left text-foreground truncate hover:text-primary transition-colors">
                     {catItem?.name || p.catalogId}
                   </button>
@@ -1994,18 +2019,19 @@ export default function BuildModeV2() {
             )}>
               {/* Soft room context hint (Inredning only) */}
               {isInredning && (
-                <div className="px-3 py-2 border-b border-border/50 bg-card/40">
+                <div className="px-3 py-3 border-b border-border/40 bg-secondary/10">
                   <div className="flex items-center gap-2">
                     <Sofa className="w-4 h-4 text-primary" />
-                    <span className="text-xs font-medium text-foreground">Inredning</span>
+                    <span className="text-sm font-medium text-foreground">Inredning</span>
                     {selectedRoom && (
-                      <Badge variant="outline" className="text-[9px] px-1.5 py-0 ml-auto">
-                        📍 {(selectedRoom as any).name}
+                      <Badge variant="outline" className="text-[9px] px-1.5 py-0.5 ml-auto gap-1">
+                        <MapPin size={9} />
+                        {(selectedRoom as any).name}
                       </Badge>
                     )}
                   </div>
                   {selectedRoom && (
-                    <p className="text-[10px] text-muted-foreground mt-1">
+                    <p className="text-[10px] text-muted-foreground mt-1.5">
                       Förslag visas för {(selectedRoom as any).name}, men alla tillgångar kan placeras fritt.
                     </p>
                   )}

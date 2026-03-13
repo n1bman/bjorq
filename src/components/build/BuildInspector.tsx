@@ -525,6 +525,16 @@ function PropInspector({ propId, close }: { propId: string; close: React.ReactNo
         />
       </div>
 
+      {/* Placement hint */}
+      {(catItem as any)?.placement && (
+        <div className="flex items-center gap-1.5">
+          <span className="text-[10px] text-muted-foreground">Placering</span>
+          <span className="text-[10px] bg-muted/40 rounded px-1.5 py-0.5 text-foreground">
+            {({ floor: 'Golv', wall: 'Vägg', ceiling: 'Tak', table: 'Yta' } as Record<string, string>)[(catItem as any).placement] || (catItem as any).placement}
+          </span>
+        </div>
+      )}
+
       {/* Model performance stats */}
       {stats && (
         <div className="rounded-lg bg-secondary/30 p-2 space-y-1">
