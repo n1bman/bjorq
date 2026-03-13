@@ -1881,46 +1881,129 @@ function BibliotekWorkspace() {
       {/* Import dialog */}
       <Dialog open={bibImportOpen} onOpenChange={setBibImportOpen}>
         <DialogContent className="sm:max-w-md">
-          <DialogHeader><DialogTitle>Importera modell</DialogTitle><DialogDescription>Ladda upp en .glb/.gltf-fil till biblioteket.</DialogDescription></DialogHeader>
-          <div className="space-y-3">
-            <input ref={bibFileRef} type="file" accept=".glb,.gltf" className="hidden" onChange={(e) => e.target.files?.[0] && handleBibFileSelect(e.target.files[0])} />
+          <DialogHeader><DialogTitle>Importera modell till biblioteket</DialogTitle><DialogDescription>Ladda upp en .glb/.gltf-fil. Modellen analyseras automatiskt.</DialogDescription></DialogHeader>
+
+          {/* File picker — always visible */}
+          <input ref={bibFileRef} type="file" accept=".glb,.gltf" className="hidden" onChange={(e) => e.target.files?.[0] && handleBibFileSelect(e.target.files[0])} />
+          {!bibImportResult && !bibProcessing && (
             <Button variant="outline" className="w-full gap-2" onClick={() => bibFileRef.current?.click()} disabled={bibProcessing}>
               <Upload className="w-4 h-4" /> {bibImportFile ? bibImportFile.name : 'Välj fil...'}
             </Button>
-            {bibProcessing && !bibIsOptimizing && <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" /> Analyserar...</div>}
-            {bibImportResult && (
-              <div className="text-xs text-muted-foreground space-y-1">
-                <p>{formatStats(bibOptimizedResult ? bibOptimizedResult.stats : bibImportResult.stats)}</p>
-                {bibOptimizedResult && !bibOptimizedResult.noImprovement && (
-                  <p className="text-primary font-medium">✓ Optimerad: {formatSize(bibOptimizedResult.beforeStats.fileSizeKB)} → {formatSize(bibOptimizedResult.stats.fileSizeKB)} ({bibOptimizedResult.savings.fileSizePct}% mindre)</p>
-                )}
-                {bibOptimizedResult && bibOptimizedResult.noImprovement && (
-                  <p className="text-muted-foreground">Modellen behöver ingen optimering.</p>
-                )}
-              </div>
-            )}
-            {/* Optimization button */}
-            {bibImportResult && bibOptStep === 'analyze' && (() => {
-              const level = getOptimizationLevel(bibImportResult.stats);
-              if (level === 'ok') return null;
-              return (
-                <Button variant="outline" className="w-full gap-2" onClick={handleBibOptimize} disabled={bibIsOptimizing}>
-                  <Wand2 className="w-4 h-4" /> Optimera modell
-                  {level === 'strongly-recommended' && <span className="text-destructive text-[10px]">(rekommenderas)</span>}
-                </Button>
-              );
-            })()}
-            {bibIsOptimizing && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="w-4 h-4 animate-spin" /> Optimerar...
-              </div>
-            )}
-            <div><Label className="text-xs">Namn</Label><Input value={bibImportName} onChange={(e) => setBibImportName(e.target.value)} placeholder="Modellnamn" className="h-8" /></div>
-            <div><Label className="text-xs">Kategori</Label><select value={bibImportCat} onChange={(e) => setBibImportCat(e.target.value as AssetCategory)} className="w-full h-8 rounded-md border border-input bg-background text-foreground px-2 text-sm">{Object.entries(BIB_CAT_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></div>
-          </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setBibImportOpen(false)}>Avbryt</Button>
-            <Button onClick={handleBibImportConfirm} disabled={!bibImportFile || bibProcessing || bibIsOptimizing}>{bibProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Importera'}</Button>
+          )}
+
+          {bibProcessing && !bibIsOptimizing && <div className="flex items-center gap-2 text-sm text-muted-foreground justify-center py-4"><Loader2 className="w-4 h-4 animate-spin" /> Analyserar modell...</div>}
+          {bibIsOptimizing && <div className="flex items-center gap-2 text-sm text-muted-foreground justify-center py-4"><Loader2 className="w-4 h-4 animate-spin" /> Optimerar modell...</div>}
+
+          {/* Optimized result view */}
+          {bibOptStep === 'optimized' && bibOptimizedResult && !bibIsOptimizing ? (
+            <div className="space-y-3">
+              {bibOptimizedResult.thumbnail ? <div className="flex justify-center"><img src={bibOptimizedResult.thumbnail} alt="Preview" className="w-24 h-24 object-contain rounded bg-muted/20" /></div> : <div className="flex justify-center"><div className="w-24 h-24 bg-muted/20 rounded flex items-center justify-center text-muted-foreground text-[10px]">Ingen förhandsgranskning</div></div>}
+
+              {!bibOptimizedResult.noImprovement ? (
+                <div className="rounded-lg bg-primary/10 p-2 text-[10px] space-y-1">
+                  <p className="font-medium text-primary flex items-center gap-1"><CheckCircle size={12} /> Optimering klar</p>
+                  <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-3 gap-y-0.5 text-[10px]">
+                    <span className="text-muted-foreground">Egenskap</span><span className="text-muted-foreground text-right">Före</span><span className="text-muted-foreground text-right">Efter</span><span className="text-muted-foreground text-right">Δ</span>
+                    <span className="text-muted-foreground">Filstorlek</span>
+                    <span className="text-muted-foreground text-right">{formatSize(bibOptimizedResult.beforeStats.fileSizeKB)}</span>
+                    <span className="text-foreground text-right font-medium">{formatSize(bibOptimizedResult.stats.fileSizeKB)}</span>
+                    <span className="font-bold text-primary">-{bibOptimizedResult.savings.fileSizePct}%</span>
+                    <span className="text-muted-foreground">Material</span>
+                    <span className="text-muted-foreground text-right">{bibOptimizedResult.beforeStats.materials}</span>
+                    <span className="text-foreground text-right font-medium">{bibOptimizedResult.stats.materials}</span>
+                    {bibOptimizedResult.savings.materialsPct > 0 ? <span className="font-bold text-primary">-{bibOptimizedResult.savings.materialsPct}%</span> : <span className="text-muted-foreground">0%</span>}
+                    <span className="text-muted-foreground">Trianglar</span>
+                    <span className="text-muted-foreground text-right">{bibOptimizedResult.beforeStats.triangles > 1000 ? `${(bibOptimizedResult.beforeStats.triangles / 1000).toFixed(1)}k` : bibOptimizedResult.beforeStats.triangles}</span>
+                    <span className="text-foreground text-right font-medium">{bibOptimizedResult.stats.triangles > 1000 ? `${(bibOptimizedResult.stats.triangles / 1000).toFixed(1)}k` : bibOptimizedResult.stats.triangles}</span>
+                    <span className="text-muted-foreground font-bold">0%</span>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-[10px] text-muted-foreground text-center">Modellen behöver ingen ytterligare optimering.</p>
+              )}
+
+              <div className="space-y-1"><Label className="text-[10px]">Namn</Label><Input value={bibImportName} onChange={(e) => setBibImportName(e.target.value)} className="h-7 text-xs" /></div>
+              <div className="space-y-1"><Label className="text-[10px]">Kategori</Label><select value={bibImportCat} onChange={(e) => setBibImportCat(e.target.value as AssetCategory)} className="w-full h-7 text-xs bg-secondary text-foreground rounded-md px-2 border border-border">{Object.entries(BIB_CAT_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></div>
+              <div className="space-y-1"><Label className="text-[10px]">Underkategori</Label><Input value={bibImportName} onChange={(e) => setBibImportName(e.target.value)} placeholder="t.ex. soffbord..." className="h-7 text-xs" /></div>
+            </div>
+          ) : bibImportResult && !bibProcessing && !bibIsOptimizing ? (
+            <div className="space-y-3">
+              {/* Thumbnail */}
+              {bibImportResult.thumbnail ? <div className="flex justify-center"><img src={bibImportResult.thumbnail} alt="Preview" className="w-24 h-24 object-contain rounded bg-muted/20" /></div> : <div className="flex justify-center"><div className="w-24 h-24 bg-muted/20 rounded flex items-center justify-center text-muted-foreground text-[10px]">Ingen förhandsgranskning</div></div>}
+
+              {/* Stats + dimensions + rating */}
+              {(() => {
+                const r = ratePerformance(bibImportResult.stats);
+                return (
+                  <div className="flex items-center gap-2 text-[10px]">
+                    {r === 'ok' && <CheckCircle size={12} className="text-primary" />}
+                    {r === 'heavy' && <AlertTriangle size={12} className="text-accent-foreground" />}
+                    {r === 'too-heavy' && <AlertTriangle size={12} className="text-destructive" />}
+                    <span className="text-muted-foreground">{formatStats(bibImportResult.stats)}</span>
+                    {bibImportResult.dimensions && <span className="text-muted-foreground">· {bibImportResult.dimensions.width}×{bibImportResult.dimensions.depth}×{bibImportResult.dimensions.height}m</span>}
+                  </div>
+                );
+              })()}
+
+              {/* Warnings */}
+              {bibImportResult.warnings.length > 0 && <div className="space-y-1">{bibImportResult.warnings.map((w, i) => <p key={i} className="text-[10px] text-accent-foreground flex items-center gap-1"><AlertTriangle size={10} /> {w}</p>)}</div>}
+
+              {/* Optimization recommendation panel */}
+              {(() => {
+                const level = getOptimizationLevel(bibImportResult.stats);
+                return (
+                  <div className={cn("rounded-lg p-2 text-[10px] flex items-start gap-2",
+                    level === 'ok' ? 'bg-primary/10 text-primary' :
+                    level === 'recommended' ? 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400' :
+                    'bg-destructive/10 text-destructive'
+                  )}>
+                    {level === 'ok' ? <CheckCircle size={14} className="shrink-0 mt-0.5" /> : <AlertTriangle size={14} className="shrink-0 mt-0.5" />}
+                    <div>
+                      <p className="font-medium">
+                        {level === 'ok' ? 'Bra — redo att använda' :
+                         level === 'recommended' ? 'Optimering rekommenderas' :
+                         'Optimering starkt rekommenderad'}
+                      </p>
+                      <p className="opacity-70 mt-0.5">
+                        {level === 'ok'
+                          ? 'OK för Raspberry Pi och mobil'
+                          : 'Minskar filstorlek och texturer. Triangelantal påverkas inte nämnvärt.'}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Form fields */}
+              <div className="space-y-1"><Label className="text-[10px]">Namn</Label><Input value={bibImportName} onChange={(e) => setBibImportName(e.target.value)} className="h-7 text-xs" /></div>
+              <div className="space-y-1"><Label className="text-[10px]">Kategori</Label><select value={bibImportCat} onChange={(e) => setBibImportCat(e.target.value as AssetCategory)} className="w-full h-7 text-xs bg-secondary text-foreground rounded-md px-2 border border-border">{Object.entries(BIB_CAT_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></div>
+              <div className="space-y-1"><Label className="text-[10px]">Underkategori</Label><Input placeholder="t.ex. soffbord..." className="h-7 text-xs" /></div>
+            </div>
+          ) : null}
+
+          <DialogFooter className="gap-1">
+            <Button size="sm" variant="outline" onClick={() => setBibImportOpen(false)}>Avbryt</Button>
+
+            {bibOptStep === 'optimized' && bibOptimizedResult ? (
+              <Button size="sm" onClick={handleBibImportConfirm} disabled={!bibImportName.trim()}>Importera</Button>
+            ) : bibOptStep === 'analyze' && bibImportResult && !bibProcessing ? (
+              <>
+                {(() => {
+                  const level = getOptimizationLevel(bibImportResult.stats);
+                  return level !== 'ok' ? (
+                    <>
+                      <Button size="sm" variant="outline" onClick={handleBibImportConfirm} disabled={bibProcessing || !bibImportName.trim()}>Importera original</Button>
+                      <Button size="sm" onClick={handleBibOptimize} disabled={bibProcessing || bibIsOptimizing}>Optimera & importera</Button>
+                    </>
+                  ) : (
+                    <>
+                      <button onClick={handleBibOptimize} disabled={bibIsOptimizing} className="text-[10px] text-muted-foreground hover:text-foreground underline disabled:opacity-50">Optimera ändå</button>
+                      <Button size="sm" onClick={handleBibImportConfirm} disabled={bibProcessing || !bibImportName.trim()}>Importera</Button>
+                    </>
+                  );
+                })()}
+              </>
+            ) : null}
           </DialogFooter>
         </DialogContent>
       </Dialog>
