@@ -7,7 +7,7 @@ import BuildCanvas2D from './BuildCanvas2D';
 import BuildScene3D from './BuildScene3D';
 import type { BuildTool, BuildTab } from '../../store/types';
 import { openingPresets } from '../../lib/openingPresets';
-import { getAllMaterials } from '../../lib/materials';
+import { getAllMaterials, wallSurfaceCategories, floorSurfaceCategories, surfaceCategoryLabels, getMaterialsByCategory } from '../../lib/materials';
 import { loadCuratedCatalog, clearCatalogCache } from '../../lib/catalogLoader';
 import { isWallMountable } from '../../lib/wallMountPlacement';
 import { processModel, validateFormat, formatStats, ratePerformance, formatSize, getOptimizationLevel, optimizeModel } from '../../lib/assetPipeline';
@@ -1340,8 +1340,130 @@ function BuildCatalogRow() {
   );
 }
 
-/* Surface Editor panel — shown when paint tool active */
-const SurfaceEditor = lazy(() => import('./SurfaceEditor'));
+/* Surface Editor panel — inlined to avoid Vite/Rollup dynamic import issues */
+function SurfaceEditor() {
+  const activeFloorId = useAppStore((s) => s.layout.activeFloorId);
+  const floors = useAppStore((s) => s.layout.floors);
+  const setRoomMaterial = useAppStore((s) => s.setRoomMaterial);
+  const pushUndo = useAppStore((s) => s.pushUndo);
+
+  const [target, setTarget] = useState<'wall' | 'floor'>('wall');
+  const [surfaceCat, setSurfaceCat] = useState<string>('paint');
+  const [sizeMode, setSizeMode] = useState<'auto' | 'small' | 'standard' | 'large'>('auto');
+
+  const floor = floors.find((f) => f.id === activeFloorId);
+  const allRooms = floor?.rooms ?? [];
+  const rooms = allRooms.filter((r: any) => r.polygon && r.polygon.length >= 3);
+
+  if (rooms.length === 0) {
+    return (
+      <div className="space-y-2">
+        <div className="flex items-center gap-1.5 px-1">
+          <Paintbrush size={13} className="text-primary" />
+          <h4 className="text-xs font-semibold text-foreground">Ytmaterial</h4>
+        </div>
+        <p className="text-[10px] text-muted-foreground italic px-1">
+          Skapa rum först för att kunna applicera material.
+        </p>
+      </div>
+    );
+  }
+
+  const categories = target === 'wall' ? wallSurfaceCategories : floorSurfaceCategories;
+  const mats = getMaterialsByCategory(surfaceCat);
+
+  const handleTargetChange = (t: 'wall' | 'floor') => {
+    setTarget(t);
+    const cats = t === 'wall' ? wallSurfaceCategories : floorSurfaceCategories;
+    if (!(cats as readonly string[]).includes(surfaceCat)) {
+      setSurfaceCat(cats[0]);
+    }
+  };
+
+  const handleSetMaterial = (roomId: string, materialId: string) => {
+    if (!activeFloorId) return;
+    pushUndo();
+    setRoomMaterial(activeFloorId, roomId, target, materialId);
+  };
+
+  const hasTexturedMats = mats.some((m: any) => m.hasTexture || m.realWorldSize);
+  const sizeLabels: Record<string, string> = { auto: 'Auto', small: 'Liten', standard: 'Standard', large: 'Stor' };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-1.5 px-1">
+        <Paintbrush size={13} className="text-primary" />
+        <h4 className="text-xs font-semibold text-foreground">Ytmaterial</h4>
+      </div>
+
+      <div className="flex gap-1 px-1">
+        <button onClick={() => handleTargetChange('wall')}
+          className={cn('flex-1 py-1.5 rounded-lg text-[11px] font-medium transition-all',
+            target === 'wall' ? 'bg-primary/15 text-primary border border-primary/30' : 'bg-secondary/30 text-muted-foreground hover:text-foreground border border-transparent')}>
+          Vägg
+        </button>
+        <button onClick={() => handleTargetChange('floor')}
+          className={cn('flex-1 py-1.5 rounded-lg text-[11px] font-medium transition-all',
+            target === 'floor' ? 'bg-primary/15 text-primary border border-primary/30' : 'bg-secondary/30 text-muted-foreground hover:text-foreground border border-transparent')}>
+          Golv
+        </button>
+      </div>
+
+      <div className="px-1">
+        <span className="text-[9px] text-muted-foreground uppercase tracking-wider font-medium">Stil</span>
+        <div className="flex flex-wrap gap-1 mt-1">
+          {categories.map((cat) => (
+            <button key={cat} onClick={() => setSurfaceCat(cat)}
+              className={cn('px-2 py-1 rounded-md text-[10px] font-medium transition-all',
+                surfaceCat === cat ? 'bg-primary/20 text-primary shadow-sm' : 'bg-secondary/20 text-muted-foreground hover:text-foreground hover:bg-secondary/40')}>
+              {surfaceCategoryLabels[cat]}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="px-1 space-y-2.5">
+        {rooms.map((room: any) => {
+          const currentId = target === 'floor' ? room.floorMaterialId : room.wallMaterialId;
+          return (
+            <div key={room.id} className="space-y-1.5">
+              <span className="text-[11px] text-foreground font-medium">{room.name}</span>
+              <div className="flex flex-wrap gap-1.5">
+                {mats.map((mat) => (
+                  <button key={mat.id} onClick={() => handleSetMaterial(room.id, mat.id)} title={mat.name}
+                    className={cn('w-7 h-7 rounded-md border-2 transition-all relative group',
+                      currentId === mat.id ? 'border-primary ring-1 ring-primary/40 scale-110' : 'border-transparent hover:border-muted-foreground/30')}
+                    style={{ backgroundColor: mat.color }}>
+                    {mat.hasTexture && <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-accent border border-background" />}
+                    <span className="absolute -top-6 left-1/2 -translate-x-1/2 px-1.5 py-0.5 rounded bg-popover text-popover-foreground text-[8px] whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity shadow-sm border border-border z-20">
+                      {mat.name}{mat.hasTexture ? ' ✦' : ''}
+                    </span>
+                  </button>
+                ))}
+              </div>
+              <div className="border-b border-border/50" />
+            </div>
+          );
+        })}
+      </div>
+
+      {hasTexturedMats && (
+        <div className="px-1 space-y-1">
+          <span className="text-[9px] text-muted-foreground uppercase tracking-wider font-medium">Mönsterstorlek</span>
+          <div className="flex gap-1">
+            {(['auto', 'small', 'standard', 'large'] as const).map((mode) => (
+              <button key={mode} onClick={() => setSizeMode(mode)}
+                className={cn('flex-1 py-1 rounded-md text-[10px] font-medium transition-all',
+                  sizeMode === mode ? 'bg-primary/15 text-primary border border-primary/30' : 'bg-secondary/20 text-muted-foreground hover:text-foreground border border-transparent')}>
+                {sizeLabels[mode]}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 /* ═══════════════════════════════════════════════
    BibliotekWorkspace — Full asset-management workspace (Phase 4A)
@@ -2175,9 +2297,7 @@ export default function BuildModeV2() {
           {/* Surface Editor — paint tool active */}
           {showSurfacePanel && (
             <div className="absolute left-0 top-0 bottom-0 w-[240px] bg-card/95 backdrop-blur-sm border-r border-border z-20 overflow-y-auto py-3 px-2">
-              <Suspense fallback={null}>
-                <SurfaceEditor />
-              </Suspense>
+              <SurfaceEditor />
             </div>
           )}
           {/* Import tools (Planritning only) */}
