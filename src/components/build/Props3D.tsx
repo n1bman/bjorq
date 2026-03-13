@@ -241,6 +241,7 @@ function PropModel({ id, url: rawUrl, position, rotation, scale, colorOverride, 
   const handlePointerLeave = () => { setIsHovered(false); if (!isDragging) gl.domElement.style.cursor = ''; };
 
   const handlePointerDown = (e: ThreeEvent<PointerEvent>) => {
+    if (e.nativeEvent.button !== 0) return;
     if (appMode !== 'build' || (activeTool !== 'select' && activeTool !== 'furnish')) return;
     e.stopPropagation();
     setSelection({ type: 'prop', id });
@@ -269,8 +270,6 @@ function PropModel({ id, url: rawUrl, position, rotation, scale, colorOverride, 
     setIsDragging(true);
     gl.domElement.style.cursor = 'grabbing';
 
-    const floorId = activeFloorId || '';
-
     const onPointerMove = (moveEvent: PointerEvent) => {
       // Check long-press movement threshold
       if (pointerDownPos.current && longPressTimer.current) {
@@ -294,15 +293,12 @@ function PropModel({ id, url: rawUrl, position, rotation, scale, colorOverride, 
       if (target) {
         const dragX = target.x - dragOffset.current.x;
         const dragZ = target.z - dragOffset.current.z;
+        const store = useAppStore.getState();
+        const currentProp = store.props.items.find((p) => p.id === id);
+        const stableY = currentProp?.position[1] ?? position[1];
 
-        // Use placement engine for smart Y
-        const result = findLandingPosition(id, [dragX, dragZ], position[1], floorId, sceneRefs);
-
-        useAppStore.getState().updateProp(id, { position: result.position });
-
-        // Update drag shadow position
-        const floorElev = getFloorElevation(floorId);
-        setDragShadowPos([dragX, floorElev + 0.02, dragZ]);
+        store.updateProp(id, { position: [dragX, stableY, dragZ] });
+        setDragShadowPos([dragX, stableY + 0.02, dragZ]);
       }
     };
 
@@ -313,21 +309,6 @@ function PropModel({ id, url: rawUrl, position, rotation, scale, colorOverride, 
       gl.domElement.style.cursor = '';
       window.removeEventListener('pointermove', onPointerMove);
       window.removeEventListener('pointerup', onPointerUp);
-
-      // Final snap on drop
-      if (!longPressTriggered.current) {
-        const currentProp = useAppStore.getState().props.items.find(p => p.id === id);
-        if (currentProp) {
-          const result = findLandingPosition(
-            id,
-            [currentProp.position[0], currentProp.position[2]],
-            currentProp.position[1],
-            floorId,
-            sceneRefs,
-          );
-          useAppStore.getState().updateProp(id, { position: result.position });
-        }
-      }
     };
 
     window.addEventListener('pointermove', onPointerMove);
