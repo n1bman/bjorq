@@ -308,8 +308,10 @@ function PropModel({ id, url: rawUrl, position, rotation, scale, colorOverride, 
         const currentProp = store.props.items.find((p) => p.id === id);
         const stableY = currentProp?.position[1] ?? position[1];
 
-        store.updateProp(id, { position: [dragX, stableY, dragZ] });
-        setDragShadowPos([dragX, stableY + 0.02, dragZ]);
+        // C4: Apply wall collision + placement rules via placement engine
+        const result = findLandingPosition(id, [dragX, dragZ], stableY, currentProp?.floorId || '', sceneRefs);
+        store.updateProp(id, { position: result.position });
+        setDragShadowPos([result.position[0], result.position[1] + 0.02, result.position[2]]);
       }
     };
 
