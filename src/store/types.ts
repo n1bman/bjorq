@@ -222,6 +222,8 @@ export interface BuildState {
   importOverlaySync: ImportOverlaySync;
   undoStack: UndoSnapshot[];
   redoStack: UndoSnapshot[];
+  /** Phase C1: pending wall-mount placement (catalog item waiting for wall click) */
+  pendingWallMount: { catalogId: string; url: string } | null;
 }
 
 // ─── Undo Snapshot (covers layout + devices + props) ───
