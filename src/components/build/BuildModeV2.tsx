@@ -730,13 +730,13 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
 
       {/* Placed items on this floor */}
       {floorProps.length > 0 && (
-        <div className="space-y-1">
-          <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Placerade ({floorProps.length})</h4>
+        <div className="space-y-1.5 border-t border-border/30 pt-3 mt-3">
+          <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Placerade ({floorProps.length})</h4>
           <div className="space-y-0.5 max-h-[30vh] overflow-y-auto">
             {floorProps.map((p: any) => {
               const catItem = catalog.find((c: any) => c.id === p.catalogId);
               return (
-                <div key={p.id} className="flex items-center gap-1.5 px-1.5 py-1 rounded hover:bg-secondary/40 group text-[10px]">
+                <div key={p.id} className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg hover:bg-secondary/40 group text-[10px]">
                   <button onClick={() => setSelection({ type: 'prop', id: p.id })} className="flex-1 text-left text-foreground truncate hover:text-primary transition-colors">
                     {catItem?.name || p.catalogId}
                   </button>
