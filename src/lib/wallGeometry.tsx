@@ -605,6 +605,7 @@ export function generateWallSegments(
   options?: WallRenderOptions,
 ): JSX.Element[] {
   const { origLength, angle, origCx, origCz, length, cx, cz } = computeWallMitering(wall, allWalls);
+  const miterOffsets = computeMiterOffsets(wall, allWalls);
 
   const wallColors = resolveWallColors(wall, options?.fallbackMaterialId);
 
