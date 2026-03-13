@@ -7,7 +7,7 @@ import BuildCanvas2D from './BuildCanvas2D';
 import BuildScene3D from './BuildScene3D';
 import type { BuildTool, BuildTab } from '../../store/types';
 import { openingPresets } from '../../lib/openingPresets';
-import { getAllMaterials } from '../../lib/materials';
+import { getAllMaterials, wallSurfaceCategories, floorSurfaceCategories, surfaceCategoryLabels, getMaterialsByCategory } from '../../lib/materials';
 import { loadCuratedCatalog, clearCatalogCache } from '../../lib/catalogLoader';
 import { isWallMountable } from '../../lib/wallMountPlacement';
 import { processModel, validateFormat, formatStats, ratePerformance, formatSize, getOptimizationLevel, optimizeModel } from '../../lib/assetPipeline';
