@@ -1,6 +1,7 @@
 import { useMemo, useCallback } from 'react';
 import { useAppStore } from '../../store/useAppStore';
 import { getMaterialById } from '../../lib/materials';
+import { applyFloorTextures } from '../../lib/wallTextureLoader';
 import * as THREE from 'three';
 import { ThreeEvent } from '@react-three/fiber';
 
@@ -40,6 +41,34 @@ export default function Floors3D() {
         }
         shape.closePath();
 
+        // Calculate bounding box for texture sizing
+        let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+        for (const p of polygon) {
+          minX = Math.min(minX, p[0]);
+          maxX = Math.max(maxX, p[0]);
+          minZ = Math.min(minZ, p[1]);
+          maxZ = Math.max(maxZ, p[1]);
+        }
+        const floorW = maxX - minX;
+        const floorD = maxZ - minZ;
+
+        // Create material with texture support
+        const threeMat = new THREE.MeshStandardMaterial({
+          color: isSelected ? '#4a9eff' : color,
+          roughness: mat?.roughness ?? 0.9,
+          side: THREE.FrontSide,
+          polygonOffset: true,
+          polygonOffsetFactor: -1,
+          polygonOffsetUnits: -1,
+          emissive: isSelected ? '#1a3a6a' : '#000000',
+          emissiveIntensity: isSelected ? 0.4 : 0,
+        });
+
+        // B5: Apply floor textures with real-world sizing
+        if (mat && !isSelected) {
+          applyFloorTextures(threeMat, mat, floorW || 4, floorD || 4);
+        }
+
         return (
           <mesh
             key={room.id}
@@ -49,16 +78,7 @@ export default function Floors3D() {
             onPointerDown={(e) => handleRoomClick(e, room.id)}
           >
             <shapeGeometry args={[shape]} />
-            <meshStandardMaterial
-              color={isSelected ? '#4a9eff' : color}
-              roughness={mat?.roughness ?? 0.9}
-              side={THREE.FrontSide}
-              polygonOffset
-              polygonOffsetFactor={-1}
-              polygonOffsetUnits={-1}
-              emissive={isSelected ? '#1a3a6a' : '#000000'}
-              emissiveIntensity={isSelected ? 0.4 : 0}
-            />
+            <primitive object={threeMat} attach="material" />
           </mesh>
         );
       });

@@ -1,6 +1,9 @@
 // ─── Materials ───
 export type MaterialType = 'paint' | 'concrete' | 'wood' | 'tile' | 'metal' | 'wallpaper' | 'texture' | 'custom';
 
+/** Size mode for user-facing scale override */
+export type SurfaceSizeMode = 'auto' | 'small' | 'standard' | 'large';
+
 export interface Material {
   id: string;
   name: string;
@@ -27,6 +30,12 @@ export interface Material {
   hasTexture?: boolean;
   /** CC0 source attribution (e.g. 'ambientCG', 'Poly Haven') */
   source?: string;
+  /**
+   * B5: Real-world size of one texture repeat unit in meters [width, height].
+   * Used to calculate sensible repeat values automatically based on surface dimensions.
+   * E.g. a subway tile might be [0.3, 0.15], wallpaper roll [0.53, 0.53].
+   */
+  realWorldSize?: [number, number];
 }
 
 // ─── Reference Drawing ───

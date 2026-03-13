@@ -1,9 +1,11 @@
 import * as THREE from 'three';
-import type { Material } from '../store/types';
+import type { Material, SurfaceSizeMode } from '../store/types';
+import { calculateRepeat } from './materials';
 
 /**
- * B4 — Wall Texture Loader
- * Manages loading, caching, and applying texture maps to wall materials.
+ * B4/B5 — Wall & Floor Texture Loader
+ * Manages loading, caching, and applying texture maps to surface materials.
+ * Uses real-world sizing (B5) for sensible default scaling.
  * Provides graceful fallback to flat color if textures fail to load.
  */
 
@@ -14,7 +16,7 @@ const failedPaths = new Set<string>();
 function loadTexture(path: string, repeat?: [number, number]): THREE.Texture | null {
   if (failedPaths.has(path)) return null;
   
-  const cacheKey = `${path}_${repeat?.[0] ?? 1}_${repeat?.[1] ?? 1}`;
+  const cacheKey = `${path}_${repeat?.[0]?.toFixed(2) ?? '1'}_${repeat?.[1]?.toFixed(2) ?? '1'}`;
   if (textureCache.has(cacheKey)) return textureCache.get(cacheKey)!;
 
   try {
@@ -31,12 +33,10 @@ function loadTexture(path: string, repeat?: [number, number]): THREE.Texture | n
       },
       undefined,
       () => {
-        // Mark as failed so we don't retry
         failedPaths.has(path) || failedPaths.add(path);
         console.warn(`[wallTextureLoader] Failed to load texture: ${path}`);
       }
     );
-    // Set wrapping immediately (before async load completes)
     tex.wrapS = THREE.RepeatWrapping;
     tex.wrapT = THREE.RepeatWrapping;
     if (repeat) {
@@ -52,18 +52,19 @@ function loadTexture(path: string, repeat?: [number, number]): THREE.Texture | n
 
 /**
  * Apply texture maps from a Material preset to a MeshStandardMaterial.
+ * B5: Uses real-world sizing via calculateRepeat for sensible scale.
  * Falls back gracefully — if textures are missing, the flat color remains.
  */
 export function applyMaterialTextures(
   threeMat: THREE.MeshStandardMaterial,
   preset: Material,
-  wallHeight: number = 2.5
+  wallHeight: number = 2.5,
+  wallWidth: number = 3.0,
+  sizeMode: SurfaceSizeMode = 'auto'
 ): void {
   if (!preset.hasTexture) return;
 
-  const repeat = preset.repeat ?? [1, 1];
-  // Scale repeat by wall height so patterns tile correctly
-  const effectiveRepeat: [number, number] = [repeat[0], repeat[1] * wallHeight];
+  const effectiveRepeat = calculateRepeat(preset, wallWidth, wallHeight, sizeMode);
 
   if (preset.mapPath) {
     const map = loadTexture(preset.mapPath, effectiveRepeat);
@@ -101,6 +102,19 @@ export function applyMaterialTextures(
       threeMat.needsUpdate = true;
     }
   }
+}
+
+/**
+ * B5: Apply textures to floor surfaces using the same system.
+ */
+export function applyFloorTextures(
+  threeMat: THREE.MeshStandardMaterial,
+  preset: Material,
+  floorWidth: number = 4.0,
+  floorDepth: number = 4.0,
+  sizeMode: SurfaceSizeMode = 'auto'
+): void {
+  applyMaterialTextures(threeMat, preset, floorDepth, floorWidth, sizeMode);
 }
 
 /** Clear the texture cache (useful for hot-reload or memory cleanup) */

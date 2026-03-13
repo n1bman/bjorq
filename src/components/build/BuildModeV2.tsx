@@ -1340,6 +1340,9 @@ function BuildCatalogRow() {
   );
 }
 
+/* Surface Editor panel — shown when paint tool active */
+const SurfaceEditor = lazy(() => import('./SurfaceEditor'));
+
 /* ═══════════════════════════════════════════════
    BibliotekWorkspace — Full asset-management workspace (Phase 4A)
    No canvas. Content-management layout with metadata editing.
@@ -2129,8 +2132,9 @@ export default function BuildModeV2() {
   // In Inredning: always show catalog as primary surface, device panel overlays when device tool active
   const showDevicePanel = !isBibliotek && (activeTool.startsWith('place-') || activeTool === 'vacuum-zone' || activeTool === ('place-vacuum-dock' as any));
   const showImportPanel = !isBibliotek && activeTab === 'planritning' && isImported;
+  const showSurfacePanel = !isBibliotek && activeTool === 'paint';
   // In Inredning: catalog is always visible (primary surface). In Planritning: only when furnish/wizard tool active
-  const showCatalogPanel = !isBibliotek && (
+  const showCatalogPanel = !isBibliotek && !showSurfacePanel && (
     isInredning
       ? !showDevicePanel  // always show unless device tool is active
       : (activeTool === ('furnish' as any) || activeTool === ('wizard' as any))
@@ -2168,8 +2172,16 @@ export default function BuildModeV2() {
               <InlinedDevicePlacementTools />
             </div>
           )}
+          {/* Surface Editor — paint tool active */}
+          {showSurfacePanel && (
+            <div className="absolute left-0 top-0 bottom-0 w-[240px] bg-card/95 backdrop-blur-sm border-r border-border z-20 overflow-y-auto py-3 px-2">
+              <Suspense fallback={null}>
+                <SurfaceEditor />
+              </Suspense>
+            </div>
+          )}
           {/* Import tools (Planritning only) */}
-          {showImportPanel && !showDevicePanel && !showCatalogPanel && (
+          {showImportPanel && !showDevicePanel && !showCatalogPanel && !showSurfacePanel && (
             <div className="absolute left-0 top-0 bottom-0 w-[220px] bg-card/95 backdrop-blur-sm border-r border-border z-20 overflow-y-auto py-3">
               <Suspense fallback={null}>
                 <ImportTools />
