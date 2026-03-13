@@ -1,13 +1,12 @@
 import { useAppStore } from '../../store/useAppStore';
 import type { BuildTab } from '../../store/types';
-import { Hammer, Upload, Sofa, Lightbulb } from 'lucide-react';
+import { Ruler, Sofa, Archive } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
-const tabs: { key: BuildTab; label: string; icon: typeof Hammer }[] = [
-  { key: 'structure', label: 'Struktur', icon: Hammer },
-  { key: 'import', label: 'Importera hem', icon: Upload },
-  { key: 'furnish', label: 'Möblera', icon: Sofa },
-  { key: 'devices', label: 'Enheter', icon: Lightbulb },
+const tabs: { key: BuildTab; label: string; icon: typeof Ruler }[] = [
+  { key: 'planritning', label: 'Planritning', icon: Ruler },
+  { key: 'inredning', label: 'Inredning', icon: Sofa },
+  { key: 'bibliotek', label: 'Bibliotek', icon: Archive },
 ];
 
 export default function BuildTabBar() {

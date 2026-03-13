@@ -1283,53 +1283,91 @@ function BuildCatalogRow() {
 }
 
 /* ═══════════════════════════════════════════════
-   BuildBottomDock — inlined to avoid Vite cache issues
+   DesignTabBar — replaces BuildBottomDock
+   3 primary tabs + contextual sub-tools per tab
    ═══════════════════════════════════════════════ */
 
-interface DockItem {
+interface SubToolDef {
   tool: BuildTool;
-  tab: BuildTab;
   label: string;
   icon: typeof MousePointer2;
-  hasCatalog?: boolean;
 }
 
-const dockItems: DockItem[] = [
-  { tool: 'select', tab: 'structure', label: 'Välj', icon: MousePointer2 },
-  { tool: 'wall', tab: 'structure', label: 'Vägg', icon: Minus },
-  { tool: 'room', tab: 'structure', label: 'Rum', icon: Square },
-  { tool: 'door', tab: 'structure', label: 'Dörr', icon: DoorOpen, hasCatalog: true },
-  { tool: 'passage', tab: 'structure', label: 'Passage', icon: DoorOpen, hasCatalog: true },
-  { tool: 'window', tab: 'structure', label: 'Fönster', icon: PanelTop, hasCatalog: true },
-  { tool: 'garage-door', tab: 'structure', label: 'Garage', icon: Warehouse, hasCatalog: true },
-  { tool: 'stairs', tab: 'structure', label: 'Trappa', icon: Footprints },
-  { tool: 'measure', tab: 'structure', label: 'Mät', icon: Ruler },
-  { tool: 'furnish' as BuildTool, tab: 'furnish', label: 'Möbler', icon: Sofa, hasCatalog: true },
-  { tool: 'wizard' as BuildTool, tab: 'furnish', label: 'Wizard', icon: Wand2, hasCatalog: true },
-  { tool: 'place-light', tab: 'devices', label: 'Enheter', icon: Cpu, hasCatalog: true },
-  { tool: 'import' as BuildTool, tab: 'import', label: 'Import', icon: Import, hasCatalog: true },
-  { tool: 'erase', tab: 'structure', label: 'Radera', icon: Eraser },
+const planritningTools: SubToolDef[] = [
+  { tool: 'select', label: 'Välj', icon: MousePointer2 },
+  { tool: 'wall', label: 'Vägg', icon: Minus },
+  { tool: 'room', label: 'Rum', icon: Square },
+  { tool: 'door', label: 'Dörr', icon: DoorOpen },
+  { tool: 'passage', label: 'Passage', icon: DoorOpen },
+  { tool: 'window', label: 'Fönster', icon: PanelTop },
+  { tool: 'garage-door', label: 'Garage', icon: Warehouse },
+  { tool: 'stairs', label: 'Trappa', icon: Footprints },
+  { tool: 'measure', label: 'Mät', icon: Ruler },
+  { tool: 'import' as BuildTool, label: 'Import', icon: Import },
+  { tool: 'erase', label: 'Radera', icon: Eraser },
 ];
 
-function BuildBottomDock() {
+const inredningTools: SubToolDef[] = [
+  { tool: 'select', label: 'Välj', icon: MousePointer2 },
+  { tool: 'furnish' as BuildTool, label: 'Möbler', icon: Sofa },
+  { tool: 'wizard' as BuildTool, label: 'Wizard', icon: Wand2 },
+  { tool: 'place-light', label: 'Enheter', icon: Cpu },
+];
+
+function DesignTabBar() {
+  const activeTab = useAppStore((s) => s.build.tab);
   const activeTool = useAppStore((s) => s.build.activeTool);
-  const setBuildTool = useAppStore((s) => s.setBuildTool);
   const setBuildTab = useAppStore((s) => s.setBuildTab);
-  const handleClick = (item: DockItem) => { setBuildTab(item.tab); setBuildTool(item.tool); };
+  const setBuildTool = useAppStore((s) => s.setBuildTool);
+
+  const handleTabClick = (tab: BuildTab) => {
+    setBuildTab(tab);
+    if (tab === 'planritning') setBuildTool('select');
+    else if (tab === 'inredning') setBuildTool('select');
+    // bibliotek has no sub-tools
+  };
+
+  const subTools = activeTab === 'planritning' ? planritningTools
+    : activeTab === 'inredning' ? inredningTools
+    : null;
+
   return (
-    <div className="flex items-center justify-center gap-1 px-2 py-1.5 bg-background/95 backdrop-blur border-t border-border">
-      {dockItems.map((item) => {
-        const Icon = item.icon;
-        const isActive = activeTool === item.tool || (item.tool === 'place-light' && activeTool.startsWith('place-')) || (item.tool === ('furnish' as BuildTool) && activeTool === ('furnish' as BuildTool)) || (item.tool === ('wizard' as BuildTool) && activeTool === ('wizard' as BuildTool)) || (item.tool === ('import' as BuildTool) && activeTool === ('import' as BuildTool));
-        return (
-          <button key={item.tool} onClick={() => handleClick(item)}
-            className={cn('flex flex-col items-center gap-0.5 px-2 py-1 rounded-md text-xs transition-colors min-w-[3rem]',
-              isActive ? 'bg-primary/15 text-primary' : 'text-muted-foreground hover:text-foreground hover:bg-muted')}>
-            <Icon className="w-5 h-5" />
-            <span className="text-[10px] leading-tight">{item.label}</span>
+    <div className="bg-background/95 backdrop-blur border-t border-border">
+      {/* Sub-tools row */}
+      {subTools && (
+        <div className="flex items-center justify-center gap-1 px-2 py-1 border-b border-border/50">
+          {subTools.map(({ tool, label, icon: Icon }) => {
+            const isActive = activeTool === tool
+              || (tool === 'place-light' && activeTool.startsWith('place-'))
+              || (tool === ('furnish' as BuildTool) && activeTool === ('furnish' as BuildTool))
+              || (tool === ('wizard' as BuildTool) && activeTool === ('wizard' as BuildTool))
+              || (tool === ('import' as BuildTool) && activeTool === ('import' as BuildTool));
+            return (
+              <button key={tool} onClick={() => setBuildTool(tool)}
+                className={cn('flex flex-col items-center gap-0.5 px-2 py-1 rounded-md text-xs transition-colors min-w-[3rem]',
+                  isActive ? 'bg-primary/15 text-primary' : 'text-muted-foreground hover:text-foreground hover:bg-muted')}>
+                <Icon className="w-5 h-5" />
+                <span className="text-[10px] leading-tight">{label}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+      {/* Primary 3-tab bar */}
+      <div className="flex items-center justify-center gap-1 px-2 py-1.5">
+        {([
+          { key: 'planritning' as BuildTab, label: 'Planritning', icon: Ruler },
+          { key: 'inredning' as BuildTab, label: 'Inredning', icon: Sofa },
+          { key: 'bibliotek' as BuildTab, label: 'Bibliotek', icon: Archive },
+        ]).map(({ key, label, icon: Icon }) => (
+          <button key={key} onClick={() => handleTabClick(key)}
+            className={cn('flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all min-h-[44px]',
+              activeTab === key ? 'bg-primary/20 text-primary' : 'text-muted-foreground hover:text-foreground hover:bg-secondary/30')}>
+            <Icon size={18} />
+            {label}
           </button>
-        );
-      })}
+        ))}
+      </div>
     </div>
   );
 }
@@ -1346,8 +1384,9 @@ export default function BuildModeV2() {
   const activeTool = useAppStore((s) => s.build.activeTool);
   const activeTab = useAppStore((s) => s.build.tab);
   const showDevicePanel = activeTool.startsWith('place-') || activeTool === 'vacuum-zone' || activeTool === ('place-vacuum-dock' as any);
-  const showImportPanel = activeTab === 'import' && isImported;
+  const showImportPanel = activeTab === 'planritning' && isImported;
   const showFurnishPanel = activeTool === ('furnish' as any) || activeTool === ('wizard' as any);
+  const showBibliotekPanel = activeTab === 'bibliotek';
 
   return (
     <div className="w-full h-full relative flex flex-col">
@@ -1360,17 +1399,24 @@ export default function BuildModeV2() {
           </div>
         )}
         {/* Import tools side panel */}
-        {showImportPanel && !showDevicePanel && !showFurnishPanel && (
+        {showImportPanel && !showDevicePanel && !showFurnishPanel && !showBibliotekPanel && (
           <div className="absolute left-0 top-0 bottom-0 w-[220px] bg-card/95 backdrop-blur-sm border-r border-border z-20 overflow-y-auto py-3">
             <Suspense fallback={null}>
               <ImportTools />
             </Suspense>
           </div>
         )}
-        {/* Furnish side panel */}
-        {showFurnishPanel && !showDevicePanel && (
+        {/* Furnish side panel (Inredning) */}
+        {showFurnishPanel && !showDevicePanel && !showBibliotekPanel && (
           <div className="absolute left-0 top-0 bottom-0 w-[260px] bg-card/95 backdrop-blur-sm border-r border-border z-20 overflow-y-auto py-3 px-2">
             <AssetCatalog initialSourceFilter={activeTool === ('wizard' as any) ? 'wizard' : 'all'} />
+          </div>
+        )}
+        {/* Bibliotek panel — full asset registry */}
+        {showBibliotekPanel && !showDevicePanel && (
+          <div className="absolute left-0 top-0 bottom-0 w-[280px] bg-card/95 backdrop-blur-sm border-r border-border z-20 overflow-y-auto py-3 px-2">
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1 mb-2">Bibliotek</h3>
+            <AssetCatalog />
           </div>
         )}
         {cameraMode === 'topdown' ? (
@@ -1388,7 +1434,7 @@ export default function BuildModeV2() {
         <BuildInspector />
       </div>
       <BuildCatalogRow />
-      <BuildBottomDock />
+      <DesignTabBar />
     </div>
   );
 }

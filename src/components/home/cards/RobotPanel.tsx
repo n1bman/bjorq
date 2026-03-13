@@ -107,7 +107,7 @@ function RoomZoneCards({ marker, data, update }: { marker: DeviceMarker; data: V
     if (!segId) {
       toast({
         title: 'Segment-ID saknas',
-        description: `Rummet "${roomName}" har inget segment-ID. Gå till Bygge → Robot Mapping och välj segment-ID.`,
+        description: `Rummet "${roomName}" har inget segment-ID. Gå till Design → Inredning → Enheter och välj segment-ID.`,
         variant: 'destructive',
       });
       return;
@@ -426,7 +426,7 @@ export default function RobotPanel() {
     return (
       <div className="text-center py-10">
         <p className="text-sm text-muted-foreground">Ingen robotdammsugare hittad</p>
-        <p className="text-xs text-muted-foreground/60 mt-1">Gå till Bygge → Enheter för att placera en</p>
+        <p className="text-xs text-muted-foreground/60 mt-1">Gå till Design → Inredning → Enheter för att placera en</p>
       </div>
     );
   }

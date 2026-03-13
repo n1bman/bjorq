@@ -7,7 +7,7 @@ import type { AppMode } from '../../store/types';
 const modes: { key: AppMode; label: string; icon: typeof Home }[] = [
   { key: 'home', label: 'Hem', icon: Home },
   { key: 'dashboard', label: 'Kontrollpanel', icon: LayoutGrid },
-  { key: 'build', label: 'Design', icon: PenTool },
+  { key: 'build', label: 'Bygge', icon: PenTool },
 ];
 
 export default function HomeNav() {

@@ -40,7 +40,7 @@ export function getDefaultState(kind: DeviceKind): DeviceState {
 const generateId = () => Math.random().toString(36).slice(2, 10);
 
 const initialBuild: BuildState = {
-  tab: 'planritning',
+  tab: 'structure',
   activeTool: 'select',
   grid: { enabled: true, sizeMeters: 0.1, snapMode: 'strict' },
   selection: { type: null, id: null },
@@ -1567,23 +1567,8 @@ export const useAppStore = create<AppState>()(
     storeCreator,
     {
       name: 'hometwin-store',
-      version: 16,
-      migrate: (persisted: any, _version: number) => {
-        // v15→v16: BuildTab rename
-        if (persisted && persisted.build?.tab) {
-          const tabMap: Record<string, string> = {
-            structure: 'planritning',
-            import: 'planritning',
-            furnish: 'inredning',
-            devices: 'inredning',
-          };
-          const oldTab = persisted.build.tab;
-          if (tabMap[oldTab]) {
-            persisted.build.tab = tabMap[oldTab];
-          }
-        }
-
-        // Legacy device state migration (kept from v15)
+      version: 15,
+      migrate: (persisted: any) => {
         if (persisted && persisted.devices?.deviceStates) {
           const oldStates = persisted.devices.deviceStates;
           const newStates: Record<string, DeviceState> = {};

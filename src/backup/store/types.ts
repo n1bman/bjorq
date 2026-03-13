@@ -167,7 +167,7 @@ export type BuildTool =
   | 'furnish'
   | 'import';
 
-export type BuildTab = 'planritning' | 'inredning' | 'bibliotek';
+export type BuildTab = 'structure' | 'import' | 'furnish' | 'devices';
 export type SnapMode = 'strict' | 'soft' | 'off';
 export type CameraMode = 'topdown' | '3d' | 'floor-isolate';
 

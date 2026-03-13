@@ -105,7 +105,7 @@ export default function SurveillancePanel() {
       <div className="text-center py-12">
         <Camera size={40} className="mx-auto text-muted-foreground/40 mb-3" />
         <p className="text-sm text-muted-foreground">Inga kameror placerade</p>
-        <p className="text-xs text-muted-foreground/60 mt-1">Gå till Bygge → Enheter för att lägga till kameror</p>
+        <p className="text-xs text-muted-foreground/60 mt-1">Gå till Design → Inredning → Enheter för att lägga till kameror</p>
       </div>
     );
   }
