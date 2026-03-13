@@ -103,7 +103,6 @@ function PropModel({ id, url: rawUrl, position, rotation, scale, colorOverride, 
   const selection = useAppStore((s) => s.build.selection);
   const setSelection = useAppStore((s) => s.setSelection);
   const activeTool = useAppStore((s) => s.build.activeTool);
-  const activeFloorId = useAppStore((s) => s.layout.activeFloorId);
 
   const isSelected = appMode === 'build' && selection.type === 'prop' && selection.id === id;
   const [isHovered, setIsHovered] = useState(false);
