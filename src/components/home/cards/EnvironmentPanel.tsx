@@ -62,7 +62,7 @@ const EnvironmentPanel = React.forwardRef<HTMLDivElement>((_, ref) => {
           {/* Tree count */}
           <div className="text-xs text-muted-foreground">
             Träd placerade: {terrain.trees?.length ?? 0}
-            <p className="text-[9px]">Hantera träd i Bygge → Import → Miljö</p>
+            <p className="text-[9px]">Hantera träd i Design → Planritning → Import</p>
           </div>
         </div>
       )}

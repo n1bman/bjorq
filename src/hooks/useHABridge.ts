@@ -194,7 +194,7 @@ function sendHACommand(entityId: string, state: DeviceState, prevState?: DeviceS
             params: [segId],
           });
         } else {
-          console.warn('[HABridge] ⚠ No segment ID for room:', data.targetRoom, '— kommandot skickades INTE. Tilldela segment-ID i Bygge → Robot Mapping.');
+          console.warn('[HABridge] ⚠ No segment ID for room:', data.targetRoom, '— kommandot skickades INTE. Tilldela segment-ID i Design → Inredning → Enheter.');
         }
         break;
       }

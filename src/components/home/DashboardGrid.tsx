@@ -176,7 +176,7 @@ function HomeCategory() {
       ) : (
         <div className="text-center py-6">
           <p className="text-sm text-muted-foreground">Inga enheter ännu</p>
-          <p className="text-xs text-muted-foreground/60 mt-1">Gå till Bygge → Enheter för att placera</p>
+          <p className="text-xs text-muted-foreground/60 mt-1">Gå till Design → Inredning → Enheter för att placera</p>
         </div>
       )}
     </div>

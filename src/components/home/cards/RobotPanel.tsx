@@ -426,7 +426,7 @@ export default function RobotPanel() {
     return (
       <div className="text-center py-10">
         <p className="text-sm text-muted-foreground">Ingen robotdammsugare hittad</p>
-        <p className="text-xs text-muted-foreground/60 mt-1">Gå till Bygge → Enheter för att placera en</p>
+        <p className="text-xs text-muted-foreground/60 mt-1">Gå till Design → Inredning → Enheter för att placera en</p>
       </div>
     );
   }
