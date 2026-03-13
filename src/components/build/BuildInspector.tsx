@@ -235,6 +235,7 @@ function WallInspector({ floorId, wallId, floor, close }: { floorId: string; wal
   const updateWall = useAppStore((s) => s.updateWall);
   const textureInputRef = useRef<HTMLInputElement>(null);
   const [materialTarget, setMaterialTarget] = useState<'exterior' | 'interior'>('exterior');
+  const [surfaceCat, setSurfaceCat] = useState<string>('paint');
 
   const wall = floor.walls.find((w: any) => w.id === wallId);
   if (!wall) return null;
