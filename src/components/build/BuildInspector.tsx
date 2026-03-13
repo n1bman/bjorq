@@ -570,6 +570,49 @@ function WallInspector({ floorId, wallId, floor, close }: { floorId: string; wal
         </div>
       </div>
 
+      <div className="border-t border-border pt-2">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-muted-foreground">Öppningar</span>
+          <div className="flex gap-1 flex-wrap">
+            <button onClick={() => handleAddOpening('door')}
+              className="flex items-center gap-1 px-2 py-1 rounded-md bg-secondary/50 hover:bg-secondary text-foreground transition-colors min-h-[32px]">
+              <Plus size={12} /> Dörr
+            </button>
+            <button onClick={() => handleAddOpening('passage')}
+              className="flex items-center gap-1 px-2 py-1 rounded-md bg-secondary/50 hover:bg-secondary text-foreground transition-colors min-h-[32px]">
+              <Plus size={12} /> Passage
+            </button>
+            <button onClick={() => handleAddOpening('window')}
+              className="flex items-center gap-1 px-2 py-1 rounded-md bg-secondary/50 hover:bg-secondary text-foreground transition-colors min-h-[32px]">
+              <Plus size={12} /> Fönster
+            </button>
+          </div>
+        </div>
+
+        {wall.openings.map((op: any) => (
+          <div key={op.id} className="bg-secondary/30 rounded-lg p-2 mb-1.5 flex items-center justify-between">
+            <button
+              onClick={() => setSelection({ type: 'opening', id: op.id })}
+              className="flex items-center gap-1 text-foreground hover:text-primary transition-colors"
+            >
+              <DoorOpen size={12} />
+              {op.type === 'door' ? 'Dörr' : op.type === 'garage-door' ? 'Garageport' : op.type === 'passage' ? 'Passage' : 'Fönster'}
+            </button>
+            <button
+              onClick={() => { pushUndo(); removeOpening(floorId, wall.id, op.id); }}
+              className="p-0.5 rounded hover:bg-destructive/20 text-destructive">
+              <X size={12} />
+            </button>
+          </div>
+        ))}
+      </div>
+
+      <button onClick={handleDelete}
+        className="w-full py-2 rounded-lg bg-destructive/20 text-destructive text-xs font-medium hover:bg-destructive/30 transition-colors min-h-[44px]">
+        Ta bort vägg
+      </button>
+    </div>
+  );
 }
 
 // ─── Prop Inspector Component ───
