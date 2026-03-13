@@ -1934,9 +1934,32 @@ export default function BuildModeV2() {
   const activeTool = useAppStore((s) => s.build.activeTool);
   const activeTab = useAppStore((s) => s.build.tab);
   const isBibliotek = activeTab === 'bibliotek';
+  const isInredning = activeTab === 'inredning';
+
+  // In Inredning: always show catalog as primary surface, device panel overlays when device tool active
   const showDevicePanel = !isBibliotek && (activeTool.startsWith('place-') || activeTool === 'vacuum-zone' || activeTool === ('place-vacuum-dock' as any));
   const showImportPanel = !isBibliotek && activeTab === 'planritning' && isImported;
-  const showFurnishPanel = !isBibliotek && (activeTool === ('furnish' as any) || activeTool === ('wizard' as any));
+  // In Inredning: catalog is always visible (primary surface). In Planritning: only when furnish/wizard tool active
+  const showCatalogPanel = !isBibliotek && (
+    isInredning
+      ? !showDevicePanel  // always show unless device tool is active
+      : (activeTool === ('furnish' as any) || activeTool === ('wizard' as any))
+  );
+
+  // Soft room context hint for Inredning
+  const selection = useAppStore((s) => s.build.selection);
+  const activeFloorId = useAppStore((s) => s.layout.activeFloorId);
+  const rooms = useAppStore((s) => {
+    if (!activeFloorId) return [];
+    const floor = s.layout.floors.find((f: any) => f.id === activeFloorId);
+    return floor?.rooms || [];
+  });
+  const selectedRoom = selection.type === 'room' && selection.id
+    ? rooms.find((r: any) => r.id === selection.id)
+    : null;
+
+  // Determine catalog source filter
+  const catalogSourceFilter = activeTool === ('wizard' as any) ? 'wizard' as const : 'all' as const;
 
   return (
     <div className="w-full h-full relative flex flex-col">
@@ -1949,21 +1972,48 @@ export default function BuildModeV2() {
       ) : (
         /* Planritning / Inredning: canvas-based */
         <div className="flex-1 relative overflow-hidden">
+          {/* Device placement tools (overlays catalog when active) */}
           {showDevicePanel && (
             <div className="absolute left-0 top-0 bottom-0 w-[220px] bg-card/95 backdrop-blur-sm border-r border-border z-20 overflow-y-auto py-3">
               <InlinedDevicePlacementTools />
             </div>
           )}
-          {showImportPanel && !showDevicePanel && !showFurnishPanel && (
+          {/* Import tools (Planritning only) */}
+          {showImportPanel && !showDevicePanel && !showCatalogPanel && (
             <div className="absolute left-0 top-0 bottom-0 w-[220px] bg-card/95 backdrop-blur-sm border-r border-border z-20 overflow-y-auto py-3">
               <Suspense fallback={null}>
                 <ImportTools />
               </Suspense>
             </div>
           )}
-          {showFurnishPanel && !showDevicePanel && (
-            <div className="absolute left-0 top-0 bottom-0 w-[260px] bg-card/95 backdrop-blur-sm border-r border-border z-20 overflow-y-auto py-3 px-2">
-              <AssetCatalog initialSourceFilter={activeTool === ('wizard' as any) ? 'wizard' : 'all'} />
+          {/* Asset catalog — primary surface in Inredning */}
+          {showCatalogPanel && (
+            <div className={cn(
+              "absolute left-0 top-0 bottom-0 bg-card/95 backdrop-blur-sm border-r border-border z-20 overflow-y-auto flex flex-col",
+              isInredning ? "w-[300px]" : "w-[260px] py-3 px-2"
+            )}>
+              {/* Soft room context hint (Inredning only) */}
+              {isInredning && (
+                <div className="px-3 py-2 border-b border-border/50 bg-card/40">
+                  <div className="flex items-center gap-2">
+                    <Sofa className="w-4 h-4 text-primary" />
+                    <span className="text-xs font-medium text-foreground">Inredning</span>
+                    {selectedRoom && (
+                      <Badge variant="outline" className="text-[9px] px-1.5 py-0 ml-auto">
+                        📍 {(selectedRoom as any).name}
+                      </Badge>
+                    )}
+                  </div>
+                  {selectedRoom && (
+                    <p className="text-[10px] text-muted-foreground mt-1">
+                      Förslag visas för {(selectedRoom as any).name}, men alla tillgångar kan placeras fritt.
+                    </p>
+                  )}
+                </div>
+              )}
+              <div className={isInredning ? "flex-1 overflow-y-auto px-2 py-3" : ""}>
+                <AssetCatalog initialSourceFilter={catalogSourceFilter} />
+              </div>
             </div>
           )}
           {cameraMode === 'topdown' ? (
