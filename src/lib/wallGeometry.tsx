@@ -1,16 +1,17 @@
 /**
- * wallGeometry.ts — Phase A1: Shared wall geometry builder
+ * wallGeometry.tsx — Shared wall geometry builder
  *
- * Extracted from Walls3D.tsx and InteractiveWalls3D.tsx to eliminate
- * duplicated wall rendering logic. Both renderers now call these functions.
- *
- * No visual or behavioral changes from pre-refactor state.
+ * Phase A1: Extracted from Walls3D.tsx and InteractiveWalls3D.tsx.
+ * Phase A2: Angle-aware corner fills via convex hull.
+ * Phase B1: Integrated with wallFaces.ts for face identity.
  */
 
 import * as THREE from 'three';
 import { getMaterialById } from './materials';
 import { createWallMaterials, resolveWallColors } from './wallMaterials';
 import type { WallSegment, WallOpening } from '../store/types';
+export type { WallFaceType, WallFaceId, WallFace, CornerFaceOwnership } from './wallFaces';
+export { getWallFaces, getCornerFaceOwnership, detectClickedFace, getRoomFacingSide, wallFaceId, openingFaceId, parseFaceId, getFaceMaterialField } from './wallFaces';
 
 // ─── Types ───
 
