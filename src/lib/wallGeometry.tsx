@@ -556,11 +556,81 @@ export function generateWallSegments(
   return segments;
 }
 
+// ─── Convex Hull (Andrew's monotone chain) ───
+
+function convexHull2D(points: [number, number][]): [number, number][] {
+  const pts = [...points].sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  if (pts.length <= 1) return pts;
+
+  const cross = (o: [number, number], a: [number, number], b: [number, number]) =>
+    (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+
+  // Lower hull
+  const lower: [number, number][] = [];
+  for (const p of pts) {
+    while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], p) <= 0)
+      lower.pop();
+    lower.push(p);
+  }
+  // Upper hull
+  const upper: [number, number][] = [];
+  for (let i = pts.length - 1; i >= 0; i--) {
+    const p = pts[i];
+    while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], p) <= 0)
+      upper.pop();
+    upper.push(p);
+  }
+
+  // Remove last point of each half because it's repeated
+  lower.pop();
+  upper.pop();
+  return lower.concat(upper);
+}
+
 // ─── Corner Block Generator ───
 
 /**
+ * Gather wall edge points at a junction and return the connected wall info.
+ */
+function getJunctionEdgePoints(
+  nodePos: [number, number],
+  walls: WallSegment[],
+  eps: number,
+): { edgePoints: [number, number][]; maxHeight: number; wallColors: ReturnType<typeof resolveWallColors>[]; maxThickness: number } {
+  const edgePoints: [number, number][] = [];
+  let maxHeight = 0;
+  let maxThickness = 0;
+  const wallColors: ReturnType<typeof resolveWallColors>[] = [];
+
+  for (const wall of walls) {
+    const df = Math.abs(wall.from[0] - nodePos[0]) + Math.abs(wall.from[1] - nodePos[1]);
+    const dt = Math.abs(wall.to[0] - nodePos[0]) + Math.abs(wall.to[1] - nodePos[1]);
+    if (df >= eps && dt >= eps) continue;
+
+    const dx = wall.to[0] - wall.from[0];
+    const dz = wall.to[1] - wall.from[1];
+    const len = Math.sqrt(dx * dx + dz * dz);
+    if (len < 0.001) continue;
+
+    // Normal perpendicular to wall direction
+    const nx = -dz / len;
+    const nz = dx / len;
+    const halfT = wall.thickness / 2;
+
+    edgePoints.push([nodePos[0] + nx * halfT, nodePos[1] + nz * halfT]);
+    edgePoints.push([nodePos[0] - nx * halfT, nodePos[1] - nz * halfT]);
+
+    maxHeight = Math.max(maxHeight, wall.height);
+    maxThickness = Math.max(maxThickness, wall.thickness);
+  }
+
+  return { edgePoints, maxHeight, wallColors, maxThickness };
+}
+
+/**
  * Generate corner fill blocks at wall junctions.
- * Currently axis-aligned squares — Phase A2 will improve these.
+ * Phase A2: Uses convex hull of wall edge points for angle-aware corners.
+ * Falls back to axis-aligned square block if hull computation fails.
  */
 export function generateCornerBlocks(
   walls: WallSegment[],
@@ -568,6 +638,8 @@ export function generateCornerBlocks(
   options?: CornerBlockOptions,
 ): JSX.Element[] {
   const eps = 0.05;
+
+  // Collect junction nodes
   const nodeMap = new Map<string, {
     pos: [number, number];
     maxThickness: number;
@@ -592,34 +664,86 @@ export function generateCornerBlocks(
   }
 
   const blocks: JSX.Element[] = [];
+
   for (const [key, { pos, maxThickness, maxHeight, wallColors }] of nodeMap) {
+    // Count connections
     let connectionCount = 0;
     for (const wall of walls) {
       const df = Math.abs(wall.from[0] - pos[0]) + Math.abs(wall.from[1] - pos[1]);
       const dt = Math.abs(wall.to[0] - pos[0]) + Math.abs(wall.to[1] - pos[1]);
       if (df < eps || dt < eps) connectionCount++;
     }
-    if (connectionCount >= 2) {
-      const dominantColor = wallColors[0]?.exteriorColor ?? '#e0e0e0';
-      const matProps: Record<string, any> = {
-        color: dominantColor,
-        roughness: 0.7,
-        side: THREE.FrontSide,
-      };
-      if (options?.polygonOffset) {
-        matProps.polygonOffset = true;
-        matProps.polygonOffsetFactor = -1;
-        matProps.polygonOffsetUnits = -1;
+    if (connectionCount < 2) continue;
+
+    const dominantColor = wallColors[0]?.exteriorColor ?? '#e0e0e0';
+    const matProps: Record<string, any> = {
+      color: dominantColor,
+      roughness: 0.7,
+      side: THREE.FrontSide,
+    };
+    if (options?.polygonOffset) {
+      matProps.polygonOffset = true;
+      matProps.polygonOffsetFactor = -1;
+      matProps.polygonOffsetUnits = -1;
+    }
+
+    // Try angle-aware convex hull corner
+    const { edgePoints, maxHeight: junctionHeight } = getJunctionEdgePoints(pos, walls, eps);
+    const height = Math.max(maxHeight, junctionHeight);
+
+    let usedHull = false;
+    if (edgePoints.length >= 3) {
+      try {
+        const hull = convexHull2D(edgePoints);
+        if (hull.length >= 3) {
+          // Compute hull area to validate — reject degenerate hulls
+          let area = 0;
+          for (let i = 0; i < hull.length; i++) {
+            const j = (i + 1) % hull.length;
+            area += (hull[i][0] - pos[0]) * (hull[j][1] - pos[1]);
+            area -= (hull[j][0] - pos[0]) * (hull[i][1] - pos[1]);
+          }
+          area = Math.abs(area) / 2;
+
+          if (area > 0.0001 && area < 10) {
+            // Build Shape in local coordinates relative to nodePos
+            const shape = new THREE.Shape();
+            shape.moveTo(hull[0][0] - pos[0], hull[0][1] - pos[1]);
+            for (let i = 1; i < hull.length; i++) {
+              shape.lineTo(hull[i][0] - pos[0], hull[i][1] - pos[1]);
+            }
+            shape.closePath();
+
+            blocks.push(
+              <mesh key={`corner-${key}`}
+                position={[pos[0], elevation, pos[1]]}
+                rotation={[-Math.PI / 2, 0, 0]}
+                castShadow receiveShadow>
+                <extrudeGeometry args={[shape, { depth: height, bevelEnabled: false }]} />
+                <meshStandardMaterial {...matProps} />
+              </mesh>
+            );
+            usedHull = true;
+          }
+        }
+      } catch {
+        // Fall through to square fallback
       }
+    }
+
+    // Fallback: axis-aligned square block (original behavior)
+    if (!usedHull) {
       blocks.push(
         <mesh key={`corner-${key}`}
-          position={[pos[0], maxHeight / 2 + elevation, pos[1]]}
+          position={[pos[0], height / 2 + elevation, pos[1]]}
           castShadow receiveShadow>
-          <boxGeometry args={[maxThickness, maxHeight, maxThickness]} />
+          <boxGeometry args={[maxThickness, height, maxThickness]} />
           <meshStandardMaterial {...matProps} />
         </mesh>
       );
     }
   }
+
   return blocks;
 }
+
