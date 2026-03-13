@@ -161,6 +161,7 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
   useEffect(() => { setSourceFilter(initialSourceFilter ?? 'all'); }, [initialSourceFilter]);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
+  const [placementFilter, setPlacementFilter] = useState<string | null>(null);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [importResult, setImportResult] = useState<PipelineResult | null>(null);
   const [importFile, setImportFile] = useState<File | null>(null);
