@@ -658,23 +658,24 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
           }
 
           return (
-            <button key={entry.id} onClick={() => handlePlaceEntry(entry)} disabled={!!isImporting} className={cn("relative flex flex-col items-center gap-0.5 p-2 rounded-lg bg-secondary/30 hover:bg-secondary/60 transition-colors text-xs group min-h-[44px]", leftBorder, isImporting && 'opacity-50')}>
-              {isImporting && <div className="absolute inset-0 flex items-center justify-center z-30 bg-background/60 rounded-lg"><Loader2 size={16} className="animate-spin text-primary" /></div>}
+            <button key={entry.id} onClick={() => handlePlaceEntry(entry)} disabled={!!isImporting} className={cn("relative flex flex-col items-center gap-1 p-2 rounded-xl bg-secondary/20 hover:bg-secondary/40 border border-transparent hover:border-border/30 transition-colors text-xs group min-h-[64px]", leftBorder, isImporting && 'opacity-50')}>
+              {isImporting && <div className="absolute inset-0 flex items-center justify-center z-30 bg-background/60 rounded-xl"><Loader2 size={16} className="animate-spin text-primary" /></div>}
               {entry.staleSync && <div className="absolute top-1 right-1 z-20" title="Kräver re-import"><AlertTriangle size={10} className="text-destructive" /></div>}
               {entry.wizardMode === 'imported' && !entry.staleSync && <div className="absolute top-1 right-1 z-20" title="Från Wizard"><Wand2 size={10} className="text-orange-400" /></div>}
               {instanceCounts[entry.id] > 0 && <div className="absolute top-1 left-1 bg-primary text-primary-foreground text-[8px] font-bold rounded-full w-4 h-4 flex items-center justify-center z-20">×{instanceCounts[entry.id]}</div>}
               {entry.thumbnail ? (
-                <img src={entry.thumbnail} alt={entry.name} className="w-full h-16 object-contain rounded" loading="lazy"
+                <img src={entry.thumbnail} alt={entry.name} className="w-full h-20 object-contain rounded p-1" loading="lazy"
                   onError={(e) => { e.currentTarget.style.display = 'none'; const p = e.currentTarget.nextElementSibling; if (p) (p as HTMLElement).style.display = 'flex'; }} />
               ) : null}
-              <div className="w-full h-16 bg-muted/30 rounded items-center justify-center text-muted-foreground" style={{ display: entry.thumbnail ? 'none' : 'flex' }}>
+              <div className="w-full h-20 bg-muted/30 rounded items-center justify-center text-muted-foreground" style={{ display: entry.thumbnail ? 'none' : 'flex' }}>
                 {(() => { const I = AC_CATEGORY_ICONS[entry.category] || Box; return <I size={20} strokeWidth={1.5} />; })()}
               </div>
-              <span className="text-[10px] text-foreground truncate w-full text-center">{entry.name}</span>
-              <div className="flex items-center gap-1 w-full justify-center">
+              <span className="text-[11px] text-foreground truncate w-full text-center">{entry.name}</span>
+              <div className="flex items-center gap-1 w-full justify-center flex-wrap">
                 {entry.dimensions && <span className="text-[8px] text-muted-foreground">{entry.dimensions.width}×{entry.dimensions.depth}×{entry.dimensions.height}m</span>}
                 {getPerfColor(entry.performance) && <span className={`inline-block w-1.5 h-1.5 rounded-full ${getPerfColor(entry.performance)}`} />}
                 {entry.subcategory && entry.subcategory !== entry.category && <span className="text-[8px] text-muted-foreground/60">{entry.subcategory}</span>}
+                {placementLabel && <span className="text-[8px] bg-muted/40 rounded px-1 py-0.5 text-muted-foreground">{placementLabel}</span>}
               </div>
               {canDelete(entry) && <button onClick={(e) => { e.stopPropagation(); handleDeleteEntry(entry); }} className="absolute bottom-1 right-1 p-0.5 rounded opacity-0 group-hover:opacity-100 hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-opacity"><Trash2 size={10} /></button>}
               {entry.source === 'curated' && isHostedSync() && <button onClick={(e) => { e.stopPropagation(); openManageDialog(entry); }} className="absolute bottom-1 right-1 p-0.5 rounded opacity-0 group-hover:opacity-100 hover:bg-accent text-muted-foreground hover:text-foreground transition-opacity"><Settings size={10} /></button>}
