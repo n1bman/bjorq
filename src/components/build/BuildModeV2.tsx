@@ -329,13 +329,11 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
   const placePropFn = useCallback((catalogId: string, url: string) => {
     if (!activeFloorId) return;
 
-    // Phase C1: Check if the item is wall-mountable
     const catItem = useAppStore.getState().props.catalog.find((c: any) => c.id === catalogId);
-    const curatedItem = curatedAssets?.find?.((c: any) => c.id === catalogId);
-    const placement = catItem?.placement || curatedItem?.placement;
-    const category = catItem?.category || curatedItem?.category;
+    const curatedMeta = curatedAssets?.find?.((c: any) => c.id === catalogId);
+    const placement = catItem?.placement || curatedMeta?.placement;
+    const category = catItem?.category || curatedMeta?.category;
 
-    const { isWallMountable } = require('../../lib/wallMountPlacement');
     if (isWallMountable({ placement, category })) {
       setPendingWallMount({ catalogId, url });
       toast.info('Klicka på en vägg för att placera');
