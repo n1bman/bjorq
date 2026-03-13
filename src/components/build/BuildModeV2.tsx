@@ -1419,6 +1419,9 @@ function BibliotekWorkspace() {
   const [bibImportName, setBibImportName] = useState('');
   const [bibImportCat, setBibImportCat] = useState<AssetCategory>('imported');
   const [bibProcessing, setBibProcessing] = useState(false);
+  const [bibOptimizedResult, setBibOptimizedResult] = useState<OptimizationResult | null>(null);
+  const [bibIsOptimizing, setBibIsOptimizing] = useState(false);
+  const [bibOptStep, setBibOptStep] = useState<'analyze' | 'optimizing' | 'optimized'>('analyze');
   const bibFileRef = useRef<HTMLInputElement>(null);
 
   const wizardStatus = useAppStore((s) => s.wizard.status);
