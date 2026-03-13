@@ -40,7 +40,7 @@ export function getDefaultState(kind: DeviceKind): DeviceState {
 const generateId = () => Math.random().toString(36).slice(2, 10);
 
 const initialBuild: BuildState = {
-  tab: 'structure',
+  tab: 'planritning',
   activeTool: 'select',
   grid: { enabled: true, sizeMeters: 0.1, snapMode: 'strict' },
   selection: { type: null, id: null },
