@@ -853,7 +853,8 @@ export function generateCornerBlocks(
       const dt = Math.abs(wall.to[0] - pos[0]) + Math.abs(wall.to[1] - pos[1]);
       if (df < eps || dt < eps) connectionCount++;
     }
-    if (connectionCount < 2) continue;
+    // Phase A3: Skip L-corners (2 walls) — mitered geometry handles them
+    if (connectionCount < 3) continue;
 
     const dominantColor = wallColors[0]?.exteriorColor ?? '#e0e0e0';
     const matProps: Record<string, any> = {
