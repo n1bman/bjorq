@@ -267,7 +267,7 @@ export function computeEnvironmentProfile(input: EnvironmentInput): EnvironmentP
   const hemisphereSkyColor: [number, number, number] = phase === 'night'
     ? [0.05, 0.05, 0.12]
     : [1.0, 0.96, 0.88]; // warm sky bounce
-  const hemisphereGroundColor: [number, number, number] = [0.23, 0.35, 0.16]; // green ground bounce
+  const hemisphereGroundColor: [number, number, number] = [0.28, 0.35, 0.14]; // warmer ground bounce
 
   return {
     phase,
