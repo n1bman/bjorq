@@ -87,14 +87,6 @@ function getFileDataForProp(propId: string): string | null {
   return (catItem as any)?.fileData ?? null;
 }
 
-// ─── Outline material (shared, never disposed) ───
-const outlineMaterial = new THREE.MeshBasicMaterial({
-  color: '#ffffff',
-  side: THREE.BackSide,
-  transparent: true,
-  opacity: 0.6,
-  depthWrite: false,
-});
 
 function PropModel({ id, url: rawUrl, position, rotation, scale, colorOverride, textureOverride, textureScale = 1, metalness: metalnessOverride, roughness: roughnessOverride }: {
   id: string;
@@ -373,7 +365,7 @@ function PropModel({ id, url: rawUrl, position, rotation, scale, colorOverride, 
     setShowQuickMenu(false);
   };
 
-  // ─── Display scene with outline shell ───
+  // ─── Display scene with selection feedback ───
   const displayScene = useMemo(() => {
     if (!scene) return null;
     const clone = scene.clone();
@@ -399,41 +391,6 @@ function PropModel({ id, url: rawUrl, position, rotation, scale, colorOverride, 
         if (isSelected) {
           child.material.emissive = new THREE.Color('#d4a574');
           child.material.emissiveIntensity = 0.15;
-
-          // Back-face outline shell for selected objects
-          // Uses adaptive scale based on mesh size to keep outline thickness consistent
-          const geo = child.geometry;
-          if (geo) {
-            geo.computeBoundingBox();
-            const bbox = geo.boundingBox;
-            if (bbox) {
-              const size = new THREE.Vector3();
-              bbox.getSize(size);
-              const center = new THREE.Vector3();
-              bbox.getCenter(center);
-              const diagonal = size.length();
-
-              // Skip degenerate or extremely small geometry
-              if (diagonal > 0.005) {
-                // Constant outline thickness (~0.015m) regardless of mesh size
-                // Clamp scale factor to avoid extreme values on tiny/huge meshes
-                const OUTLINE_THICKNESS = 0.015;
-                const rawScale = 1 + (OUTLINE_THICKNESS / Math.max(diagonal * 0.5, 0.01));
-                const scaleFactor = Math.min(Math.max(rawScale, 1.005), 1.12);
-
-                const outlineMesh = new THREE.Mesh(geo, outlineMaterial);
-                outlineMesh.scale.setScalar(scaleFactor);
-                // Compensate position so scaling happens around bbox center, not origin
-                // When scaling by S around center C: offset = C * (1 - S)
-                const posOffset = center.clone().multiplyScalar(1 - scaleFactor);
-                outlineMesh.position.copy(child.position).add(posOffset);
-                outlineMesh.rotation.copy(child.rotation);
-                outlineMesh.quaternion.copy(child.quaternion);
-                outlineMesh.raycast = () => {}; // Don't interfere with picking
-                child.parent?.add(outlineMesh);
-              }
-            }
-          }
         } else if (isHovered) {
           child.material.emissive = new THREE.Color('#f5e6d3');
           child.material.emissiveIntensity = 0.08;
@@ -442,6 +399,29 @@ function PropModel({ id, url: rawUrl, position, rotation, scale, colorOverride, 
     });
     return clone;
   }, [scene, isSelected, isHovered, colorOverride, textureOverride, textureScale, roughnessOverride, metalnessOverride]);
+
+  // ─── Bounding-box selection indicator (always correct, scale-aware) ───
+  const selectionBox = useMemo(() => {
+    if (!isSelected || !scene) return null;
+    // Compute world-space bbox of the entire scene at identity transform
+    const tempGroup = scene.clone();
+    const bbox = new THREE.Box3().setFromObject(tempGroup);
+    disposeScene(tempGroup);
+    if (bbox.isEmpty()) return null;
+
+    const size = new THREE.Vector3();
+    const center = new THREE.Vector3();
+    bbox.getSize(size);
+    bbox.getCenter(center);
+
+    // Add a small margin so the box doesn't sit flush on the mesh
+    const margin = 0.03;
+    const bw = size.x + margin;
+    const bh = size.y + margin;
+    const bd = size.z + margin;
+
+    return { center: [center.x, center.y, center.z] as [number, number, number], size: [bw, bh, bd] as [number, number, number] };
+  }, [scene, isSelected]);
 
   // Loading state
   if (status === 'loading' || status === 'idle') {
@@ -504,6 +484,26 @@ function PropModel({ id, url: rawUrl, position, rotation, scale, colorOverride, 
         onPointerLeave={handlePointerLeave}
         onContextMenu={(e: any) => { e.nativeEvent?.preventDefault?.(); e.stopPropagation(); }}
       />
+
+      {/* Bounding-box selection wireframe — always correct regardless of geometry */}
+      {selectionBox && (
+        <lineSegments
+          position={[
+            position[0] + selectionBox.center[0] * scale[0],
+            position[1] + selectionBox.center[1] * scale[1],
+            position[2] + selectionBox.center[2] * scale[2],
+          ]}
+          rotation={rotation}
+          raycast={() => {}}
+        >
+          <edgesGeometry args={[new THREE.BoxGeometry(
+            selectionBox.size[0] * scale[0],
+            selectionBox.size[1] * scale[1],
+            selectionBox.size[2] * scale[2],
+          )]} />
+          <lineBasicMaterial color="#ffffff" transparent opacity={0.7} linewidth={1} />
+        </lineSegments>
+      )}
 
       {/* Drag shadow indicator */}
       {isDragging && dragShadowPos && (
