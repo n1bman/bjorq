@@ -694,6 +694,8 @@ export interface PropItem {
   roughness?: number;           // 0-1
   /** Phase C1: wall-mount attachment data (if mounted on wall) */
   wallMountInfo?: WallMountInfo;
+  /** C4: User override to ignore wall collision barriers */
+  freePlacement?: boolean;
 }
 
 export interface PropsState {
