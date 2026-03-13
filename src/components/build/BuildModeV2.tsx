@@ -1891,10 +1891,10 @@ function BibliotekWorkspace() {
             {bibImportResult && (
               <div className="text-xs text-muted-foreground space-y-1">
                 <p>{formatStats(bibOptimizedResult ? bibOptimizedResult.stats : bibImportResult.stats)}</p>
-                {bibOptimizedResult && bibOptimizedResult.status === 'improved' && (
-                  <p className="text-primary font-medium">✓ Optimerad: {formatSize(bibOptimizedResult.originalSize)} → {formatSize(bibOptimizedResult.blob.size)} ({Math.round((1 - bibOptimizedResult.blob.size / bibOptimizedResult.originalSize) * 100)}% mindre)</p>
+                {bibOptimizedResult && !bibOptimizedResult.noImprovement && (
+                  <p className="text-primary font-medium">✓ Optimerad: {formatSize(bibOptimizedResult.beforeStats.fileSizeKB)} → {formatSize(bibOptimizedResult.stats.fileSizeKB)} ({bibOptimizedResult.savings.fileSizePct}% mindre)</p>
                 )}
-                {bibOptimizedResult && bibOptimizedResult.status === 'noImprovement' && (
+                {bibOptimizedResult && bibOptimizedResult.noImprovement && (
                   <p className="text-muted-foreground">Modellen behöver ingen optimering.</p>
                 )}
               </div>
@@ -1902,11 +1902,11 @@ function BibliotekWorkspace() {
             {/* Optimization button */}
             {bibImportResult && bibOptStep === 'analyze' && (() => {
               const level = getOptimizationLevel(bibImportResult.stats);
-              if (level === 'none') return null;
+              if (level === 'ok') return null;
               return (
                 <Button variant="outline" className="w-full gap-2" onClick={handleBibOptimize} disabled={bibIsOptimizing}>
-                  <Sparkles className="w-4 h-4" /> Optimera modell
-                  {level === 'heavy' && <span className="text-destructive text-[10px]">(rekommenderas)</span>}
+                  <Wand2 className="w-4 h-4" /> Optimera modell
+                  {level === 'strongly-recommended' && <span className="text-destructive text-[10px]">(rekommenderas)</span>}
                 </Button>
               );
             })()}
