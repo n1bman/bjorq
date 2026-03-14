@@ -564,7 +564,7 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
     } else if (entry.catalogItem) {
       placePropFn(entry.catalogItem.id, entry.catalogItem.url);
     }
-  }, [activeFloorId, catalog, addToCatalog, placePropFn, handleWizardImport, removeFromCatalog, wizardStatus]);
+  }, [activeFloorId, catalog, addToCatalog, placePropFn, handleWizardImport, removeFromCatalog, wizardStatus, addKitchenFixture]);
 
   const openManageDialog = useCallback((entry: ACEntry) => { setManageAsset(entry); setManageName(entry.name); setManageCategory((entry.category as AssetCategory) || 'imported'); setManageSubcategory(entry.subcategory || ''); setManagePlacement(entry.curatedMeta?.placement || 'floor'); setManageDialogOpen(true); }, []);
   const handleSaveMeta = useCallback(async () => { if (!manageAsset) return; try { await updateCatalogMeta(manageAsset.id, { name: manageName.trim() || manageAsset.name, category: manageCategory, subcategory: manageSubcategory || undefined, placement: managePlacement }); clearCatalogCache(); loadCuratedCatalog().then(setCuratedAssets); toast.success('Metadata uppdaterad'); setManageDialogOpen(false); } catch { toast.error('Kunde inte uppdatera'); } }, [manageAsset, manageName, manageCategory, manageSubcategory, managePlacement]);
