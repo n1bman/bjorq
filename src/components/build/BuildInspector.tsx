@@ -1137,14 +1137,17 @@ function DeviceInspector({ deviceId, close }: { deviceId: string; close: React.R
 
   const isScreen = device.kind === 'media_screen';
   const isLight = device.kind === 'light';
+  const isLightFixture = device.kind === 'light-fixture';
   const screenConfig = device.screenConfig ?? { aspectRatio: 16 / 9, uiStyle: 'minimal' as const, showProgress: true };
   const scale = device.scale ?? [1.2, 0.675, 1];
 
   const lightTypeOptions: { value: LightType; label: string; emoji: string }[] = [
     { value: 'ceiling', label: 'Tak', emoji: '🔵' },
+    { value: 'ceiling-small', label: 'Tak Liten', emoji: '🔹' },
     { value: 'strip', label: 'Strip', emoji: '🟢' },
     { value: 'wall', label: 'Vägg', emoji: '🟡' },
     { value: 'spot', label: 'Spot', emoji: '⚪' },
+    { value: 'lightbar', label: 'Lightbar', emoji: '▬' },
   ];
 
   const handleDelete = () => {
