@@ -1277,7 +1277,7 @@ function DeviceInspector({ deviceId, close }: { deviceId: string; close: React.R
           'spot':          { intensity: 6, distance: 6, angle: Math.PI / 7, penumbra: 0.4 },
           'wall':          { intensity: 4.8, distance: 5, angle: Math.PI / 4, penumbra: 0.6 },
           'led-bulb':      { intensity: 1, distance: 2, angle: Math.PI, penumbra: 0 },
-          'led-bar':       { intensity: 1.5, distance: 3, angle: Math.PI / 4, penumbra: 0.7 },
+          'led-bar':       { intensity: 0.5, distance: 1.4, angle: (118 * Math.PI) / 180, penumbra: 0.7 },
           'led-spot':      { intensity: 2, distance: 2.5, angle: Math.PI / 10, penumbra: 0.3 },
         };
         const typeKey = isLightFixture ? (device.fixtureModel ?? 'led-bulb') : (device.lightType ?? 'ceiling');

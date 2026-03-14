@@ -1396,10 +1396,35 @@ export default function DeviceMarkers3D({ buildMode, onLongPress }: DeviceMarker
     'light-fixture', 'smart-outlet',
   ]), []);
 
+  // Long-press support for 3D markers in home mode
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressTriggered = useRef(false);
+
+  const handlePointerDown3D = useCallback((id: string) => {
+    if (buildMode || !onLongPress) return;
+    longPressTriggered.current = false;
+    longPressTimer.current = setTimeout(() => {
+      longPressTriggered.current = true;
+      onLongPress(id);
+    }, 500);
+  }, [buildMode, onLongPress]);
+
+  const handlePointerUp3D = useCallback(() => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  }, []);
+
   const handleSelect = useCallback((id: string) => {
     if (buildMode) {
       setSelection({ type: 'device', id });
     } else {
+      // If long-press was triggered, don't toggle
+      if (longPressTriggered.current) {
+        longPressTriggered.current = false;
+        return;
+      }
       // In home/dashboard mode: toggle device state on click
       const marker = markers.find((m) => m.id === id);
       if (marker && toggleableKinds.has(marker.kind)) {
