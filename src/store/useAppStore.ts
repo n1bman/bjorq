@@ -839,6 +839,27 @@ const storeCreator = (set: any, get: any): AppState => ({
       },
     })),
 
+  // Kitchen fixture actions
+  addKitchenFixture: (floorId, fixture) =>
+    set((s: any) => ({
+      layout: {
+        ...s.layout,
+        floors: s.layout.floors.map((f: any) =>
+          f.id === floorId ? { ...f, kitchenFixtures: [...(f.kitchenFixtures || []), fixture] } : f
+        ),
+      },
+    })),
+
+  removeKitchenFixture: (floorId, fixtureId) =>
+    set((s: any) => ({
+      layout: {
+        ...s.layout,
+        floors: s.layout.floors.map((f: any) =>
+          f.id === floorId ? { ...f, kitchenFixtures: (f.kitchenFixtures || []).filter((k: any) => k.id !== fixtureId) } : f
+        ),
+      },
+    })),
+
   // Props actions
   addToCatalog: (item) =>
     set((s: any) => ({ props: { ...s.props, catalog: [...s.props.catalog, item] } })),
