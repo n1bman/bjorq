@@ -32,6 +32,7 @@ export default function BuildInspector() {
   if (selection.type === 'room') return <RoomInspector floorId={activeFloorId!} roomId={selection.id} floor={floor} close={closeBtn} />;
   if (selection.type === 'opening') return <OpeningInspector floorId={activeFloorId!} openingId={selection.id} floor={floor} close={closeBtn} />;
   if (selection.type === 'device') return <DeviceInspector deviceId={selection.id} close={closeBtn} />;
+  if (selection.type === 'kitchen-fixture') return <KitchenFixtureInspector floorId={activeFloorId!} fixtureId={selection.id} close={closeBtn} />;
 
   return null;
 }
@@ -1425,6 +1426,105 @@ function DeviceInspector({ deviceId, close }: { deviceId: string; close: React.R
       <button onClick={handleDelete}
         className="w-full py-2 rounded-lg bg-destructive/20 text-destructive text-xs font-medium hover:bg-destructive/30 transition-colors min-h-[44px] flex items-center justify-center gap-1">
         <Trash2 size={14} /> Ta bort enhet
+      </button>
+    </div>
+  );
+}
+
+// ─── Kitchen Fixture Inspector ───
+function KitchenFixtureInspector({ floorId, fixtureId, close }: { floorId: string; fixtureId: string; close: React.ReactNode }) {
+  const floors = useAppStore((s) => s.layout.floors);
+  const updateKitchenFixture = useAppStore((s) => s.updateKitchenFixture);
+  const removeKitchenFixture = useAppStore((s) => s.removeKitchenFixture);
+  const addKitchenFixture = useAppStore((s) => s.addKitchenFixture);
+  const pushUndo = useAppStore((s) => s.pushUndo);
+  const setSelection = useAppStore((s) => s.setSelection);
+
+  const floor = floors.find((f) => f.id === floorId);
+  const fixture = floor?.kitchenFixtures?.find((k) => k.id === fixtureId);
+  if (!fixture) return null;
+
+  const rotDeg = Math.round((fixture.rotation * 180) / Math.PI) % 360;
+
+  const handleRotate = (deg: number) => {
+    pushUndo();
+    updateKitchenFixture(floorId, fixtureId, { rotation: (deg * Math.PI) / 180 });
+  };
+
+  const handlePositionChange = (axis: 'x' | 'z', val: number) => {
+    pushUndo();
+    updateKitchenFixture(floorId, fixtureId, {
+      position: axis === 'x' ? [val, fixture.position[1]] : [fixture.position[0], val],
+    });
+  };
+
+  const handleDuplicate = () => {
+    const newId = generateId();
+    addKitchenFixture(floorId, {
+      id: newId,
+      floorId,
+      position: [fixture.position[0] + 0.5, fixture.position[1]],
+      rotation: fixture.rotation,
+    });
+    setSelection({ type: 'kitchen-fixture', id: newId });
+  };
+
+  const handleDelete = () => {
+    pushUndo();
+    removeKitchenFixture(floorId, fixtureId);
+    setSelection({ type: null, id: null });
+  };
+
+  return (
+    <div className="absolute top-14 right-3 bottom-3 w-56 overflow-y-auto glass-panel rounded-xl p-3 space-y-3 text-xs z-10">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-foreground font-display flex items-center gap-1">
+          🍳 Kök
+        </h3>
+        {close}
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-muted-foreground text-[10px]">Rotation (°)</label>
+        <div className="flex items-center gap-2">
+          <Slider min={0} max={360} step={1} value={[rotDeg < 0 ? rotDeg + 360 : rotDeg]}
+            onValueChange={([v]) => handleRotate(v)} className="flex-1" />
+          <span className="text-[10px] text-foreground w-8 text-right">{rotDeg < 0 ? rotDeg + 360 : rotDeg}°</span>
+        </div>
+        <div className="flex gap-1">
+          {[0, 90, 180, 270].map((d) => (
+            <button key={d} onClick={() => handleRotate(d)}
+              className={`px-2 py-1 rounded-md text-[10px] transition-colors ${rotDeg === d ? 'bg-primary text-primary-foreground' : 'bg-secondary/50 hover:bg-secondary text-foreground'}`}>
+              {d}°
+            </button>
+          ))}
+        </div>
+
+        <label className="text-muted-foreground text-[10px]">Position X (m)</label>
+        <Input
+          type="number" step={0.1}
+          value={fixture.position[0].toFixed(2)}
+          onChange={(e) => handlePositionChange('x', parseFloat(e.target.value) || 0)}
+          className="h-7 text-[10px]"
+        />
+
+        <label className="text-muted-foreground text-[10px]">Position Z (m)</label>
+        <Input
+          type="number" step={0.1}
+          value={fixture.position[1].toFixed(2)}
+          onChange={(e) => handlePositionChange('z', parseFloat(e.target.value) || 0)}
+          className="h-7 text-[10px]"
+        />
+      </div>
+
+      <button onClick={handleDuplicate}
+        className="w-full py-2 rounded-lg bg-secondary/30 text-foreground text-xs font-medium hover:bg-secondary/50 transition-colors min-h-[44px] flex items-center justify-center gap-1">
+        <Plus size={14} /> Duplicera
+      </button>
+
+      <button onClick={handleDelete}
+        className="w-full py-2 rounded-lg bg-destructive/20 text-destructive text-xs font-medium hover:bg-destructive/30 transition-colors min-h-[44px] flex items-center justify-center gap-1">
+        <Trash2 size={14} /> Ta bort
       </button>
     </div>
   );
