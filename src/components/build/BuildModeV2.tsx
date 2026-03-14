@@ -2161,6 +2161,30 @@ function BibliotekWorkspace() {
                     <CheckCircle className="w-3.5 h-3.5" /> Spara ändringar
                   </Button>
                 )}
+                {/* Export button */}
+                <Button variant="outline" size="sm" className="w-full gap-1.5" onClick={() => {
+                  const entry = selectedAsset;
+                  if (!entry) return;
+                  // For user assets with catalog item, export as JSON metadata + model link
+                  const meta = {
+                    name: entry.name,
+                    category: entry.category,
+                    subcategory: entry.subcategory,
+                    source: entry.source,
+                    dimensions: entry.dimensions,
+                    tags: entry.tags,
+                  };
+                  const blob = new Blob([JSON.stringify(meta, null, 2)], { type: 'application/json' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `${entry.name.replace(/\s+/g, '_')}_meta.json`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                  toast.success('Metadata exporterad');
+                }}>
+                  <Download className="w-3.5 h-3.5" /> Exportera
+                </Button>
                 {selectedAsset.source === 'user' && selectedAsset.catalogItem && (
                   <Button variant="destructive" size="sm" className="w-full gap-1.5" onClick={() => {
                     removeFromCatalog(selectedAsset.catalogItem!.id);
