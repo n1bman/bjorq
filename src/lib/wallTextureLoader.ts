@@ -122,9 +122,11 @@ export function applyFloorTextures(
   preset: Material,
   floorWidth: number = 4.0,
   floorDepth: number = 4.0,
-  sizeMode: SurfaceSizeMode = 'auto'
+  sizeMode: SurfaceSizeMode = 'auto',
+  textureScale: number = 1,
+  textureRotation: number = 0
 ): void {
-  applyMaterialTextures(threeMat, preset, floorDepth, floorWidth, sizeMode, 'floor');
+  applyMaterialTextures(threeMat, preset, floorDepth, floorWidth, sizeMode, 'floor', false, textureScale, textureRotation);
 }
 
 /** Clear the texture cache (useful for hot-reload or memory cleanup) */
