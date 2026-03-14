@@ -409,16 +409,16 @@ function renderOpeningModels(
       };
 
       // Top panel — both sides
-      segments.push(...panelMeshBoth(`${wall.id}-p4-top-${i}`, localX, topY, usableW - 0.02, topPanelH, panelColor, 0.006));
+      segments.push(...panelMeshBoth(`${wall.id}-p4-top-${i}`, localX, topY, usableW - 0.02, topPanelH, panelColor, 0.004));
 
       // Mid left panel — both sides
-      segments.push(...panelMeshBoth(`${wall.id}-p4-ml-${i}`, localX - (midPaneW / 2 + stileW / 2), midY, midPaneW - 0.02, midPanelH, panelColor, 0.006));
+      segments.push(...panelMeshBoth(`${wall.id}-p4-ml-${i}`, localX - (midPaneW / 2 + stileW / 2), midY, midPaneW - 0.02, midPanelH, panelColor, 0.004));
 
       // Mid right panel — both sides
-      segments.push(...panelMeshBoth(`${wall.id}-p4-mr-${i}`, localX + (midPaneW / 2 + stileW / 2), midY, midPaneW - 0.02, midPanelH, panelColor, 0.006));
+      segments.push(...panelMeshBoth(`${wall.id}-p4-mr-${i}`, localX + (midPaneW / 2 + stileW / 2), midY, midPaneW - 0.02, midPanelH, panelColor, 0.004));
 
       // Bottom panel — both sides
-      segments.push(...panelMeshBoth(`${wall.id}-p4-bot-${i}`, localX, bottomY, usableW - 0.02, bottomPanelH, panelColor, 0.006));
+      segments.push(...panelMeshBoth(`${wall.id}-p4-bot-${i}`, localX, bottomY, usableW - 0.02, bottomPanelH, panelColor, 0.004));
 
       // Horizontal rails — both sides
       segments.push(...panelMeshBoth(`${wall.id}-p4-rail1-${i}`, localX, topY - topPanelH / 2 - railH / 2, usableW, railH, railColor, 0.005));
