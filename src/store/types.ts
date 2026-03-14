@@ -32,6 +32,10 @@ export interface Material {
   hasTexture?: boolean;
   /** CC0 source attribution (e.g. 'ambientCG', 'Poly Haven') */
   source?: string;
+  /** ambientCG asset ID for download reference */
+  ambientCGId?: string;
+  /** CDN thumbnail URL for material browser preview */
+  thumbnailUrl?: string;
   /**
    * B5: Real-world size of one texture repeat unit in meters [width, height].
    * Used to calculate sensible repeat values automatically based on surface dimensions.
