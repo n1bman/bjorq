@@ -245,6 +245,12 @@ export function mapHAEntityToDeviceState(
       return { kind: 'lawn-mower', data: { on: state === 'mowing', status: statusMap[state] || 'docked', battery, ...(errorMessage && { errorMessage }) } };
     }
 
+    // ─── Light Fixture (uses same light state as 'light') ───
+    // Handled by the 'light' case above since HA domain is 'light'
+
+    // ─── Smart Outlet (uses generic on/off like switch) ───
+    // Handled by the 'switch' case above since HA domain is 'switch'
+
     default:
       return null;
   }
