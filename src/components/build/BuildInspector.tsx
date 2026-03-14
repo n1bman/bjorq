@@ -1249,6 +1249,7 @@ function DeviceInspector({ deviceId, close }: { deviceId: string; close: React.R
               { value: 'led-bulb' as const, label: 'LED Lampa', emoji: '💡' },
               { value: 'led-bar' as const, label: 'LED Bar', emoji: '▬' },
               { value: 'led-spot' as const, label: 'LED Spot', emoji: '⚪' },
+              { value: 'led-gu10' as const, label: 'LED Spotlight', emoji: '🔦' },
             ]).map(({ value, label, emoji }) => (
               <button
                 key={value}
@@ -1279,6 +1280,7 @@ function DeviceInspector({ deviceId, close }: { deviceId: string; close: React.R
           'led-bulb':      { intensity: 1, distance: 2, angle: Math.PI, penumbra: 0 },
           'led-bar':       { intensity: 0.5, distance: 1.4, angle: (118 * Math.PI) / 180, penumbra: 0.7 },
           'led-spot':      { intensity: 2, distance: 2.5, angle: Math.PI / 10, penumbra: 0.3 },
+          'led-gu10':      { intensity: 2.5, distance: 3, angle: Math.PI / 8, penumbra: 0.4 },
         };
         const typeKey = isLightFixture ? (device.fixtureModel ?? 'led-bulb') : (device.lightType ?? 'ceiling');
         const def = lightDefaults[typeKey] ?? lightDefaults['ceiling'];

@@ -1,60 +1,84 @@
+# Arbetsplan: Stabilisering, buggfixar och UX-förbättringar
 
+## Status: ✅ Implementerat (v1.1.0)
 
-# Ny ljusarmatur: LED Spotlight (GU10) + version bump → 1.5.1
+---
 
-## Referens
-Bilden visar en GU10 LED-spotlight — konisk glaskropp med linstopp och två metallpinnar (GU10-sockel). Samma storlek som LED Lampa (~0.03m radie).
+## Fas 0 — Bygg-stabilisering ✅ DONE
+- Fixat import i Scene3D till `./build/KitchenFixture3D`
+- Raderat duplikat `KitchenFixtureObject3D.tsx`
 
-## Ändringar
+## Fas 1 — Buggar och regressioner ✅ DONE
 
-### 1. `src/store/types.ts` (rad 410)
-Utöka `fixtureModel` union med `'led-gu10'`:
-```ts
-fixtureModel?: 'led-bulb' | 'led-bar' | 'led-spot' | 'led-gu10';
-```
+### 1.1 Väggar: 90-gradersstöd vid ritning ✅
+- Axis-aligned snapping (±3° av 0/90/180/270°) i `BuildScene3D.tsx`
+- Visuell indikator: cyan linje + solid (ej dashed) + "90°"-label via `<Html>`
+- `cursorAxisAligned`-prop tillagd i `WallDrawing3D.tsx`
 
-### 2. `src/components/devices/DeviceMarkers3D.tsx`
-**Defaults** (rad 1227-1231) — lägg till:
-```ts
-'led-gu10': { intensity: 2.5, distance: 3, angle: Math.PI / 8, penumbra: 0.4 },
-```
+### 1.3 Dörr-öppningsriktning ✅
+- `flipped` appliceras nu på dörrpanelens position och rotation i `wallGeometry.tsx`
+- Gångjärnspunkt beräknas baserat på `flipped`-flagga
 
-**3D-geometri** (efter led-spot blocket, rad ~1292) — ny sektion:
-- Konisk glaskropp (cylinderGeometry med olika radier top/bottom)
-- Linstopp (flat cylinder, emissive)
-- Två GU10-pinnar (cylinderGeometry, metallmaterial)
-- SpotLight med target nedåt (som led-spot)
+### 1.4 Dörrens öppningsgrad ✅
+- `openAmount?: number` (0-1) tillagd på `WallOpening` i `types.ts`
+- Slider "Öppningsgrad" i OpeningInspector (dörrar + garageportar)
+- 3D: dörrblad roteras runt gångjärnspunkt baserat på `openAmount * π/2`
+- TODO: koppla till `haEntityId` för automatisk HA-sync
 
-### 3. `src/components/build/BuildInspector.tsx`
-**Modellväljare** (rad 1248-1252) — lägg till:
-```ts
-{ value: 'led-gu10' as const, label: 'LED Spotlight', emoji: '🔦' },
-```
+### 1.5 Ljus går igenom väggar ✅ (pragmatisk lösning)
+- Alla ljustyper: minskad distance + decay=2
+- ceiling: 5m, strip: 6m, spot: 6m/π/7 angle, wall: 5m/π/4 angle
+- Dokumenterat: fullständig ljusblockering kräver baked lighting
 
-**Defaults** (rad 1272-1282) — lägg till:
-```ts
-'led-gu10': { intensity: 2.5, distance: 3, angle: Math.PI / 8, penumbra: 0.4 },
-```
+## Fas 2 — UX-förbättringar ✅ DONE
 
-**hasSpotAngle** (rad 1287) — inkludera `'led-gu10'` som spotLight-typ (redan exkluderad från listan = korrekt).
+### 2.1 Sliders med exakt värdeinmatning ✅
+- Ny `SliderWithInput`-komponent (`src/components/ui/SliderWithInput.tsx`)
+- Klickbart värde → number input med Enter/Escape/blur
+- Applicerad i OpeningInspector (bredd, höjd, bröstning, position, öppningsgrad)
 
-### 4. Version bump → 1.5.1
-- `package.json` → `"version": "1.5.1"`
-- `bjorq_dashboard/config.yaml` → `version: "1.5.1"`
-- `README.md` → badge `1.5.1`
-- `CHANGELOG.md` → ny `[1.5.1]`-sektion:
-  - Ny ljusarmatur: LED Spotlight (GU10) med riktad spotlight
-  - Fix: long-press timing på 3D-markörer (clickHandled guard)
+### 2.2 Möbelfliken stängd som standard ✅
+- Inredning startar med `select`-verktyg (inte `furnish`)
+- Katalogen visas bara när Möbler eller Wizard-verktyg är aktivt
 
-## Filändringar
+### 2.3 Måla-fliken flyttad till Inredning ✅
+- `paint`-verktyg borttaget från `planritningTools`
+- Tillagt i `inredningTools` som "Måla" med Paintbrush-ikon
+- SurfaceEditor visas under Inredning-fliken
 
-| Fil | Ändring |
-|-----|---------|
-| `types.ts` | `fixtureModel` union + `'led-gu10'` |
-| `DeviceMarkers3D.tsx` | Defaults + 3D-geometri för GU10 |
-| `BuildInspector.tsx` | Modellväljare + defaults |
-| `package.json` | 1.4.1 → 1.5.1 |
-| `config.yaml` | 1.4.1 → 1.5.1 |
-| `README.md` | Badge 1.5.1 |
-| `CHANGELOG.md` | Ny sektion |
+### 2.4 Väggar: bara färger (inga texturer) ✅
+- SurfaceEditor filtrerar vägg-material till enbart `paint`-kategorin
+- 15 nya väggfärger tillagda (mjuk rosa, oliv, skifferblå, etc.)
+- Golv behåller alla texturer som tidigare
 
+## Fas 3 — Dokumentation och mappstruktur ✅ DONE
+- `public/textures/guide/README.md` uppdaterad med korrekt mappstruktur
+- Borttagen felaktig referens till `public/textures/floor/`
+- Target-paths tillagda per preset
+- `public/textures/carpet/` skapad
+
+## Fas 4 — Import/Export och long-press ✅ DONE
+
+### 4.2 Exportera från Bibliotek ✅
+- "Exportera"-knapp tillagd i BibliotekWorkspace detaljpanel
+- Exporterar metadata som JSON-fil
+
+### 4.3 Hold-long på enheter i hemmenyn ✅
+- 500ms long-press → popup med av/på + ljusstyrka-slider
+- Fungerar för alla enheter med extra kontroll för `light`
+
+## Fas 5 — Troubleshooting-pass ✅ DONE
+- Raderat dead code: `PaintTool.tsx` (ersatt av inline SurfaceEditor)
+- KitchenFixtureObject3D redan borttagen
+- Inga oanvända importer kvar
+- Tester passerar
+
+## Fas 6 — Version 1.1.0 ✅ DONE
+- `package.json` bumpat till 1.1.0
+
+## Bevarat
+- Design / Planritning / Inredning / Bibliotek-struktur
+- Save/load kompatibilitet
+- HA-sync (ej ändrad)
+- Golv-texturer med ambientCG CDN-thumbnails
+- Vägg-mitering och hörn-geometri

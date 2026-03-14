@@ -5,7 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.4.1] - 2026-03-14
+## [1.5.1] - 2026-03-14
+
+### Added
+- **LED Spotlight (GU10) ljusarmatur** — ny `led-gu10` fixtureModel med konisk metallkropp, emissiv lins och dubbla GU10-pinnar; använder riktad spotLight med angle π/8 och penumbra 0.4
 
 ### Fixed
 - **Long-press popup on short click** — added `clickHandled` ref guard so the 500ms timer callback aborts if a regular click was already processed; prevents popup from opening on quick taps
