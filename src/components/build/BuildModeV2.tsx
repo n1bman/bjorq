@@ -2245,7 +2245,7 @@ export default function BuildModeV2() {
   const cameraMode = useAppStore((s) => s.build.view.cameraMode);
   const isImported = useAppStore((s) => s.homeGeometry.source === 'imported');
   const hasImportedUrl = useAppStore((s) => !!s.homeGeometry.imported.url);
-  const showImportOverlay = cameraMode === 'topdown' && isImported && hasImportedUrl;
+  const showImportOverlay = cameraMode === 'topdown' && isImported && hasImportedUrl && activeTool === 'import';
   const activeTool = useAppStore((s) => s.build.activeTool);
   const activeTab = useAppStore((s) => s.build.tab);
   const isBibliotek = activeTab === 'bibliotek';
