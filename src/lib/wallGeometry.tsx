@@ -692,7 +692,6 @@ function renderOpeningModels(
       );
     }
   }
-  }
 
   return segments;
 }
