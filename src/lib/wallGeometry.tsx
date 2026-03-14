@@ -434,7 +434,6 @@ function renderOpeningModels(
       const frosted = op.style === '4pane-frost-bottom'
         ? [false, false, true, true]
         : [false, false, false, false];
-          : [false, false, false, false];
 
       const paneOffsetX = (side: 'left' | 'right') => {
         const sign = side === 'left' ? -1 : 1;
