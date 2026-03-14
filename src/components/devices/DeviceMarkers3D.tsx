@@ -1368,9 +1368,10 @@ const markerComponents: Record<DeviceKind, React.FC<MarkerProps>> = {
 
 interface DeviceMarkers3DProps {
   buildMode?: boolean;
+  onLongPress?: (id: string) => void;
 }
 
-export default function DeviceMarkers3D({ buildMode }: DeviceMarkers3DProps) {
+export default function DeviceMarkers3D({ buildMode, onLongPress }: DeviceMarkers3DProps) {
   const markers = useAppStore((s) => s.devices.markers);
   const floors = useAppStore((s) => s.layout.floors);
   const showDeviceMarkers = useAppStore((s) => s.homeView.showDeviceMarkers ?? true);
