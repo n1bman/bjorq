@@ -186,7 +186,7 @@ export const presetMaterials: Material[] = [
     hasTexture: true, source: 'ambientCG', realWorldSize: [0.40, 0.40],
     ambientCGId: 'Tiles082',
     thumbnailUrl: 'https://acg-media.struffelproductions.com/file/ambientCG-Web/media/thumbnail/256-JPG-FFFFFF/Tiles082.jpg',
-    mapPath: '/textures/floor/tile/slate_tile_diff.jpg' },
+    mapPath: 'https://acg-media.struffelproductions.com/file/ambientCG-Web/media/thumbnail/2048-JPG-FFFFFF/Tiles082.jpg' },
 
   // ─── Floor: Stone / Concrete (5) ───
   { id: 'floor-polished-concrete', name: 'Polerad betong golv', type: 'concrete', color: '#b8b4ae', roughness: 0.30, surfaceCategory: 'stone', floorOnly: true,
