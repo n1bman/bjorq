@@ -225,7 +225,7 @@ export const presetMaterials: Material[] = [
     hasTexture: true, source: 'ambientCG', realWorldSize: [2.0, 2.0],
     ambientCGId: 'Metal034',
     thumbnailUrl: 'https://acg-media.struffelproductions.com/file/ambientCG-Web/media/thumbnail/256-JPG-FFFFFF/Metal034.jpg',
-    mapPath: '/textures/floor/texture/epoxy_diff.jpg' },
+    mapPath: 'https://acg-media.struffelproductions.com/file/ambientCG-Web/media/thumbnail/2048-JPG-FFFFFF/Metal034.jpg' },
   { id: 'floor-cork', name: 'Kork', type: 'texture', color: '#c4a870', roughness: 0.80, surfaceCategory: 'texture', floorOnly: true,
     hasTexture: true, source: 'ambientCG', realWorldSize: [0.30, 0.30],
     ambientCGId: 'Cork002',
