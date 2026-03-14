@@ -338,9 +338,9 @@ export const sizeModelLabels: Record<SurfaceSizeMode, string> = {
 /** Size mode multipliers — applied to realWorldSize to get actual texture repeat */
 export const sizeModeMultipliers: Record<SurfaceSizeMode, number> = {
   auto: 1.0,
-  small: 0.6,
+  small: 0.4,
   standard: 1.0,
-  large: 1.6,
+  large: 2.5,
 };
 
 /**

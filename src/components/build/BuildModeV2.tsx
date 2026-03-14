@@ -1520,10 +1520,9 @@ function SurfaceEditor() {
                 </div>
               )}
 
-              <div className="border-b border-border/50" />
             </div>
           );
-        })}
+        })()}
       </div>
     </div>
   );

@@ -10,6 +10,7 @@ import { calculateRepeat } from './materials';
  */
 
 const textureLoader = new THREE.TextureLoader();
+textureLoader.setCrossOrigin('anonymous');
 const textureCache = new Map<string, THREE.Texture>();
 const failedPaths = new Set<string>();
 
