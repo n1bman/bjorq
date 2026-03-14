@@ -257,7 +257,7 @@ export const presetMaterials: Material[] = [
     hasTexture: true, source: 'ambientCG', realWorldSize: [0.40, 0.40],
     ambientCGId: 'Fabric029',
     thumbnailUrl: 'https://acg-media.struffelproductions.com/file/ambientCG-Web/media/thumbnail/256-JPG-FFFFFF/Fabric029.jpg',
-    mapPath: '/textures/floor/carpet/sisal_diff.jpg' },
+    mapPath: 'https://acg-media.struffelproductions.com/file/ambientCG-Web/media/thumbnail/2048-JPG-FFFFFF/Fabric029.jpg' },
   { id: 'floor-berber', name: 'Berber grädde', type: 'custom', color: '#e0d4c0', roughness: 0.90, surfaceCategory: 'carpet', floorOnly: true,
     hasTexture: true, source: 'ambientCG', realWorldSize: [0.60, 0.60],
     ambientCGId: 'Fabric026',
