@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import Scene3D from '../Scene3D';
 import SortableWidgetGrid from './SortableWidgetGrid';
 import type { SortableItem } from './SortableWidgetGrid';
 import { Home, Cloud, Cpu, Zap, Bell, Video, Settings, Pencil, X, CalendarDays, Bot, Moon, Save, Workflow, Palette, LayoutGrid, Thermometer, Trees } from 'lucide-react';
@@ -392,6 +393,11 @@ function StandbySettingsPanel() {
             <option key={o.value} value={o.value}>{o.label}</option>
           ))}
         </select>
+      </div>
+
+      {/* 3D Camera preview */}
+      <div className="glass-panel rounded-xl overflow-hidden h-[200px]">
+        <Scene3D />
       </div>
 
       <Button

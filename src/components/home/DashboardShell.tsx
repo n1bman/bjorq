@@ -107,31 +107,30 @@ export default function DashboardShell() {
 
         {/* Content body */}
         <div className="flex-1 min-h-0 overflow-y-auto">
-          <div className={cn(
-            'p-5 pb-8',
-            isPage
-              ? '' /* page-like sections get full width, no grid */
-              : show3D
-                ? 'grid gap-5 grid-cols-1 lg:grid-cols-[minmax(300px,2fr)_3fr]'
-                : ''
-          )}>
-            {/* 3D Preview card */}
+          <div className="p-5 pb-8 space-y-5">
+            {/* 3D Preview + first content row side by side */}
             {show3D && !isPage && (
-              <div className="glass-panel glass-panel-hover rounded-2xl overflow-hidden h-[280px] lg:h-full lg:min-h-[280px] lg:max-h-[360px]">
-                <Scene3D />
+              <div className="grid gap-5 grid-cols-1 lg:grid-cols-[minmax(280px,2fr)_3fr]">
+                <div className="glass-panel glass-panel-hover rounded-2xl overflow-hidden h-[280px]">
+                  <Scene3D />
+                </div>
+                {/* First content block next to 3D */}
+                <div className="min-w-0">
+                  <Content />
+                </div>
               </div>
             )}
 
-            {/* Category content */}
-            <div className={cn(
-              isPage
-                ? 'w-full'
-                : show3D
-                  ? 'min-w-0'
+            {/* Non-3D categories or page layouts */}
+            {!show3D && (
+              <div className={cn(
+                isPage
+                  ? 'w-full'
                   : 'max-w-[1200px] mx-auto w-full'
-            )}>
-              <Content />
-            </div>
+              )}>
+                <Content />
+              </div>
+            )}
           </div>
         </div>
       </div>

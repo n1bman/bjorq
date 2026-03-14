@@ -1,42 +1,84 @@
+# Arbetsplan: Stabilisering, buggfixar och UX-förbättringar
 
+## Status: ✅ Implementerat (v1.1.0)
 
-# Correction Plan — 3 Issues
+---
 
-## Issue 1: Home layout — widgets should also appear below the 3D view, and toolbar buttons on same row
+## Fas 0 — Bygg-stabilisering ✅ DONE
+- Fixat import i Scene3D till `./build/KitchenFixture3D`
+- Raderat duplikat `KitchenFixtureObject3D.tsx`
 
-**Current:** `DashboardShell.tsx` uses a two-column grid (`grid-cols-[minmax(300px,2fr)_3fr]`) where 3D is left column and widgets are right column. Nothing renders below the 3D view. The "Redigera" / "Hantera kategorier" / "Klar" buttons are in a separate `flex justify-end` row above the grid.
+## Fas 1 — Buggar och regressioner ✅ DONE
 
-**Fix:**
-- Change the Home layout from a strict 2-column grid to a more flexible approach: 3D preview and widget area sit in a top row, then widgets can continue below spanning full width.
-- Technically: wrap 3D + first widget column in a flex row, then let remaining widgets flow below in a full-width grid.
-- Move the "Redigera" / "Hantera kategorier" / "Klar" buttons into the same horizontal bar as the category title area (top-right of the content region, same visual line).
+### 1.1 Väggar: 90-gradersstöd vid ritning ✅
+- Axis-aligned snapping (±3° av 0/90/180/270°) i `BuildScene3D.tsx`
+- Visuell indikator: cyan linje + solid (ej dashed) + "90°"-label via `<Html>`
+- `cursorAxisAligned`-prop tillagd i `WallDrawing3D.tsx`
 
-**Files:** `DashboardShell.tsx` (layout grid change), `DashboardGrid.tsx` HomeCategory (button positioning)
+### 1.3 Dörr-öppningsriktning ✅
+- `flipped` appliceras nu på dörrpanelens position och rotation i `wallGeometry.tsx`
+- Gångjärnspunkt beräknas baserat på `flipped`-flagga
 
-## Issue 2: Add a small 3D preview in Standby settings (Kameravy section)
+### 1.4 Dörrens öppningsgrad ✅
+- `openAmount?: number` (0-1) tillagd på `WallOpening` i `types.ts`
+- Slider "Öppningsgrad" i OpeningInspector (dörrar + garageportar)
+- 3D: dörrblad roteras runt gångjärnspunkt baserat på `openAmount * π/2`
+- TODO: koppla till `haEntityId` för automatisk HA-sync
 
-**Current:** `StandbySettingsPanel` in `DashboardGrid.tsx` (lines ~300-418) has a dropdown for camera view and a "Spara aktuell kameravy" button, but no visual preview of what the standby camera will look like.
+### 1.5 Ljus går igenom väggar ✅ (pragmatisk lösning)
+- Alla ljustyper: minskad distance + decay=2
+- ceiling: 5m, strip: 6m, spot: 6m/π/7 angle, wall: 5m/π/4 angle
+- Dokumenterat: fullständig ljusblockering kräver baked lighting
 
-**Fix:**
-- Add a small (~200px tall) inline `Scene3D` preview inside the Standby settings panel, below the camera view dropdown.
-- This preview should show the selected standby camera angle so the user can see what they're choosing.
-- Wrap it in a `glass-panel rounded-xl overflow-hidden` container.
+## Fas 2 — UX-förbättringar ✅ DONE
 
-**Files:** `DashboardGrid.tsx` (StandbySettingsPanel — add inline Scene3D import and render)
+### 2.1 Sliders med exakt värdeinmatning ✅
+- Ny `SliderWithInput`-komponent (`src/components/ui/SliderWithInput.tsx`)
+- Klickbart värde → number input med Enter/Escape/blur
+- Applicerad i OpeningInspector (bredd, höjd, bröstning, position, öppningsgrad)
 
-## Issue 3: Nav rail background should match the rest of the page (dark blue)
+### 2.2 Möbelfliken stängd som standard ✅
+- Inredning startar med `select`-verktyg (inte `furnish`)
+- Katalogen visas bara när Möbler eller Wizard-verktyg är aktivt
 
-**Current:** `.nav-rail-bg` uses a separate gradient (`hsl(222 20% 10%)` to `hsl(222 18% 8%)`) which is slightly different/darker than `--background: 222 18% 11%`. This creates a visible color split.
+### 2.3 Måla-fliken flyttad till Inredning ✅
+- `paint`-verktyg borttaget från `planritningTools`
+- Tillagt i `inredningTools` som "Måla" med Paintbrush-ikon
+- SurfaceEditor visas under Inredning-fliken
 
-**Fix:**
-- Change `.nav-rail-bg` to use `bg-background` (same as page) with only the right border for separation. Remove the distinct gradient.
-- Keep the border-right for structural separation but make the nav feel unified with the rest.
+### 2.4 Väggar: bara färger (inga texturer) ✅
+- SurfaceEditor filtrerar vägg-material till enbart `paint`-kategorin
+- 15 nya väggfärger tillagda (mjuk rosa, oliv, skifferblå, etc.)
+- Golv behåller alla texturer som tidigare
 
-**Files:** `src/index.css` (`.nav-rail-bg` rule)
+## Fas 3 — Dokumentation och mappstruktur ✅ DONE
+- `public/textures/guide/README.md` uppdaterad med korrekt mappstruktur
+- Borttagen felaktig referens till `public/textures/floor/`
+- Target-paths tillagda per preset
+- `public/textures/carpet/` skapad
 
-## Implementation order
-1. CSS: nav-rail background → `background: hsl(var(--background))`
-2. DashboardShell: change home layout to allow content below 3D
-3. DashboardGrid HomeCategory: move buttons to same row
-4. DashboardGrid StandbySettingsPanel: add small 3D preview
+## Fas 4 — Import/Export och long-press ✅ DONE
 
+### 4.2 Exportera från Bibliotek ✅
+- "Exportera"-knapp tillagd i BibliotekWorkspace detaljpanel
+- Exporterar metadata som JSON-fil
+
+### 4.3 Hold-long på enheter i hemmenyn ✅
+- 500ms long-press → popup med av/på + ljusstyrka-slider
+- Fungerar för alla enheter med extra kontroll för `light`
+
+## Fas 5 — Troubleshooting-pass ✅ DONE
+- Raderat dead code: `PaintTool.tsx` (ersatt av inline SurfaceEditor)
+- KitchenFixtureObject3D redan borttagen
+- Inga oanvända importer kvar
+- Tester passerar
+
+## Fas 6 — Version 1.1.0 ✅ DONE
+- `package.json` bumpat till 1.1.0
+
+## Bevarat
+- Design / Planritning / Inredning / Bibliotek-struktur
+- Save/load kompatibilitet
+- HA-sync (ej ändrad)
+- Golv-texturer med ambientCG CDN-thumbnails
+- Vägg-mitering och hörn-geometri
