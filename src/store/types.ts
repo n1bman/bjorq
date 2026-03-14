@@ -783,6 +783,7 @@ export interface RoomTemplate {
   width: number;
   depth: number;
   category: RoomTemplateCategory;
+  fixture?: string;
 }
 
 // ─── Device Categories ───
