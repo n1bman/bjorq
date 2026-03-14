@@ -114,6 +114,10 @@ export interface Room {
   floorTextureScale?: number;
   /** F6: Manual floor texture rotation in degrees (0–360, default 0) */
   floorTextureRotation?: number;
+  /** Manual wall texture scale multiplier (0.2–10, default 1) */
+  wallTextureScale?: number;
+  /** Manual wall texture rotation in degrees (0–360, default 0) */
+  wallTextureRotation?: number;
   polygon?: [number, number][]; // cached polygon for rendering
   cameraPreset?: RoomCameraPreset;
 }

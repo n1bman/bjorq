@@ -7,7 +7,7 @@ import BuildCanvas2D from './BuildCanvas2D';
 import BuildScene3D from './BuildScene3D';
 import type { BuildTool, BuildTab } from '../../store/types';
 import { openingPresets } from '../../lib/openingPresets';
-import { getAllMaterials, wallSurfaceCategories, floorSurfaceCategories, surfaceCategoryLabels, floorCategoryLabels, getMaterialsByCategory } from '../../lib/materials';
+import { getAllMaterials, getMaterialById, wallSurfaceCategories, floorSurfaceCategories, surfaceCategoryLabels, floorCategoryLabels, getMaterialsByCategory } from '../../lib/materials';
 import { loadCuratedCatalog, clearCatalogCache } from '../../lib/catalogLoader';
 import { isWallMountable } from '../../lib/wallMountPlacement';
 import { processModel, validateFormat, formatStats, ratePerformance, formatSize, getOptimizationLevel, optimizeModel } from '../../lib/assetPipeline';
@@ -1520,7 +1520,7 @@ function SurfaceEditor() {
                     ))}
                   </div>
 
-                  {/* F6: Scale slider */}
+                  {/* Scale slider */}
                   <div className="px-0.5">
                     <div className="flex justify-between items-center mb-0.5">
                       <span className="text-[9px] text-muted-foreground">Skala</span>
@@ -1546,7 +1546,7 @@ function SurfaceEditor() {
                     />
                   </div>
 
-                  {/* F6: Rotation slider */}
+                  {/* Rotation slider */}
                   <div className="px-0.5">
                     <div className="flex justify-between items-center mb-0.5">
                       <span className="text-[9px] text-muted-foreground">Rotation</span>
@@ -1573,6 +1573,66 @@ function SurfaceEditor() {
                   </div>
                 </div>
               )}
+
+              {/* Wall texture scale/rotation per room */}
+              {!isFloor && currentId && (() => {
+                const wallMat = getMaterialById(currentId);
+                return wallMat?.hasTexture ? (
+                  <div className="space-y-2 mt-1">
+                    {/* Scale slider */}
+                    <div className="px-0.5">
+                      <div className="flex justify-between items-center mb-0.5">
+                        <span className="text-[9px] text-muted-foreground">Skala</span>
+                        <span className="text-[9px] font-mono text-foreground">{(room.wallTextureScale ?? 1).toFixed(1)}x</span>
+                      </div>
+                      <input type="range" min="0.2" max="10" step="0.1"
+                        value={room.wallTextureScale ?? 1}
+                        onChange={(e) => {
+                          if (!activeFloorId) return;
+                          const val = parseFloat(e.target.value);
+                          const store = useAppStore.getState();
+                          const updatedFloors = store.layout.floors.map((fl: any) => {
+                            if (fl.id !== activeFloorId) return fl;
+                            return { ...fl, rooms: fl.rooms.map((r: any) =>
+                              r.id === room.id ? { ...r, wallTextureScale: val } : r
+                            )};
+                          });
+                          useAppStore.setState((s: any) => ({ layout: { ...s.layout, floors: updatedFloors } }));
+                        }}
+                        onMouseDown={() => pushUndo()}
+                        onTouchStart={() => pushUndo()}
+                        className="w-full h-1.5 rounded-full appearance-none bg-secondary/40 accent-primary cursor-pointer"
+                      />
+                    </div>
+
+                    {/* Rotation slider */}
+                    <div className="px-0.5">
+                      <div className="flex justify-between items-center mb-0.5">
+                        <span className="text-[9px] text-muted-foreground">Rotation</span>
+                        <span className="text-[9px] font-mono text-foreground">{Math.round(room.wallTextureRotation ?? 0)}°</span>
+                      </div>
+                      <input type="range" min="0" max="360" step="1"
+                        value={room.wallTextureRotation ?? 0}
+                        onChange={(e) => {
+                          if (!activeFloorId) return;
+                          const val = parseFloat(e.target.value);
+                          const store = useAppStore.getState();
+                          const updatedFloors = store.layout.floors.map((fl: any) => {
+                            if (fl.id !== activeFloorId) return fl;
+                            return { ...fl, rooms: fl.rooms.map((r: any) =>
+                              r.id === room.id ? { ...r, wallTextureRotation: val } : r
+                            )};
+                          });
+                          useAppStore.setState((s: any) => ({ layout: { ...s.layout, floors: updatedFloors } }));
+                        }}
+                        onMouseDown={() => pushUndo()}
+                        onTouchStart={() => pushUndo()}
+                        className="w-full h-1.5 rounded-full appearance-none bg-secondary/40 accent-primary cursor-pointer"
+                      />
+                    </div>
+                  </div>
+                ) : null;
+              })()}
 
             </div>
           );

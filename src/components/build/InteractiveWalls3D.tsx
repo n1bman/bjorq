@@ -41,13 +41,28 @@ export default function InteractiveWalls3D() {
   const isPaintMode = activeTool === 'paint';
   const isWallMountMode = !!pendingWallMount;
 
-  // Build wall-to-room material lookup
+  // Build wall-to-room material + texture params lookup
   const wallRoomMaterial = useMemo(() => {
     const map: Record<string, string> = {};
     for (const room of rooms) {
       if (room.wallMaterialId) {
         for (const wid of room.wallIds) {
           if (!map[wid]) map[wid] = room.wallMaterialId;
+        }
+      }
+    }
+    return map;
+  }, [rooms]);
+
+  const wallRoomTextureParams = useMemo(() => {
+    const map: Record<string, { scale: number; rotation: number }> = {};
+    for (const room of rooms) {
+      for (const wid of room.wallIds) {
+        if (!map[wid]) {
+          map[wid] = {
+            scale: room.wallTextureScale ?? 1,
+            rotation: room.wallTextureRotation ?? 0,
+          };
         }
       }
     }
@@ -135,19 +150,60 @@ export default function InteractiveWalls3D() {
     return walls.map((wall) => {
       const isSelected = wall.id === selectedWallId;
       const isHovered = wall.id === hoveredWallId;
-      const highlightColor = isSelected ? '#4a9eff' : isHovered && !isPaintMode && !isWallMountMode ? '#f0c060' : null;
+      // Match floor highlight style: subtle emissive + no color override for selection
       const emissive = isSelected ? '#1a3a6a' : isHovered && !isPaintMode && !isWallMountMode ? '#3a2a10' : '#000000';
-      const emissiveIntensity = (isSelected || (isHovered && !isPaintMode && !isWallMountMode)) ? 0.3 : 0;
+      const emissiveIntensity = isSelected ? 0.08 : (isHovered && !isPaintMode && !isWallMountMode) ? 0.15 : 0;
 
+      const texParams = wallRoomTextureParams[wall.id];
       const segments = generateWallSegments(wall, walls, elevation, {
         fallbackMaterialId: wallRoomMaterial[wall.id],
-        highlightColor,
+        // No highlightColor override — preserve real material like floors
+        highlightColor: null,
         emissive,
         emissiveIntensity,
         onOpeningClick: handleOpeningClick,
         selectedOpeningId,
         includeWindowReveal: true,
+        extraTextureScale: texParams?.scale,
+        textureRotationDeg: texParams?.rotation,
       });
+
+      // Selection outline for walls (matching floor outline style)
+      let outlineElements: JSX.Element | null = null;
+      if (isSelected) {
+        const dx = wall.to[0] - wall.from[0];
+        const dz = wall.to[1] - wall.from[1];
+        const wallLen = Math.sqrt(dx * dx + dz * dz);
+        const angle = Math.atan2(dz, dx);
+        const nx = -dz / wallLen;
+        const nz = dx / wallLen;
+        const ht = wall.thickness / 2;
+
+        // Build outline rectangle around wall perimeter
+        const outlinePoints = [
+          new THREE.Vector3(wall.from[0] + nx * ht, elevation, wall.from[1] + nz * ht),
+          new THREE.Vector3(wall.to[0] + nx * ht, elevation, wall.to[1] + nz * ht),
+          new THREE.Vector3(wall.to[0] + nx * ht, elevation + wall.height, wall.to[1] + nz * ht),
+          new THREE.Vector3(wall.from[0] + nx * ht, elevation + wall.height, wall.from[1] + nz * ht),
+          new THREE.Vector3(wall.from[0] + nx * ht, elevation, wall.from[1] + nz * ht),
+        ];
+        const outlinePoints2 = [
+          new THREE.Vector3(wall.from[0] - nx * ht, elevation, wall.from[1] - nz * ht),
+          new THREE.Vector3(wall.to[0] - nx * ht, elevation, wall.to[1] - nz * ht),
+          new THREE.Vector3(wall.to[0] - nx * ht, elevation + wall.height, wall.to[1] - nz * ht),
+          new THREE.Vector3(wall.from[0] - nx * ht, elevation + wall.height, wall.from[1] - nz * ht),
+          new THREE.Vector3(wall.from[0] - nx * ht, elevation, wall.from[1] - nz * ht),
+        ];
+        const geo1 = new THREE.BufferGeometry().setFromPoints(outlinePoints);
+        const geo2 = new THREE.BufferGeometry().setFromPoints(outlinePoints2);
+        const outlineMat = new THREE.LineBasicMaterial({ color: '#4a9eff', depthTest: false, transparent: true, opacity: 0.9 });
+        outlineElements = (
+          <>
+            <primitive object={new THREE.LineLoop(geo1, outlineMat)} />
+            <primitive object={new THREE.LineLoop(geo2, outlineMat.clone())} />
+          </>
+        );
+      }
 
       const nodeElements = activeTool === 'select' ? (
         <>
@@ -222,10 +278,11 @@ export default function InteractiveWalls3D() {
           {segments}
           {nodeElements}
           {faceHighlight}
+          {outlineElements}
         </group>
       );
     });
-  }, [walls, rooms, elevation, selectedWallId, selectedFaceSide, selectedOpeningId, hoveredWallId, hoveredFaceSide, activeTool, isPaintMode, isWallMountMode, handleWallClick, handleWallHover, handleWallHoverMove, handleOpeningClick, wallRoomMaterial]);
+  }, [walls, rooms, elevation, selectedWallId, selectedFaceSide, selectedOpeningId, hoveredWallId, hoveredFaceSide, activeTool, isPaintMode, isWallMountMode, handleWallClick, handleWallHover, handleWallHoverMove, handleOpeningClick, wallRoomMaterial, wallRoomTextureParams]);
 
   const cornerBlocks = useMemo(() =>
     generateCornerBlocks(walls, elevation, {
