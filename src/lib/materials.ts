@@ -49,7 +49,7 @@ export const presetMaterials: Material[] = [
     hasTexture: true, repeat: [1, 1], source: 'Poly Haven', realWorldSize: [0.60, 0.60],
     mapPath: '/textures/tile/marble_diff.jpg', normalMapPath: '/textures/tile/marble_nor.jpg', roughnessMapPath: '/textures/tile/marble_rough.jpg' },
   { id: 'mat-subway-tile', name: 'Tunnelbanekakel', type: 'tile', color: '#f0ece8', roughness: 0.22, surfaceCategory: 'tile',
-    hasTexture: true, repeat: [6, 3], source: 'ambientCG', realWorldSize: [0.30, 0.15],
+    hasTexture: true, repeat: [6, 3], source: 'ambientCG', realWorldSize: [0.30, 0.30],
     mapPath: '/textures/tile/subway_diff.jpg', normalMapPath: '/textures/tile/subway_nor.jpg' },
   { id: 'mat-zellige', name: 'Zellige', type: 'tile', color: '#c8d8d0', roughness: 0.35, surfaceCategory: 'tile',
     hasTexture: true, repeat: [4, 4], source: 'CC0', realWorldSize: [0.10, 0.10],
