@@ -65,6 +65,7 @@ const initialLayout: LayoutState = {
       walls: [],
       rooms: [],
       stairs: [],
+      kitchenFixtures: [],
     },
   ],
   activeFloorId: 'floor-1',
