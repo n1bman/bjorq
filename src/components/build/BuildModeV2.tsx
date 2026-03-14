@@ -2452,7 +2452,7 @@ function DesignTabBar() {
         <div className="flex items-center justify-center gap-1 px-2 py-1 border-b border-border/50">
           {subTools.map(({ tool, label, icon: Icon }) => {
             const isActive = activeTool === tool
-              || (tool === 'place-light' && activeTool.startsWith('place-'))
+              || (tool === ('devices' as BuildTool) && (activeTool.startsWith('place-') || activeTool === 'devices'))
               || (tool === ('furnish' as BuildTool) && activeTool === ('furnish' as BuildTool))
               || (tool === ('wizard' as BuildTool) && activeTool === ('wizard' as BuildTool))
               || (tool === ('import' as BuildTool) && activeTool === ('import' as BuildTool));
