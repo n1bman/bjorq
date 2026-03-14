@@ -322,7 +322,7 @@ function SceneContent() {
       <ImportedHome3D />
       <Props3D />
       <KitchenFixture3D />
-      <WallDrawing3D cursorPos={cursorPos} cursorSnapped={cursorSnapped} cursorMidSnap={cursorMidSnap} />
+      <WallDrawing3D cursorPos={cursorPos} cursorSnapped={cursorSnapped} cursorMidSnap={cursorMidSnap} cursorAxisAligned={cursorAxisAligned} />
       <WeatherEffects3D />
       <InlineTerrain3D />
       <DeviceMarkers3D buildMode />

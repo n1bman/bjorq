@@ -117,10 +117,10 @@ function LightMarker({ position, id, onSelect, onDragStart, selected }: MarkerPr
           <spotLight
             ref={spotLightRef}
             color={lightColor}
-            intensity={intensity * 1.5}
-            distance={8}
-            angle={Math.PI / 3}
-            penumbra={0.5}
+            intensity={intensity * 1.2}
+            distance={5}
+            angle={Math.PI / 4}
+            penumbra={0.6}
             decay={2}
             castShadow
             shadow-mapSize-width={512}
