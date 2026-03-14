@@ -1481,8 +1481,21 @@ export default function DeviceMarkers3D({ buildMode, onLongPress }: DeviceMarker
     window.addEventListener('pointerup', onPointerUp);
   }, [buildMode, markers, camera, raycaster, gl, updateDevice]);
 
-  if (markers.length === 0) return null;
+  // Migrate stale light-fixture states (generic → light)
+  const setDeviceState = useAppStore((s) => s.setDeviceState);
+  useEffect(() => {
+    const states = useAppStore.getState().devices.deviceStates;
+    markers.forEach((m) => {
+      if (m.kind === 'light-fixture') {
+        const st = states[m.id];
+        if (!st || st.kind === 'generic') {
+          setDeviceState(m.id, getDefaultState('light-fixture'));
+        }
+      }
+    });
+  }, [markers, setDeviceState]);
 
+  if (markers.length === 0) return null;
   // When not in build mode and markers hidden: only render lights (for pointLight effect)
   const hideVisuals = !buildMode && !showDeviceMarkers;
 
