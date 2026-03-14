@@ -1199,6 +1199,7 @@ function SoundbarMarker3D({ position, id, onSelect, onDragStart, selected }: Mar
 
 // ─── Light Fixture Marker ───
 function LightFixtureMarker({ position, id, onSelect, onDragStart, selected }: MarkerProps) {
+  const appMode = useAppStore((s) => s.appMode);
   const state = useAppStore((s) => s.devices.deviceStates[id]);
   const marker = useAppStore((s) => s.devices.markers.find((m) => m.id === id));
   const hasState = state?.kind === 'light';
@@ -1316,6 +1317,12 @@ function LightFixtureMarker({ position, id, onSelect, onDragStart, selected }: M
           <spotLight ref={spotLightRef} color={lightColor} intensity={isOn ? brightness * cfg.intensity : 0} distance={cfg.distance} angle={cfg.angle} penumbra={cfg.penumbra ?? 0.4} decay={2} position={[0, -0.024, 0]} />
           <object3D ref={spotTargetRef} position={[0, -3, 0]} />
         </>
+      )}
+      {appMode === 'build' && (
+        <mesh>
+          <sphereGeometry args={[0.06, 16, 16]} />
+          <meshStandardMaterial color="#ffffff" transparent opacity={0.15} depthWrite={false} />
+        </mesh>
       )}
       {selected && <SelectionRing radius={0.15} />}
     </group>
