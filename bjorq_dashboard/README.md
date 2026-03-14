@@ -2,7 +2,7 @@
 
 A 3D smart home dashboard for wall-mounted tablets and kiosks.
 
-![Version](https://img.shields.io/badge/version-1.0.8-blue)
+![Version](https://img.shields.io/badge/version-1.1.0-blue)
 
 ## Features
 
@@ -14,7 +14,8 @@ A 3D smart home dashboard for wall-mounted tablets and kiosks.
 - **Surveillance** — Live camera snapshots with motion detection
 - **Energy Monitoring** — Track power consumption per device
 - **Scenes & Automations** — Trigger Home Assistant scenes and automations
-- **Standby Mode** — Auto-dimming clock screen for wall-mounted displays
+- **Standby Mode** — Auto-dimming clock screen with 3D camera preview for wall-mounted displays
+- **Unified Dashboard** — Vertical nav rail with drag-to-reorder widget grid and room-based device grouping
 - **Kiosk Ready** — Designed for fullscreen tablet and kiosk use
 
 ## Installation

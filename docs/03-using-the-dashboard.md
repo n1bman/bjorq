@@ -6,7 +6,15 @@ BJORQ Dashboard has two main areas: the **Home View** (daily use) and **Build Mo
 
 ## Home View
 
-The Home View is the main screen you see on your tablet or kiosk. It shows a 3D view of your home with overlaid widgets and a category-based control grid.
+The Home View is the main screen you see on your tablet or kiosk. It features a vertical **nav rail** (120px sidebar) on the left for category navigation, a top summary bar with clock/weather/energy/scenes widgets, and a flexible widget grid as the main content area.
+
+### 3D Preview Widget
+
+The 3D view of your home is rendered as a draggable widget card in the Home grid. It can be reordered alongside other widgets using the drag-to-reorder system. Other widget cards flow naturally below the 3D preview.
+
+### Widget Reordering
+
+Long-press (500ms) on the Home grid to enter edit mode. Cards wobble to indicate they are draggable. Drag to reorder, then tap **Klar** to save. The toolbar row also includes **Redigera** (toggle edit mode) and **Hantera kategorier** (custom category management) — all on the same line.
 
 ### Widgets
 

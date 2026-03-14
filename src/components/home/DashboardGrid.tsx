@@ -156,13 +156,14 @@ function HomeCategory() {
     setDraggingCatIndex(null);
   };
 
-  // Build sortable items from entries
+  // Build sortable items: 3D preview as first widget + category entries
   const sortableItems: SortableItem[] = useMemo(() => {
+    const base: SortableItem[] = [{ id: '__3d_preview__', colSpan: 2 }];
     const saved = categoryLayouts?.home;
     if (saved && saved.length > 0) {
-      // Restore saved order, add any new entries not in saved
       const ordered: SortableItem[] = [];
       for (const s of saved) {
+        if (s.widgetId === '__3d_preview__') continue;
         const found = entries.find((e) => e.key === s.widgetId);
         if (found) ordered.push({ id: s.widgetId, colSpan: s.colSpan });
       }
@@ -171,40 +172,50 @@ function HomeCategory() {
           ordered.push({ id: e.key, colSpan: e.devices.length >= 5 ? 2 : 1 });
         }
       }
-      return ordered;
+      return [...base, ...ordered];
     }
-    return entries.map((e) => ({
-      id: e.key,
-      colSpan: (e.devices.length >= 5 ? 2 : 1) as 1 | 2,
-    }));
+    return [
+      ...base,
+      ...entries.map((e) => ({
+        id: e.key,
+        colSpan: (e.devices.length >= 5 ? 2 : 1) as 1 | 2,
+      })),
+    ];
   }, [entries, categoryLayouts]);
 
   const handleReorder = (newOrder: SortableItem[]) => {
-    setCategoryLayout('home', newOrder.map((item, i) => ({
-      widgetId: item.id,
-      order: i,
-      colSpan: item.colSpan,
-    })));
+    setCategoryLayout('home', newOrder
+      .filter((item) => item.id !== '__3d_preview__')
+      .map((item, i) => ({
+        widgetId: item.id,
+        order: i,
+        colSpan: item.colSpan,
+      })));
   };
 
   // Sort entries to match sortable order
   const orderedEntries = useMemo(() => {
     return sortableItems
+      .filter((item) => item.id !== '__3d_preview__')
       .map((item) => entries.find((e) => e.key === item.id))
       .filter(Boolean) as typeof entries;
   }, [sortableItems, entries]);
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end gap-2">
-        <Button size="sm" variant={editMode ? 'default' : 'outline'} className="h-7 text-[10px] gap-1"
-          onClick={() => setEditMode(!editMode)}>
-          {editMode ? <><X size={10} /> Klar</> : <><Pencil size={10} /> Redigera</>}
-        </Button>
-        <Button size="sm" variant="outline" className="h-7 text-[10px]"
-          onClick={() => setShowManager(!showManager)}>
-          {showManager ? 'Stäng' : 'Hantera kategorier'}
-        </Button>
+      {/* Unified toolbar: title + all buttons on same row */}
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="text-sm font-semibold text-foreground">Hem</h2>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" className="h-7 text-[10px]"
+            onClick={() => setShowManager(!showManager)}>
+            {showManager ? 'Stäng' : 'Hantera kategorier'}
+          </Button>
+          <Button size="sm" variant={editMode ? 'default' : 'outline'} className="h-7 text-[10px] gap-1"
+            onClick={() => setEditMode(!editMode)}>
+            {editMode ? <><X size={10} /> Klar</> : <><Pencil size={10} /> Redigera</>}
+          </Button>
+        </div>
       </div>
 
       {editMode && (
@@ -215,28 +226,35 @@ function HomeCategory() {
 
       {showManager && <CategoryManager />}
 
-      {orderedEntries.length > 0 ? (
-        <SortableWidgetGrid
-          items={sortableItems}
-          onReorder={handleReorder}
-          columns={3}
-        >
-          {orderedEntries.map((entry, index) => (
-            <CategoryCard
-              key={entry.key}
-              category={entry.label}
-              categoryId={entry.catId}
-              devices={entry.devices}
-              span={entry.devices.length >= 5}
-              editMode={editMode}
-              categoryIndex={index}
-              onDropDevice={entry.catId ? (deviceId) => handleDropDevice(entry.catId!, deviceId) : undefined}
-              onDragCategoryStart={() => setDraggingCatIndex(index)}
-              onDropCategory={() => handleDropCategory(index)}
-            />
-          ))}
-        </SortableWidgetGrid>
-      ) : (
+      <SortableWidgetGrid
+        items={sortableItems}
+        onReorder={handleReorder}
+        columns={3}
+        editMode={editMode}
+      >
+        {/* 3D Preview widget */}
+        <div className="glass-panel glass-panel-hover rounded-2xl overflow-hidden h-[280px]">
+          <Scene3D />
+        </div>
+
+        {/* Category cards */}
+        {orderedEntries.map((entry, index) => (
+          <CategoryCard
+            key={entry.key}
+            category={entry.label}
+            categoryId={entry.catId}
+            devices={entry.devices}
+            span={entry.devices.length >= 5}
+            editMode={editMode}
+            categoryIndex={index}
+            onDropDevice={entry.catId ? (deviceId) => handleDropDevice(entry.catId!, deviceId) : undefined}
+            onDragCategoryStart={() => setDraggingCatIndex(index)}
+            onDropCategory={() => handleDropCategory(index)}
+          />
+        ))}
+      </SortableWidgetGrid>
+
+      {orderedEntries.length === 0 && (
         <div className="text-center py-6">
           <p className="text-sm text-muted-foreground">Inga enheter ännu</p>
           <p className="text-xs text-muted-foreground/60 mt-1">Gå till Design → Inredning → Enheter för att placera</p>

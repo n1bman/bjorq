@@ -175,10 +175,10 @@ export default function CategoryCard({
                 >
                   {editMode && <GripVertical size={10} className="text-muted-foreground/50 shrink-0" />}
                   <span className="text-sm">{emoji}</span>
-                  <span className="text-sm text-foreground truncate flex-1">{d.name || d.kind}</span>
+                  <span className="text-sm text-foreground flex-1 min-w-[60px]" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.name || d.kind}</span>
 
                   {!editMode && state?.kind === 'light' && state.data.on && !expanded && (
-                    <div className="w-16" onClick={(e) => e.stopPropagation()}>
+                    <div className="w-14 shrink-0" onClick={(e) => e.stopPropagation()}>
                       <Slider
                         value={[state.data.brightness]}
                         max={255} step={1}
