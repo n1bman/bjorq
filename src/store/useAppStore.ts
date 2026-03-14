@@ -65,6 +65,7 @@ const initialLayout: LayoutState = {
       walls: [],
       rooms: [],
       stairs: [],
+      kitchenFixtures: [],
     },
   ],
   activeFloorId: 'floor-1',
@@ -834,6 +835,27 @@ const storeCreator = (set: any, get: any): AppState => ({
         ...s.layout,
         floors: s.layout.floors.map((f: any) =>
           f.id === floorId ? { ...f, stairs: f.stairs.filter((st: any) => st.id !== stairId) } : f
+        ),
+      },
+    })),
+
+  // Kitchen fixture actions
+  addKitchenFixture: (floorId, fixture) =>
+    set((s: any) => ({
+      layout: {
+        ...s.layout,
+        floors: s.layout.floors.map((f: any) =>
+          f.id === floorId ? { ...f, kitchenFixtures: [...(f.kitchenFixtures || []), fixture] } : f
+        ),
+      },
+    })),
+
+  removeKitchenFixture: (floorId, fixtureId) =>
+    set((s: any) => ({
+      layout: {
+        ...s.layout,
+        floors: s.layout.floors.map((f: any) =>
+          f.id === floorId ? { ...f, kitchenFixtures: (f.kitchenFixtures || []).filter((k: any) => k.id !== fixtureId) } : f
         ),
       },
     })),

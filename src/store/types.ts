@@ -133,6 +133,13 @@ export interface StairItem {
   toFloorId: string;
 }
 
+export interface KitchenFixture {
+  id: string;
+  floorId: string;
+  position: [number, number]; // x, z (bottom-center)
+  rotation: number; // radians
+}
+
 // ─── Vacuum Mapping ───
 export interface VacuumZone {
   roomId: string;
@@ -154,6 +161,7 @@ export interface Floor {
   walls: WallSegment[];
   rooms: Room[];
   stairs: StairItem[];
+  kitchenFixtures: KitchenFixture[];
   floorplanImage?: string;
   pixelsPerMeter?: number;
   vacuumMapping?: VacuumMapping;
@@ -218,7 +226,7 @@ export type CameraMode = 'topdown' | '3d' | 'floor-isolate';
 
 
 export interface BuildSelection {
-  type: 'wall' | 'opening' | 'room' | 'prop' | 'stair' | 'device' | null;
+  type: 'wall' | 'opening' | 'room' | 'prop' | 'stair' | 'device' | 'kitchen-fixture' | null;
   id: string | null;
   /** Which wall face was clicked (paint mode). Added Phase B2. */
   faceSide?: 'left' | 'right' | null;
@@ -775,6 +783,7 @@ export interface RoomTemplate {
   width: number;
   depth: number;
   category: RoomTemplateCategory;
+  fixture?: string;
 }
 
 // ─── Device Categories ───
@@ -1106,6 +1115,10 @@ export interface AppState {
   // Stair actions
   addStair: (floorId: string, stair: StairItem) => void;
   removeStair: (floorId: string, stairId: string) => void;
+
+  // Kitchen fixture actions
+  addKitchenFixture: (floorId: string, fixture: KitchenFixture) => void;
+  removeKitchenFixture: (floorId: string, fixtureId: string) => void;
 
   // Props actions
   addToCatalog: (item: PropCatalogItem) => void;

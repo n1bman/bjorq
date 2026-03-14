@@ -6,9 +6,12 @@ import { cn } from '../../../lib/utils';
 
 const categories: RoomTemplateCategory[] = ['bedroom', 'kitchen', 'livingroom', 'bathroom'];
 
+const generateId = () => Math.random().toString(36).slice(2, 10);
+
 export default function TemplatesPicker() {
   const activeFloorId = useAppStore((s) => s.layout.activeFloorId);
   const addRoomFromRect = useAppStore((s) => s.addRoomFromRect);
+  const addKitchenFixture = useAppStore((s) => s.addKitchenFixture);
   const [activeCategory, setActiveCategory] = useState<RoomTemplateCategory>('bedroom');
 
   const filtered = roomTemplates.filter((t) => t.category === activeCategory);
@@ -17,6 +20,15 @@ export default function TemplatesPicker() {
     if (!activeFloorId) return;
     // Place at origin (user can move later)
     addRoomFromRect(activeFloorId, 0, 0, tpl.width, tpl.depth, tpl.name);
+    // If template has a kitchen fixture, spawn it along the back wall
+    if (tpl.fixture === 'standard-kitchen') {
+      addKitchenFixture(activeFloorId, {
+        id: generateId(),
+        floorId: activeFloorId,
+        position: [0, -(tpl.depth / 2) + 0.30],
+        rotation: 0,
+      });
+    }
   };
 
   return (
