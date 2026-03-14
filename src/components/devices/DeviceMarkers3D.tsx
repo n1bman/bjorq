@@ -77,7 +77,7 @@ function LightMarker({ position, id, onSelect, onDragStart, selected }: MarkerPr
     <group position={position} onClick={handleClick} onPointerDown={handlePointerDown}>
       {/* Light source varies by type */}
       {lightType === 'ceiling' && (
-        <pointLight color={lightColor} intensity={intensity} distance={8} decay={2} />
+        <pointLight color={lightColor} intensity={intensity} distance={5} decay={2} />
       )}
       {lightType === 'strip' && (
         <>
