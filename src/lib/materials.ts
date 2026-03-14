@@ -159,7 +159,7 @@ export const presetMaterials: Material[] = [
     hasTexture: true, source: 'ambientCG', realWorldSize: [0.15, 0.90],
     ambientCGId: 'WoodFloor006',
     thumbnailUrl: 'https://acg-media.struffelproductions.com/file/ambientCG-Web/media/thumbnail/256-JPG-FFFFFF/WoodFloor006.jpg',
-    mapPath: '/textures/floor/wood/bamboo_diff.jpg' },
+    mapPath: 'https://acg-media.struffelproductions.com/file/ambientCG-Web/media/thumbnail/2048-JPG-FFFFFF/WoodFloor006.jpg' },
 
   // ─── Floor: Tile (5) ───
   { id: 'floor-porcelain-large', name: 'Stor porslin', type: 'tile', color: '#e8e4e0', roughness: 0.22, surfaceCategory: 'tile', floorOnly: true,
