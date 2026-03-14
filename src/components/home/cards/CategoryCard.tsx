@@ -16,6 +16,7 @@ const kindEmoji: Record<DeviceKind, string> = {
   alarm: '🚨', 'water-heater': '🔥', humidifier: '💧',
   siren: '🔔', valve: '🔧', remote: '📡', 'lawn-mower': '🌿',
   speaker: '🔊', soundbar: '🎵',
+  'light-fixture': '💡', 'smart-outlet': '🔌',
 };
 
 function isOn(state?: DeviceState): boolean {
