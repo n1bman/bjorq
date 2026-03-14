@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { PenTool } from 'lucide-react';
+import { PenTool, Home } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useAppStore } from '../../store/useAppStore';
 import { useWeatherSync } from '../../hooks/useWeatherSync';
@@ -14,6 +14,9 @@ import type { DashCategory } from '../../store/types';
 /** Categories where the 3D preview is shown */
 const SHOW_3D: Set<DashCategory> = new Set(['home', 'devices', 'surveillance', 'robot']);
 
+/** Categories that use page-like layout instead of widget grid */
+const PAGE_LAYOUT: Set<DashCategory> = new Set(['graphics', 'settings']);
+
 export default function DashboardShell() {
   useWeatherSync();
   const activeCategory = useAppStore((s) => s.dashboard.activeCategory) ?? 'home';
@@ -23,6 +26,7 @@ export default function DashboardShell() {
 
   const Content = categoryContent[activeCategory];
   const show3D = SHOW_3D.has(activeCategory);
+  const isPage = PAGE_LAYOUT.has(activeCategory);
 
   const handleCategoryClick = useCallback((key: DashCategory) => {
     setDashCategory(key);
@@ -31,8 +35,15 @@ export default function DashboardShell() {
   return (
     <div className="fixed inset-0 bg-background flex">
       {/* ── Left Nav Rail ── */}
-      <nav className="w-[72px] shrink-0 flex flex-col bg-sidebar border-r border-sidebar-border overflow-y-auto overflow-x-hidden">
-        <div className="flex-1 flex flex-col items-center gap-0.5 py-3">
+      <nav className="w-[120px] shrink-0 flex flex-col nav-rail-bg overflow-y-auto overflow-x-hidden">
+        {/* Logo area */}
+        <div className="flex items-center justify-center py-4 px-3">
+          <span className="text-sm font-bold tracking-widest text-primary" style={{ fontFamily: 'Space Grotesk, system-ui' }}>
+            BJORQ
+          </span>
+        </div>
+
+        <div className="flex-1 flex flex-col gap-0.5 px-2 py-1">
           {categories.map(({ key, label, icon: Icon }) => {
             const active = activeCategory === key;
             return (
@@ -40,16 +51,16 @@ export default function DashboardShell() {
                 key={key}
                 onClick={() => handleCategoryClick(key)}
                 className={cn(
-                  'relative flex flex-col items-center justify-center gap-0.5 w-[60px] h-[56px] rounded-xl text-[9px] font-medium transition-all select-none',
+                  'relative flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl text-[11px] font-medium transition-all select-none text-left',
                   active
-                    ? 'bg-primary/15 text-primary'
-                    : 'text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50'
+                    ? 'nav-item-active text-primary'
+                    : 'text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/40 border-l-[3px] border-transparent'
                 )}
               >
-                <Icon size={20} strokeWidth={active ? 2.2 : 1.6} />
-                <span className="leading-tight truncate w-full text-center px-0.5">{label}</span>
+                <Icon size={18} strokeWidth={active ? 2.2 : 1.5} className="shrink-0" />
+                <span className="leading-tight truncate">{label}</span>
                 {key === 'activity' && unreadCount > 0 && (
-                  <span className="absolute top-1 right-1.5 bg-destructive text-destructive-foreground text-[7px] font-bold rounded-full min-w-[14px] h-[14px] flex items-center justify-center px-0.5">
+                  <span className="absolute top-1.5 left-[26px] bg-destructive text-destructive-foreground text-[7px] font-bold rounded-full min-w-[14px] h-[14px] flex items-center justify-center px-0.5">
                     {unreadCount > 9 ? '9+' : unreadCount}
                   </span>
                 )}
@@ -58,13 +69,27 @@ export default function DashboardShell() {
           })}
         </div>
 
-        {/* Build mode shortcut at bottom */}
-        <div className="flex flex-col items-center pb-4 pt-2 border-t border-sidebar-border">
+        {/* Bottom: Home + Design shortcuts */}
+        <div className="flex flex-col gap-1 px-2 pb-4 pt-2 border-t border-sidebar-border/40">
+          <button
+            onClick={() => {
+              setDashCategory('home');
+            }}
+            className={cn(
+              'flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl text-[11px] font-medium transition-all border-l-[3px] border-transparent',
+              activeCategory === 'home'
+                ? 'text-primary'
+                : 'text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/40'
+            )}
+          >
+            <Home size={18} strokeWidth={1.5} className="shrink-0" />
+            <span>Hem</span>
+          </button>
           <button
             onClick={() => setAppMode('build')}
-            className="flex flex-col items-center justify-center gap-0.5 w-[60px] h-[56px] rounded-xl text-[9px] font-medium text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-all"
+            className="flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl text-[11px] font-medium text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/40 transition-all border-l-[3px] border-transparent"
           >
-            <PenTool size={20} strokeWidth={1.6} />
+            <PenTool size={18} strokeWidth={1.5} className="shrink-0" />
             <span>Design</span>
           </button>
         </div>
@@ -73,7 +98,7 @@ export default function DashboardShell() {
       {/* ── Main Content Area ── */}
       <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
         {/* Top summary cards */}
-        <div className="shrink-0 flex items-start gap-3 px-5 py-3 border-b border-border overflow-x-auto">
+        <div className="shrink-0 flex items-start gap-3 px-5 py-3 summary-bar overflow-x-auto">
           <ClockWidget />
           <WeatherWidget />
           <EnergyWidget />
@@ -84,18 +109,27 @@ export default function DashboardShell() {
         <div className="flex-1 min-h-0 overflow-y-auto">
           <div className={cn(
             'p-5 pb-8',
-            show3D && 'grid gap-5',
-            show3D && 'grid-cols-1 lg:grid-cols-[minmax(300px,2fr)_3fr]'
+            isPage
+              ? '' /* page-like sections get full width, no grid */
+              : show3D
+                ? 'grid gap-5 grid-cols-1 lg:grid-cols-[minmax(300px,2fr)_3fr]'
+                : ''
           )}>
             {/* 3D Preview card */}
-            {show3D && (
-              <div className="glass-panel rounded-2xl overflow-hidden h-[280px] lg:h-full lg:min-h-[320px] lg:max-h-[480px]">
+            {show3D && !isPage && (
+              <div className="glass-panel glass-panel-hover rounded-2xl overflow-hidden h-[280px] lg:h-full lg:min-h-[280px] lg:max-h-[360px]">
                 <Scene3D />
               </div>
             )}
 
             {/* Category content */}
-            <div className={cn(show3D ? 'min-w-0' : 'max-w-[1200px] mx-auto w-full')}>
+            <div className={cn(
+              isPage
+                ? 'w-full'
+                : show3D
+                  ? 'min-w-0'
+                  : 'max-w-[1200px] mx-auto w-full'
+            )}>
               <Content />
             </div>
           </div>
