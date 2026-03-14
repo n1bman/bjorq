@@ -42,7 +42,7 @@ export default function HomeView() {
   const hideAllMarkers = useAppStore((s) => s.hideAllMarkers);
   const toggleDeviceState = useAppStore((s) => s.toggleDeviceState);
   const deviceStates = useAppStore((s) => s.devices.deviceStates);
-  const saveHomeStartCamera = useAppStore((s) => s.saveHomeStartCamera);
+  
   const [pickerOpen, setPickerOpen] = useState(false);
   const [longPressId, setLongPressId] = useState<string | null>(null);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
