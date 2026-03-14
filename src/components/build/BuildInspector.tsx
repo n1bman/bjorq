@@ -1249,6 +1249,7 @@ function DeviceInspector({ deviceId, close }: { deviceId: string; close: React.R
               { value: 'led-bulb' as const, label: 'LED Lampa', emoji: '💡' },
               { value: 'led-bar' as const, label: 'LED Bar', emoji: '▬' },
               { value: 'led-spot' as const, label: 'LED Spot', emoji: '⚪' },
+              { value: 'led-gu10' as const, label: 'LED Spotlight', emoji: '🔦' },
             ]).map(({ value, label, emoji }) => (
               <button
                 key={value}
