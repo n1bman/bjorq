@@ -1206,7 +1206,6 @@ function LightFixtureMarker({ position, id, onSelect, onDragStart, selected }: M
   }, [lightData?.colorMode, lightData?.rgbColor?.[0], lightData?.rgbColor?.[1], lightData?.rgbColor?.[2], lightData?.colorTemp, isOn, hasState]);
 
   const brightness = isOn ? (lightData?.brightness ?? 200) / 255 : 0;
-  const intensity = isOn ? brightness * 3 : 0;
 
   useFrame(() => {
     if (spotLightRef.current && spotTargetRef.current) {
