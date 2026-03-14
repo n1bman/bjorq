@@ -1244,7 +1244,7 @@ function LightFixtureMarker({ position, id, onSelect, onDragStart, selected }: M
             <boxGeometry args={[0.56, 0.005, 0.025]} />
             <meshStandardMaterial color={lightColor} emissive={lightColor} emissiveIntensity={isOn ? brightness * 2.5 : 0.1} transparent opacity={isOn ? 0.85 : 0.3} />
           </mesh>
-          <spotLight ref={spotLightRef} color={lightColor} intensity={intensity * 1.2} distance={5} angle={Math.PI / 3} penumbra={0.7} decay={2} castShadow />
+          <spotLight ref={spotLightRef} color={lightColor} intensity={isOn ? brightness * 4 : 0} distance={5} angle={Math.PI / 3} penumbra={0.7} decay={2} castShadow />
           <object3D ref={spotTargetRef} position={[0, -3, 0]} />
         </>
       )}
