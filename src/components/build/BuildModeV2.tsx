@@ -27,7 +27,6 @@ import {
 } from 'lucide-react';
 import { domainToKind } from '../../lib/haDomainMapping';
 import VacuumMappingTools from './devices/VacuumMappingTools';
-import TemplatesPicker from './structure/TemplatesPicker';
 import { cn } from '../../lib/utils';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogFooter } from '../ui/dialog';
@@ -229,7 +228,14 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
     catalog.filter(c => c.wizardMode === 'imported' && c.wizardAssetId).map(c => c.wizardAssetId!)
   ), [catalog]);
 
+  const addKitchenFixture = useAppStore((s) => s.addKitchenFixture);
+
   const allEntries: ACEntry[] = [
+    // Built-in procedural kitchen
+    {
+      id: 'builtin-standard-kitchen', name: 'Standardkök 🍳', category: 'kitchen',
+      source: 'builtin', dimensions: { width: 3.80, depth: 0.60, height: 2.40 },
+    },
     ...curatedAssets.map((c): ACEntry => ({
       id: c.id, name: c.name, thumbnail: c.thumbnail ? `/catalog/${c.thumbnail}` : undefined,
       category: c.category, source: 'curated', modelPath: `/catalog/${c.model}`, curatedMeta: c,
@@ -477,6 +483,18 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
   const handlePlaceEntry = useCallback(async (entry: ACEntry) => {
     if (!activeFloorId) return;
 
+    // Built-in procedural kitchen
+    if (entry.id === 'builtin-standard-kitchen') {
+      addKitchenFixture(activeFloorId, {
+        id: generateId(),
+        floorId: activeFloorId,
+        position: [0, 0],
+        rotation: 0,
+      });
+      toast.success('Standardkök placerat');
+      return;
+    }
+
     // Stale synced entries → need re-import from Wizard
     if (entry.staleSync && entry.catalogItem?.wizardAssetId) {
       // Try to re-import if wizard is connected
@@ -546,7 +564,7 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
     } else if (entry.catalogItem) {
       placePropFn(entry.catalogItem.id, entry.catalogItem.url);
     }
-  }, [activeFloorId, catalog, addToCatalog, placePropFn, handleWizardImport, removeFromCatalog, wizardStatus]);
+  }, [activeFloorId, catalog, addToCatalog, placePropFn, handleWizardImport, removeFromCatalog, wizardStatus, addKitchenFixture]);
 
   const openManageDialog = useCallback((entry: ACEntry) => { setManageAsset(entry); setManageName(entry.name); setManageCategory((entry.category as AssetCategory) || 'imported'); setManageSubcategory(entry.subcategory || ''); setManagePlacement(entry.curatedMeta?.placement || 'floor'); setManageDialogOpen(true); }, []);
   const handleSaveMeta = useCallback(async () => { if (!manageAsset) return; try { await updateCatalogMeta(manageAsset.id, { name: manageName.trim() || manageAsset.name, category: manageCategory, subcategory: manageSubcategory || undefined, placement: managePlacement }); clearCatalogCache(); loadCuratedCatalog().then(setCuratedAssets); toast.success('Metadata uppdaterad'); setManageDialogOpen(false); } catch { toast.error('Kunde inte uppdatera'); } }, [manageAsset, manageName, manageCategory, manageSubcategory, managePlacement]);
@@ -2359,7 +2377,7 @@ const planritningTools: SubToolDef[] = [
   { tool: 'window', label: 'Fönster', icon: PanelTop },
   { tool: 'garage-door', label: 'Garage', icon: Warehouse },
   { tool: 'stairs', label: 'Trappa', icon: Footprints },
-  { tool: 'template', label: 'Mallar', icon: Package },
+  
   { tool: 'measure', label: 'Mät', icon: Ruler },
   { tool: 'calibrate', label: 'Skala', icon: Ruler },
   { tool: 'copy', label: 'Kopiera', icon: Import },
@@ -2457,7 +2475,7 @@ export default function BuildModeV2() {
   const showDevicePanel = !isBibliotek && (activeTool.startsWith('place-') || activeTool === 'vacuum-zone' || activeTool === ('place-vacuum-dock' as any));
   const showImportPanel = !isBibliotek && activeTab === 'planritning' && isImported && activeTool === 'import';
   const showSurfacePanel = !isBibliotek && activeTool === 'paint';
-  const showTemplatePanel = !isBibliotek && activeTab === 'planritning' && activeTool === 'template';
+  
   // In Inredning: catalog only when furnish or wizard tool is active (not always). In Planritning: when furnish/wizard tool active
   const showCatalogPanel = !isBibliotek && !showSurfacePanel && (
     isInredning
@@ -2509,12 +2527,6 @@ export default function BuildModeV2() {
               <Suspense fallback={null}>
                 <ImportTools />
               </Suspense>
-            </div>
-          )}
-          {/* Templates panel (Planritning only) */}
-          {showTemplatePanel && !showDevicePanel && !showSurfacePanel && (
-            <div className="absolute left-0 top-0 bottom-0 w-[220px] bg-card/95 backdrop-blur-sm border-r border-border z-20 overflow-y-auto py-3 px-2">
-              <TemplatesPicker />
             </div>
           )}
           {/* Asset catalog — primary surface in Inredning */}
