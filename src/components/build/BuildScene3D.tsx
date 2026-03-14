@@ -321,7 +321,7 @@ function SceneContent() {
       <Stairs3D />
       <ImportedHome3D />
       <Props3D />
-      <KitchenFixture3D />
+      <KitchenFixtureObject3D />
       <WallDrawing3D cursorPos={cursorPos} cursorSnapped={cursorSnapped} cursorMidSnap={cursorMidSnap} cursorAxisAligned={cursorAxisAligned} />
       <WeatherEffects3D />
       <InlineTerrain3D />
