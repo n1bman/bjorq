@@ -1157,7 +1157,7 @@ function InlinedDevicePlacementTools() {
   const removeDevice = useAppStore((s) => s.removeDevice);
   const setSelection = useAppStore((s) => s.setSelection);
   const selectedId = useAppStore((s) => s.build.selection.type === 'device' ? s.build.selection.id : null);
-  const [openCategories, setOpenCategories] = useState<Set<string>>(new Set(['Ljus']));
+  const [openCategories, setOpenCategories] = useState<Set<string>>(new Set());
 
   const floorMarkers = markers.filter((m) => m.floorId === activeFloorId);
 
