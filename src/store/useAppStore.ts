@@ -10,6 +10,7 @@ import { DEFAULT_ENVIRONMENT_PROFILE, computeEnvironmentProfile } from '../lib/e
 export function getDefaultState(kind: DeviceKind): DeviceState {
   switch (kind) {
     case 'light':
+    case 'light-fixture':
       return { kind: 'light', data: { on: true, brightness: 200, colorTemp: 300, colorMode: 'temp' } };
     case 'camera':
       return { kind: 'camera', data: { on: true, streaming: false } };
