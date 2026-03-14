@@ -389,7 +389,7 @@ function renderOpeningModels(
 
       const panelColor = '#f0ebe5';
       const railColor = '#e8e0d8';
-      const panelRecess = leafThick / 2 - 0.003;
+      const panelRecess = leafThick / 2 - 0.008;
 
       // Helper: render a recessed panel on BOTH sides of the door
       const panelMeshBoth = (key: string, lx: number, cy: number, w: number, h: number, color: string, depth: number) => {
@@ -401,7 +401,8 @@ function renderOpeningModels(
             <mesh key={`${key}-s${si}`} position={pos.toArray()} rotation={[0, -angle, 0]} castShadow {...openingPointer}>
               <boxGeometry args={[w, h, depth]} />
               <meshStandardMaterial color={color} roughness={0.4}
-                emissive={opEmissive} emissiveIntensity={opEmissiveIntensity} />
+                emissive={opEmissive} emissiveIntensity={opEmissiveIntensity}
+                polygonOffset polygonOffsetFactor={-1} polygonOffsetUnits={-1} />
             </mesh>
           );
         });
