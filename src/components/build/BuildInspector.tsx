@@ -8,7 +8,7 @@ import { Switch } from '../ui/switch';
 import { presetMaterials, addCustomMaterial, wallSurfaceCategories, floorSurfaceCategories, surfaceCategoryLabels, getMaterialsByCategory } from '../../lib/materials';
 import { openingPresets, getPresetsByType } from '../../lib/openingPresets';
 import { useState, useRef } from 'react';
-import type { DeviceKind, DeviceSurface, ScreenConfig, LightType, WallOpening } from '../../store/types';
+import type { DeviceKind, DeviceSurface, ScreenConfig, LightType, LightConfig, WallOpening } from '../../store/types';
 import HAEntityPicker from './devices/HAEntityPicker';
 import { generateId } from '../../lib/buildUtils';
 
