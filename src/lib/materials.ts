@@ -252,7 +252,7 @@ export const presetMaterials: Material[] = [
     hasTexture: true, source: 'ambientCG', realWorldSize: [0.50, 0.50],
     ambientCGId: 'Fabric030',
     thumbnailUrl: 'https://acg-media.struffelproductions.com/file/ambientCG-Web/media/thumbnail/256-JPG-FFFFFF/Fabric030.jpg',
-    mapPath: '/textures/floor/carpet/cut_beige_diff.jpg' },
+    mapPath: 'https://acg-media.struffelproductions.com/file/ambientCG-Web/media/thumbnail/2048-JPG-FFFFFF/Fabric030.jpg' },
   { id: 'floor-sisal', name: 'Sisal natur', type: 'custom', color: '#b8a878', roughness: 0.88, surfaceCategory: 'carpet', floorOnly: true,
     hasTexture: true, source: 'ambientCG', realWorldSize: [0.40, 0.40],
     ambientCGId: 'Fabric029',
