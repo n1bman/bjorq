@@ -73,7 +73,21 @@ function LightMarker({ position, id, onSelect, onDragStart, selected }: MarkerPr
     if (selected && onDragStart) { onDragStart(id, e); }
   }, [selected, onDragStart, id]);
 
-  const intensity = isOn ? brightness * 4 : 0;
+  // Per-device light config with type-specific defaults
+  const cfg = useMemo(() => {
+    const defaults: Record<string, { intensity: number; distance: number; angle: number; penumbra: number }> = {
+      'ceiling':       { intensity: 4, distance: 5, angle: Math.PI, penumbra: 0 },
+      'ceiling-small': { intensity: 2, distance: 3, angle: Math.PI, penumbra: 0 },
+      'strip':         { intensity: 2, distance: 6, angle: Math.PI, penumbra: 0 },
+      'lightbar':      { intensity: 5.2, distance: 5, angle: Math.PI / 4, penumbra: 0.5 },
+      'spot':          { intensity: 6, distance: 6, angle: Math.PI / 7, penumbra: 0.4 },
+      'wall':          { intensity: 4.8, distance: 5, angle: Math.PI / 4, penumbra: 0.6 },
+    };
+    const d = defaults[lightType] ?? defaults['ceiling'];
+    return { ...d, ...marker?.lightConfig };
+  }, [lightType, marker?.lightConfig]);
+
+  const intensity = isOn ? brightness * cfg.intensity : 0;
 
   return (
     <group position={position} onClick={handleClick} onPointerDown={handlePointerDown}>
