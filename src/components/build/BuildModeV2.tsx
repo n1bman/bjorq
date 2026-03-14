@@ -228,7 +228,14 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
     catalog.filter(c => c.wizardMode === 'imported' && c.wizardAssetId).map(c => c.wizardAssetId!)
   ), [catalog]);
 
+  const addKitchenFixture = useAppStore((s) => s.addKitchenFixture);
+
   const allEntries: ACEntry[] = [
+    // Built-in procedural kitchen
+    {
+      id: 'builtin-standard-kitchen', name: 'Standardkök 🍳', category: 'kitchen',
+      source: 'builtin', dimensions: { width: 3.80, depth: 0.60, height: 2.40 },
+    },
     ...curatedAssets.map((c): ACEntry => ({
       id: c.id, name: c.name, thumbnail: c.thumbnail ? `/catalog/${c.thumbnail}` : undefined,
       category: c.category, source: 'curated', modelPath: `/catalog/${c.model}`, curatedMeta: c,
