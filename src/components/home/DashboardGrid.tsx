@@ -464,7 +464,7 @@ function GraphicsCategory() {
   );
 }
 
-const categoryContent: Record<DashCategory, React.FC> = {
+export const categoryContent: Record<DashCategory, React.FC> = {
   home: HomeCategory,
   weather: WeatherCategory,
   calendar: CalendarCategory,
