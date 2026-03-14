@@ -15,7 +15,7 @@ import Props3D from './build/Props3D';
 import DeviceMarkers3D from './devices/DeviceMarkers3D';
 import WeatherEffects3D from './build/WeatherEffects3D';
 import Ceilings3D from './build/Ceilings3D';
-import KitchenFixture3D from './build/KitchenFixture3D'; // stable
+import KitchenFixtureObject3D from './build/KitchenFixtureObject3D';
 
 import GroundPlane from './build/GroundPlane';
 import type { CameraPreset, StandbyCameraView } from '../store/types';
@@ -242,7 +242,7 @@ function SceneContent() {
       <Stairs3D />
       <ImportedHome3D />
       <Props3D />
-      <KitchenFixture3D />
+      <KitchenFixtureObject3D />
       <WeatherEffects3D />
       <InlineTerrainEnvironment3D />
       <DeviceMarkers3D />
