@@ -24,7 +24,9 @@ export function isWallMountable(item: {
   placement?: AssetPlacement;
   category?: string;
 }): boolean {
-  if (item.placement === 'wall') return true;
+  // Explicit placement takes priority — if set to anything other than 'wall', respect it
+  if (item.placement) return item.placement === 'wall';
+  // Fallback to category only when no explicit placement is set
   if (item.category && WALL_MOUNT_CATEGORIES.has(item.category)) return true;
   return false;
 }

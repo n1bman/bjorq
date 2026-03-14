@@ -607,7 +607,7 @@ export type AssetCategory =
   | 'lighting' | 'decor' | 'plants' | 'kitchen' | 'bathroom'
   | 'devices' | 'outdoor' | 'electronics' | 'smart-devices' | 'imported';
 
-export type AssetPlacement = 'floor' | 'wall' | 'ceiling' | 'table';
+export type AssetPlacement = 'floor' | 'wall' | 'ceiling' | 'table' | 'free';
 
 export interface AssetDimensions {
   width: number;   // meters

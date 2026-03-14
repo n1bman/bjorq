@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1] - 2026-03-14
+
+### Fixed
+- **Bibliotek import** — Imported models now correctly include thumbnail, dimensions, performance stats, subcategory, and base64 persistence for offline use
+- **Wizard thumbnails** — Stale synced wizard models with expired blob URLs now fall back to the Wizard API thumbnail endpoint
+- **Placement per-model** — Placement type (Golv/Vägg/Tak/Bord/Fri) is now respected per-model instead of being overridden by category; explicit placement field takes priority over category defaults
+
+### Added
+- **Free placement type** — New "Fri" (free) placement option allows models to bypass wall barriers and mount logic entirely
+- Free placement option added to Bibliotek metadata editor, catalog manage dialog, and placement filter
+
 ## [1.2.0] - 2026-03-14
 
 ### Added

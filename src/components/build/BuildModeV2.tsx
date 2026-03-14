@@ -244,8 +244,14 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
     ...catalog.map((c): ACEntry => {
       // Stale synced entries get marked for re-import
       const isStaleSync = c.wizardMode === 'synced';
+      // For stale synced items with expired blob thumbnails, try wizard API fallback
+      let thumb = c.thumbnail;
+      if (isStaleSync && c.wizardAssetId && (!thumb || thumb.startsWith('blob:'))) {
+        const base = useAppStore.getState().wizard.url.replace(/\/+$/, '');
+        if (base) thumb = `${base}/assets/${encodeURIComponent(c.wizardAssetId)}/thumbnail`;
+      }
       return {
-        id: c.id, name: c.name, thumbnail: c.thumbnail, category: c.category || 'imported',
+        id: c.id, name: c.name, thumbnail: thumb, category: c.category || 'imported',
         source: isStaleSync ? 'wizard' as const : c.source as any, catalogItem: c,
         dimensions: c.dimensions, performance: c.performance as any, subcategory: c.subcategory,
         wizardMode: c.wizardMode,
@@ -280,7 +286,7 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
   const hasUser = allEntries.some((e) => e.source === 'user' || e.wizardMode === 'imported');
   const hasCurated = allEntries.some((e) => e.source === 'curated');
   const hasWizard = wizardStatus === 'connected' || wizardAssets.length > 0;
-  const PLACEMENT_LABELS: Record<string, string> = { floor: 'Golv', wall: 'Vägg', ceiling: 'Tak', table: 'Yta' };
+  const PLACEMENT_LABELS: Record<string, string> = { floor: 'Golv', wall: 'Vägg', ceiling: 'Tak', table: 'Yta', free: 'Fri' };
   const placementTypes = [...new Set(allEntries.map(e => e.catalogItem?.placement || e.curatedMeta?.placement).filter(Boolean))] as string[];
 
   const filtered = allEntries
@@ -341,7 +347,8 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
     const placement = catItem?.placement || curatedMeta?.placement;
     const category = catItem?.category || curatedMeta?.category;
 
-    if (isWallMountable({ placement, category })) {
+    // 'free' placement skips wall mount entirely
+    if (placement !== 'free' && isWallMountable({ placement, category })) {
       setPendingWallMount({ catalogId, url });
       toast.info('Klicka på en vägg för att placera');
       return;
@@ -351,7 +358,7 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
     const tz = Math.round(cameraRef.target.z * 10) / 10;
     const existing = floorProps.filter((p: any) => p.catalogId === catalogId);
     const offset = existing.length * 0.5;
-    addProp({ id: generateId(), catalogId, floorId: activeFloorId, url, position: [tx + offset, 0, tz + offset], rotation: [0,0,0], scale: [1,1,1] });
+    addProp({ id: generateId(), catalogId, floorId: activeFloorId, url, position: [tx + offset, 0, tz + offset], rotation: [0,0,0], scale: [1,1,1], freePlacement: placement === 'free' });
   }, [activeFloorId, addProp, floorProps, setPendingWallMount]);
 
   const handleImportConfirm = useCallback(async () => {
@@ -942,7 +949,7 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
               <div className="space-y-1"><Label className="text-[10px]">Namn</Label><Input value={manageName} onChange={(e) => setManageName(e.target.value)} className="h-7 text-xs" /></div>
               <div className="space-y-1"><Label className="text-[10px]">Kategori</Label><select value={manageCategory} onChange={(e) => setManageCategory(e.target.value as AssetCategory)} className="w-full h-7 text-xs bg-secondary text-foreground rounded-md px-2 border border-border">{Object.entries(AC_CATEGORY_LABELS).map(([k,v]) => <option key={k} value={k}>{v}</option>)}</select></div>
               <div className="space-y-1"><Label className="text-[10px]">Underkategori</Label><Input value={manageSubcategory} onChange={(e) => setManageSubcategory(e.target.value)} className="h-7 text-xs" /></div>
-              <div className="space-y-1"><Label className="text-[10px]">Placering</Label><select value={managePlacement} onChange={(e) => setManagePlacement(e.target.value)} className="w-full h-7 text-xs bg-secondary text-foreground rounded-md px-2 border border-border"><option value="floor">Golv</option><option value="wall">Vägg</option><option value="ceiling">Tak</option></select></div>
+              <div className="space-y-1"><Label className="text-[10px]">Placering</Label><select value={managePlacement} onChange={(e) => setManagePlacement(e.target.value)} className="w-full h-7 text-xs bg-secondary text-foreground rounded-md px-2 border border-border"><option value="floor">Golv</option><option value="wall">Vägg</option><option value="ceiling">Tak</option><option value="table">Bord/yta</option><option value="free">Fri</option></select></div>
               <div className="flex gap-2"><Button size="sm" variant="outline" onClick={() => thumbRef.current?.click()} className="text-[10px]">Byt thumbnail</Button><Button size="sm" variant="destructive" onClick={handleDeleteCurated} className="text-[10px]">Ta bort</Button></div>
             </div>
           )}
@@ -1702,6 +1709,7 @@ const PLACEMENT_OPTIONS: { value: import('../../store/types').AssetPlacement; la
   { value: 'wall', label: 'Vägg' },
   { value: 'ceiling', label: 'Tak' },
   { value: 'table', label: 'Bord/yta' },
+  { value: 'free', label: 'Fri' },
 ];
 
 const VISIBILITY_OPTIONS: { value: import('../../store/types').AssetVisibility; label: string; icon: React.ElementType }[] = [
@@ -1866,14 +1874,35 @@ function BibliotekWorkspace() {
     const finalFile = bibOptimizedResult
       ? new File([bibOptimizedResult.blob], bibImportName.trim().replace(/\s+/g, '_') + '.glb', { type: 'model/gltf-binary' })
       : bibImportFile;
+    const finalStats = bibOptimizedResult ? bibOptimizedResult.stats : bibImportResult.stats;
+    const finalThumbnail = bibOptimizedResult?.thumbnail || bibImportResult.thumbnail;
     setBibProcessing(true);
     try {
       if (isHostedSync()) {
-        const r = await ingestToCatalog(finalFile, { name: bibImportName, category: bibImportCat }, bibImportResult.thumbnail);
+        const r = await ingestToCatalog(finalFile, { name: bibImportName, category: bibImportCat, subcategory: bibImportSub || undefined, placement: 'floor', dimensions: bibImportResult.dimensions, performance: finalStats }, finalThumbnail);
         if (r) toast.success('Importerad till katalogen');
       } else {
-        addToCatalog({ id: `user-${Date.now()}`, name: bibImportName || bibImportFile.name, url: URL.createObjectURL(finalFile), source: 'user', category: bibImportCat, visibility: 'visible' });
-        toast.success('Tillagd i lokalt bibliotek');
+        const url = URL.createObjectURL(finalFile);
+        const catalogId = `user-${Date.now()}`;
+        const item: any = {
+          id: catalogId, name: bibImportName || bibImportFile.name, url, source: 'user',
+          category: bibImportCat, subcategory: bibImportSub || undefined,
+          thumbnail: finalThumbnail || undefined,
+          dimensions: bibImportResult.dimensions, performance: finalStats,
+          placement: 'floor', visibility: 'visible',
+        };
+        // Store base64 for persistence if small enough
+        if (finalFile.size <= 4 * 1024 * 1024) {
+          const reader = new FileReader();
+          reader.onload = () => {
+            addToCatalog({ ...item, fileData: (reader.result as string).split(',')[1] });
+            toast.success('Tillagd i lokalt bibliotek');
+          };
+          reader.readAsDataURL(finalFile);
+        } else {
+          addToCatalog(item);
+          toast.success('Tillagd i lokalt bibliotek (sessionsbaserad)');
+        }
       }
     } catch { toast.error('Import misslyckades'); }
     finally { setBibProcessing(false); setBibImportOpen(false); setBibImportFile(null); setBibImportResult(null); setBibOptimizedResult(null); }
