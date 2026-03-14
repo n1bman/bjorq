@@ -394,6 +394,11 @@ function StandbySettingsPanel() {
         </select>
       </div>
 
+      {/* 3D Camera preview */}
+      <div className="glass-panel rounded-xl overflow-hidden h-[200px]">
+        <Scene3D />
+      </div>
+
       <Button
         variant="outline"
         className="w-full h-9 text-xs gap-2"

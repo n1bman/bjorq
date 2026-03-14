@@ -141,7 +141,7 @@
 
   /* Nav rail styling */
   .nav-rail-bg {
-    background: linear-gradient(180deg, hsl(222 20% 10%) 0%, hsl(222 18% 8%) 100%);
+    background: hsl(var(--background));
     border-right: 1px solid hsl(var(--sidebar-border) / 0.6);
   }
 
