@@ -40,6 +40,14 @@
 - Save/load compatibility (new fields optional with fallbacks)
 - Wall texture engine (C1 stylized walls)
 
+## Phase F6 — Manual Scale & Rotation Sliders ✅ DONE
+- Added `floorTextureScale` (0.2–4.0x) and `floorTextureRotation` (0°–360°) per room
+- Two sliders under size mode presets in Måla panel with live value display
+- Texture engine clones textures per room to avoid cross-room leaking
+- Rotation applied via `tex.rotation` + `tex.center` for proper pivot
+- Undo pushed once per drag (mouseDown/touchStart), not per tick
+- Files: `types.ts`, `BuildModeV2.tsx`, `wallTextureLoader.ts`, `Floors3D.tsx`
+
 ## Väntar
 - Real ambientCG 1K texture file downloads (manual step — download ZIPs from ambientcg.com/get?file={ID}_1K-JPG.zip)
 - Per-wall roughness from finish selector
