@@ -310,6 +310,7 @@ function renderOpeningModels(
   if (op.type === 'door') {
     const isDouble = op.style === 'double';
     const isSliding = op.style === 'sliding';
+    const isPanel4 = op.style === 'panel-4';
     const panelW = isDouble ? (op.width - 0.04) / 2 : op.width - 0.04;
     const doorColor = opMat?.color ?? '#7a5a35';
 
@@ -348,8 +349,122 @@ function renderOpeningModels(
       </mesh>
     );
 
-    // Door panel(s)
-    if (isDouble) {
+    if (isPanel4) {
+      // ─── Classic 4-panel Swedish Spegeldörr ───
+      const leafW = op.width - 0.08; // inner width minus frame
+      const leafH = op.height - 0.06; // inner height minus frame
+      const leafThick = 0.04;
+      const panelProtrusion = 0.005;
+      const stileW = 0.06; // vertical stile width
+      const railH = 0.05; // horizontal rail height
+      const panelInset = 0.04; // inset from leaf edges for panels
+
+      // Door leaf base
+      segments.push(
+        <mesh key={`${wall.id}-door-leaf-${i}`}
+          position={new THREE.Vector3(localX, 0, 0)
+            .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
+            .add(new THREE.Vector3(origCx, opBottom + leafH / 2 + 0.03 + elevation, origCz)).toArray()}
+          rotation={[0, -angle, 0]} castShadow {...openingPointer}>
+          <boxGeometry args={[leafW, leafH, leafThick]} />
+          <meshStandardMaterial color="#f5f0eb" roughness={0.45}
+            emissive={opEmissive} emissiveIntensity={opEmissiveIntensity} />
+        </mesh>
+      );
+
+      // Panel dimensions
+      const usableW = leafW - panelInset * 2;
+      const usableH = leafH - panelInset * 2;
+      const topPanelH = usableH * 0.22;
+      const midPanelH = usableH * 0.45;
+      const bottomPanelH = usableH * 0.23;
+      const gap1 = railH; // rail between top and mid
+      const gap2 = railH; // rail between mid and bottom
+      const midPaneW = (usableW - stileW) / 2;
+
+      const leafCenterY = opBottom + leafH / 2 + 0.03 + elevation;
+      const panelBaseY = leafCenterY - usableH / 2;
+
+      // Y centers for each row
+      const bottomY = panelBaseY + bottomPanelH / 2;
+      const midY = panelBaseY + bottomPanelH + gap2 + midPanelH / 2;
+      const topY = panelBaseY + bottomPanelH + gap2 + midPanelH + gap1 + topPanelH / 2;
+
+      const panelColor = '#f0ebe5';
+      const railColor = '#e8e0d8';
+      const panelZ = leafThick / 2 + panelProtrusion;
+
+      // Helper: position a panel element on the door surface
+      const panelMesh = (key: string, lx: number, cy: number, w: number, h: number, color: string, depth: number) => {
+        const pos = new THREE.Vector3(lx, 0, panelZ)
+          .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
+          .add(new THREE.Vector3(origCx, cy, origCz));
+        return (
+          <mesh key={key} position={pos.toArray()} rotation={[0, -angle, 0]} castShadow>
+            <boxGeometry args={[w, h, depth]} />
+            <meshStandardMaterial color={color} roughness={0.4} />
+          </mesh>
+        );
+      };
+
+      // Top panel (full width)
+      segments.push(panelMesh(`${wall.id}-p4-top-${i}`, localX, topY, usableW - 0.02, topPanelH, panelColor, 0.008));
+
+      // Arch decoration on top panel
+      const archPos = new THREE.Vector3(localX, 0, panelZ + 0.004)
+        .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
+        .add(new THREE.Vector3(origCx, topY + topPanelH * 0.25, origCz));
+      segments.push(
+        <mesh key={`${wall.id}-p4-arch-${i}`} position={archPos.toArray()} rotation={[0, -angle, Math.PI / 2]}>
+          <cylinderGeometry args={[(usableW - 0.04) * 0.45, (usableW - 0.04) * 0.45, 0.006, 16, 1, false, 0, Math.PI]} />
+          <meshStandardMaterial color={panelColor} roughness={0.4} />
+        </mesh>
+      );
+
+      // Mid left panel
+      segments.push(panelMesh(`${wall.id}-p4-ml-${i}`, localX - (midPaneW / 2 + stileW / 2), midY, midPaneW - 0.02, midPanelH, panelColor, 0.008));
+
+      // Mid right panel
+      segments.push(panelMesh(`${wall.id}-p4-mr-${i}`, localX + (midPaneW / 2 + stileW / 2), midY, midPaneW - 0.02, midPanelH, panelColor, 0.008));
+
+      // Bottom panel (full width)
+      segments.push(panelMesh(`${wall.id}-p4-bot-${i}`, localX, bottomY, usableW - 0.02, bottomPanelH, panelColor, 0.008));
+
+      // Horizontal rail between top and mid
+      segments.push(panelMesh(`${wall.id}-p4-rail1-${i}`, localX, topY - topPanelH / 2 - railH / 2, usableW, railH, railColor, 0.006));
+
+      // Horizontal rail between mid and bottom
+      segments.push(panelMesh(`${wall.id}-p4-rail2-${i}`, localX, midY - midPanelH / 2 - railH / 2, usableW, railH, railColor, 0.006));
+
+      // Vertical center stile (mullion between mid panels)
+      segments.push(panelMesh(`${wall.id}-p4-stile-${i}`, localX, midY, stileW, midPanelH, railColor, 0.006));
+
+      // Handle on right side
+      const handleLocalX = localX + leafW * 0.35;
+      segments.push(
+        <mesh key={`${wall.id}-p4-handle-${i}`}
+          position={new THREE.Vector3(handleLocalX, 0, panelZ + 0.01)
+            .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
+            .add(new THREE.Vector3(origCx, opBottom + 1.0 + elevation, origCz)).toArray()}
+          rotation={[0, -angle, 0]}>
+          <boxGeometry args={[0.12, 0.03, 0.04]} />
+          <meshStandardMaterial color="#aaa" roughness={0.2} metalness={0.7} />
+        </mesh>
+      );
+
+      // Keyhole below handle
+      segments.push(
+        <mesh key={`${wall.id}-p4-keyhole-${i}`}
+          position={new THREE.Vector3(handleLocalX, 0, panelZ + 0.008)
+            .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
+            .add(new THREE.Vector3(origCx, opBottom + 0.93 + elevation, origCz)).toArray()}
+          rotation={[Math.PI / 2, 0, -angle]}>
+          <cylinderGeometry args={[0.008, 0.008, 0.01, 12]} />
+          <meshStandardMaterial color="#333" roughness={0.3} metalness={0.5} />
+        </mesh>
+      );
+    } else if (isDouble) {
+      // Door panel(s)
       segments.push(
         <mesh key={`${wall.id}-door-pl-${i}`}
           position={new THREE.Vector3(localX - panelW / 2 - 0.01, 0, 0)
@@ -397,17 +512,19 @@ function renderOpeningModels(
       }
     }
 
-    // Door handle
-    segments.push(
-      <mesh key={`${wall.id}-door-handle-${i}`}
-        position={new THREE.Vector3(localX + (isDouble ? 0 : panelW * 0.35), 0, 0)
-          .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
-          .add(new THREE.Vector3(origCx, opBottom + 1.0 + elevation, origCz)).toArray()}
-        rotation={[0, -angle, 0]}>
-        <boxGeometry args={[0.12, 0.03, 0.05]} />
-        <meshStandardMaterial color="#aaa" roughness={0.2} metalness={0.7} />
-      </mesh>
-    );
+    // Door handle (skip for panel-4 which has its own)
+    if (!isPanel4) {
+      segments.push(
+        <mesh key={`${wall.id}-door-handle-${i}`}
+          position={new THREE.Vector3(localX + (isDouble ? 0 : panelW * 0.35), 0, 0)
+            .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
+            .add(new THREE.Vector3(origCx, opBottom + 1.0 + elevation, origCz)).toArray()}
+          rotation={[0, -angle, 0]}>
+          <boxGeometry args={[0.12, 0.03, 0.05]} />
+          <meshStandardMaterial color="#aaa" roughness={0.2} metalness={0.7} />
+        </mesh>
+      );
+    }
   } else if (op.type === 'window') {
     const isFrench = op.style === 'french';
     const isFixed = op.style === 'fixed';
