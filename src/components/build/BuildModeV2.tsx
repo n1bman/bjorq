@@ -483,6 +483,18 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
   const handlePlaceEntry = useCallback(async (entry: ACEntry) => {
     if (!activeFloorId) return;
 
+    // Built-in procedural kitchen
+    if (entry.id === 'builtin-standard-kitchen') {
+      addKitchenFixture(activeFloorId, {
+        id: generateId(),
+        floorId: activeFloorId,
+        position: [0, 0],
+        rotation: 0,
+      });
+      toast.success('Standardkök placerat');
+      return;
+    }
+
     // Stale synced entries → need re-import from Wizard
     if (entry.staleSync && entry.catalogItem?.wizardAssetId) {
       // Try to re-import if wizard is connected
