@@ -71,7 +71,7 @@ function LightMarker({ position, id, onSelect, onDragStart, selected }: MarkerPr
     if (selected && onDragStart) { onDragStart(id, e); }
   }, [selected, onDragStart, id]);
 
-  const intensity = isOn ? brightness * 5 : 0;
+  const intensity = isOn ? brightness * 4 : 0;
 
   return (
     <group position={position} onClick={handleClick} onPointerDown={handlePointerDown}>
