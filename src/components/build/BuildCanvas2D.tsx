@@ -476,6 +476,7 @@ export default function BuildCanvas2D({ overlayMode = false }: { overlayMode?: b
   const rooms = floor?.rooms ?? [];
   const stairs = floor?.stairs ?? [];
   const floorProps = propItems.filter((p) => p.floorId === activeFloorId);
+  const kitchenFixtures = floor?.kitchenFixtures ?? [];
   const ghostFloors = showGhost ? floors.filter((f) => f.id !== activeFloorId) : [];
   const referenceDrawing = floor?.referenceDrawing;
 
