@@ -351,13 +351,12 @@ function renderOpeningModels(
 
     if (isPanel4) {
       // ─── Classic 4-panel Swedish Spegeldörr ───
-      const leafW = op.width - 0.08; // inner width minus frame
-      const leafH = op.height - 0.06; // inner height minus frame
-      const leafThick = 0.04;
-      const panelProtrusion = 0.005;
-      const stileW = 0.06; // vertical stile width
-      const railH = 0.05; // horizontal rail height
-      const panelInset = 0.04; // inset from leaf edges for panels
+      const leafW = op.width - 0.08;
+      const leafH = op.height - 0.06;
+      const leafThick = 0.045;
+      const stileW = 0.06;
+      const railH = 0.05;
+      const panelInset = 0.04;
 
       // Door leaf base
       segments.push(
@@ -375,9 +374,9 @@ function renderOpeningModels(
       // Panel dimensions
       const usableW = leafW - panelInset * 2;
       const usableH = leafH - panelInset * 2;
-      const topPanelH = usableH * 0.22;
+      const topPanelH = usableH * 0.24;
       const midPanelH = usableH * 0.45;
-      const bottomPanelH = usableH * 0.23;
+      const bottomPanelH = usableH * 0.21;
       const gap1 = railH; // rail between top and mid
       const gap2 = railH; // rail between mid and bottom
       const midPaneW = (usableW - stileW) / 2;
