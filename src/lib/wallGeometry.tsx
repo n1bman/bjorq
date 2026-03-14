@@ -855,18 +855,75 @@ export function generateWallSegments(
 
   const segments: JSX.Element[] = [];
 
-  // Wall body mesh
-  segments.push(
-    <mesh
-      key={`${wall.id}-body`}
-      geometry={geo}
-      material={mats}
-      position={[origCx, wallHeight / 2 + elevation, origCz]}
-      rotation={[0, -angle, 0]}
-      castShadow
-      receiveShadow
-    />
-  );
+  if (!wall.openings || wall.openings.length === 0) {
+    // No openings — use full mitered geometry
+    segments.push(
+      <mesh
+        key={`${wall.id}-body`}
+        geometry={geo}
+        material={mats}
+        position={[origCx, wallHeight / 2 + elevation, origCz]}
+        rotation={[0, -angle, 0]}
+        castShadow
+        receiveShadow
+      />
+    );
+  } else {
+    // Has openings — split wall into sub-sections leaving gaps for openings
+    const halfLen = origLength / 2;
+
+    // Compute local X ranges for each opening
+    const opRanges = wall.openings.map((op) => {
+      const localX = op.offset * origLength - halfLen;
+      const halfW = op.width / 2;
+      const opBottom = op.type === 'window' ? (op.sillHeight ?? (wallHeight - op.height) / 2) : 0;
+      return { left: localX - halfW, right: localX + halfW, bottom: opBottom, top: opBottom + op.height };
+    }).sort((a, b) => a.left - b.left);
+
+    // Helper: create a positioned box section of the wall
+    const wallSection = (key: string, localCenterX: number, centerY: number, w: number, h: number) => {
+      const pos = new THREE.Vector3(localCenterX, 0, 0)
+        .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
+        .add(new THREE.Vector3(origCx, centerY, origCz));
+      return (
+        <mesh key={key} position={pos.toArray()} rotation={[0, -angle, 0]} castShadow receiveShadow material={mats}>
+          <boxGeometry args={[w, h, wall.thickness]} />
+        </mesh>
+      );
+    };
+
+    // 1. Vertical strips (full-height wall between/outside openings)
+    let cursor = -halfLen;
+    let stripIdx = 0;
+    for (const r of opRanges) {
+      if (r.left > cursor + 0.001) {
+        const w = r.left - cursor;
+        segments.push(wallSection(`${wall.id}-vs-${stripIdx++}`, (cursor + r.left) / 2, wallHeight / 2 + elevation, w, wallHeight));
+      }
+      cursor = Math.max(cursor, r.right);
+    }
+    if (cursor < halfLen - 0.001) {
+      const w = halfLen - cursor;
+      segments.push(wallSection(`${wall.id}-vs-${stripIdx}`, (cursor + halfLen) / 2, wallHeight / 2 + elevation, w, wallHeight));
+    }
+
+    // 2. Header strips (above each opening)
+    for (let oi = 0; oi < opRanges.length; oi++) {
+      const r = opRanges[oi];
+      const headerH = wallHeight - r.top;
+      if (headerH > 0.01) {
+        segments.push(wallSection(`${wall.id}-hdr-${oi}`, (r.left + r.right) / 2, r.top + headerH / 2 + elevation, r.right - r.left, headerH));
+      }
+    }
+
+    // 3. Sill strips (below windows — where bottom > 0)
+    for (let oi = 0; oi < opRanges.length; oi++) {
+      const r = opRanges[oi];
+      if (r.bottom > 0.01) {
+        segments.push(wallSection(`${wall.id}-sill-${oi}`, (r.left + r.right) / 2, r.bottom / 2 + elevation, r.right - r.left, r.bottom));
+      }
+    }
+  }
 
   // Openings
   if (wall.openings) {
