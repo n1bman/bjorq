@@ -1369,6 +1369,7 @@ export default function DeviceMarkers3D({ buildMode }: DeviceMarkers3DProps) {
   // Toggleable device kinds (on/off capable)
   const toggleableKinds = useMemo(() => new Set<DeviceKind>([
     'light', 'switch', 'fan', 'power-outlet', 'siren', 'humidifier', 'water-heater',
+    'light-fixture', 'smart-outlet',
   ]), []);
 
   const handleSelect = useCallback((id: string) => {

@@ -80,7 +80,7 @@ const kindCategory: Record<DeviceKind, string> = {
 };
 
 /** Light-type device kinds that should be grouped by room */
-const LIGHT_KINDS: Set<DeviceKind> = new Set(['light', 'switch', 'power-outlet']);
+const LIGHT_KINDS: Set<DeviceKind> = new Set(['light', 'switch', 'power-outlet', 'light-fixture', 'smart-outlet']);
 
 function HomeCategory() {
   const markers = useAppStore((s) => s.devices.markers);
