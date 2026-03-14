@@ -1418,10 +1418,15 @@ export default function DeviceMarkers3D({ buildMode, onLongPress }: DeviceMarker
   }, []);
 
   const handleSelect = useCallback((id: string) => {
+    // Always clear long-press timer on click (acts as pointerUp substitute in R3F)
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
     if (buildMode) {
       setSelection({ type: 'device', id });
     } else {
-      // If long-press was triggered, don't toggle
+      // If long-press was already triggered, don't toggle
       if (longPressTriggered.current) {
         longPressTriggered.current = false;
         return;
