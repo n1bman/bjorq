@@ -267,7 +267,7 @@ export const presetMaterials: Material[] = [
     hasTexture: true, source: 'ambientCG', realWorldSize: [0.50, 0.50],
     ambientCGId: 'Fabric036',
     thumbnailUrl: 'https://acg-media.struffelproductions.com/file/ambientCG-Web/media/thumbnail/256-JPG-FFFFFF/Fabric036.jpg',
-    mapPath: '/textures/floor/carpet/wool_charcoal_diff.jpg' },
+    mapPath: 'https://acg-media.struffelproductions.com/file/ambientCG-Web/media/thumbnail/2048-JPG-FFFFFF/Fabric036.jpg' },
 ];
 
 // In-memory custom materials (runtime only)
