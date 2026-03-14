@@ -280,7 +280,7 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
   const hasUser = allEntries.some((e) => e.source === 'user' || e.wizardMode === 'imported');
   const hasCurated = allEntries.some((e) => e.source === 'curated');
   const hasWizard = wizardStatus === 'connected' || wizardAssets.length > 0;
-  const PLACEMENT_LABELS: Record<string, string> = { floor: 'Golv', wall: 'Vägg', ceiling: 'Tak', table: 'Yta' };
+  const PLACEMENT_LABELS: Record<string, string> = { floor: 'Golv', wall: 'Vägg', ceiling: 'Tak', table: 'Yta', free: 'Fri' };
   const placementTypes = [...new Set(allEntries.map(e => e.catalogItem?.placement || e.curatedMeta?.placement).filter(Boolean))] as string[];
 
   const filtered = allEntries
