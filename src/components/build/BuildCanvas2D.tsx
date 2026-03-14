@@ -778,6 +778,7 @@ export default function BuildCanvas2D({ overlayMode = false }: { overlayMode?: b
     if (dragOpening) { setDragOpening(null); return; }
     if (isDraggingProp) { setIsDraggingProp(false); setDragPropId(null); return; }
     if (dragDeviceId) { setDragDeviceId(null); return; }
+    if (dragKitchenId) { setDragKitchenId(null); return; }
     if (roomDrawStart && roomDrawEnd && activeTool === 'room' && activeFloorId) {
       const x = Math.min(roomDrawStart[0], roomDrawEnd[0]), z = Math.min(roomDrawStart[1], roomDrawEnd[1]);
       const w = Math.abs(roomDrawEnd[0] - roomDrawStart[0]), d = Math.abs(roomDrawEnd[1] - roomDrawStart[1]);
