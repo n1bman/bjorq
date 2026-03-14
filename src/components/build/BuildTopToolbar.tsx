@@ -2,7 +2,7 @@ import { useAppStore } from '../../store/useAppStore';
 import type { SnapMode, WeatherCondition } from '../../store/types';
 import {
   Undo2, Redo2, Eye, Box, Layers, Settings2,
-  ArrowLeft, Ghost,
+  ArrowLeft, Ghost, Home, LayoutGrid,
   Grid3X3, XCircle, Sun, Check, HelpCircle, Sparkles, DoorOpen, Trash2, Edit3, Wrench,
   Save, Download, Upload, FolderOpen,
 } from 'lucide-react';
@@ -121,13 +121,22 @@ export default function BuildTopToolbar() {
 
   return (
     <div className="relative z-50 flex items-center gap-1.5 px-2 py-1 border-b border-border bg-card/90 backdrop-blur-sm h-12">
-      {/* Back */}
+      {/* Back to Home */}
       <button
         onClick={() => { toast.success('Sparad!'); setAppMode('home'); }}
-        title="Tillbaka"
+        title="Hemvy"
         className="p-2.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary/40 transition-all min-w-[44px] min-h-[44px] flex items-center justify-center"
       >
-        <ArrowLeft size={18} />
+        <Home size={18} />
+      </button>
+
+      {/* Dashboard / Kontrollpanel */}
+      <button
+        onClick={() => { setAppMode('dashboard'); }}
+        title="Kontrollpanel"
+        className="p-2.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary/40 transition-all min-w-[44px] min-h-[44px] flex items-center justify-center"
+      >
+        <LayoutGrid size={18} />
       </button>
 
       {/* Undo / Redo */}
