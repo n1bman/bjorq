@@ -98,28 +98,6 @@ export default function HomeView() {
         {visibleWidgets.energy && <EnergyWidget />}
       </div>
 
-      {/* Save View popup */}
-      {showSaveView && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-auto" onClick={() => setShowSaveView(false)}>
-          <div className="absolute inset-0 bg-background/40 backdrop-blur-sm" />
-          <div className="relative glass-panel rounded-2xl p-5 w-64 shadow-xl space-y-3" onClick={(e) => e.stopPropagation()}>
-            <p className="text-sm font-semibold text-foreground">Spara som startvy?</p>
-            <p className="text-xs text-muted-foreground">Den aktuella kameravinkeln sparas som din hemvy.</p>
-            <div className="flex gap-2">
-              <Button size="sm" variant="outline" className="flex-1" onClick={() => setShowSaveView(false)}>Avbryt</Button>
-              <Button size="sm" className="flex-1 gap-1" onClick={() => {
-                saveHomeStartCamera(
-                  [cameraRef.position.x, cameraRef.position.y, cameraRef.position.z],
-                  [cameraRef.target.x, cameraRef.target.y, cameraRef.target.z],
-                );
-                setShowSaveView(false);
-              }}>
-                <Save size={12} /> Spara
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Long-press popup for device control */}
       {longPressId && longPressMarker && (
