@@ -1,36 +1,84 @@
+# Arbetsplan: Stabilisering, buggfixar och UX-förbättringar
 
+## Status: ✅ Implementerat (v1.1.0)
 
-# Fix: Light Fixtures Default to "On" in Design Mode
+---
 
-## Problem
-Light fixtures (`led-bulb`, `led-bar`, `led-spot`) show no light because when no HA entity is connected, `isOn = false` and `intensity = 0`. The mesh bodies render but are dark and lifeless.
+## Fas 0 — Bygg-stabilisering ✅ DONE
+- Fixat import i Scene3D till `./build/KitchenFixture3D`
+- Raderat duplikat `KitchenFixtureObject3D.tsx`
 
-## Fix
-In `LightFixtureMarker`, when no HA state exists (`state === undefined`), default to **on** with a warm preview color and moderate brightness. This gives immediate visual feedback in design mode. When an HA entity is linked, it uses real state as before.
+## Fas 1 — Buggar och regressioner ✅ DONE
 
-Apply the same fix to `LightMarker` (the original light types) for consistency — they have the same issue.
+### 1.1 Väggar: 90-gradersstöd vid ritning ✅
+- Axis-aligned snapping (±3° av 0/90/180/270°) i `BuildScene3D.tsx`
+- Visuell indikator: cyan linje + solid (ej dashed) + "90°"-label via `<Html>`
+- `cursorAxisAligned`-prop tillagd i `WallDrawing3D.tsx`
 
-**File:** `src/components/devices/DeviceMarkers3D.tsx`
+### 1.3 Dörr-öppningsriktning ✅
+- `flipped` appliceras nu på dörrpanelens position och rotation i `wallGeometry.tsx`
+- Gångjärnspunkt beräknas baserat på `flipped`-flagga
 
-### Changes
-1. **LightMarker** (line ~39): Change `isOn` logic to default to `true` when no state exists:
-   ```ts
-   const hasState = state?.kind === 'light';
-   const lightData = hasState ? state.data : null;
-   const isOn = hasState ? (lightData?.on ?? false) : true; // preview on
-   ```
-   Update lightColor to return warm default when `!hasState && isOn`.
+### 1.4 Dörrens öppningsgrad ✅
+- `openAmount?: number` (0-1) tillagd på `WallOpening` i `types.ts`
+- Slider "Öppningsgrad" i OpeningInspector (dörrar + garageportar)
+- 3D: dörrblad roteras runt gångjärnspunkt baserat på `openAmount * π/2`
+- TODO: koppla till `haEntityId` för automatisk HA-sync
 
-2. **LightFixtureMarker** (line ~1188): Same pattern:
-   ```ts
-   const hasState = state?.kind === 'light';
-   const lightData = hasState ? state.data : null;
-   const isOn = hasState ? (lightData?.on ?? false) : true;
-   ```
-   Update lightColor: when `!lightData && isOn` return warm `#f5c542` instead of `#555555`.
+### 1.5 Ljus går igenom väggar ✅ (pragmatisk lösning)
+- Alla ljustyper: minskad distance + decay=2
+- ceiling: 5m, strip: 6m, spot: 6m/π/7 angle, wall: 5m/π/4 angle
+- Dokumenterat: fullständig ljusblockering kräver baked lighting
 
-3. **Intensity scaling** — review that fixture light distances/intensities are proportional to their physical size:
-   - `led-bulb`: pointLight intensity `brightness * 2`, distance `3` (small room lamp)
-   - `led-bar`: spotLight intensity `brightness * 4`, distance `5`, wide angle (linear downlight)
-   - `led-spot`: spotLight intensity `brightness * 5`, distance `4`, narrow cone (focused beam)
+## Fas 2 — UX-förbättringar ✅ DONE
 
+### 2.1 Sliders med exakt värdeinmatning ✅
+- Ny `SliderWithInput`-komponent (`src/components/ui/SliderWithInput.tsx`)
+- Klickbart värde → number input med Enter/Escape/blur
+- Applicerad i OpeningInspector (bredd, höjd, bröstning, position, öppningsgrad)
+
+### 2.2 Möbelfliken stängd som standard ✅
+- Inredning startar med `select`-verktyg (inte `furnish`)
+- Katalogen visas bara när Möbler eller Wizard-verktyg är aktivt
+
+### 2.3 Måla-fliken flyttad till Inredning ✅
+- `paint`-verktyg borttaget från `planritningTools`
+- Tillagt i `inredningTools` som "Måla" med Paintbrush-ikon
+- SurfaceEditor visas under Inredning-fliken
+
+### 2.4 Väggar: bara färger (inga texturer) ✅
+- SurfaceEditor filtrerar vägg-material till enbart `paint`-kategorin
+- 15 nya väggfärger tillagda (mjuk rosa, oliv, skifferblå, etc.)
+- Golv behåller alla texturer som tidigare
+
+## Fas 3 — Dokumentation och mappstruktur ✅ DONE
+- `public/textures/guide/README.md` uppdaterad med korrekt mappstruktur
+- Borttagen felaktig referens till `public/textures/floor/`
+- Target-paths tillagda per preset
+- `public/textures/carpet/` skapad
+
+## Fas 4 — Import/Export och long-press ✅ DONE
+
+### 4.2 Exportera från Bibliotek ✅
+- "Exportera"-knapp tillagd i BibliotekWorkspace detaljpanel
+- Exporterar metadata som JSON-fil
+
+### 4.3 Hold-long på enheter i hemmenyn ✅
+- 500ms long-press → popup med av/på + ljusstyrka-slider
+- Fungerar för alla enheter med extra kontroll för `light`
+
+## Fas 5 — Troubleshooting-pass ✅ DONE
+- Raderat dead code: `PaintTool.tsx` (ersatt av inline SurfaceEditor)
+- KitchenFixtureObject3D redan borttagen
+- Inga oanvända importer kvar
+- Tester passerar
+
+## Fas 6 — Version 1.1.0 ✅ DONE
+- `package.json` bumpat till 1.1.0
+
+## Bevarat
+- Design / Planritning / Inredning / Bibliotek-struktur
+- Save/load kompatibilitet
+- HA-sync (ej ändrad)
+- Golv-texturer med ambientCG CDN-thumbnails
+- Vägg-mitering och hörn-geometri

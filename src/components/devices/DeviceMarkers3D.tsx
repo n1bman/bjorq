@@ -35,8 +35,9 @@ function miredsToColor(mireds: number): THREE.Color {
 function LightMarker({ position, id, onSelect, onDragStart, selected }: MarkerProps) {
   const state = useAppStore((s) => s.devices.deviceStates[id]);
   const marker = useAppStore((s) => s.devices.markers.find((m) => m.id === id));
-  const lightData = state?.kind === 'light' ? state.data : null;
-  const isOn = lightData?.on ?? false;
+  const hasState = state?.kind === 'light';
+  const lightData = hasState ? state.data : null;
+  const isOn = hasState ? (lightData?.on ?? false) : true;
   const lightType: LightType = marker?.lightType ?? 'ceiling';
 
   const spotTargetRef = useRef<THREE.Object3D>(null);
@@ -44,7 +45,8 @@ function LightMarker({ position, id, onSelect, onDragStart, selected }: MarkerPr
 
   // Compute color from state
   const lightColor = useMemo(() => {
-    if (!lightData || !isOn) return new THREE.Color('#555555');
+    if (!isOn) return new THREE.Color('#555555');
+    if (!lightData) return new THREE.Color('#f5c542'); // warm preview
     if (lightData.colorMode === 'rgb' && lightData.rgbColor) {
       return new THREE.Color(lightData.rgbColor[0] / 255, lightData.rgbColor[1] / 255, lightData.rgbColor[2] / 255);
     }
@@ -52,7 +54,7 @@ function LightMarker({ position, id, onSelect, onDragStart, selected }: MarkerPr
       return miredsToColor(lightData.colorTemp);
     }
     return new THREE.Color('#f5c542');
-  }, [lightData?.colorMode, lightData?.rgbColor?.[0], lightData?.rgbColor?.[1], lightData?.rgbColor?.[2], lightData?.colorTemp, isOn]);
+  }, [lightData?.colorMode, lightData?.rgbColor?.[0], lightData?.rgbColor?.[1], lightData?.rgbColor?.[2], lightData?.colorTemp, isOn, hasState]);
 
   const brightness = isOn ? (lightData?.brightness ?? 200) / 255 : 0;
 
@@ -1184,14 +1186,16 @@ function SoundbarMarker3D({ position, id, onSelect, onDragStart, selected }: Mar
 function LightFixtureMarker({ position, id, onSelect, onDragStart, selected }: MarkerProps) {
   const state = useAppStore((s) => s.devices.deviceStates[id]);
   const marker = useAppStore((s) => s.devices.markers.find((m) => m.id === id));
-  const lightData = state?.kind === 'light' ? state.data : null;
-  const isOn = lightData?.on ?? false;
+  const hasState = state?.kind === 'light';
+  const lightData = hasState ? state.data : null;
+  const isOn = hasState ? (lightData?.on ?? false) : true;
   const fixtureModel = marker?.fixtureModel ?? 'led-bulb';
   const spotTargetRef = useRef<THREE.Object3D>(null);
   const spotLightRef = useRef<THREE.SpotLight>(null);
 
   const lightColor = useMemo(() => {
-    if (!lightData || !isOn) return new THREE.Color('#555555');
+    if (!isOn) return new THREE.Color('#555555');
+    if (!lightData) return new THREE.Color('#f5c542'); // warm preview
     if (lightData.colorMode === 'rgb' && lightData.rgbColor) {
       return new THREE.Color(lightData.rgbColor[0] / 255, lightData.rgbColor[1] / 255, lightData.rgbColor[2] / 255);
     }
@@ -1199,10 +1203,9 @@ function LightFixtureMarker({ position, id, onSelect, onDragStart, selected }: M
       return miredsToColor(lightData.colorTemp);
     }
     return new THREE.Color('#f5c542');
-  }, [lightData?.colorMode, lightData?.rgbColor?.[0], lightData?.rgbColor?.[1], lightData?.rgbColor?.[2], lightData?.colorTemp, isOn]);
+  }, [lightData?.colorMode, lightData?.rgbColor?.[0], lightData?.rgbColor?.[1], lightData?.rgbColor?.[2], lightData?.colorTemp, isOn, hasState]);
 
   const brightness = isOn ? (lightData?.brightness ?? 200) / 255 : 0;
-  const intensity = isOn ? brightness * 3 : 0;
 
   useFrame(() => {
     if (spotLightRef.current && spotTargetRef.current) {
@@ -1227,7 +1230,7 @@ function LightFixtureMarker({ position, id, onSelect, onDragStart, selected }: M
             <sphereGeometry args={[0.03, 16, 16]} />
             <meshStandardMaterial color={lightColor} emissive={lightColor} emissiveIntensity={isOn ? brightness * 3 : 0.1} transparent opacity={isOn ? 0.95 : 0.5} />
           </mesh>
-          <pointLight color={lightColor} intensity={intensity} distance={4} decay={2} />
+          <pointLight color={lightColor} intensity={isOn ? brightness * 2 : 0} distance={3} decay={2} />
         </>
       )}
       {fixtureModel === 'led-bar' && (
@@ -1241,7 +1244,7 @@ function LightFixtureMarker({ position, id, onSelect, onDragStart, selected }: M
             <boxGeometry args={[0.56, 0.005, 0.025]} />
             <meshStandardMaterial color={lightColor} emissive={lightColor} emissiveIntensity={isOn ? brightness * 2.5 : 0.1} transparent opacity={isOn ? 0.85 : 0.3} />
           </mesh>
-          <spotLight ref={spotLightRef} color={lightColor} intensity={intensity * 1.2} distance={5} angle={Math.PI / 3} penumbra={0.7} decay={2} castShadow />
+          <spotLight ref={spotLightRef} color={lightColor} intensity={isOn ? brightness * 4 : 0} distance={5} angle={Math.PI / 3} penumbra={0.7} decay={2} castShadow />
           <object3D ref={spotTargetRef} position={[0, -3, 0]} />
         </>
       )}
@@ -1257,7 +1260,7 @@ function LightFixtureMarker({ position, id, onSelect, onDragStart, selected }: M
             <cylinderGeometry args={[0.025, 0.025, 0.003, 24]} />
             <meshStandardMaterial color={lightColor} emissive={lightColor} emissiveIntensity={isOn ? brightness * 3 : 0.1} transparent opacity={isOn ? 0.9 : 0.3} />
           </mesh>
-          <spotLight ref={spotLightRef} color={lightColor} intensity={intensity * 1.5} distance={5} angle={Math.PI / 8} penumbra={0.3} decay={2} castShadow />
+          <spotLight ref={spotLightRef} color={lightColor} intensity={isOn ? brightness * 5 : 0} distance={4} angle={Math.PI / 8} penumbra={0.3} decay={2} castShadow />
           <object3D ref={spotTargetRef} position={[0, -3, 0]} />
         </>
       )}
