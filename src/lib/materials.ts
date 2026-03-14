@@ -208,7 +208,7 @@ export const presetMaterials: Material[] = [
     hasTexture: true, source: 'ambientCG', realWorldSize: [0.60, 0.60],
     ambientCGId: 'Rock030',
     thumbnailUrl: 'https://acg-media.struffelproductions.com/file/ambientCG-Web/media/thumbnail/256-JPG-FFFFFF/Rock030.jpg',
-    mapPath: '/textures/floor/stone/granite_diff.jpg' },
+    mapPath: 'https://acg-media.struffelproductions.com/file/ambientCG-Web/media/thumbnail/2048-JPG-FFFFFF/Rock030.jpg' },
   { id: 'floor-microcement', name: 'Mikrociment golv', type: 'concrete', color: '#a8a4a0', roughness: 0.48, surfaceCategory: 'stone', floorOnly: true,
     hasTexture: true, source: 'ambientCG', realWorldSize: [1.5, 1.5],
     ambientCGId: 'Concrete040',
