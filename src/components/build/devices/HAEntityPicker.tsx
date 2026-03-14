@@ -97,7 +97,7 @@ export default function HAEntityPicker({ deviceId, kind, currentEntityId, onSele
                         onSelect(entity.entityId);
                         setOpen(false);
                       }}
-                      disabled={!!linked}
+                      disabled={false}
                       className="flex flex-col items-start gap-0"
                     >
                       <div className="flex items-center gap-2 w-full">
