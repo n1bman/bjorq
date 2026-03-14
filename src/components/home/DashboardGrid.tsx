@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+import SortableWidgetGrid from './SortableWidgetGrid';
+import type { SortableItem } from './SortableWidgetGrid';
 import { Home, Cloud, Cpu, Zap, Bell, Video, Settings, Pencil, X, CalendarDays, Bot, Moon, Save, Workflow, Palette, LayoutGrid, Thermometer, Trees } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Button } from '../ui/button';
