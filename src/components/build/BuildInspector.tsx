@@ -1116,6 +1116,8 @@ const kindLabels: Record<DeviceKind, string> = {
   'lawn-mower': 'Gräsklippare',
   speaker: 'Högtalare',
   soundbar: 'Soundbar',
+  'light-fixture': 'Ljusarmatur',
+  'smart-outlet': 'Vägguttag',
 };
 
 function DeviceInspector({ deviceId, close }: { deviceId: string; close: React.ReactNode }) {
