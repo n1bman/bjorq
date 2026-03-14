@@ -1400,11 +1400,14 @@ export default function DeviceMarkers3D({ buildMode, onLongPress }: DeviceMarker
   // Long-press support for 3D markers in home mode
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressTriggered = useRef(false);
+  const clickHandled = useRef(false);
 
   const handlePointerDown3D = useCallback((id: string) => {
     if (buildMode || !onLongPress) return;
+    clickHandled.current = false;
     longPressTriggered.current = false;
     longPressTimer.current = setTimeout(() => {
+      if (clickHandled.current) return; // click already handled → abort
       longPressTriggered.current = true;
       onLongPress(id);
     }, 500);
@@ -1418,7 +1421,7 @@ export default function DeviceMarkers3D({ buildMode, onLongPress }: DeviceMarker
   }, []);
 
   const handleSelect = useCallback((id: string) => {
-    // Always clear long-press timer on click (acts as pointerUp substitute in R3F)
+    clickHandled.current = true;
     if (longPressTimer.current) {
       clearTimeout(longPressTimer.current);
       longPressTimer.current = null;
