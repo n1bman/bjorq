@@ -412,6 +412,7 @@ function renderOpeningModels(
     const isFrench = op.style === 'french';
     const isFixed = op.style === 'fixed';
     const is4Pane = op.style?.startsWith('4pane');
+    const is6Pane = op.style === '6pane-frost-mid';
     const outerFrameW = 0.05;
 
     if (is4Pane) {
