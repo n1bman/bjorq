@@ -244,8 +244,14 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
     ...catalog.map((c): ACEntry => {
       // Stale synced entries get marked for re-import
       const isStaleSync = c.wizardMode === 'synced';
+      // For stale synced items with expired blob thumbnails, try wizard API fallback
+      let thumb = c.thumbnail;
+      if (isStaleSync && c.wizardAssetId && (!thumb || thumb.startsWith('blob:'))) {
+        const base = useAppStore.getState().wizard.url.replace(/\/+$/, '');
+        if (base) thumb = `${base}/assets/${encodeURIComponent(c.wizardAssetId)}/thumbnail`;
+      }
       return {
-        id: c.id, name: c.name, thumbnail: c.thumbnail, category: c.category || 'imported',
+        id: c.id, name: c.name, thumbnail: thumb, category: c.category || 'imported',
         source: isStaleSync ? 'wizard' as const : c.source as any, catalogItem: c,
         dimensions: c.dimensions, performance: c.performance as any, subcategory: c.subcategory,
         wizardMode: c.wizardMode,
