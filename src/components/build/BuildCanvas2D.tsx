@@ -767,8 +767,9 @@ export default function BuildCanvas2D({ overlayMode = false }: { overlayMode?: b
     if (dragOpening && activeFloorId) { const wall = walls.find((w) => w.id === dragOpening.wallId); if (wall) { const [, t] = pointToSegment(wx, wz, wall.from[0], wall.from[1], wall.to[0], wall.to[1]); updateOpeningOffset(activeFloorId, dragOpening.wallId, dragOpening.openingId, Math.max(0.05, Math.min(0.95, t))); } return; }
     if (isDraggingProp && dragPropId) { const snapped = snapToGridFn(wx - dragPropOffset[0], wz - dragPropOffset[1]); const prop = floorProps.find((p) => p.id === dragPropId); if (prop) updateProp(dragPropId, { position: [snapped[0], prop.position[1], snapped[1]] }); return; }
     if (dragDeviceId) { const dev = deviceMarkers.find((m) => m.id === dragDeviceId); if (dev) { const snapped = snapToGridFn(wx - dragDeviceOffset[0], wz - dragDeviceOffset[1]); updateDevice(dragDeviceId, { position: [snapped[0], dev.position[1], snapped[1]] }); } return; }
+    if (dragKitchenId && activeFloorId) { const snapped = snapToGridFn(wx - dragKitchenOffset[0], wz - dragKitchenOffset[1]); updateKitchenFixture(activeFloorId, dragKitchenId, { position: [snapped[0], snapped[1]] }); return; }
     if (roomDrawStart && activeTool === 'room') setRoomDrawEnd(snapToGridFn(wx, wz));
-  }, [isPanning, panStart, zoom, offset, screenToWorld, dragNode, dragWall, dragOpening, isDraggingProp, dragPropId, dragPropOffset, dragDeviceId, dragDeviceOffset, roomDrawStart, activeTool, activeFloorId, snapToGridFn, updateWallNode, updateOpeningOffset, updateProp, updateDevice, floorProps, walls, deviceMarkers]);
+  }, [isPanning, panStart, zoom, offset, screenToWorld, dragNode, dragWall, dragOpening, isDraggingProp, dragPropId, dragPropOffset, dragDeviceId, dragDeviceOffset, dragKitchenId, dragKitchenOffset, roomDrawStart, activeTool, activeFloorId, snapToGridFn, updateWallNode, updateOpeningOffset, updateProp, updateDevice, updateKitchenFixture, floorProps, walls, deviceMarkers]);
 
   const handlePointerUp = useCallback(() => {
     setIsPanning(false);
