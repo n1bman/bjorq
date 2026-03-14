@@ -79,13 +79,36 @@ function LightMarker({ position, id, onSelect, onDragStart, selected }: MarkerPr
       {lightType === 'ceiling' && (
         <pointLight color={lightColor} intensity={intensity} distance={5} decay={2} />
       )}
+      {lightType === 'ceiling-small' && (
+        <pointLight color={lightColor} intensity={intensity * 0.5} distance={3} decay={2} />
+      )}
       {lightType === 'strip' && (
         <>
           <pointLight color={lightColor} intensity={intensity * 0.5} distance={6} decay={2} />
-          {/* Elongated emissive strip mesh */}
           <mesh>
             <boxGeometry args={[0.6, 0.03, 0.05]} />
             <meshStandardMaterial color={lightColor} emissive={lightColor} emissiveIntensity={isOn ? brightness * 3 : 0.1} transparent opacity={isOn ? 0.95 : 0.4} />
+          </mesh>
+        </>
+      )}
+      {lightType === 'lightbar' && (
+        <>
+          <spotLight
+            ref={spotLightRef}
+            color={lightColor}
+            intensity={intensity * 1.3}
+            distance={5}
+            angle={Math.PI / 4}
+            penumbra={0.5}
+            decay={2}
+            castShadow
+            shadow-mapSize-width={512}
+            shadow-mapSize-height={512}
+          />
+          <object3D ref={spotTargetRef} position={[0, -3, 0]} />
+          <mesh>
+            <boxGeometry args={[0.4, 0.02, 0.04]} />
+            <meshStandardMaterial color={lightColor} emissive={lightColor} emissiveIntensity={isOn ? brightness * 2.5 : 0.1} transparent opacity={isOn ? 0.95 : 0.4} />
           </mesh>
         </>
       )}
@@ -103,9 +126,7 @@ function LightMarker({ position, id, onSelect, onDragStart, selected }: MarkerPr
             shadow-mapSize-width={512}
             shadow-mapSize-height={512}
           />
-          {/* Target positioned below the light (in local space, pointing down by default) */}
           <object3D ref={spotTargetRef} position={[0, -3, 0]} />
-          {/* Cone indicator mesh */}
           <mesh rotation={[Math.PI, 0, 0]}>
             <coneGeometry args={[0.08, 0.15, 8]} />
             <meshStandardMaterial color={lightColor} emissive={lightColor} emissiveIntensity={isOn ? brightness * 2 : 0.1} transparent opacity={isOn ? 0.9 : 0.4} />
@@ -126,19 +147,17 @@ function LightMarker({ position, id, onSelect, onDragStart, selected }: MarkerPr
             shadow-mapSize-width={512}
             shadow-mapSize-height={512}
           />
-          {/* Target positioned forward and down for wall wash */}
           <object3D ref={spotTargetRef} position={[0, -1, 1]} />
-          {/* Half-dome mesh for wall light */}
           <mesh>
             <sphereGeometry args={[selected ? 0.12 : 0.08, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2]} />
             <meshStandardMaterial color={lightColor} emissive={lightColor} emissiveIntensity={isOn ? brightness * 2 : 0.1} transparent opacity={isOn ? 0.9 : 0.4} />
           </mesh>
         </>
       )}
-      {/* Default sphere for ceiling type */}
-      {lightType === 'ceiling' && (
+      {/* Default sphere for ceiling / ceiling-small */}
+      {(lightType === 'ceiling' || lightType === 'ceiling-small') && (
         <mesh>
-          <sphereGeometry args={[selected ? 0.15 : 0.1, 16, 16]} />
+          <sphereGeometry args={[lightType === 'ceiling-small' ? (selected ? 0.08 : 0.05) : (selected ? 0.15 : 0.1), 16, 16]} />
           <meshStandardMaterial color={lightColor} emissive={lightColor} emissiveIntensity={isOn ? brightness * 2 : 0.1} transparent opacity={isOn ? 0.9 : 0.4} />
         </mesh>
       )}
