@@ -31,7 +31,7 @@ export const openingPresets: OpeningPreset[] = [
   // 4-pane Swedish tvåluftsfönster
   { id: 'win-4pane', label: '4-rutors fönster', type: 'window', width: 1.0, height: 1.4, sillHeight: 0.9, style: '4pane', description: '100×140 cm tvåluft, klart glas' },
   { id: 'win-4pane-frost-bottom', label: '4-rutors frostat nedtill', type: 'window', width: 1.0, height: 1.4, sillHeight: 0.9, style: '4pane-frost-bottom', description: '100×140 cm, frostat nedre rutor' },
-  { id: 'win-4pane-frost-diag', label: '4-rutors frostat diagonalt', type: 'window', width: 1.0, height: 1.4, sillHeight: 0.9, style: '4pane-frost-diag', description: '100×140 cm, frostat diagonalt' },
+  { id: 'win-6pane-frost-mid', label: '6-rutors frostat mitt', type: 'window', width: 1.0, height: 1.4, sillHeight: 0.9, style: '6pane-frost-mid', description: '100×140 cm, 6 rutor, frostat mittrad' },
   // Garage doors — Swedish standard
   { id: 'garage-single', label: 'Garageport enkel', type: 'garage-door', width: 2.5, height: 2.2, sillHeight: 0, style: 'sectional', description: '250 cm sektionsport' },
   { id: 'garage-double', label: 'Garageport dubbel', type: 'garage-door', width: 5.0, height: 2.5, sillHeight: 0, style: 'sectional', description: '500 cm sektionsport' },

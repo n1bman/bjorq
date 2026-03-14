@@ -748,7 +748,7 @@ export function generateWallSegments(
       key={`${wall.id}-body`}
       geometry={geo}
       material={mats}
-      position={[origCx, elevation, origCz]}
+      position={[origCx, wallHeight / 2 + elevation, origCz]}
       rotation={[0, -angle, 0]}
       castShadow
       receiveShadow
