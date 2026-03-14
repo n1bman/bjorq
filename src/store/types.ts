@@ -1117,6 +1117,7 @@ export interface AppState {
 
   // Kitchen fixture actions
   addKitchenFixture: (floorId: string, fixture: KitchenFixture) => void;
+  updateKitchenFixture: (floorId: string, fixtureId: string, updates: Partial<KitchenFixture>) => void;
   removeKitchenFixture: (floorId: string, fixtureId: string) => void;
 
   // Props actions

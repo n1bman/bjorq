@@ -850,6 +850,18 @@ const storeCreator = (set: any, get: any): AppState => ({
       },
     })),
 
+  updateKitchenFixture: (floorId, fixtureId, updates) =>
+    set((s: any) => ({
+      layout: {
+        ...s.layout,
+        floors: s.layout.floors.map((f: any) =>
+          f.id === floorId
+            ? { ...f, kitchenFixtures: (f.kitchenFixtures || []).map((k: any) => k.id === fixtureId ? { ...k, ...updates } : k) }
+            : f
+        ),
+      },
+    })),
+
   removeKitchenFixture: (floorId, fixtureId) =>
     set((s: any) => ({
       layout: {

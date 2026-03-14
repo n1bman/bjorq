@@ -467,12 +467,16 @@ export default function BuildCanvas2D({ overlayMode = false }: { overlayMode?: b
   const updateDevice = useAppStore((s) => s.updateDevice);
   const setVacuumDock = useAppStore((s) => s.setVacuumDock);
   const addVacuumZone = useAppStore((s) => s.addVacuumZone);
+  const updateKitchenFixture = useAppStore((s) => s.updateKitchenFixture);
+  const [dragKitchenId, setDragKitchenId] = useState<string | null>(null);
+  const [dragKitchenOffset, setDragKitchenOffset] = useState<[number, number]>([0, 0]);
 
   const floor = floors.find((f) => f.id === activeFloorId);
   const walls = floor?.walls ?? [];
   const rooms = floor?.rooms ?? [];
   const stairs = floor?.stairs ?? [];
   const floorProps = propItems.filter((p) => p.floorId === activeFloorId);
+  const kitchenFixtures = floor?.kitchenFixtures ?? [];
   const ghostFloors = showGhost ? floors.filter((f) => f.id !== activeFloorId) : [];
   const referenceDrawing = floor?.referenceDrawing;
 
@@ -621,7 +625,38 @@ export default function BuildCanvas2D({ overlayMode = false }: { overlayMode?: b
       ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.font = '9px DM Sans, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillText(prop.url.split('/').pop()?.slice(0, 10) ?? '3D', px, py + size + 3);
     }
 
-    if (measureStart) drawMeasureTool(ctx, measureStart, measureEnd, cursorWorld, snapToGridFn, worldToScreen);
+    // Kitchen fixtures (rendered as rectangles in 2D)
+    const KW = 3.80, KD = 0.60;
+    for (const kf of kitchenFixtures) {
+      const cos = Math.cos(-kf.rotation), sin = Math.sin(-kf.rotation);
+      // Four corners of the kitchen footprint
+      const hw = KW / 2, hd = KD;
+      const corners: [number, number][] = [
+        [kf.position[0] + (-hw) * cos - 0 * sin, kf.position[1] + (-hw) * sin + 0 * cos],
+        [kf.position[0] + hw * cos - 0 * sin, kf.position[1] + hw * sin + 0 * cos],
+        [kf.position[0] + hw * cos - (-hd) * sin, kf.position[1] + hw * sin + (-hd) * cos],
+        [kf.position[0] + (-hw) * cos - (-hd) * sin, kf.position[1] + (-hw) * sin + (-hd) * cos],
+      ];
+      const screenCorners = corners.map(([cx, cz]) => worldToScreen(cx, cz));
+      const isKSel = selection.type === 'kitchen-fixture' && selection.id === kf.id;
+      ctx.beginPath();
+      ctx.moveTo(screenCorners[0][0], screenCorners[0][1]);
+      for (let i = 1; i < screenCorners.length; i++) ctx.lineTo(screenCorners[i][0], screenCorners[i][1]);
+      ctx.closePath();
+      ctx.fillStyle = isKSel ? 'rgba(74,158,255,0.3)' : 'rgba(200,168,110,0.25)';
+      ctx.fill();
+      ctx.strokeStyle = isKSel ? '#4a9eff' : '#c8a86e';
+      ctx.lineWidth = isKSel ? 2 : 1;
+      ctx.stroke();
+      // Label
+      const [lx, ly] = worldToScreen(kf.position[0], kf.position[1] - KD / 2);
+      ctx.fillStyle = 'rgba(255,255,255,0.7)';
+      ctx.font = '9px DM Sans, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('🍳 Kök', lx, ly);
+    }
+
     if (vacZoneNodes.length > 0) drawVacuumZonePreview(ctx, vacZoneNodes, cursorWorld, activeTool, worldToScreen);
 
     // Cursor crosshair
@@ -710,6 +745,8 @@ export default function BuildCanvas2D({ overlayMode = false }: { overlayMode?: b
       const [swx, swz] = screenToWorld(sx, sy);
       for (const dev of deviceMarkers.filter((m) => m.floorId === activeFloorId)) { if (Math.sqrt((swx - dev.position[0]) ** 2 + (swz - dev.position[2]) ** 2) < 0.5) { setSelection({ type: 'device', id: dev.id }); setDragDeviceId(dev.id); setDragDeviceOffset([swx - dev.position[0], swz - dev.position[2]]); return; } }
       const node = findNodeAt(sx, sy); if (node) { pushUndo(); setDragNode({ wallId: node.wallId, endpoint: node.endpoint, connectedWalls: findConnectedWalls(node.pos, node.wallId) }); setSelection({ type: 'wall', id: node.wallId }); return; }
+      // Kitchen fixture hit test
+      for (const kf of kitchenFixtures) { const kDist = Math.sqrt((swx - kf.position[0]) ** 2 + (swz - kf.position[1]) ** 2); if (kDist < 2.0) { setSelection({ type: 'kitchen-fixture', id: kf.id }); pushUndo(); setDragKitchenId(kf.id); setDragKitchenOffset([swx - kf.position[0], swz - kf.position[1]]); return; } }
       const prop = findPropAt(sx, sy); if (prop) { setSelection({ type: 'prop', id: prop.id }); const [wx2, wz2] = screenToWorld(sx, sy); setIsDraggingProp(true); setDragPropId(prop.id); setDragPropOffset([wx2 - prop.position[0], wz2 - prop.position[2]]); return; }
       const wall = findWallAt(sx, sy); if (wall) { const [wx2, wz2] = screenToWorld(sx, sy); pushUndo(); setDragWall({ wallId: wall.id, startFrom: [...wall.from], startTo: [...wall.to], mouseStart: [wx2, wz2] }); setSelection({ type: 'wall', id: wall.id }); return; }
       for (const stair of stairs) { const [stx, sty] = worldToScreen(stair.position[0], stair.position[1]); if (Math.abs(sx - stx) < stair.width * zoom / 2 && Math.abs(sy - sty) < stair.length * zoom / 2) { setSelection({ type: 'stair', id: stair.id }); return; } }
@@ -730,8 +767,9 @@ export default function BuildCanvas2D({ overlayMode = false }: { overlayMode?: b
     if (dragOpening && activeFloorId) { const wall = walls.find((w) => w.id === dragOpening.wallId); if (wall) { const [, t] = pointToSegment(wx, wz, wall.from[0], wall.from[1], wall.to[0], wall.to[1]); updateOpeningOffset(activeFloorId, dragOpening.wallId, dragOpening.openingId, Math.max(0.05, Math.min(0.95, t))); } return; }
     if (isDraggingProp && dragPropId) { const snapped = snapToGridFn(wx - dragPropOffset[0], wz - dragPropOffset[1]); const prop = floorProps.find((p) => p.id === dragPropId); if (prop) updateProp(dragPropId, { position: [snapped[0], prop.position[1], snapped[1]] }); return; }
     if (dragDeviceId) { const dev = deviceMarkers.find((m) => m.id === dragDeviceId); if (dev) { const snapped = snapToGridFn(wx - dragDeviceOffset[0], wz - dragDeviceOffset[1]); updateDevice(dragDeviceId, { position: [snapped[0], dev.position[1], snapped[1]] }); } return; }
+    if (dragKitchenId && activeFloorId) { const snapped = snapToGridFn(wx - dragKitchenOffset[0], wz - dragKitchenOffset[1]); updateKitchenFixture(activeFloorId, dragKitchenId, { position: [snapped[0], snapped[1]] }); return; }
     if (roomDrawStart && activeTool === 'room') setRoomDrawEnd(snapToGridFn(wx, wz));
-  }, [isPanning, panStart, zoom, offset, screenToWorld, dragNode, dragWall, dragOpening, isDraggingProp, dragPropId, dragPropOffset, dragDeviceId, dragDeviceOffset, roomDrawStart, activeTool, activeFloorId, snapToGridFn, updateWallNode, updateOpeningOffset, updateProp, updateDevice, floorProps, walls, deviceMarkers]);
+  }, [isPanning, panStart, zoom, offset, screenToWorld, dragNode, dragWall, dragOpening, isDraggingProp, dragPropId, dragPropOffset, dragDeviceId, dragDeviceOffset, dragKitchenId, dragKitchenOffset, roomDrawStart, activeTool, activeFloorId, snapToGridFn, updateWallNode, updateOpeningOffset, updateProp, updateDevice, updateKitchenFixture, floorProps, walls, deviceMarkers]);
 
   const handlePointerUp = useCallback(() => {
     setIsPanning(false);
@@ -740,6 +778,7 @@ export default function BuildCanvas2D({ overlayMode = false }: { overlayMode?: b
     if (dragOpening) { setDragOpening(null); return; }
     if (isDraggingProp) { setIsDraggingProp(false); setDragPropId(null); return; }
     if (dragDeviceId) { setDragDeviceId(null); return; }
+    if (dragKitchenId) { setDragKitchenId(null); return; }
     if (roomDrawStart && roomDrawEnd && activeTool === 'room' && activeFloorId) {
       const x = Math.min(roomDrawStart[0], roomDrawEnd[0]), z = Math.min(roomDrawStart[1], roomDrawEnd[1]);
       const w = Math.abs(roomDrawEnd[0] - roomDrawStart[0]), d = Math.abs(roomDrawEnd[1] - roomDrawStart[1]);
