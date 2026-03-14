@@ -8,7 +8,7 @@ import { Switch } from '../ui/switch';
 import { presetMaterials, addCustomMaterial, wallSurfaceCategories, floorSurfaceCategories, surfaceCategoryLabels, getMaterialsByCategory } from '../../lib/materials';
 import { openingPresets, getPresetsByType } from '../../lib/openingPresets';
 import { useState, useRef } from 'react';
-import type { DeviceKind, DeviceSurface, ScreenConfig, LightType, WallOpening } from '../../store/types';
+import type { DeviceKind, DeviceSurface, ScreenConfig, LightType, LightConfig, WallOpening } from '../../store/types';
 import HAEntityPicker from './devices/HAEntityPicker';
 import { generateId } from '../../lib/buildUtils';
 
@@ -1266,7 +1266,74 @@ function DeviceInspector({ deviceId, close }: { deviceId: string; close: React.R
         </div>
       )}
 
-      {/* Screen-specific controls */}
+      {/* Light properties — for light and light-fixture */}
+      {(isLight || isLightFixture) && (() => {
+        // Defaults per light type / fixture model
+        const lightDefaults: Record<string, { intensity: number; distance: number; angle: number; penumbra: number }> = {
+          'ceiling':       { intensity: 4, distance: 5, angle: Math.PI, penumbra: 0 },
+          'ceiling-small': { intensity: 2, distance: 3, angle: Math.PI, penumbra: 0 },
+          'strip':         { intensity: 2, distance: 6, angle: Math.PI, penumbra: 0 },
+          'lightbar':      { intensity: 5.2, distance: 5, angle: Math.PI / 4, penumbra: 0.5 },
+          'spot':          { intensity: 6, distance: 6, angle: Math.PI / 7, penumbra: 0.4 },
+          'wall':          { intensity: 4.8, distance: 5, angle: Math.PI / 4, penumbra: 0.6 },
+          'led-bulb':      { intensity: 1, distance: 2, angle: Math.PI, penumbra: 0 },
+          'led-bar':       { intensity: 1.5, distance: 3, angle: Math.PI / 4, penumbra: 0.7 },
+          'led-spot':      { intensity: 2, distance: 2.5, angle: Math.PI / 10, penumbra: 0.3 },
+        };
+        const typeKey = isLightFixture ? (device.fixtureModel ?? 'led-bulb') : (device.lightType ?? 'ceiling');
+        const def = lightDefaults[typeKey] ?? lightDefaults['ceiling'];
+        const lc = device.lightConfig;
+        const cur = { ...def, ...lc };
+        const hasSpotAngle = !['ceiling', 'ceiling-small', 'strip', 'led-bulb'].includes(typeKey);
+
+        const updateLightConfig = (patch: Partial<LightConfig>) => {
+          updateDevice(device.id, { lightConfig: { ...cur, ...patch } });
+        };
+
+        return (
+          <div className="space-y-2 border-t border-border pt-2">
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground text-[10px] font-medium">Ljusegenskaper</span>
+              {lc && (
+                <button
+                  onClick={() => updateDevice(device.id, { lightConfig: undefined })}
+                  className="text-[9px] text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Återställ
+                </button>
+              )}
+            </div>
+            <SliderWithInput
+              label="Intensitet" suffix="×" decimals={1}
+              min={0.1} max={10} step={0.1}
+              value={cur.intensity}
+              onValueChange={(v) => updateLightConfig({ intensity: v })}
+            />
+            <SliderWithInput
+              label="Räckvidd" suffix=" m" decimals={1}
+              min={0.5} max={15} step={0.1}
+              value={cur.distance}
+              onValueChange={(v) => updateLightConfig({ distance: v })}
+            />
+            {hasSpotAngle && (
+              <>
+                <SliderWithInput
+                  label="Konvinkel" suffix="°" decimals={0}
+                  min={5} max={120} step={1}
+                  value={Math.round(cur.angle * (180 / Math.PI))}
+                  onValueChange={(v) => updateLightConfig({ angle: v * (Math.PI / 180) })}
+                />
+                <SliderWithInput
+                  label="Penumbra" suffix="" decimals={2}
+                  min={0} max={1} step={0.05}
+                  value={cur.penumbra}
+                  onValueChange={(v) => updateLightConfig({ penumbra: v })}
+                />
+              </>
+            )}
+          </div>
+        );
+      })()}
       {isScreen && (
         <>
           <div className="space-y-2">

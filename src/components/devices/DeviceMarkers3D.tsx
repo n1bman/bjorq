@@ -73,20 +73,34 @@ function LightMarker({ position, id, onSelect, onDragStart, selected }: MarkerPr
     if (selected && onDragStart) { onDragStart(id, e); }
   }, [selected, onDragStart, id]);
 
-  const intensity = isOn ? brightness * 4 : 0;
+  // Per-device light config with type-specific defaults
+  const cfg = useMemo(() => {
+    const defaults: Record<string, { intensity: number; distance: number; angle: number; penumbra: number }> = {
+      'ceiling':       { intensity: 4, distance: 5, angle: Math.PI, penumbra: 0 },
+      'ceiling-small': { intensity: 2, distance: 3, angle: Math.PI, penumbra: 0 },
+      'strip':         { intensity: 2, distance: 6, angle: Math.PI, penumbra: 0 },
+      'lightbar':      { intensity: 5.2, distance: 5, angle: Math.PI / 4, penumbra: 0.5 },
+      'spot':          { intensity: 6, distance: 6, angle: Math.PI / 7, penumbra: 0.4 },
+      'wall':          { intensity: 4.8, distance: 5, angle: Math.PI / 4, penumbra: 0.6 },
+    };
+    const d = defaults[lightType] ?? defaults['ceiling'];
+    return { ...d, ...marker?.lightConfig };
+  }, [lightType, marker?.lightConfig]);
+
+  const intensity = isOn ? brightness * cfg.intensity : 0;
 
   return (
     <group position={position} onClick={handleClick} onPointerDown={handlePointerDown}>
-      {/* Light source varies by type */}
+      {/* Light source varies by type — uses per-device cfg */}
       {lightType === 'ceiling' && (
-        <pointLight color={lightColor} intensity={intensity} distance={5} decay={2} />
+        <pointLight color={lightColor} intensity={intensity} distance={cfg.distance} decay={2} />
       )}
       {lightType === 'ceiling-small' && (
-        <pointLight color={lightColor} intensity={intensity * 0.5} distance={3} decay={2} />
+        <pointLight color={lightColor} intensity={intensity} distance={cfg.distance} decay={2} />
       )}
       {lightType === 'strip' && (
         <>
-          <pointLight color={lightColor} intensity={intensity * 0.5} distance={6} decay={2} />
+          <pointLight color={lightColor} intensity={intensity} distance={cfg.distance} decay={2} />
           <mesh>
             <boxGeometry args={[0.6, 0.03, 0.05]} />
             <meshStandardMaterial color={lightColor} emissive={lightColor} emissiveIntensity={isOn ? brightness * 3 : 0.1} transparent opacity={isOn ? 0.95 : 0.4} />
@@ -98,10 +112,10 @@ function LightMarker({ position, id, onSelect, onDragStart, selected }: MarkerPr
           <spotLight
             ref={spotLightRef}
             color={lightColor}
-            intensity={intensity * 1.3}
-            distance={5}
-            angle={Math.PI / 4}
-            penumbra={0.5}
+            intensity={intensity}
+            distance={cfg.distance}
+            angle={cfg.angle}
+            penumbra={cfg.penumbra}
             decay={2}
             castShadow
             shadow-mapSize-width={512}
@@ -119,10 +133,10 @@ function LightMarker({ position, id, onSelect, onDragStart, selected }: MarkerPr
           <spotLight
             ref={spotLightRef}
             color={lightColor}
-            intensity={intensity * 1.5}
-            distance={6}
-            angle={Math.PI / 7}
-            penumbra={0.4}
+            intensity={intensity}
+            distance={cfg.distance}
+            angle={cfg.angle}
+            penumbra={cfg.penumbra}
             decay={2}
             castShadow
             shadow-mapSize-width={512}
@@ -140,10 +154,10 @@ function LightMarker({ position, id, onSelect, onDragStart, selected }: MarkerPr
           <spotLight
             ref={spotLightRef}
             color={lightColor}
-            intensity={intensity * 1.2}
-            distance={5}
-            angle={Math.PI / 4}
-            penumbra={0.6}
+            intensity={intensity}
+            distance={cfg.distance}
+            angle={cfg.angle}
+            penumbra={cfg.penumbra}
             decay={2}
             castShadow
             shadow-mapSize-width={512}
@@ -1207,6 +1221,17 @@ function LightFixtureMarker({ position, id, onSelect, onDragStart, selected }: M
 
   const brightness = isOn ? (lightData?.brightness ?? 200) / 255 : 0;
 
+  // Per-device light config with fixture-model defaults
+  const cfg = useMemo(() => {
+    const defaults: Record<string, { intensity: number; distance: number; angle: number; penumbra: number }> = {
+      'led-bulb': { intensity: 1, distance: 2, angle: Math.PI, penumbra: 0 },
+      'led-bar':  { intensity: 1.5, distance: 3, angle: Math.PI / 4, penumbra: 0.7 },
+      'led-spot': { intensity: 2, distance: 2.5, angle: Math.PI / 10, penumbra: 0.3 },
+    };
+    const d = defaults[fixtureModel] ?? defaults['led-bulb'];
+    return { ...d, ...marker?.lightConfig };
+  }, [fixtureModel, marker?.lightConfig]);
+
   useFrame(() => {
     if (spotLightRef.current && spotTargetRef.current) {
       spotLightRef.current.target = spotTargetRef.current;
@@ -1230,7 +1255,7 @@ function LightFixtureMarker({ position, id, onSelect, onDragStart, selected }: M
             <sphereGeometry args={[0.03, 16, 16]} />
             <meshStandardMaterial color={lightColor} emissive={lightColor} emissiveIntensity={isOn ? brightness * 3 : 0.1} transparent opacity={isOn ? 0.95 : 0.5} />
           </mesh>
-          <pointLight color={lightColor} intensity={isOn ? brightness * 1 : 0} distance={2} decay={2} />
+          <pointLight color={lightColor} intensity={isOn ? brightness * cfg.intensity : 0} distance={cfg.distance} decay={2} />
         </>
       )}
       {fixtureModel === 'led-bar' && (
@@ -1244,7 +1269,7 @@ function LightFixtureMarker({ position, id, onSelect, onDragStart, selected }: M
             <boxGeometry args={[0.56, 0.005, 0.025]} />
             <meshStandardMaterial color={lightColor} emissive={lightColor} emissiveIntensity={isOn ? brightness * 2 : 0.1} transparent opacity={isOn ? 0.85 : 0.3} />
           </mesh>
-          <spotLight ref={spotLightRef} color={lightColor} intensity={isOn ? brightness * 1.5 : 0} distance={3} angle={Math.PI / 4} penumbra={0.7} decay={2} position={[0, -0.012, 0]} />
+          <spotLight ref={spotLightRef} color={lightColor} intensity={isOn ? brightness * cfg.intensity : 0} distance={cfg.distance} angle={cfg.angle} penumbra={cfg.penumbra ?? 0.7} decay={2} position={[0, -0.012, 0]} />
           <object3D ref={spotTargetRef} position={[0, -3, 0]} />
         </>
       )}
@@ -1260,7 +1285,7 @@ function LightFixtureMarker({ position, id, onSelect, onDragStart, selected }: M
             <cylinderGeometry args={[0.025, 0.025, 0.003, 24]} />
             <meshStandardMaterial color={lightColor} emissive={lightColor} emissiveIntensity={isOn ? brightness * 2.5 : 0.1} transparent opacity={isOn ? 0.9 : 0.3} />
           </mesh>
-          <spotLight ref={spotLightRef} color={lightColor} intensity={isOn ? brightness * 2 : 0} distance={2.5} angle={Math.PI / 10} penumbra={0.3} decay={2} position={[0, -0.008, 0]} />
+          <spotLight ref={spotLightRef} color={lightColor} intensity={isOn ? brightness * cfg.intensity : 0} distance={cfg.distance} angle={cfg.angle} penumbra={cfg.penumbra ?? 0.3} decay={2} position={[0, -0.008, 0]} />
           <object3D ref={spotTargetRef} position={[0, -3, 0]} />
         </>
       )}
