@@ -146,7 +146,7 @@ export default function CategoryCard({
 
       {/* Compact device list */}
       {!collapsed && (
-        <div className="space-y-1 mt-2">
+        <div className="space-y-1 mt-2 overflow-y-auto flex-1 min-h-0">
           {devices.map((d) => {
             const state = deviceStates[d.id];
             const on = isOn(state);
