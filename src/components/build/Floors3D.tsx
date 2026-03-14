@@ -93,11 +93,7 @@ export default function Floors3D() {
             <primitive
               key={`outline-${room.id}`}
               object={lineObj}
-              position={[0, (floor?.elevation ?? 0) + 0.04, 0]}
-              geometry={outlineGeo}
-            >
-              <lineBasicMaterial color="#4a9eff" linewidth={2} depthTest={false} transparent opacity={0.9} />
-            </line>
+            />
           );
         }
 
