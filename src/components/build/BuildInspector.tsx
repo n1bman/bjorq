@@ -1379,6 +1379,15 @@ function DeviceInspector({ deviceId, close }: { deviceId: string; close: React.R
         onSelect={(entityId) => updateDevice(device.id, { ha: { entityId } })}
         onClear={() => updateDevice(device.id, { ha: undefined })}
       />
+      {/* Multi-entity warning */}
+      {device.ha?.entityId && (() => {
+        const sharedCount = markers.filter(m => m.id !== device.id && m.ha?.entityId === device.ha?.entityId).length;
+        return sharedCount > 0 ? (
+          <p className="text-[9px] text-amber-500 flex items-center gap-1 px-1">
+            ⚠ {sharedCount + 1} enheter delar denna entitet
+          </p>
+        ) : null;
+      })()}
 
       {/* Position sliders */}
       <div className="space-y-1.5">

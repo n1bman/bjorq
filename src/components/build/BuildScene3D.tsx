@@ -127,7 +127,7 @@ function SceneContent() {
           kind,
           name: '',
           floorId: activeFloorId,
-          surface: kind === 'light' ? 'ceiling' : kind === 'media_screen' ? 'free' : 'floor',
+          surface: kind === 'light' || kind === 'light-fixture' ? 'ceiling' : kind === 'media_screen' ? 'free' : kind === 'smart-outlet' ? 'wall' : 'floor',
           position: [snapped[0], yPos, snapped[1]],
           rotation: [0, 0, 0],
         };

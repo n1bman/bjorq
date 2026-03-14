@@ -117,7 +117,7 @@ export default function HAEntityPicker({ deviceId, kind, currentEntityId, onSele
                         )}
                       </div>
                       {linked && (
-                        <p className="text-[9px] text-muted-foreground/60 ml-5">Kopplad till: {linked}</p>
+                        <p className="text-[9px] text-amber-500/80 ml-5">⚠ Kopplad till: {linked}</p>
                       )}
                     </CommandItem>
                   );
