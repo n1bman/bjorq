@@ -278,10 +278,11 @@ export default function InteractiveWalls3D() {
           {segments}
           {nodeElements}
           {faceHighlight}
+          {outlineElements}
         </group>
       );
     });
-  }, [walls, rooms, elevation, selectedWallId, selectedFaceSide, selectedOpeningId, hoveredWallId, hoveredFaceSide, activeTool, isPaintMode, isWallMountMode, handleWallClick, handleWallHover, handleWallHoverMove, handleOpeningClick, wallRoomMaterial]);
+  }, [walls, rooms, elevation, selectedWallId, selectedFaceSide, selectedOpeningId, hoveredWallId, hoveredFaceSide, activeTool, isPaintMode, isWallMountMode, handleWallClick, handleWallHover, handleWallHoverMove, handleOpeningClick, wallRoomMaterial, wallRoomTextureParams]);
 
   const cornerBlocks = useMemo(() =>
     generateCornerBlocks(walls, elevation, {
