@@ -86,9 +86,13 @@ export default function Floors3D() {
           // Close the loop
           outlinePoints.push(outlinePoints[0].clone());
           const outlineGeo = new THREE.BufferGeometry().setFromPoints(outlinePoints);
+          const outlineMatObj = new THREE.LineBasicMaterial({ color: '#4a9eff', depthTest: false, transparent: true, opacity: 0.9 });
+          const lineObj = new THREE.LineLoop(outlineGeo, outlineMatObj);
+          lineObj.position.set(0, (floor?.elevation ?? 0) + 0.04, 0);
           outlineMesh = (
-            <line
+            <primitive
               key={`outline-${room.id}`}
+              object={lineObj}
               position={[0, (floor?.elevation ?? 0) + 0.04, 0]}
               geometry={outlineGeo}
             >
