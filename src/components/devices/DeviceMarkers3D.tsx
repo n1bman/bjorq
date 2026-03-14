@@ -1260,7 +1260,7 @@ function LightFixtureMarker({ position, id, onSelect, onDragStart, selected }: M
             <cylinderGeometry args={[0.025, 0.025, 0.003, 24]} />
             <meshStandardMaterial color={lightColor} emissive={lightColor} emissiveIntensity={isOn ? brightness * 3 : 0.1} transparent opacity={isOn ? 0.9 : 0.3} />
           </mesh>
-          <spotLight ref={spotLightRef} color={lightColor} intensity={intensity * 1.5} distance={5} angle={Math.PI / 8} penumbra={0.3} decay={2} castShadow />
+          <spotLight ref={spotLightRef} color={lightColor} intensity={isOn ? brightness * 5 : 0} distance={4} angle={Math.PI / 8} penumbra={0.3} decay={2} castShadow />
           <object3D ref={spotTargetRef} position={[0, -3, 0]} />
         </>
       )}
