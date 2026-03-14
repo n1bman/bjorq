@@ -14,7 +14,6 @@ import { Eye, EyeOff, Lightbulb, Thermometer, Wind, Camera, Power, Tv, Fan, Shie
 import { cn } from '../../lib/utils';
 import { Switch } from '../ui/switch';
 import { Button } from '../ui/button';
-import { Button } from '../ui/button';
 import type { DeviceKind } from '../../store/types';
 import { cameraRef } from '../../lib/cameraRef';
 
