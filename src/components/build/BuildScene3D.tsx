@@ -12,7 +12,7 @@ import Floors3D from './Floors3D';
 import Stairs3D from './Stairs3D';
 import ImportedHome3D from './ImportedHome3D';
 import Props3D from './Props3D';
-import KitchenFixtureModel3D from './KitchenUnit3D';
+import KitchenUnit3DComponent from './KitchenUnit3D';
 import WeatherEffects3D from './WeatherEffects3D';
 import Ceilings3D from './Ceilings3D';
 
@@ -321,7 +321,7 @@ function SceneContent() {
       <Stairs3D />
       <ImportedHome3D />
       <Props3D />
-      <KitchenFixtureModel3D />
+      <KitchenUnit3DComponent />
       <WallDrawing3D cursorPos={cursorPos} cursorSnapped={cursorSnapped} cursorMidSnap={cursorMidSnap} cursorAxisAligned={cursorAxisAligned} />
       <WeatherEffects3D />
       <InlineTerrain3D />
