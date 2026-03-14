@@ -151,7 +151,24 @@ export default function CategoryCard({
           <span className="text-base font-semibold text-foreground truncate">{category}</span>
           <span className="text-xs text-muted-foreground shrink-0">{onCount}/{devices.length}</span>
         </div>
-        <div onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+          {hasLights && allOn && (
+            <div className="w-16 shrink-0">
+              <Slider
+                value={[avgBrightness]}
+                max={255}
+                step={1}
+                onValueChange={([v]) => {
+                  for (const d of lightDevices) {
+                    const st = deviceStates[d.id];
+                    if (st?.kind === 'light' && st.data.on) {
+                      updateDeviceState(d.id, { brightness: v });
+                    }
+                  }
+                }}
+              />
+            </div>
+          )}
           <Switch checked={allOn} onCheckedChange={toggleAll} className="scale-90" />
         </div>
       </div>

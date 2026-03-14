@@ -80,9 +80,9 @@ function StandbyStaticCamera() {
   return null;
 }
 
-const CameraController = React.forwardRef(function CameraController(_props, _ref) {
+// Separate interactive camera — only mounted when NOT in standby
+function InteractiveCameraController() {
   const cameraPreset = useAppStore((s) => s.homeView.cameraPreset);
-  const appMode = useAppStore((s) => s.appMode);
   const customStartPos = useAppStore((s) => s.homeView.customStartPos);
   const customStartTarget = useAppStore((s) => s.homeView.customStartTarget);
   const controlsRef = useRef<any>(null);
@@ -96,7 +96,7 @@ const CameraController = React.forwardRef(function CameraController(_props, _ref
   }, []);
 
   useEffect(() => {
-    if (!initialApplied.current && (appMode === 'dashboard' || appMode === 'home')) {
+    if (!initialApplied.current) {
       const pos = customStartPos
         ? new THREE.Vector3(...customStartPos)
         : presetPositions.angle.clone();
@@ -110,15 +110,13 @@ const CameraController = React.forwardRef(function CameraController(_props, _ref
 
   useEffect(() => {
     if (!initialApplied.current) return;
-    if (appMode === 'dashboard' || appMode === 'home') {
-      const pos = customStartPos
-        ? new THREE.Vector3(...customStartPos)
-        : presetPositions.angle.clone();
-      const target = customStartTarget
-        ? new THREE.Vector3(...customStartTarget)
-        : presetTargets.angle.clone();
-      lerpingTo.current = { pos, target };
-    }
+    const pos = customStartPos
+      ? new THREE.Vector3(...customStartPos)
+      : presetPositions.angle.clone();
+    const target = customStartTarget
+      ? new THREE.Vector3(...customStartTarget)
+      : presetTargets.angle.clone();
+    lerpingTo.current = { pos, target };
   }, [customStartPos, customStartTarget]);
 
   useEffect(() => {
@@ -135,7 +133,6 @@ const CameraController = React.forwardRef(function CameraController(_props, _ref
     if (controlsRef.current) {
       cameraRef.target.copy(controlsRef.current.target);
     }
-    // Check for external flyTo requests
     if (pendingFlyTo) {
       lerpingTo.current = { pos: pendingFlyTo.position, target: pendingFlyTo.target };
       clearPendingFlyTo();
@@ -153,10 +150,6 @@ const CameraController = React.forwardRef(function CameraController(_props, _ref
     }
   });
 
-  if (appMode === 'standby') {
-    return <StandbyStaticCamera />;
-  }
-
   if (!ready) return null;
 
   return (
@@ -170,6 +163,23 @@ const CameraController = React.forwardRef(function CameraController(_props, _ref
       maxPolarAngle={Math.PI / 2.1}
     />
   );
+}
+
+// CameraController wrapper: chooses standby vs interactive
+const CameraController = React.forwardRef(function CameraController(_props, _ref) {
+  const appMode = useAppStore((s) => s.appMode);
+  const prevModeRef = useRef(appMode);
+
+  // Reset camera state on mode transitions
+  useEffect(() => {
+    prevModeRef.current = appMode;
+  }, [appMode]);
+
+  if (appMode === 'standby') {
+    return <StandbyStaticCamera />;
+  }
+
+  return <InteractiveCameraController />;
 });
 
 

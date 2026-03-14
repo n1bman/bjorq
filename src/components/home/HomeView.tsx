@@ -114,6 +114,29 @@ export default function HomeView() {
         {visibleWidgets.energy && <EnergyWidget />}
       </div>
 
+      {/* Save View popup */}
+      {showSaveView && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-auto" onClick={() => setShowSaveView(false)}>
+          <div className="absolute inset-0 bg-background/40 backdrop-blur-sm" />
+          <div className="relative glass-panel rounded-2xl p-5 w-64 shadow-xl space-y-3" onClick={(e) => e.stopPropagation()}>
+            <p className="text-sm font-semibold text-foreground">Spara som startvy?</p>
+            <p className="text-xs text-muted-foreground">Den aktuella kameravinkeln sparas som din hemvy.</p>
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" className="flex-1" onClick={() => setShowSaveView(false)}>Avbryt</Button>
+              <Button size="sm" className="flex-1 gap-1" onClick={() => {
+                saveHomeStartCamera(
+                  [cameraRef.position.x, cameraRef.position.y, cameraRef.position.z],
+                  [cameraRef.target.x, cameraRef.target.y, cameraRef.target.z],
+                );
+                setShowSaveView(false);
+              }}>
+                <Save size={12} /> Spara
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Long-press popup for device control */}
       {longPressId && longPressMarker && (
         <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-auto"
@@ -125,52 +148,16 @@ export default function HomeView() {
               <div className="flex items-center gap-2">
                 {(() => { const Icon = KIND_ICONS[longPressMarker.kind] || Power; return <Icon size={18} className="text-primary" />; })()}
                 <span className="text-sm font-semibold text-foreground">{longPressMarker.name || longPressMarker.kind}</span>
+                {longPressMarker.ha?.entityId && (
+                  <Wifi size={10} className="text-green-400 shrink-0" />
+                )}
               </div>
               <button onClick={() => setLongPressId(null)} className="text-muted-foreground hover:text-foreground">
                 <X size={16} />
               </button>
             </div>
 
-            {/* On/Off toggle */}
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">Av / På</span>
-              <Switch
-                checked={getDeviceIsOn(longPressId)}
-                onCheckedChange={() => toggleDeviceState(longPressId)}
-              />
-            </div>
-
-            {/* Brightness slider for lights */}
-            {longPressMarker.kind === 'light' && getDeviceIsOn(longPressId) && (
-              <div className="space-y-1.5">
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-muted-foreground">Ljusstyrka</span>
-                  <span className="text-xs font-mono text-foreground">
-                    {Math.round(getDeviceBrightness(longPressId) / 255 * 100)}%
-                  </span>
-                </div>
-                <Slider
-                  min={1}
-                  max={255}
-                  step={1}
-                  value={[getDeviceBrightness(longPressId)]}
-                  onValueChange={([v]) => {
-                    useAppStore.setState((s) => ({
-                      devices: {
-                        ...s.devices,
-                        deviceStates: {
-                          ...s.devices.deviceStates,
-                          [longPressId!]: {
-                            ...s.devices.deviceStates[longPressId!],
-                            data: { ...(s.devices.deviceStates[longPressId!]?.data as any), brightness: v },
-                          },
-                        },
-                      },
-                    }));
-                  }}
-                />
-              </div>
-            )}
+            <DeviceControlCard marker={longPressMarker} />
           </div>
         </div>
       )}
