@@ -53,6 +53,17 @@ export default function CategoryCard({
   const onCount = devices.filter((d) => isOn(deviceStates[d.id])).length;
   const allOn = onCount === devices.length && devices.length > 0;
 
+  // Category-level brightness for light devices
+  const LIGHT_DEVICE_KINDS = new Set(['light', 'light-fixture']);
+  const lightDevices = devices.filter((d) => LIGHT_DEVICE_KINDS.has(d.kind));
+  const hasLights = lightDevices.length > 0;
+  const avgBrightness = hasLights
+    ? Math.round(lightDevices.reduce((sum, d) => {
+        const st = deviceStates[d.id];
+        return sum + (st?.kind === 'light' ? (st.data.brightness ?? 200) : 200);
+      }, 0) / lightDevices.length)
+    : 0;
+
   const toggleAll = (on: boolean) => {
     for (const d of devices) {
       const state = deviceStates[d.id];
@@ -140,7 +151,24 @@ export default function CategoryCard({
           <span className="text-base font-semibold text-foreground truncate">{category}</span>
           <span className="text-xs text-muted-foreground shrink-0">{onCount}/{devices.length}</span>
         </div>
-        <div onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+          {hasLights && allOn && (
+            <div className="w-16 shrink-0">
+              <Slider
+                value={[avgBrightness]}
+                max={255}
+                step={1}
+                onValueChange={([v]) => {
+                  for (const d of lightDevices) {
+                    const st = deviceStates[d.id];
+                    if (st?.kind === 'light' && st.data.on) {
+                      updateDeviceState(d.id, { brightness: v });
+                    }
+                  }
+                }}
+              />
+            </div>
+          )}
           <Switch checked={allOn} onCheckedChange={toggleAll} className="scale-90" />
         </div>
       </div>

@@ -60,6 +60,7 @@ export const categories: { key: DashCategory; label: string; icon: typeof Home }
 const deviceFilters: { key: DeviceKind | 'all'; label: string; emoji: string }[] = [
   { key: 'all', label: 'Alla', emoji: '🏠' },
   { key: 'light', label: 'Ljus', emoji: '💡' },
+  { key: 'light-fixture', label: 'Armaturer', emoji: '💡' },
   { key: 'climate', label: 'Klimat', emoji: '❄️' },
   { key: 'media_screen', label: 'Media', emoji: '📺' },
   { key: 'vacuum', label: 'Robot', emoji: '🤖' },
@@ -80,7 +81,7 @@ const kindCategory: Record<DeviceKind, string> = {
 };
 
 /** Light-type device kinds that should be grouped by room */
-const LIGHT_KINDS: Set<DeviceKind> = new Set(['light', 'switch', 'power-outlet']);
+const LIGHT_KINDS: Set<DeviceKind> = new Set(['light', 'switch', 'power-outlet', 'light-fixture', 'smart-outlet']);
 
 function HomeCategory() {
   const markers = useAppStore((s) => s.devices.markers);

@@ -54,20 +54,35 @@ function StandbyStaticCamera() {
   const cameraView = useAppStore((s) => s.standby.cameraView);
   const customPos = useAppStore((s) => s.standby.customPos);
   const customTarget = useAppStore((s) => s.standby.customTarget);
+  const targetPosRef = useRef(new THREE.Vector3());
+  const targetLookRef = useRef(new THREE.Vector3());
+  const currentLookAt = useRef(new THREE.Vector3());
+  const initialized = useRef(false);
 
-  useFrame(({ camera }) => {
+  useFrame(({ camera }, delta) => {
     const pos = cameraView === 'custom' && customPos ? customPos : standbyCameraPositions[cameraView] || standbyCameraPositions.standard;
     const target = cameraView === 'custom' && customTarget ? customTarget : standbyCameraTargets[cameraView] || standbyCameraTargets.standard;
-    if (pos) camera.position.set(pos[0], pos[1], pos[2]);
-    if (target) camera.lookAt(target[0], target[1], target[2]);
+    if (pos) targetPosRef.current.set(pos[0], pos[1], pos[2]);
+    if (target) targetLookRef.current.set(target[0], target[1], target[2]);
+
+    if (!initialized.current) {
+      camera.position.copy(targetPosRef.current);
+      currentLookAt.current.copy(targetLookRef.current);
+      camera.lookAt(currentLookAt.current);
+      initialized.current = true;
+    } else {
+      camera.position.lerp(targetPosRef.current, Math.min(1, delta * 3));
+      currentLookAt.current.lerp(targetLookRef.current, Math.min(1, delta * 3));
+      camera.lookAt(currentLookAt.current);
+    }
   });
 
   return null;
 }
 
-const CameraController = React.forwardRef(function CameraController(_props, _ref) {
+// Separate interactive camera — only mounted when NOT in standby
+function InteractiveCameraController() {
   const cameraPreset = useAppStore((s) => s.homeView.cameraPreset);
-  const appMode = useAppStore((s) => s.appMode);
   const customStartPos = useAppStore((s) => s.homeView.customStartPos);
   const customStartTarget = useAppStore((s) => s.homeView.customStartTarget);
   const controlsRef = useRef<any>(null);
@@ -81,7 +96,7 @@ const CameraController = React.forwardRef(function CameraController(_props, _ref
   }, []);
 
   useEffect(() => {
-    if (!initialApplied.current && (appMode === 'dashboard' || appMode === 'home')) {
+    if (!initialApplied.current) {
       const pos = customStartPos
         ? new THREE.Vector3(...customStartPos)
         : presetPositions.angle.clone();
@@ -95,15 +110,13 @@ const CameraController = React.forwardRef(function CameraController(_props, _ref
 
   useEffect(() => {
     if (!initialApplied.current) return;
-    if (appMode === 'dashboard' || appMode === 'home') {
-      const pos = customStartPos
-        ? new THREE.Vector3(...customStartPos)
-        : presetPositions.angle.clone();
-      const target = customStartTarget
-        ? new THREE.Vector3(...customStartTarget)
-        : presetTargets.angle.clone();
-      lerpingTo.current = { pos, target };
-    }
+    const pos = customStartPos
+      ? new THREE.Vector3(...customStartPos)
+      : presetPositions.angle.clone();
+    const target = customStartTarget
+      ? new THREE.Vector3(...customStartTarget)
+      : presetTargets.angle.clone();
+    lerpingTo.current = { pos, target };
   }, [customStartPos, customStartTarget]);
 
   useEffect(() => {
@@ -120,7 +133,6 @@ const CameraController = React.forwardRef(function CameraController(_props, _ref
     if (controlsRef.current) {
       cameraRef.target.copy(controlsRef.current.target);
     }
-    // Check for external flyTo requests
     if (pendingFlyTo) {
       lerpingTo.current = { pos: pendingFlyTo.position, target: pendingFlyTo.target };
       clearPendingFlyTo();
@@ -138,10 +150,6 @@ const CameraController = React.forwardRef(function CameraController(_props, _ref
     }
   });
 
-  if (appMode === 'standby') {
-    return <StandbyStaticCamera />;
-  }
-
   if (!ready) return null;
 
   return (
@@ -155,6 +163,23 @@ const CameraController = React.forwardRef(function CameraController(_props, _ref
       maxPolarAngle={Math.PI / 2.1}
     />
   );
+}
+
+// CameraController wrapper: chooses standby vs interactive
+const CameraController = React.forwardRef(function CameraController(_props, _ref) {
+  const appMode = useAppStore((s) => s.appMode);
+  const prevModeRef = useRef(appMode);
+
+  // Reset camera state on mode transitions
+  useEffect(() => {
+    prevModeRef.current = appMode;
+  }, [appMode]);
+
+  if (appMode === 'standby') {
+    return <StandbyStaticCamera />;
+  }
+
+  return <InteractiveCameraController />;
 });
 
 
