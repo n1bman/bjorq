@@ -183,7 +183,7 @@ const CameraController = React.forwardRef(function CameraController(_props, _ref
 });
 
 
-function SceneContent() {
+function SceneContent({ onDeviceLongPress }: { onDeviceLongPress?: (id: string) => void }) {
   const appMode = useAppStore((s) => s.appMode);
   const sunAzimuth = useAppStore((s) => s.environment.sunAzimuth);
   const sunElevation = useAppStore((s) => s.environment.sunElevation);
