@@ -139,7 +139,7 @@ export const presetMaterials: Material[] = [
     hasTexture: true, source: 'ambientCG', realWorldSize: [0.20, 1.2],
     ambientCGId: 'WoodFloor051',
     thumbnailUrl: 'https://acg-media.struffelproductions.com/file/ambientCG-Web/media/thumbnail/256-JPG-FFFFFF/WoodFloor051.jpg',
-    mapPath: '/textures/floor/wood/light_oak_diff.jpg' },
+    mapPath: 'https://acg-media.struffelproductions.com/file/ambientCG-Web/media/thumbnail/2048-JPG-FFFFFF/WoodFloor051.jpg' },
   { id: 'floor-dark-walnut', name: 'Mörk valnöt planka', type: 'wood', color: '#4a2e18', roughness: 0.60, surfaceCategory: 'wood', floorOnly: true,
     hasTexture: true, source: 'ambientCG', realWorldSize: [0.20, 1.2],
     ambientCGId: 'WoodFloor040',
