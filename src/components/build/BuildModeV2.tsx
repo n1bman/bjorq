@@ -2456,7 +2456,7 @@ export default function BuildModeV2() {
   const showDevicePanel = !isBibliotek && (activeTool.startsWith('place-') || activeTool === 'vacuum-zone' || activeTool === ('place-vacuum-dock' as any));
   const showImportPanel = !isBibliotek && activeTab === 'planritning' && isImported && activeTool === 'import';
   const showSurfacePanel = !isBibliotek && activeTool === 'paint';
-  const showTemplatePanel = !isBibliotek && activeTab === 'planritning' && activeTool === 'template';
+  
   // In Inredning: catalog only when furnish or wizard tool is active (not always). In Planritning: when furnish/wizard tool active
   const showCatalogPanel = !isBibliotek && !showSurfacePanel && (
     isInredning
