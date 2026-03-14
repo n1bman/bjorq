@@ -1,4 +1,6 @@
 import { Canvas, useThree } from '@react-three/fiber';
+// @ts-ignore - Html import
+import { Html } from '@react-three/drei';
 import { OrbitControls, Grid, Environment } from '@react-three/drei';
 import { Suspense, useRef, useState, useCallback, useMemo, useEffect } from 'react';
 import * as THREE from 'three';
