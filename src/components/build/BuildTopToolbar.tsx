@@ -2,7 +2,7 @@ import { useAppStore } from '../../store/useAppStore';
 import type { SnapMode, WeatherCondition } from '../../store/types';
 import {
   Undo2, Redo2, Eye, Box, Layers, Settings2,
-  ArrowLeft, Ghost,
+  ArrowLeft, Ghost, Home, LayoutGrid,
   Grid3X3, XCircle, Sun, Check, HelpCircle, Sparkles, DoorOpen, Trash2, Edit3, Wrench,
   Save, Download, Upload, FolderOpen,
 } from 'lucide-react';
