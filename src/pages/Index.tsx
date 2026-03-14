@@ -1,9 +1,7 @@
 import { useEffect, useState } from 'react';
 import BuildModeV2 from '../components/build/BuildModeV2';
-import HomeView from '../components/home/HomeView';
-import DashboardView from '../components/home/DashboardView';
+import DashboardShell from '../components/home/DashboardShell';
 import StandbyMode from '../components/standby/StandbyMode';
-import ModeHeader from '../components/ModeHeader';
 import PerformanceHUD from '../components/home/PerformanceHUD';
 import { useAppStore, initHostedMode, autoDetectPerformance } from '../store/useAppStore';
 import { useHomeAssistant } from '../hooks/useHomeAssistant';
