@@ -1,56 +1,49 @@
-# Floor Material Experience Improvement
 
-## Phase F1 — Floor Selection Highlight Fix ✅ DONE
-- Replaced solid blue fill with perimeter-only outline (`<line>` geometry)
-- Textures always applied regardless of selection state
-- Subtle emissive tint (0.08) keeps glow without hiding material
-- File: `src/components/build/Floors3D.tsx`
 
-## Phase F2 — Floor Material Browser UI ✅ DONE
-- Floor target shows larger material cards (grid-cols-3) with texture thumbnails
-- Category-first tabs: Trä & Parkett, Kakel & Klinker, Sten & Betong, Textur, Matta
-- Material name visible below each card
-- Wall target unchanged (small swatches)
-- File: `src/components/build/structure/PaintTool.tsx`
+# Add Classic 4-Panel Swedish Door (Spegeldörr)
 
-## Phase F3 — Curated Floor Texture Pack ✅ DONE
-- 25 new floor-only presets across 5 categories (Wood, Tile, Stone, Texture, Carpet)
-- `floorOnly` flag added to Material interface
-- Paths under `public/textures/floor/` — falls back to flat color if files missing
-- ambientCG (CC0) as documented source for future file placement
-- File: `src/lib/materials.ts`, `src/store/types.ts`
+## Overview
+Add a new door style `'panel-4'` — a classic Swedish 4-panel interior door with arched top panel, two vertical middle panels, and a wide bottom panel. White-painted with raised panels and a metal handle on the right side.
 
-## Phase F4 — Floor Texture Mapping Polish ✅ DONE
-- Aspect-ratio clamping in `calculateRepeat` prevents extreme stretching
-- `floorSizeMode` UI control (Auto/Small/Standard/Large) added to floor material browser
-- All new presets have sensible `realWorldSize` values
-- File: `src/lib/materials.ts`, `src/components/build/structure/PaintTool.tsx`
+## Layout
+```text
+┌─────────────────┐
+│   TOP PANEL     │
+│   (arched top)  │
+├────────┬────────┤
+│  MID   │  MID   │
+│  LEFT  │  RIGHT │
+├────────┴────────┤
+│  BOTTOM PANEL   │
+│                 │
+└─────────────────┘
+```
 
-## Phase F5 — ambientCG Thumbnails + Size Mode Fix ✅ DONE
-- Added `thumbnailUrl` and `ambientCGId` fields to Material interface
-- All 25 floor presets mapped to specific ambientCG assets with CDN thumbnails
-- PaintTool shows CDN thumbnails with category emoji badges (🪵🔲🪨✦🧶)
-- Hybrid approach: CDN thumbnail for browser preview, local files for 3D textures
-- Fixed `Floors3D.tsx` memoization — `floorSizeMode` changes now trigger re-render
-- Thumbnail URL pattern: `https://acg-media.struffelproductions.com/file/ambientCG-Web/media/thumbnail/256-JPG-FFFFFF/{AssetId}.jpg`
+## Changes
 
-## Preserved
-- Wall painting workflow untouched
-- Existing material preset IDs unchanged
-- Save/load compatibility (new fields optional with fallbacks)
-- Wall texture engine (C1 stylized walls)
+### 1. `src/lib/openingPresets.ts`
+Add one new preset after the existing door entries (line 21):
+```
+{ id: 'door-panel4', label: 'Spegeldörr', type: 'door', width: 0.9, height: 2.0, sillHeight: 0, style: 'panel-4', description: '90 cm klassisk 4-spegels innerdörr' }
+```
 
-## Phase F6 — Manual Scale & Rotation Sliders ✅ DONE
-- Added `floorTextureScale` (0.2–4.0x) and `floorTextureRotation` (0°–360°) per room
-- Two sliders under size mode presets in Måla panel with live value display
-- Texture engine clones textures per room to avoid cross-room leaking
-- Rotation applied via `tex.rotation` + `tex.center` for proper pivot
-- Undo pushed once per drag (mouseDown/touchStart), not per tick
-- Files: `types.ts`, `BuildModeV2.tsx`, `wallTextureLoader.ts`, `Floors3D.tsx`
+### 2. `src/lib/wallGeometry.tsx` — Door rendering (around line 310–410)
+Add a new branch `op.style === 'panel-4'` inside the `op.type === 'door'` block. This renders:
 
-## Väntar
-- Real ambientCG 1K texture file downloads (manual step — download ZIPs from ambientcg.com/get?file={ID}_1K-JPG.zip)
-- Per-wall roughness from finish selector
-- Accent zones / backsplash
-- Ceiling surfaces
-- Custom user-uploaded floor textures
+- **Door frame**: Same as existing doors (top, left, right frame bars)
+- **Door leaf**: A flat white panel (0.04m thick, `#f5f0eb`) filling the frame
+- **4 raised panels** (slightly offset in Z, ~0.005m proud of the leaf):
+  - **Top panel**: Full width, ~25% height, with a slight arch effect (a thin curved element at the top edge)
+  - **Two middle panels**: Side by side with a vertical stile between them, ~45% height
+  - **Bottom panel**: Full width, ~25% height
+- **Stiles and rails**: Thin bars (`#e8e0d8`) forming the grid between panels — one horizontal rail between top and middle sections, one between middle and bottom, one vertical mullion splitting the middle row
+- **Handle**: Metal handle on the right side at 1.0m height (same as existing doors)
+- **Keyhole**: Small dark cylinder below the handle
+
+All panels use a slightly warm white (`#f0ebe5`) with subtle roughness variation to suggest raised woodwork. The frame uses standard `frameColor`.
+
+### Technical Notes
+- Reuses the same `localX`, `opPos`, `origCx/origCz`, `angle`, `elevation` coordinate system as existing door styles
+- All panel meshes use `polygonOffset` if needed (matching other openings)
+- The arch on the top panel is approximated with a thin half-cylinder mesh at its upper edge
+
