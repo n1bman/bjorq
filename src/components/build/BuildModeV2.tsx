@@ -2335,7 +2335,6 @@ const planritningTools: SubToolDef[] = [
   { tool: 'window', label: 'Fönster', icon: PanelTop },
   { tool: 'garage-door', label: 'Garage', icon: Warehouse },
   { tool: 'stairs', label: 'Trappa', icon: Footprints },
-  { tool: 'paint', label: 'Måla', icon: Paintbrush },
   { tool: 'template', label: 'Mallar', icon: Package },
   { tool: 'measure', label: 'Mät', icon: Ruler },
   { tool: 'calibrate', label: 'Skala', icon: Ruler },
@@ -2347,6 +2346,7 @@ const planritningTools: SubToolDef[] = [
 const inredningTools: SubToolDef[] = [
   { tool: 'select', label: 'Välj', icon: MousePointer2 },
   { tool: 'furnish' as BuildTool, label: 'Möbler', icon: Sofa },
+  { tool: 'paint', label: 'Måla', icon: Paintbrush },
   { tool: 'wizard' as BuildTool, label: 'Wizard', icon: Wand2 },
   { tool: 'place-light', label: 'Enheter', icon: Cpu },
 ];
