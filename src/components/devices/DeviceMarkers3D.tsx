@@ -1320,8 +1320,8 @@ function LightFixtureMarker({ position, id, onSelect, onDragStart, selected }: M
       )}
       {appMode === 'build' && (
         <mesh>
-          <sphereGeometry args={[0.06, 16, 16]} />
-          <meshStandardMaterial color="#ffffff" transparent opacity={0.15} depthWrite={false} />
+    <sphereGeometry args={[0.09, 16, 16]} />
+    <meshStandardMaterial color="#7ec8e3" transparent opacity={0.20} depthWrite={false} />
         </mesh>
       )}
       {selected && <SelectionRing radius={0.15} />}
