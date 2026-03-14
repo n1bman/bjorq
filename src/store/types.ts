@@ -226,7 +226,7 @@ export type CameraMode = 'topdown' | '3d' | 'floor-isolate';
 
 
 export interface BuildSelection {
-  type: 'wall' | 'opening' | 'room' | 'prop' | 'stair' | 'device' | null;
+  type: 'wall' | 'opening' | 'room' | 'prop' | 'stair' | 'device' | 'kitchen-fixture' | null;
   id: string | null;
   /** Which wall face was clicked (paint mode). Added Phase B2. */
   faceSide?: 'left' | 'right' | null;
