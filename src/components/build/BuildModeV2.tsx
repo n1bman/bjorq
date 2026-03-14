@@ -1349,6 +1349,7 @@ function SurfaceEditor() {
 
   const [target, setTarget] = useState<'wall' | 'floor'>('floor');
   const [surfaceCat, setSurfaceCat] = useState<string>('wood');
+  const [selectedRoomId, setSelectedRoomId] = useState<string>('');
 
   const floor = floors.find((f) => f.id === activeFloorId);
   const allRooms = floor?.rooms ?? [];
@@ -1428,12 +1429,24 @@ function SurfaceEditor() {
       </div>
 
       <div className="px-1 space-y-2.5">
-        {rooms.map((room: any) => {
+        {/* Room dropdown */}
+        <select
+          value={selectedRoomId || rooms[0]?.id || ''}
+          onChange={(e) => setSelectedRoomId(e.target.value)}
+          className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+        >
+          {rooms.map((r: any) => (
+            <option key={r.id} value={r.id}>{r.name}</option>
+          ))}
+        </select>
+
+        {(() => {
+          const room = rooms.find((r: any) => r.id === (selectedRoomId || rooms[0]?.id)) || rooms[0];
+          if (!room) return null;
           const currentId = isFloor ? room.floorMaterialId : room.wallMaterialId;
           const currentSizeMode = room.floorSizeMode ?? 'auto';
           return (
-            <div key={room.id} className="space-y-1.5">
-              <span className="text-[11px] text-foreground font-medium">{room.name}</span>
+            <div className="space-y-1.5">
 
               {/* Floor: larger cards with ambientCG thumbnails */}
               {isFloor ? (
@@ -1507,10 +1520,9 @@ function SurfaceEditor() {
                 </div>
               )}
 
-              <div className="border-b border-border/50" />
             </div>
           );
-        })}
+        })()}
       </div>
     </div>
   );
