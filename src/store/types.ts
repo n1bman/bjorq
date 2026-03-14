@@ -1116,6 +1116,10 @@ export interface AppState {
   addStair: (floorId: string, stair: StairItem) => void;
   removeStair: (floorId: string, stairId: string) => void;
 
+  // Kitchen fixture actions
+  addKitchenFixture: (floorId: string, fixture: KitchenFixture) => void;
+  removeKitchenFixture: (floorId: string, fixtureId: string) => void;
+
   // Props actions
   addToCatalog: (item: PropCatalogItem) => void;
   removeFromCatalog: (id: string) => void;
