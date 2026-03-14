@@ -377,87 +377,75 @@ function renderOpeningModels(
       const topPanelH = usableH * 0.24;
       const midPanelH = usableH * 0.45;
       const bottomPanelH = usableH * 0.21;
-      const gap1 = railH; // rail between top and mid
-      const gap2 = railH; // rail between mid and bottom
       const midPaneW = (usableW - stileW) / 2;
 
       const leafCenterY = opBottom + leafH / 2 + 0.03 + elevation;
       const panelBaseY = leafCenterY - usableH / 2;
 
-      // Y centers for each row
       const bottomY = panelBaseY + bottomPanelH / 2;
-      const midY = panelBaseY + bottomPanelH + gap2 + midPanelH / 2;
-      const topY = panelBaseY + bottomPanelH + gap2 + midPanelH + gap1 + topPanelH / 2;
+      const midY = panelBaseY + bottomPanelH + railH + midPanelH / 2;
+      const topY = panelBaseY + bottomPanelH + railH + midPanelH + railH + topPanelH / 2;
 
       const panelColor = '#f0ebe5';
       const railColor = '#e8e0d8';
-      const panelZ = leafThick / 2 + panelProtrusion;
+      const panelRecess = leafThick / 2 - 0.003;
 
-      // Helper: position a panel element on the door surface
-      const panelMesh = (key: string, lx: number, cy: number, w: number, h: number, color: string, depth: number) => {
-        const pos = new THREE.Vector3(lx, 0, panelZ)
-          .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
-          .add(new THREE.Vector3(origCx, cy, origCz));
-        return (
-          <mesh key={key} position={pos.toArray()} rotation={[0, -angle, 0]} castShadow>
-            <boxGeometry args={[w, h, depth]} />
-            <meshStandardMaterial color={color} roughness={0.4} />
-          </mesh>
-        );
+      // Helper: render a recessed panel on BOTH sides of the door
+      const panelMeshBoth = (key: string, lx: number, cy: number, w: number, h: number, color: string, depth: number) => {
+        return [-panelRecess, panelRecess].map((zOff, si) => {
+          const pos = new THREE.Vector3(lx, 0, zOff)
+            .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
+            .add(new THREE.Vector3(origCx, cy, origCz));
+          return (
+            <mesh key={`${key}-s${si}`} position={pos.toArray()} rotation={[0, -angle, 0]} castShadow {...openingPointer}>
+              <boxGeometry args={[w, h, depth]} />
+              <meshStandardMaterial color={color} roughness={0.4}
+                emissive={opEmissive} emissiveIntensity={opEmissiveIntensity} />
+            </mesh>
+          );
+        });
       };
 
-      // Top panel (full width)
-      segments.push(panelMesh(`${wall.id}-p4-top-${i}`, localX, topY, usableW - 0.02, topPanelH, panelColor, 0.008));
+      // Top panel — both sides
+      segments.push(...panelMeshBoth(`${wall.id}-p4-top-${i}`, localX, topY, usableW - 0.02, topPanelH, panelColor, 0.006));
 
-      // Arch decoration on top panel
-      const archPos = new THREE.Vector3(localX, 0, panelZ + 0.004)
-        .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
-        .add(new THREE.Vector3(origCx, topY + topPanelH * 0.25, origCz));
-      segments.push(
-        <mesh key={`${wall.id}-p4-arch-${i}`} position={archPos.toArray()} rotation={[0, -angle, Math.PI / 2]}>
-          <cylinderGeometry args={[(usableW - 0.04) * 0.45, (usableW - 0.04) * 0.45, 0.006, 16, 1, false, 0, Math.PI]} />
-          <meshStandardMaterial color={panelColor} roughness={0.4} />
-        </mesh>
-      );
+      // Mid left panel — both sides
+      segments.push(...panelMeshBoth(`${wall.id}-p4-ml-${i}`, localX - (midPaneW / 2 + stileW / 2), midY, midPaneW - 0.02, midPanelH, panelColor, 0.006));
 
-      // Mid left panel
-      segments.push(panelMesh(`${wall.id}-p4-ml-${i}`, localX - (midPaneW / 2 + stileW / 2), midY, midPaneW - 0.02, midPanelH, panelColor, 0.008));
+      // Mid right panel — both sides
+      segments.push(...panelMeshBoth(`${wall.id}-p4-mr-${i}`, localX + (midPaneW / 2 + stileW / 2), midY, midPaneW - 0.02, midPanelH, panelColor, 0.006));
 
-      // Mid right panel
-      segments.push(panelMesh(`${wall.id}-p4-mr-${i}`, localX + (midPaneW / 2 + stileW / 2), midY, midPaneW - 0.02, midPanelH, panelColor, 0.008));
+      // Bottom panel — both sides
+      segments.push(...panelMeshBoth(`${wall.id}-p4-bot-${i}`, localX, bottomY, usableW - 0.02, bottomPanelH, panelColor, 0.006));
 
-      // Bottom panel (full width)
-      segments.push(panelMesh(`${wall.id}-p4-bot-${i}`, localX, bottomY, usableW - 0.02, bottomPanelH, panelColor, 0.008));
+      // Horizontal rails — both sides
+      segments.push(...panelMeshBoth(`${wall.id}-p4-rail1-${i}`, localX, topY - topPanelH / 2 - railH / 2, usableW, railH, railColor, 0.005));
+      segments.push(...panelMeshBoth(`${wall.id}-p4-rail2-${i}`, localX, midY - midPanelH / 2 - railH / 2, usableW, railH, railColor, 0.005));
 
-      // Horizontal rail between top and mid
-      segments.push(panelMesh(`${wall.id}-p4-rail1-${i}`, localX, topY - topPanelH / 2 - railH / 2, usableW, railH, railColor, 0.006));
+      // Vertical center stile — both sides
+      segments.push(...panelMeshBoth(`${wall.id}-p4-stile-${i}`, localX, midY, stileW, midPanelH, railColor, 0.005));
 
-      // Horizontal rail between mid and bottom
-      segments.push(panelMesh(`${wall.id}-p4-rail2-${i}`, localX, midY - midPanelH / 2 - railH / 2, usableW, railH, railColor, 0.006));
-
-      // Vertical center stile (mullion between mid panels)
-      segments.push(panelMesh(`${wall.id}-p4-stile-${i}`, localX, midY, stileW, midPanelH, railColor, 0.006));
-
-      // Handle on right side
+      // Handle on right side (front only)
       const handleLocalX = localX + leafW * 0.35;
+      const handleZ = leafThick / 2 + 0.01;
       segments.push(
         <mesh key={`${wall.id}-p4-handle-${i}`}
-          position={new THREE.Vector3(handleLocalX, 0, panelZ + 0.01)
+          position={new THREE.Vector3(handleLocalX, 0, handleZ)
             .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
             .add(new THREE.Vector3(origCx, opBottom + 1.0 + elevation, origCz)).toArray()}
-          rotation={[0, -angle, 0]}>
+          rotation={[0, -angle, 0]} {...openingPointer}>
           <boxGeometry args={[0.12, 0.03, 0.04]} />
           <meshStandardMaterial color="#aaa" roughness={0.2} metalness={0.7} />
         </mesh>
       );
 
-      // Keyhole below handle
+      // Keyhole below handle (front only)
       segments.push(
         <mesh key={`${wall.id}-p4-keyhole-${i}`}
-          position={new THREE.Vector3(handleLocalX, 0, panelZ + 0.008)
+          position={new THREE.Vector3(handleLocalX, 0, handleZ - 0.002)
             .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
             .add(new THREE.Vector3(origCx, opBottom + 0.93 + elevation, origCz)).toArray()}
-          rotation={[Math.PI / 2, 0, -angle]}>
+          rotation={[Math.PI / 2, 0, -angle]} {...openingPointer}>
           <cylinderGeometry args={[0.008, 0.008, 0.01, 12]} />
           <meshStandardMaterial color="#333" roughness={0.3} metalness={0.5} />
         </mesh>
