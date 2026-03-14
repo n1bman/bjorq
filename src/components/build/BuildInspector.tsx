@@ -1321,22 +1321,25 @@ function DeviceInspector({ deviceId, close }: { deviceId: string; close: React.R
         </>
       )}
 
-      {!isScreen && (
-        <div className="space-y-2">
-          <label className="text-muted-foreground text-[10px]">Höjd (Y) — {device.position[1].toFixed(1)} m</label>
-          <div className="flex items-center gap-2">
-            <Slider min={0} max={10} step={0.1} value={[Math.max(0, device.position[1])]}
-              onValueChange={([v]) => {
-                const pos = [...device.position] as [number, number, number];
-                pos[1] = Math.max(0, v);
-                updateDevice(device.id, { position: pos });
-              }}
-              className="flex-1"
-            />
-            <span className="text-[10px] text-foreground w-8 text-right">{device.position[1].toFixed(1)}</span>
+      {!isScreen && (() => {
+        const floorElev = floor?.elevation ?? 0;
+        return (
+          <div className="space-y-2">
+            <label className="text-muted-foreground text-[10px]">Höjd (Y) — {device.position[1].toFixed(2)} m</label>
+            <div className="flex items-center gap-2">
+              <Slider min={floorElev} max={floorElev + 10} step={0.1} value={[Math.max(floorElev, device.position[1])]}
+                onValueChange={([v]) => {
+                  const pos = [...device.position] as [number, number, number];
+                  pos[1] = Math.max(floorElev, v);
+                  updateDevice(device.id, { position: pos });
+                }}
+                className="flex-1"
+              />
+              <span className="text-[10px] text-foreground w-8 text-right">{device.position[1].toFixed(1)}</span>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       <div className="space-y-2">
         <label className="text-muted-foreground text-[10px]">Yta</label>
