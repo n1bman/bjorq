@@ -242,6 +242,7 @@ function SceneContent() {
       <Stairs3D />
       <ImportedHome3D />
       <Props3D />
+      <KitchenFixture3D />
       <WeatherEffects3D />
       <InlineTerrainEnvironment3D />
       <DeviceMarkers3D />
