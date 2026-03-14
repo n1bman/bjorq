@@ -1371,10 +1371,10 @@ function SurfaceEditor() {
   }
 
   const isFloor = target === 'floor';
-  const categories = isFloor ? floorSurfaceCategories : wallSurfaceCategories;
-  const mats = getMaterialsByCategory(surfaceCat).filter((m: any) =>
-    isFloor ? true : !m.floorOnly
-  );
+  const categories = isFloor ? floorSurfaceCategories : (['paint'] as const);
+  const mats = isFloor
+    ? getMaterialsByCategory(surfaceCat).filter((m: any) => true)
+    : getMaterialsByCategory('paint'); // Wall: only flat paint colors, no textures
 
   const categoryIcons: Record<string, string> = {
     wood: '🪵', tile: '🔲', stone: '🪨', texture: '✦', carpet: '🧶',

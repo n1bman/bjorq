@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { useAppStore } from '../../store/useAppStore';
 import Scene3D from '../Scene3D';
 import HomeNav from './HomeNav';
@@ -10,9 +10,10 @@ import EnergyWidget from './cards/EnergyWidget';
 import TemperatureWidget from './cards/TemperatureWidget';
 import DeviceControlCard from './cards/DeviceControlCard';
 import { useWeatherSync } from '../../hooks/useWeatherSync';
-import { Eye, EyeOff, EyeClosed, Lightbulb, Thermometer, Wind, Camera, Power, Tv, Fan, Shield, Droplets, X } from 'lucide-react';
+import { Eye, EyeOff, Lightbulb, Thermometer, Wind, Camera, Power, Tv, Fan, Shield, Droplets, X } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Switch } from '../ui/switch';
+import { Slider } from '../ui/slider';
 import type { DeviceKind } from '../../store/types';
 
 const TOGGLEABLE_KINDS = new Set(['light', 'switch', 'climate', 'vacuum', 'media_screen', 'power-outlet', 'camera', 'fridge', 'oven', 'washer']);
@@ -40,7 +41,10 @@ export default function HomeView() {
   const hideAllMarkers = useAppStore((s) => s.hideAllMarkers);
   const toggleDeviceState = useAppStore((s) => s.toggleDeviceState);
   const deviceStates = useAppStore((s) => s.devices.deviceStates);
+  const setDeviceBrightness = useAppStore((s) => s.setDeviceBrightness);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [longPressId, setLongPressId] = useState<string | null>(null);
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useWeatherSync();
 
   const selectedMarkers = markers.filter((m) => homeScreenDevices.includes(m.id));
@@ -53,8 +57,36 @@ export default function HomeView() {
     return true;
   };
 
+  const getDeviceBrightness = (id: string) => {
+    const state = deviceStates[id];
+    if (state?.kind === 'light') return (state.data as any).brightness ?? 200;
+    return 200;
+  };
+
   const hiddenCount = hiddenMarkerIds.length;
   const allHidden = markers.length > 0 && hiddenCount === markers.length;
+
+  const handlePointerDown = useCallback((id: string) => {
+    longPressTimerRef.current = setTimeout(() => {
+      setLongPressId(id);
+    }, 500);
+  }, []);
+
+  const handlePointerUp = useCallback(() => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  }, []);
+
+  const handlePointerCancel = useCallback(() => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  }, []);
+
+  const longPressMarker = longPressId ? markers.find((m) => m.id === longPressId) : null;
 
   return (
     <div className="fixed inset-0 bg-background">
@@ -70,7 +102,57 @@ export default function HomeView() {
         {visibleWidgets.energy && <EnergyWidget />}
       </div>
 
-      {/* Selected device widgets at bottom - one-click toggle */}
+      {/* Long-press popup for device control */}
+      {longPressId && longPressMarker && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-auto"
+          onClick={() => setLongPressId(null)}>
+          <div className="absolute inset-0 bg-background/40 backdrop-blur-sm" />
+          <div className="relative glass-panel rounded-2xl p-5 w-72 shadow-xl space-y-4"
+            onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                {(() => { const Icon = KIND_ICONS[longPressMarker.kind] || Power; return <Icon size={18} className="text-primary" />; })()}
+                <span className="text-sm font-semibold text-foreground">{longPressMarker.name || longPressMarker.kind}</span>
+              </div>
+              <button onClick={() => setLongPressId(null)} className="text-muted-foreground hover:text-foreground">
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* On/Off toggle */}
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">Av / På</span>
+              <Switch
+                checked={getDeviceIsOn(longPressId)}
+                onCheckedChange={() => toggleDeviceState(longPressId)}
+              />
+            </div>
+
+            {/* Brightness slider for lights */}
+            {longPressMarker.kind === 'light' && getDeviceIsOn(longPressId) && (
+              <div className="space-y-1.5">
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-muted-foreground">Ljusstyrka</span>
+                  <span className="text-xs font-mono text-foreground">
+                    {Math.round(getDeviceBrightness(longPressId) / 255 * 100)}%
+                  </span>
+                </div>
+                <Slider
+                  min={1}
+                  max={255}
+                  step={1}
+                  value={[getDeviceBrightness(longPressId)]}
+                  onValueChange={([v]) => {
+                    if (setDeviceBrightness) setDeviceBrightness(longPressId, v);
+                  }}
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Selected device widgets at bottom - one-click toggle + long-press for details */}
       {selectedMarkers.length > 0 && (
         <div className="absolute bottom-24 left-4 right-4 z-10 pointer-events-auto">
           <div className="flex gap-3 overflow-x-auto pb-2">
@@ -82,11 +164,21 @@ export default function HomeView() {
                 <div
                   key={m.id}
                   className={cn(
-                    'glass-panel rounded-xl p-4 min-w-[200px] max-w-[240px] shrink-0 transition-all',
+                    'glass-panel rounded-xl p-4 min-w-[200px] max-w-[240px] shrink-0 transition-all select-none',
                     canToggle && !isMediaOn && 'cursor-pointer active:scale-95',
                     !isOn && 'opacity-50 grayscale'
                   )}
-                  onClick={() => canToggle && !isMediaOn && toggleDeviceState(m.id)}
+                  onClick={() => {
+                    if (longPressTimerRef.current) {
+                      clearTimeout(longPressTimerRef.current);
+                      longPressTimerRef.current = null;
+                    }
+                    if (!longPressId && canToggle && !isMediaOn) toggleDeviceState(m.id);
+                  }}
+                  onPointerDown={() => handlePointerDown(m.id)}
+                  onPointerUp={handlePointerUp}
+                  onPointerCancel={handlePointerCancel}
+                  onPointerLeave={handlePointerCancel}
                 >
                   <p className="text-xs font-medium text-foreground mb-1 truncate">{m.name || m.kind}</p>
                   <DeviceControlCard marker={m} compact />
