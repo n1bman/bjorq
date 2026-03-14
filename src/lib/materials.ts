@@ -136,7 +136,7 @@ export const presetMaterials: Material[] = [
   // ambientCG assets: download 1K-JPG ZIPs from https://ambientcg.com/get?file={ID}_1K-JPG.zip
   // Extract *_Color.jpg → mapPath, *_NormalGL.jpg → normalMapPath
   { id: 'floor-light-oak', name: 'Ljus ek planka', type: 'wood', color: '#d4b88c', roughness: 0.65, surfaceCategory: 'wood', floorOnly: true,
-    hasTexture: true, source: 'ambientCG', realWorldSize: [0.20, 1.2],
+    hasTexture: true, source: 'ambientCG', realWorldSize: [1.0, 1.0],
     ambientCGId: 'WoodFloor051',
     thumbnailUrl: 'https://acg-media.struffelproductions.com/file/ambientCG-Web/media/thumbnail/256-JPG-FFFFFF/WoodFloor051.jpg',
     mapPath: 'https://acg-media.struffelproductions.com/file/ambientCG-Web/media/thumbnail/2048-JPG-FFFFFF/WoodFloor051.jpg' },
