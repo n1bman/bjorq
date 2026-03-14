@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { domainToKind } from '../../lib/haDomainMapping';
 import VacuumMappingTools from './devices/VacuumMappingTools';
+import TemplatesPicker from './structure/TemplatesPicker';
 import { cn } from '../../lib/utils';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogFooter } from '../ui/dialog';
@@ -2432,6 +2433,7 @@ export default function BuildModeV2() {
   const showDevicePanel = !isBibliotek && (activeTool.startsWith('place-') || activeTool === 'vacuum-zone' || activeTool === ('place-vacuum-dock' as any));
   const showImportPanel = !isBibliotek && activeTab === 'planritning' && isImported && activeTool === 'import';
   const showSurfacePanel = !isBibliotek && activeTool === 'paint';
+  const showTemplatePanel = !isBibliotek && activeTab === 'planritning' && activeTool === 'template';
   // In Inredning: catalog is always visible (primary surface). In Planritning: only when furnish/wizard tool active
   const showCatalogPanel = !isBibliotek && !showSurfacePanel && (
     isInredning
@@ -2483,6 +2485,12 @@ export default function BuildModeV2() {
               <Suspense fallback={null}>
                 <ImportTools />
               </Suspense>
+            </div>
+          )}
+          {/* Templates panel (Planritning only) */}
+          {showTemplatePanel && !showDevicePanel && !showSurfacePanel && (
+            <div className="absolute left-0 top-0 bottom-0 w-[220px] bg-card/95 backdrop-blur-sm border-r border-border z-20 overflow-y-auto py-3 px-2">
+              <TemplatesPicker />
             </div>
           )}
           {/* Asset catalog — primary surface in Inredning */}
