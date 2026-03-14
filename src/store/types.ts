@@ -14,7 +14,9 @@ export interface Material {
   textureUrl?: string; // user-uploaded texture image
   textureScale?: number; // UV repeat factor (default 1)
   /** Visual category for UI grouping */
-  surfaceCategory?: 'paint' | 'wallpaper' | 'tile' | 'stone' | 'wood' | 'metal' | 'texture';
+  surfaceCategory?: 'paint' | 'wallpaper' | 'tile' | 'stone' | 'wood' | 'metal' | 'texture' | 'carpet';
+  /** F3: If true, this material only appears in floor material browser */
+  floorOnly?: boolean;
   // ─── B4: Texture-ready fields ───
   /** Path to albedo/color map (local asset path or URL) */
   mapPath?: string;

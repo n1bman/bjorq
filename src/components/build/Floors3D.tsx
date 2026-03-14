@@ -1,10 +1,14 @@
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, useRef } from 'react';
 import { useAppStore } from '../../store/useAppStore';
 import { getMaterialById } from '../../lib/materials';
 import { applyFloorTextures } from '../../lib/wallTextureLoader';
 import * as THREE from 'three';
 import { ThreeEvent } from '@react-three/fiber';
 
+/**
+ * F1: Floor selection uses a perimeter outline instead of a solid blue fill,
+ * so the real material/texture preview remains visible during editing.
+ */
 export default function Floors3D() {
   const floors = useAppStore((s) => s.layout.floors);
   const activeFloorId = useAppStore((s) => s.layout.activeFloorId);
@@ -52,36 +56,60 @@ export default function Floors3D() {
         const floorW = maxX - minX;
         const floorD = maxZ - minZ;
 
-        // Create material with texture support
+        // F1: Always show real material color — selection uses outline only
         const threeMat = new THREE.MeshStandardMaterial({
-          color: isSelected ? '#4a9eff' : color,
+          color: color,
           roughness: mat?.roughness ?? 0.9,
           metalness: mat?.metalness ?? 0,
           side: THREE.FrontSide,
           polygonOffset: true,
           polygonOffsetFactor: -1,
           polygonOffsetUnits: -1,
+          // F1: Very subtle emissive tint when selected (texture stays visible)
           emissive: isSelected ? '#1a3a6a' : '#000000',
-          emissiveIntensity: isSelected ? 0.4 : 0,
+          emissiveIntensity: isSelected ? 0.08 : 0,
         });
 
-        // C2: Apply floor textures with real-world sizing and per-room sizeMode
-        if (mat && !isSelected) {
+        // F1: Always apply textures — no longer skipped when selected
+        if (mat) {
           const sizeMode = room.floorSizeMode ?? 'auto';
           applyFloorTextures(threeMat, mat, floorW || 4, floorD || 4, sizeMode);
         }
 
+        // F1: Build perimeter outline geometry for selected room
+        let outlineMesh = null;
+        if (isSelected) {
+          const outlinePoints: THREE.Vector3[] = [];
+          for (const p of polygon) {
+            outlinePoints.push(new THREE.Vector3(p[0], 0, p[1]));
+          }
+          // Close the loop
+          outlinePoints.push(outlinePoints[0].clone());
+          const outlineGeo = new THREE.BufferGeometry().setFromPoints(outlinePoints);
+          const outlineMatObj = new THREE.LineBasicMaterial({ color: '#4a9eff', depthTest: false, transparent: true, opacity: 0.9 });
+          const lineObj = new THREE.LineLoop(outlineGeo, outlineMatObj);
+          lineObj.position.set(0, (floor?.elevation ?? 0) + 0.04, 0);
+          outlineMesh = (
+            <primitive
+              key={`outline-${room.id}`}
+              object={lineObj}
+            />
+          );
+        }
+
         return (
-          <mesh
-            key={room.id}
-            rotation={[-Math.PI / 2, 0, 0]}
-            position={[0, (floor?.elevation ?? 0) + 0.02, 0]}
-            receiveShadow
-            onPointerDown={(e) => handleRoomClick(e, room.id)}
-          >
-            <shapeGeometry args={[shape]} />
-            <primitive object={threeMat} attach="material" />
-          </mesh>
+          <group key={room.id}>
+            <mesh
+              rotation={[-Math.PI / 2, 0, 0]}
+              position={[0, (floor?.elevation ?? 0) + 0.02, 0]}
+              receiveShadow
+              onPointerDown={(e) => handleRoomClick(e, room.id)}
+            >
+              <shapeGeometry args={[shape]} />
+              <primitive object={threeMat} attach="material" />
+            </mesh>
+            {outlineMesh}
+          </group>
         );
       });
   }, [rooms, floor?.elevation, selectedRoomId, handleRoomClick]);
