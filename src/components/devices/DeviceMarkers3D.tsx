@@ -1180,6 +1180,134 @@ function SoundbarMarker3D({ position, id, onSelect, onDragStart, selected }: Mar
   );
 }
 
+// ─── Light Fixture Marker ───
+function LightFixtureMarker({ position, id, onSelect, onDragStart, selected }: MarkerProps) {
+  const state = useAppStore((s) => s.devices.deviceStates[id]);
+  const marker = useAppStore((s) => s.devices.markers.find((m) => m.id === id));
+  const lightData = state?.kind === 'light' ? state.data : null;
+  const isOn = lightData?.on ?? false;
+  const fixtureModel = marker?.fixtureModel ?? 'led-bulb';
+  const spotTargetRef = useRef<THREE.Object3D>(null);
+  const spotLightRef = useRef<THREE.SpotLight>(null);
+
+  const lightColor = useMemo(() => {
+    if (!lightData || !isOn) return new THREE.Color('#555555');
+    if (lightData.colorMode === 'rgb' && lightData.rgbColor) {
+      return new THREE.Color(lightData.rgbColor[0] / 255, lightData.rgbColor[1] / 255, lightData.rgbColor[2] / 255);
+    }
+    if (lightData.colorMode === 'temp' && lightData.colorTemp) {
+      return miredsToColor(lightData.colorTemp);
+    }
+    return new THREE.Color('#f5c542');
+  }, [lightData?.colorMode, lightData?.rgbColor?.[0], lightData?.rgbColor?.[1], lightData?.rgbColor?.[2], lightData?.colorTemp, isOn]);
+
+  const brightness = isOn ? (lightData?.brightness ?? 200) / 255 : 0;
+  const intensity = isOn ? brightness * 3 : 0;
+
+  useFrame(() => {
+    if (spotLightRef.current && spotTargetRef.current) {
+      spotLightRef.current.target = spotTargetRef.current;
+    }
+  });
+
+  const handleClick = useCallback((e: ThreeEvent<PointerEvent>) => { e.stopPropagation(); onSelect?.(id); }, [onSelect, id]);
+  const handlePointerDown = useCallback((e: ThreeEvent<PointerEvent>) => { if (selected && onDragStart) onDragStart(id, e); }, [selected, onDragStart, id]);
+
+  return (
+    <group position={position} onClick={handleClick} onPointerDown={handlePointerDown}>
+      {fixtureModel === 'led-bulb' && (
+        <>
+          {/* E27 base */}
+          <mesh position={[0, -0.02, 0]}>
+            <cylinderGeometry args={[0.013, 0.013, 0.04, 16]} />
+            <meshStandardMaterial color="#999" roughness={0.3} metalness={0.8} />
+          </mesh>
+          {/* Bulb sphere */}
+          <mesh position={[0, 0.015, 0]}>
+            <sphereGeometry args={[0.03, 16, 16]} />
+            <meshStandardMaterial color={lightColor} emissive={lightColor} emissiveIntensity={isOn ? brightness * 3 : 0.1} transparent opacity={isOn ? 0.95 : 0.5} />
+          </mesh>
+          <pointLight color={lightColor} intensity={intensity} distance={4} decay={2} />
+        </>
+      )}
+      {fixtureModel === 'led-bar' && (
+        <>
+          <mesh>
+            <boxGeometry args={[0.6, 0.02, 0.03]} />
+            <meshStandardMaterial color="#ddd" roughness={0.4} metalness={0.1} />
+          </mesh>
+          {/* Frosted diffuser */}
+          <mesh position={[0, -0.012, 0]}>
+            <boxGeometry args={[0.56, 0.005, 0.025]} />
+            <meshStandardMaterial color={lightColor} emissive={lightColor} emissiveIntensity={isOn ? brightness * 2.5 : 0.1} transparent opacity={isOn ? 0.85 : 0.3} />
+          </mesh>
+          <spotLight ref={spotLightRef} color={lightColor} intensity={intensity * 1.2} distance={5} angle={Math.PI / 3} penumbra={0.7} decay={2} castShadow />
+          <object3D ref={spotTargetRef} position={[0, -3, 0]} />
+        </>
+      )}
+      {fixtureModel === 'led-spot' && (
+        <>
+          {/* Puck body */}
+          <mesh>
+            <cylinderGeometry args={[0.04, 0.04, 0.015, 24]} />
+            <meshStandardMaterial color="#ccc" roughness={0.3} metalness={0.2} />
+          </mesh>
+          {/* Lens */}
+          <mesh position={[0, -0.008, 0]}>
+            <cylinderGeometry args={[0.025, 0.025, 0.003, 24]} />
+            <meshStandardMaterial color={lightColor} emissive={lightColor} emissiveIntensity={isOn ? brightness * 3 : 0.1} transparent opacity={isOn ? 0.9 : 0.3} />
+          </mesh>
+          <spotLight ref={spotLightRef} color={lightColor} intensity={intensity * 1.5} distance={5} angle={Math.PI / 8} penumbra={0.3} decay={2} castShadow />
+          <object3D ref={spotTargetRef} position={[0, -3, 0]} />
+        </>
+      )}
+      {selected && <SelectionRing radius={0.15} />}
+    </group>
+  );
+}
+
+// ─── Smart Outlet Marker ───
+function SmartOutletMarker({ position, id, onSelect, onDragStart, selected }: MarkerProps) {
+  const state = useAppStore((s) => s.devices.deviceStates[id]);
+  const isOn = state?.kind === 'generic' ? state.data.on : false;
+  const ledRef = useRef<THREE.Mesh>(null);
+
+  useFrame(() => {
+    if (ledRef.current) {
+      const mat = ledRef.current.material as THREE.MeshStandardMaterial;
+      mat.emissiveIntensity = isOn ? 1.2 : 0.15;
+    }
+  });
+
+  const handleClick = useCallback((e: ThreeEvent<PointerEvent>) => { e.stopPropagation(); onSelect?.(id); }, [onSelect, id]);
+  const handlePointerDown = useCallback((e: ThreeEvent<PointerEvent>) => { if (selected && onDragStart) onDragStart(id, e); }, [selected, onDragStart, id]);
+
+  return (
+    <group position={position} onClick={handleClick} onPointerDown={handlePointerDown}>
+      {/* Outlet body */}
+      <mesh>
+        <boxGeometry args={[0.05, 0.08, 0.03]} />
+        <meshStandardMaterial color="#f0f0f0" roughness={0.6} />
+      </mesh>
+      {/* Socket hole */}
+      <mesh position={[0, 0.01, 0.016]}>
+        <cylinderGeometry args={[0.012, 0.012, 0.005, 16]} rotation={[Math.PI / 2, 0, 0]} />
+        <meshStandardMaterial color="#333" roughness={0.8} />
+      </mesh>
+      {/* Status LED */}
+      <mesh ref={ledRef} position={[0.015, -0.025, 0.016]}>
+        <sphereGeometry args={[0.004, 8, 8]} />
+        <meshStandardMaterial
+          color={isOn ? '#22c55e' : '#444'}
+          emissive={isOn ? '#22c55e' : '#222'}
+          emissiveIntensity={isOn ? 1.2 : 0.15}
+        />
+      </mesh>
+      {selected && <SelectionRing radius={0.1} />}
+    </group>
+  );
+}
+
 const markerComponents: Record<DeviceKind, React.FC<MarkerProps>> = {
   light: LightMarker,
   switch: SwitchMarker,
@@ -1206,6 +1334,8 @@ const markerComponents: Record<DeviceKind, React.FC<MarkerProps>> = {
   'lawn-mower': (props) => <GenericMarker {...props} color="#22c55e" emissive="#16a34a" />,
   speaker: SpeakerMarker3D,
   soundbar: SoundbarMarker3D,
+  'light-fixture': LightFixtureMarker,
+  'smart-outlet': SmartOutletMarker,
 };
 
 interface DeviceMarkers3DProps {
