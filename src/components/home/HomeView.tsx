@@ -60,11 +60,6 @@ export default function HomeView() {
     return true;
   };
 
-  const getDeviceBrightness = (id: string) => {
-    const state = deviceStates[id];
-    if (state?.kind === 'light') return (state.data as any).brightness ?? 200;
-    return 200;
-  };
 
   const hiddenCount = hiddenMarkerIds.length;
   const allHidden = markers.length > 0 && hiddenCount === markers.length;
