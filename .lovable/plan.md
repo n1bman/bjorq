@@ -1,84 +1,148 @@
-# Arbetsplan: Stabilisering, buggfixar och UX-förbättringar
 
-## Status: ✅ Implementerat (v1.1.0)
+
+# Dashboard Redesign Plan -- BJORQ Kontrollpanel
+
+## Current Architecture
+
+The dashboard is split across three app modes:
+
+| Mode | Component | Purpose |
+|------|-----------|---------|
+| `home` | `HomeView` | Full-screen 3D scene with floating widgets |
+| `dashboard` | `DashboardView` → `DashboardGrid` | 3D at top (35vh) + horizontal tab bar + scrollable content |
+| `build` | `BuildModeV2` | Design/editor mode |
+
+**Current problems identified:**
+- `DashboardView` uses a stacked layout: 3D (35vh) on top, then a horizontal scrolling tab bar, then content below
+- The horizontal tab bar at the top is cramped with 14 categories in a scrollable row
+- No per-category widget layout persistence exists in the store
+- No drag-to-reorder infrastructure for widgets (only for device categories within HomeCategory)
+- The 3D view dominates the viewport
+- The `home` and `dashboard` modes are separate — the concept image merges them
 
 ---
 
-## Fas 0 — Bygg-stabilisering ✅ DONE
-- Fixat import i Scene3D till `./build/KitchenFixture3D`
-- Raderat duplikat `KitchenFixtureObject3D.tsx`
+## Redesign Plan (4 Phases)
 
-## Fas 1 — Buggar och regressioner ✅ DONE
+### Phase 1: Layout Shell (the biggest change)
 
-### 1.1 Väggar: 90-gradersstöd vid ritning ✅
-- Axis-aligned snapping (±3° av 0/90/180/270°) i `BuildScene3D.tsx`
-- Visuell indikator: cyan linje + solid (ej dashed) + "90°"-label via `<Html>`
-- `cursorAxisAligned`-prop tillagd i `WallDrawing3D.tsx`
+Merge `home` and `dashboard` into a single unified view. Replace the current stacked layout with a **sidebar + main content** layout:
 
-### 1.3 Dörr-öppningsriktning ✅
-- `flipped` appliceras nu på dörrpanelens position och rotation i `wallGeometry.tsx`
-- Gångjärnspunkt beräknas baserat på `flipped`-flagga
+```text
+┌──────┬──────────────────────────────────────┐
+│      │  [Clock] [Weather] [Energy] [Scenes] │  ← summary cards
+│ Nav  ├──────────────┬───────────────────────┤
+│ Rail │   3D Preview │   Widget Grid         │
+│      │   (medium)   │   (category content)  │
+│ 14   │              │                       │
+│ icons│              │                       │
+│      ├──────────────┴───────────────────────┤
+│      │   More widget cards below            │
+└──────┴──────────────────────────────────────┘
+```
 
-### 1.4 Dörrens öppningsgrad ✅
-- `openAmount?: number` (0-1) tillagd på `WallOpening` i `types.ts`
-- Slider "Öppningsgrad" i OpeningInspector (dörrar + garageportar)
-- 3D: dörrblad roteras runt gångjärnspunkt baserat på `openAmount * π/2`
-- TODO: koppla till `haEntityId` för automatisk HA-sync
+**Technical approach:**
+- Create a new `DashboardShell.tsx` replacing both `DashboardView` and `DashboardGrid`
+- Left nav rail: ~72px wide, icon + label, vertical scroll, touch-friendly (48px+ hit targets)
+- Top row: summary cards (clock, weather, energy, scenes) — same widgets, horizontal flex
+- Main area: CSS Grid with 3D preview as one cell (~40% width on "Hem" tab) and widget grid filling the rest
+- 3D preview size controlled per category (visible on Hem, smaller/hidden on Settings etc.)
+- Remove `HomeNav` (the floating FAB) — navigation moves to left rail
+- Keep `home` and `dashboard` as a single `AppMode` or keep `dashboard` and redirect `home` → `dashboard`
 
-### 1.5 Ljus går igenom väggar ✅ (pragmatisk lösning)
-- Alla ljustyper: minskad distance + decay=2
-- ceiling: 5m, strip: 6m, spot: 6m/π/7 angle, wall: 5m/π/4 angle
-- Dokumenterat: fullständig ljusblockering kräver baked lighting
+**Files changed:**
+- New: `src/components/home/DashboardShell.tsx`
+- Modified: `src/pages/Index.tsx` (merge home/dashboard modes)
+- Modified: `src/components/home/HomeNav.tsx` (remove or repurpose)
+- Existing category content functions from `DashboardGrid.tsx` are preserved and imported
 
-## Fas 2 — UX-förbättringar ✅ DONE
+### Phase 2: Per-Category Widget Layouts & Persistence
 
-### 2.1 Sliders med exakt värdeinmatning ✅
-- Ny `SliderWithInput`-komponent (`src/components/ui/SliderWithInput.tsx`)
-- Klickbart värde → number input med Enter/Escape/blur
-- Applicerad i OpeningInspector (bredd, höjd, bröstning, position, öppningsgrad)
+Add a store slice for per-category widget arrangement:
 
-### 2.2 Möbelfliken stängd som standard ✅
-- Inredning startar med `select`-verktyg (inte `furnish`)
-- Katalogen visas bara när Möbler eller Wizard-verktyg är aktivt
+```typescript
+// In types.ts
+interface WidgetPlacement {
+  widgetId: string;    // e.g. 'clock', 'weather', 'energy-chart', 'device-lights'
+  order: number;       // sort order within grid
+  colSpan?: 1 | 2;    // grid column span
+}
 
-### 2.3 Måla-fliken flyttad till Inredning ✅
-- `paint`-verktyg borttaget från `planritningTools`
-- Tillagt i `inredningTools` som "Måla" med Paintbrush-ikon
-- SurfaceEditor visas under Inredning-fliken
+interface CategoryLayout {
+  categoryKey: DashCategory;
+  widgets: WidgetPlacement[];
+}
 
-### 2.4 Väggar: bara färger (inga texturer) ✅
-- SurfaceEditor filtrerar vägg-material till enbart `paint`-kategorin
-- 15 nya väggfärger tillagda (mjuk rosa, oliv, skifferblå, etc.)
-- Golv behåller alla texturer som tidigare
+// In AppState
+categoryLayouts: Record<DashCategory, WidgetPlacement[]>;
+setCategoryLayout: (cat: DashCategory, widgets: WidgetPlacement[]) => void;
+```
 
-## Fas 3 — Dokumentation och mappstruktur ✅ DONE
-- `public/textures/guide/README.md` uppdaterad med korrekt mappstruktur
-- Borttagen felaktig referens till `public/textures/floor/`
-- Target-paths tillagda per preset
-- `public/textures/carpet/` skapad
+- Each category gets a default widget set (e.g. "energy" defaults to `[EnergyWidget, EnergyDeviceList]`)
+- User rearrangements are persisted per category
+- Stored via existing Zustand persist + autosave to server in hosted mode
+- No external dependency needed
 
-## Fas 4 — Import/Export och long-press ✅ DONE
+**Files changed:**
+- `src/store/types.ts` — add types
+- `src/store/useAppStore.ts` — add slice + defaults + actions
 
-### 4.2 Exportera från Bibliotek ✅
-- "Exportera"-knapp tillagd i BibliotekWorkspace detaljpanel
-- Exporterar metadata som JSON-fil
+### Phase 3: Touch Drag-to-Reorder
 
-### 4.3 Hold-long på enheter i hemmenyn ✅
-- 500ms long-press → popup med av/på + ljusstyrka-slider
-- Fungerar för alla enheter med extra kontroll för `light`
+Implement long-press → drag reorder for widget cards:
 
-## Fas 5 — Troubleshooting-pass ✅ DONE
-- Raderat dead code: `PaintTool.tsx` (ersatt av inline SurfaceEditor)
-- KitchenFixtureObject3D redan borttagen
-- Inga oanvända importer kvar
-- Tester passerar
+- Long-press (500ms) enters "edit mode" for the current category
+- Cards get a subtle wobble/outline animation
+- Touch drag uses `pointer` events (pointerdown/pointermove/pointerup) with manual position tracking — no external library needed
+- On drop, update `categoryLayouts[activeCategory]` order
+- An explicit "Klar" button exits edit mode
+- Alternative: a dedicated "Redigera" button in the top-right (like current implementation) that toggles edit mode
 
-## Fas 6 — Version 1.1.0 ✅ DONE
-- `package.json` bumpat till 1.1.0
+**Technical approach:**
+- Build a `SortableWidgetGrid` component wrapping children
+- Track drag state with `useRef` for positions, `useState` for visual reorder
+- CSS `transform: translate()` for smooth drag visuals
+- On release, commit new order to store
 
-## Bevarat
-- Design / Planritning / Inredning / Bibliotek-struktur
-- Save/load kompatibilitet
-- HA-sync (ej ändrad)
-- Golv-texturer med ambientCG CDN-thumbnails
-- Vägg-mitering och hörn-geometri
+**Files changed:**
+- New: `src/components/home/SortableWidgetGrid.tsx`
+- Modified: each category content component to wrap in `SortableWidgetGrid`
+
+### Phase 4: Polish & Category-Specific Layouts
+
+- Refine each category's default widget composition
+- Add "Lägg till widget" button per category with available widget picker
+- 3D preview visibility/size per category (large on Hem, medium on Devices, hidden on Settings)
+- Smooth transitions between categories
+- Tablet breakpoint tuning (target 1024-1366px landscape)
+- Ensure `build` mode access from nav rail (bottom icon or separate area)
+
+---
+
+## What to Preserve
+
+- All existing widget components (ClockWidget, WeatherWidget, EnergyWidget, etc.)
+- All category content logic (HomeCategory, DevicesCategory, SettingsCategory, etc.)
+- Store structure for devices, HA connection, standby, etc.
+- The glassmorphism/dark theme design language
+- Device interaction patterns (long-press for control, toggle on tap)
+- The 3D scene as a visual element (just smaller/repositioned)
+
+## What Changes
+
+- Layout: stacked → sidebar + grid
+- Navigation: horizontal tab bar → vertical nav rail
+- 3D: 35vh full-width banner → medium inline card (~40% width, ~300px height)
+- Widget arrangement: fixed per category → user-customizable per category
+- App modes: `home` + `dashboard` → single unified mode
+- HomeNav FAB: removed (nav rail replaces it)
+
+## Suggested Implementation Order
+
+1. **Phase 1** first — it's the structural foundation. Everything else builds on it.
+2. **Phase 2** next — persistence layer before drag logic.
+3. **Phase 3** — drag interaction on top of the persistence.
+4. **Phase 4** — polish pass.
+
+Each phase is independently deployable and testable.
+
