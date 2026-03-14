@@ -115,7 +115,7 @@ export default function Floors3D() {
         );
       });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rooms, floor?.elevation, selectedRoomId, handleRoomClick, JSON.stringify(rooms.map(r => r.floorSizeMode))]);
+  }, [rooms, floor?.elevation, selectedRoomId, handleRoomClick, JSON.stringify(rooms.map(r => ({ sm: r.floorSizeMode, sc: r.floorTextureScale, rot: r.floorTextureRotation })))]);
 
   return <group>{roomMeshes}</group>;
 }

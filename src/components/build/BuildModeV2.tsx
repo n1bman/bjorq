@@ -1497,26 +1497,80 @@ function SurfaceEditor() {
 
               {/* Floor size mode per room */}
               {isFloor && currentId && (
-                <div className="flex gap-0.5 mt-1">
-                  {(['auto', 'small', 'standard', 'large'] as const).map((mode) => (
-                    <button key={mode}
-                      onClick={() => {
+                <div className="space-y-2 mt-1">
+                  <div className="flex gap-0.5">
+                    {(['auto', 'small', 'standard', 'large'] as const).map((mode) => (
+                      <button key={mode}
+                        onClick={() => {
+                          if (!activeFloorId) return;
+                          pushUndo();
+                          const store = useAppStore.getState();
+                          const updatedFloors = store.layout.floors.map((fl: any) => {
+                            if (fl.id !== activeFloorId) return fl;
+                            return { ...fl, rooms: fl.rooms.map((r: any) =>
+                              r.id === room.id ? { ...r, floorSizeMode: mode } : r
+                            )};
+                          });
+                          useAppStore.setState((s: any) => ({ layout: { ...s.layout, floors: updatedFloors } }));
+                        }}
+                        className={cn('flex-1 py-0.5 rounded text-[8px] font-medium transition-colors',
+                          currentSizeMode === mode ? 'bg-primary/20 text-primary' : 'bg-secondary/20 text-muted-foreground hover:text-foreground')}>
+                        {sizeLabels[mode]}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* F6: Scale slider */}
+                  <div className="px-0.5">
+                    <div className="flex justify-between items-center mb-0.5">
+                      <span className="text-[9px] text-muted-foreground">Skala</span>
+                      <span className="text-[9px] font-mono text-foreground">{(room.floorTextureScale ?? 1).toFixed(1)}x</span>
+                    </div>
+                    <input type="range" min="0.2" max="4" step="0.1"
+                      value={room.floorTextureScale ?? 1}
+                      onChange={(e) => {
                         if (!activeFloorId) return;
-                        pushUndo();
+                        const val = parseFloat(e.target.value);
                         const store = useAppStore.getState();
                         const updatedFloors = store.layout.floors.map((fl: any) => {
                           if (fl.id !== activeFloorId) return fl;
                           return { ...fl, rooms: fl.rooms.map((r: any) =>
-                            r.id === room.id ? { ...r, floorSizeMode: mode } : r
+                            r.id === room.id ? { ...r, floorTextureScale: val } : r
                           )};
                         });
                         useAppStore.setState((s: any) => ({ layout: { ...s.layout, floors: updatedFloors } }));
                       }}
-                      className={cn('flex-1 py-0.5 rounded text-[8px] font-medium transition-colors',
-                        currentSizeMode === mode ? 'bg-primary/20 text-primary' : 'bg-secondary/20 text-muted-foreground hover:text-foreground')}>
-                      {sizeLabels[mode]}
-                    </button>
-                  ))}
+                      onMouseDown={() => pushUndo()}
+                      onTouchStart={() => pushUndo()}
+                      className="w-full h-1.5 rounded-full appearance-none bg-secondary/40 accent-primary cursor-pointer"
+                    />
+                  </div>
+
+                  {/* F6: Rotation slider */}
+                  <div className="px-0.5">
+                    <div className="flex justify-between items-center mb-0.5">
+                      <span className="text-[9px] text-muted-foreground">Rotation</span>
+                      <span className="text-[9px] font-mono text-foreground">{Math.round(room.floorTextureRotation ?? 0)}°</span>
+                    </div>
+                    <input type="range" min="0" max="360" step="1"
+                      value={room.floorTextureRotation ?? 0}
+                      onChange={(e) => {
+                        if (!activeFloorId) return;
+                        const val = parseFloat(e.target.value);
+                        const store = useAppStore.getState();
+                        const updatedFloors = store.layout.floors.map((fl: any) => {
+                          if (fl.id !== activeFloorId) return fl;
+                          return { ...fl, rooms: fl.rooms.map((r: any) =>
+                            r.id === room.id ? { ...r, floorTextureRotation: val } : r
+                          )};
+                        });
+                        useAppStore.setState((s: any) => ({ layout: { ...s.layout, floors: updatedFloors } }));
+                      }}
+                      onMouseDown={() => pushUndo()}
+                      onTouchStart={() => pushUndo()}
+                      className="w-full h-1.5 rounded-full appearance-none bg-secondary/40 accent-primary cursor-pointer"
+                    />
+                  </div>
                 </div>
               )}
 
