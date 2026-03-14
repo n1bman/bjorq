@@ -1,41 +1,84 @@
+# Arbetsplan: Stabilisering, buggfixar och UX-förbättringar
 
-Målet är att bryta fel-loopen permanent genom att sluta importera en separat köksfil från `Scene3D.tsx`, eftersom just den importkedjan fortsätter fallera i Vite/Rollup trots flera filnamnsbyten.
+## Status: ✅ Implementerat (v1.1.0)
 
-## Vad jag ser i koden nu
-- `Scene3D.tsx` och `BuildScene3D.tsx` importerar `./build/ProceduralKitchen`.
-- Flera parallella köksfiler finns kvar samtidigt:
-  - `ProceduralKitchen.tsx`
-  - `KitchenUnit3D.tsx`
-  - `KitchenFixtureModel3D.tsx`
-  - `KitchenFixtureObject3D.tsx`
-  - `KitchenFixture3D.tsx`
-- `BuildModeV2.tsx` har redan köket i biblioteket som inbyggd post (`builtin-standard-kitchen`) och anropar `addKitchenFixture` korrekt.
+---
 
-## Plan för fix (robust, enkel resolver-yta)
-1. **Flytta köksrendering in i en redan stabil modul**  
-   Lägg in kökskomponenten direkt i `src/components/build/Props3D.tsx` (samma logik som nu finns i `ProceduralKitchen.tsx`), så att inga separata kitchen-importer behövs från scenfilerna.
+## Fas 0 — Bygg-stabilisering ✅ DONE
+- Fixat import i Scene3D till `./build/KitchenFixture3D`
+- Raderat duplikat `KitchenFixtureObject3D.tsx`
 
-2. **Ta bort kitchen-import från scenfiler**
-   - I `src/components/Scene3D.tsx`: ta bort `import ProceduralKitchen ...` och `<ProceduralKitchen />`.
-   - I `src/components/build/BuildScene3D.tsx`: ta bort motsvarande import/rendering.
-   Köket renderas istället via `Props3D` i båda vyerna.
+## Fas 1 — Buggar och regressioner ✅ DONE
 
-3. **Städa gamla oanvända kitchen-filer helt**
-   Ta bort:
-   - `src/components/build/ProceduralKitchen.tsx`
-   - `src/components/build/KitchenUnit3D.tsx`
-   - `src/components/build/KitchenFixtureModel3D.tsx`
-   - `src/components/build/KitchenFixtureObject3D.tsx`
-   - `src/components/build/KitchenFixture3D.tsx`
+### 1.1 Väggar: 90-gradersstöd vid ritning ✅
+- Axis-aligned snapping (±3° av 0/90/180/270°) i `BuildScene3D.tsx`
+- Visuell indikator: cyan linje + solid (ej dashed) + "90°"-label via `<Html>`
+- `cursorAxisAligned`-prop tillagd i `WallDrawing3D.tsx`
 
-4. **Behåll bibliotekskopplingen**
-   Låt `BuildModeV2.tsx` vara kvar med `builtin-standard-kitchen` + `addKitchenFixture` (ingen ändring behövs där, endast verifiering).
+### 1.3 Dörr-öppningsriktning ✅
+- `flipped` appliceras nu på dörrpanelens position och rotation i `wallGeometry.tsx`
+- Gångjärnspunkt beräknas baserat på `flipped`-flagga
 
-5. **Verifiering**
-   - Kör `npm run build:dev` och säkerställ att resolve-felet försvinner.
-   - Funktionstest: placera “Standardkök 🍳” från biblioteket och kontrollera att det syns/kan väljas/flyttas/roteras i 3D.
+### 1.4 Dörrens öppningsgrad ✅
+- `openAmount?: number` (0-1) tillagd på `WallOpening` i `types.ts`
+- Slider "Öppningsgrad" i OpeningInspector (dörrar + garageportar)
+- 3D: dörrblad roteras runt gångjärnspunkt baserat på `openAmount * π/2`
+- TODO: koppla till `haEntityId` för automatisk HA-sync
 
-## Tekniska detaljer (varför detta löser felet)
-- Felet är ett **modulupplösningsfel på filnivå** (`Could not resolve "./build/ProceduralKitchen"`), inte ett runtime-fel i kökslogiken.
-- Genom att **eliminera separat importpunkt** och lägga kökslogik i en fil som redan laddas stabilt (`Props3D.tsx`) minimeras risken för ytterligare resolver-problem.
-- Att ta bort duplicerade/shim-filer förhindrar att gamla referenser eller cache-relaterade importvägar “läcker tillbaka”.
+### 1.5 Ljus går igenom väggar ✅ (pragmatisk lösning)
+- Alla ljustyper: minskad distance + decay=2
+- ceiling: 5m, strip: 6m, spot: 6m/π/7 angle, wall: 5m/π/4 angle
+- Dokumenterat: fullständig ljusblockering kräver baked lighting
+
+## Fas 2 — UX-förbättringar ✅ DONE
+
+### 2.1 Sliders med exakt värdeinmatning ✅
+- Ny `SliderWithInput`-komponent (`src/components/ui/SliderWithInput.tsx`)
+- Klickbart värde → number input med Enter/Escape/blur
+- Applicerad i OpeningInspector (bredd, höjd, bröstning, position, öppningsgrad)
+
+### 2.2 Möbelfliken stängd som standard ✅
+- Inredning startar med `select`-verktyg (inte `furnish`)
+- Katalogen visas bara när Möbler eller Wizard-verktyg är aktivt
+
+### 2.3 Måla-fliken flyttad till Inredning ✅
+- `paint`-verktyg borttaget från `planritningTools`
+- Tillagt i `inredningTools` som "Måla" med Paintbrush-ikon
+- SurfaceEditor visas under Inredning-fliken
+
+### 2.4 Väggar: bara färger (inga texturer) ✅
+- SurfaceEditor filtrerar vägg-material till enbart `paint`-kategorin
+- 15 nya väggfärger tillagda (mjuk rosa, oliv, skifferblå, etc.)
+- Golv behåller alla texturer som tidigare
+
+## Fas 3 — Dokumentation och mappstruktur ✅ DONE
+- `public/textures/guide/README.md` uppdaterad med korrekt mappstruktur
+- Borttagen felaktig referens till `public/textures/floor/`
+- Target-paths tillagda per preset
+- `public/textures/carpet/` skapad
+
+## Fas 4 — Import/Export och long-press ✅ DONE
+
+### 4.2 Exportera från Bibliotek ✅
+- "Exportera"-knapp tillagd i BibliotekWorkspace detaljpanel
+- Exporterar metadata som JSON-fil
+
+### 4.3 Hold-long på enheter i hemmenyn ✅
+- 500ms long-press → popup med av/på + ljusstyrka-slider
+- Fungerar för alla enheter med extra kontroll för `light`
+
+## Fas 5 — Troubleshooting-pass ✅ DONE
+- Raderat dead code: `PaintTool.tsx` (ersatt av inline SurfaceEditor)
+- KitchenFixtureObject3D redan borttagen
+- Inga oanvända importer kvar
+- Tester passerar
+
+## Fas 6 — Version 1.1.0 ✅ DONE
+- `package.json` bumpat till 1.1.0
+
+## Bevarat
+- Design / Planritning / Inredning / Bibliotek-struktur
+- Save/load kompatibilitet
+- HA-sync (ej ändrad)
+- Golv-texturer med ambientCG CDN-thumbnails
+- Vägg-mitering och hörn-geometri
