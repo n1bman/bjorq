@@ -198,7 +198,7 @@ export const presetMaterials: Material[] = [
     hasTexture: true, source: 'ambientCG', realWorldSize: [1.0, 1.0],
     ambientCGId: 'Concrete032',
     thumbnailUrl: 'https://acg-media.struffelproductions.com/file/ambientCG-Web/media/thumbnail/256-JPG-FFFFFF/Concrete032.jpg',
-    mapPath: '/textures/floor/stone/raw_concrete_diff.jpg' },
+    mapPath: 'https://acg-media.struffelproductions.com/file/ambientCG-Web/media/thumbnail/2048-JPG-FFFFFF/Concrete032.jpg' },
   { id: 'floor-travertine', name: 'Travertin', type: 'concrete', color: '#d8ccb4', roughness: 0.55, surfaceCategory: 'stone', floorOnly: true,
     hasTexture: true, source: 'ambientCG', realWorldSize: [0.60, 0.60],
     ambientCGId: 'Marble006',
