@@ -220,7 +220,7 @@ export const presetMaterials: Material[] = [
     hasTexture: true, source: 'ambientCG', realWorldSize: [1.0, 1.0],
     ambientCGId: 'PaintedPlaster017',
     thumbnailUrl: 'https://acg-media.struffelproductions.com/file/ambientCG-Web/media/thumbnail/256-JPG-FFFFFF/PaintedPlaster017.jpg',
-    mapPath: '/textures/floor/texture/tadelakt_diff.jpg' },
+    mapPath: 'https://acg-media.struffelproductions.com/file/ambientCG-Web/media/thumbnail/2048-JPG-FFFFFF/PaintedPlaster017.jpg' },
   { id: 'floor-epoxy', name: 'Epoxigolv', type: 'texture', color: '#d4d0ca', roughness: 0.15, metalness: 0.05, surfaceCategory: 'texture', floorOnly: true,
     hasTexture: true, source: 'ambientCG', realWorldSize: [2.0, 2.0],
     ambientCGId: 'Metal034',
