@@ -1447,7 +1447,7 @@ export default function DeviceMarkers3D({ buildMode }: DeviceMarkers3DProps) {
 
         // When hiding visuals globally or per-device, render invisible click targets + light sources
         if (hideVisuals || isMarkerHidden) {
-          if (marker.kind === 'light') {
+          if (marker.kind === 'light' || marker.kind === 'light-fixture') {
             return <LightMarkerLightOnly key={marker.id} position={marker.position} id={marker.id} onSelect={() => handleSelect(marker.id)} />;
           }
           // Invisible click sphere for all other marker types
