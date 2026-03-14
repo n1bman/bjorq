@@ -240,7 +240,7 @@ export const presetMaterials: Material[] = [
     hasTexture: true, source: 'ambientCG', realWorldSize: [2.0, 2.0],
     ambientCGId: 'PaintedPlaster020',
     thumbnailUrl: 'https://acg-media.struffelproductions.com/file/ambientCG-Web/media/thumbnail/256-JPG-FFFFFF/PaintedPlaster020.jpg',
-    mapPath: '/textures/floor/texture/linoleum_diff.jpg' },
+    mapPath: 'https://acg-media.struffelproductions.com/file/ambientCG-Web/media/thumbnail/2048-JPG-FFFFFF/PaintedPlaster020.jpg' },
 
   // ─── Floor: Carpet / Fabric (5) ───
   { id: 'floor-loop-grey', name: 'Slinga grå', type: 'custom', color: '#8a8a8a', roughness: 0.95, surfaceCategory: 'carpet', floorOnly: true,
