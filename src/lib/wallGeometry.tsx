@@ -708,7 +708,7 @@ export function generateWallSegments(
   elevation: number,
   options?: WallRenderOptions,
 ): JSX.Element[] {
-  const { trimmedLength, centerX, centerZ, origLength, origCx, origCz, angle } = computeWallMitering(wall, allWalls);
+  const { origLength, origCx, origCz, angle, length: trimmedLength, cx: centerX, cz: centerZ } = computeWallMitering(wall, allWalls);
   const miter = computeMiterOffsets(wall, allWalls);
   const wallHeight = wall.height;
 
