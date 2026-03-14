@@ -176,7 +176,7 @@ export const presetMaterials: Material[] = [
     hasTexture: true, source: 'ambientCG', realWorldSize: [0.25, 0.25],
     ambientCGId: 'Tiles054',
     thumbnailUrl: 'https://acg-media.struffelproductions.com/file/ambientCG-Web/media/thumbnail/256-JPG-FFFFFF/Tiles054.jpg',
-    mapPath: '/textures/floor/tile/hex_cement_diff.jpg' },
+    mapPath: 'https://acg-media.struffelproductions.com/file/ambientCG-Web/media/thumbnail/2048-JPG-FFFFFF/Tiles054.jpg' },
   { id: 'floor-checkerboard', name: 'Schackrutigt', type: 'tile', color: '#d0d0d0', roughness: 0.25, surfaceCategory: 'tile', floorOnly: true,
     hasTexture: true, source: 'ambientCG', realWorldSize: [0.40, 0.40],
     ambientCGId: 'Tiles012',
