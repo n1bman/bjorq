@@ -625,7 +625,38 @@ export default function BuildCanvas2D({ overlayMode = false }: { overlayMode?: b
       ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.font = '9px DM Sans, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillText(prop.url.split('/').pop()?.slice(0, 10) ?? '3D', px, py + size + 3);
     }
 
-    if (measureStart) drawMeasureTool(ctx, measureStart, measureEnd, cursorWorld, snapToGridFn, worldToScreen);
+    // Kitchen fixtures (rendered as rectangles in 2D)
+    const KW = 3.80, KD = 0.60;
+    for (const kf of kitchenFixtures) {
+      const cos = Math.cos(-kf.rotation), sin = Math.sin(-kf.rotation);
+      // Four corners of the kitchen footprint
+      const hw = KW / 2, hd = KD;
+      const corners: [number, number][] = [
+        [kf.position[0] + (-hw) * cos - 0 * sin, kf.position[1] + (-hw) * sin + 0 * cos],
+        [kf.position[0] + hw * cos - 0 * sin, kf.position[1] + hw * sin + 0 * cos],
+        [kf.position[0] + hw * cos - (-hd) * sin, kf.position[1] + hw * sin + (-hd) * cos],
+        [kf.position[0] + (-hw) * cos - (-hd) * sin, kf.position[1] + (-hw) * sin + (-hd) * cos],
+      ];
+      const screenCorners = corners.map(([cx, cz]) => worldToScreen(cx, cz));
+      const isKSel = selection.type === 'kitchen-fixture' && selection.id === kf.id;
+      ctx.beginPath();
+      ctx.moveTo(screenCorners[0][0], screenCorners[0][1]);
+      for (let i = 1; i < screenCorners.length; i++) ctx.lineTo(screenCorners[i][0], screenCorners[i][1]);
+      ctx.closePath();
+      ctx.fillStyle = isKSel ? 'rgba(74,158,255,0.3)' : 'rgba(200,168,110,0.25)';
+      ctx.fill();
+      ctx.strokeStyle = isKSel ? '#4a9eff' : '#c8a86e';
+      ctx.lineWidth = isKSel ? 2 : 1;
+      ctx.stroke();
+      // Label
+      const [lx, ly] = worldToScreen(kf.position[0], kf.position[1] - KD / 2);
+      ctx.fillStyle = 'rgba(255,255,255,0.7)';
+      ctx.font = '9px DM Sans, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('🍳 Kök', lx, ly);
+    }
+
     if (vacZoneNodes.length > 0) drawVacuumZonePreview(ctx, vacZoneNodes, cursorWorld, activeTool, worldToScreen);
 
     // Cursor crosshair
