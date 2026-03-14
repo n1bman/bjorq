@@ -1185,8 +1185,9 @@ function SoundbarMarker3D({ position, id, onSelect, onDragStart, selected }: Mar
 function LightFixtureMarker({ position, id, onSelect, onDragStart, selected }: MarkerProps) {
   const state = useAppStore((s) => s.devices.deviceStates[id]);
   const marker = useAppStore((s) => s.devices.markers.find((m) => m.id === id));
-  const lightData = state?.kind === 'light' ? state.data : null;
-  const isOn = lightData?.on ?? false;
+  const hasState = state?.kind === 'light';
+  const lightData = hasState ? state.data : null;
+  const isOn = hasState ? (lightData?.on ?? false) : true;
   const fixtureModel = marker?.fixtureModel ?? 'led-bulb';
   const spotTargetRef = useRef<THREE.Object3D>(null);
   const spotLightRef = useRef<THREE.SpotLight>(null);
