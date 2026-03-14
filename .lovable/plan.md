@@ -1,84 +1,59 @@
-# Arbetsplan: Stabilisering, buggfixar och UX-förbättringar
 
-## Status: ✅ Implementerat (v1.1.0)
 
----
+# Per-enhet ljusegenskaper i Design-inspektören
 
-## Fas 0 — Bygg-stabilisering ✅ DONE
-- Fixat import i Scene3D till `./build/KitchenFixture3D`
-- Raderat duplikat `KitchenFixtureObject3D.tsx`
+## Problem
+Alla armaturer av samma typ (t.ex. LED-spot) delar hårdkodade ljusvärden (intensitet ×2, räckvidd 2.5m, konvinkel π/10). I verkligheten varierar spots och bars i storlek och spridning — användaren behöver kunna justera detta per enhet.
 
-## Fas 1 — Buggar och regressioner ✅ DONE
+## Lösning
 
-### 1.1 Väggar: 90-gradersstöd vid ritning ✅
-- Axis-aligned snapping (±3° av 0/90/180/270°) i `BuildScene3D.tsx`
-- Visuell indikator: cyan linje + solid (ej dashed) + "90°"-label via `<Html>`
-- `cursorAxisAligned`-prop tillagd i `WallDrawing3D.tsx`
+### 1. Utöka `DeviceMarker` i `src/store/types.ts`
 
-### 1.3 Dörr-öppningsriktning ✅
-- `flipped` appliceras nu på dörrpanelens position och rotation i `wallGeometry.tsx`
-- Gångjärnspunkt beräknas baserat på `flipped`-flagga
+Lägg till valfria ljusegenskaper direkt på markören:
 
-### 1.4 Dörrens öppningsgrad ✅
-- `openAmount?: number` (0-1) tillagd på `WallOpening` i `types.ts`
-- Slider "Öppningsgrad" i OpeningInspector (dörrar + garageportar)
-- 3D: dörrblad roteras runt gångjärnspunkt baserat på `openAmount * π/2`
-- TODO: koppla till `haEntityId` för automatisk HA-sync
+```ts
+// På DeviceMarker (rad ~411):
+lightConfig?: {
+  intensity: number;    // multiplier (default per typ: bulb=1, bar=1.5, spot=2)
+  distance: number;     // meter (default: bulb=2, bar=3, spot=2.5)
+  angle: number;        // radianer, bara spot/bar (default: bar=π/4, spot=π/10)
+  penumbra: number;     // 0-1 (default: bar=0.7, spot=0.3)
+};
+```
 
-### 1.5 Ljus går igenom väggar ✅ (pragmatisk lösning)
-- Alla ljustyper: minskad distance + decay=2
-- ceiling: 5m, strip: 6m, spot: 6m/π/7 angle, wall: 5m/π/4 angle
-- Dokumenterat: fullständig ljusblockering kräver baked lighting
+### 2. Uppdatera `DeviceMarkers3D.tsx`
 
-## Fas 2 — UX-förbättringar ✅ DONE
+I `LightFixtureMarker` och `LightMarker`: läs `marker.lightConfig` med fallback till nuvarande hårdkodade värden.
 
-### 2.1 Sliders med exakt värdeinmatning ✅
-- Ny `SliderWithInput`-komponent (`src/components/ui/SliderWithInput.tsx`)
-- Klickbart värde → number input med Enter/Escape/blur
-- Applicerad i OpeningInspector (bredd, höjd, bröstning, position, öppningsgrad)
+```ts
+const defaults = fixtureModel === 'led-bulb' ? { intensity: 1, distance: 2 }
+               : fixtureModel === 'led-bar'  ? { intensity: 1.5, distance: 3, angle: Math.PI/4, penumbra: 0.7 }
+               :                                { intensity: 2, distance: 2.5, angle: Math.PI/10, penumbra: 0.3 };
+const cfg = { ...defaults, ...marker.lightConfig };
+```
 
-### 2.2 Möbelfliken stängd som standard ✅
-- Inredning startar med `select`-verktyg (inte `furnish`)
-- Katalogen visas bara när Möbler eller Wizard-verktyg är aktivt
+Sedan används `brightness * cfg.intensity`, `cfg.distance`, `cfg.angle`, `cfg.penumbra` i respektive `<spotLight>` / `<pointLight>`.
 
-### 2.3 Måla-fliken flyttad till Inredning ✅
-- `paint`-verktyg borttaget från `planritningTools`
-- Tillagt i `inredningTools` som "Måla" med Paintbrush-ikon
-- SurfaceEditor visas under Inredning-fliken
+Samma mönster för `LightMarker` (lightType-baserade ljuskällor: ceiling, spot, wall, strip, lightbar).
 
-### 2.4 Väggar: bara färger (inga texturer) ✅
-- SurfaceEditor filtrerar vägg-material till enbart `paint`-kategorin
-- 15 nya väggfärger tillagda (mjuk rosa, oliv, skifferblå, etc.)
-- Golv behåller alla texturer som tidigare
+### 3. Uppdatera `DeviceInspector` i `BuildInspector.tsx`
 
-## Fas 3 — Dokumentation och mappstruktur ✅ DONE
-- `public/textures/guide/README.md` uppdaterad med korrekt mappstruktur
-- Borttagen felaktig referens till `public/textures/floor/`
-- Target-paths tillagda per preset
-- `public/textures/carpet/` skapad
+Under armaturmodell-väljaren (rad ~1267) och ljustyp-väljaren (rad ~1243), lägg till en sektion "Ljusegenskaper" med `SliderWithInput`-kontroller:
 
-## Fas 4 — Import/Export och long-press ✅ DONE
+- **Intensitet** (0.1–10, steg 0.1, default per typ)
+- **Räckvidd** (0.5–15 m, steg 0.1)
+- **Konvinkel** (5°–120°, steg 1°) — bara för spot/bar/lightbar/wall
+- **Penumbra** (0–1, steg 0.05) — bara för spot/bar/lightbar/wall
 
-### 4.2 Exportera från Bibliotek ✅
-- "Exportera"-knapp tillagd i BibliotekWorkspace detaljpanel
-- Exporterar metadata som JSON-fil
+Kontrollerna syns för `kind === 'light'` och `kind === 'light-fixture'`.
 
-### 4.3 Hold-long på enheter i hemmenyn ✅
-- 500ms long-press → popup med av/på + ljusstyrka-slider
-- Fungerar för alla enheter med extra kontroll för `light`
+"Återställ"-knapp sätter `lightConfig` till `undefined` (= tillbaka till defaults).
 
-## Fas 5 — Troubleshooting-pass ✅ DONE
-- Raderat dead code: `PaintTool.tsx` (ersatt av inline SurfaceEditor)
-- KitchenFixtureObject3D redan borttagen
-- Inga oanvända importer kvar
-- Tester passerar
+### Filändringar
 
-## Fas 6 — Version 1.1.0 ✅ DONE
-- `package.json` bumpat till 1.1.0
+| Fil | Ändring |
+|-----|---------|
+| `src/store/types.ts` | Lägg till `LightConfig` interface + `lightConfig?` på `DeviceMarker` |
+| `src/components/devices/DeviceMarkers3D.tsx` | Läs `marker.lightConfig` med fallback i `LightMarker` och `LightFixtureMarker` |
+| `src/components/build/BuildInspector.tsx` | Lägg till ljusegenskaps-sliders i `DeviceInspector` |
 
-## Bevarat
-- Design / Planritning / Inredning / Bibliotek-struktur
-- Save/load kompatibilitet
-- HA-sync (ej ändrad)
-- Golv-texturer med ambientCG CDN-thumbnails
-- Vägg-mitering och hörn-geometri
