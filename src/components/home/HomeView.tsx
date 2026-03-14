@@ -10,12 +10,10 @@ import EnergyWidget from './cards/EnergyWidget';
 import TemperatureWidget from './cards/TemperatureWidget';
 import DeviceControlCard from './cards/DeviceControlCard';
 import { useWeatherSync } from '../../hooks/useWeatherSync';
-import { Eye, EyeOff, Lightbulb, Thermometer, Wind, Camera, Power, Tv, Fan, Shield, Droplets, X, Wifi, Save } from 'lucide-react';
+import { Eye, EyeOff, Lightbulb, Thermometer, Wind, Camera, Power, Tv, Fan, Shield, Droplets, X, Wifi } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Switch } from '../ui/switch';
-import { Button } from '../ui/button';
 import type { DeviceKind } from '../../store/types';
-import { cameraRef } from '../../lib/cameraRef';
 
 const TOGGLEABLE_KINDS = new Set(['light', 'switch', 'climate', 'vacuum', 'media_screen', 'power-outlet', 'camera', 'fridge', 'oven', 'washer', 'light-fixture', 'smart-outlet']);
 
@@ -42,12 +40,10 @@ export default function HomeView() {
   const hideAllMarkers = useAppStore((s) => s.hideAllMarkers);
   const toggleDeviceState = useAppStore((s) => s.toggleDeviceState);
   const deviceStates = useAppStore((s) => s.devices.deviceStates);
-  const saveHomeStartCamera = useAppStore((s) => s.saveHomeStartCamera);
+  
   const [pickerOpen, setPickerOpen] = useState(false);
   const [longPressId, setLongPressId] = useState<string | null>(null);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [showSaveView, setShowSaveView] = useState(false);
-  const sceneLongPressRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useWeatherSync();
 
   const selectedMarkers = markers.filter((m) => homeScreenDevices.includes(m.id));
@@ -88,15 +84,7 @@ export default function HomeView() {
 
   return (
     <div className="fixed inset-0 bg-background">
-      <div
-        className="absolute inset-0"
-        onPointerDown={() => {
-          sceneLongPressRef.current = setTimeout(() => setShowSaveView(true), 800);
-        }}
-        onPointerUp={() => { if (sceneLongPressRef.current) { clearTimeout(sceneLongPressRef.current); sceneLongPressRef.current = null; } }}
-        onPointerCancel={() => { if (sceneLongPressRef.current) { clearTimeout(sceneLongPressRef.current); sceneLongPressRef.current = null; } }}
-        onPointerLeave={() => { if (sceneLongPressRef.current) { clearTimeout(sceneLongPressRef.current); sceneLongPressRef.current = null; } }}
-      >
+      <div className="absolute inset-0">
         <Scene3D />
       </div>
 
@@ -108,28 +96,6 @@ export default function HomeView() {
         {visibleWidgets.energy && <EnergyWidget />}
       </div>
 
-      {/* Save View popup */}
-      {showSaveView && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-auto" onClick={() => setShowSaveView(false)}>
-          <div className="absolute inset-0 bg-background/40 backdrop-blur-sm" />
-          <div className="relative glass-panel rounded-2xl p-5 w-64 shadow-xl space-y-3" onClick={(e) => e.stopPropagation()}>
-            <p className="text-sm font-semibold text-foreground">Spara som startvy?</p>
-            <p className="text-xs text-muted-foreground">Den aktuella kameravinkeln sparas som din hemvy.</p>
-            <div className="flex gap-2">
-              <Button size="sm" variant="outline" className="flex-1" onClick={() => setShowSaveView(false)}>Avbryt</Button>
-              <Button size="sm" className="flex-1 gap-1" onClick={() => {
-                saveHomeStartCamera(
-                  [cameraRef.position.x, cameraRef.position.y, cameraRef.position.z],
-                  [cameraRef.target.x, cameraRef.target.y, cameraRef.target.z],
-                );
-                setShowSaveView(false);
-              }}>
-                <Save size={12} /> Spara
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Long-press popup for device control */}
       {longPressId && longPressMarker && (

@@ -91,9 +91,11 @@ function HomeCategory() {
   const reorderCategories = useAppStore((s) => s.reorderCategories);
   const categoryLayouts = useAppStore((s) => s.dashboard.categoryLayouts);
   const setCategoryLayout = useAppStore((s) => s.setCategoryLayout);
+  const saveHomeStartCamera = useAppStore((s) => s.saveHomeStartCamera);
   const [showManager, setShowManager] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [draggingCatIndex, setDraggingCatIndex] = useState<number | null>(null);
+  const [showSaveView, setShowSaveView] = useState(false);
 
   // Build room name lookup from floors
   const roomNameMap = useMemo(() => {
@@ -234,9 +236,32 @@ function HomeCategory() {
         columns={3}
         editMode={editMode}
       >
-        {/* 3D Preview widget */}
-        <div className="glass-panel glass-panel-hover rounded-2xl overflow-hidden h-[280px]">
+        {/* 3D Preview widget — double-click to save camera view */}
+        <div
+          className="glass-panel glass-panel-hover rounded-2xl overflow-hidden h-[280px] relative cursor-pointer"
+          onDoubleClick={() => setShowSaveView(true)}
+        >
           <Scene3D />
+          {showSaveView && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/50 backdrop-blur-sm" onClick={(e) => e.stopPropagation()}>
+              <div className="glass-panel rounded-2xl p-5 w-64 shadow-xl space-y-3">
+                <p className="text-sm font-semibold text-foreground">Spara som startvy?</p>
+                <p className="text-xs text-muted-foreground">Den aktuella kameravinkeln sparas som din kontrollpanelvy.</p>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="outline" className="flex-1" onClick={() => setShowSaveView(false)}>Avbryt</Button>
+                  <Button size="sm" className="flex-1 gap-1" onClick={() => {
+                    saveHomeStartCamera(
+                      [cameraRef.position.x, cameraRef.position.y, cameraRef.position.z],
+                      [cameraRef.target.x, cameraRef.target.y, cameraRef.target.z],
+                    );
+                    setShowSaveView(false);
+                  }}>
+                    <Save size={12} /> Spara
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Category cards */}
