@@ -1232,7 +1232,7 @@ function LightFixtureMarker({ position, id, onSelect, onDragStart, selected }: M
             <sphereGeometry args={[0.03, 16, 16]} />
             <meshStandardMaterial color={lightColor} emissive={lightColor} emissiveIntensity={isOn ? brightness * 3 : 0.1} transparent opacity={isOn ? 0.95 : 0.5} />
           </mesh>
-          <pointLight color={lightColor} intensity={isOn ? brightness * 2 : 0} distance={3} decay={2} />
+          <pointLight color={lightColor} intensity={isOn ? brightness * 1 : 0} distance={2} decay={2} />
         </>
       )}
       {fixtureModel === 'led-bar' && (
@@ -1244,9 +1244,9 @@ function LightFixtureMarker({ position, id, onSelect, onDragStart, selected }: M
           {/* Frosted diffuser */}
           <mesh position={[0, -0.012, 0]}>
             <boxGeometry args={[0.56, 0.005, 0.025]} />
-            <meshStandardMaterial color={lightColor} emissive={lightColor} emissiveIntensity={isOn ? brightness * 2.5 : 0.1} transparent opacity={isOn ? 0.85 : 0.3} />
+            <meshStandardMaterial color={lightColor} emissive={lightColor} emissiveIntensity={isOn ? brightness * 2 : 0.1} transparent opacity={isOn ? 0.85 : 0.3} />
           </mesh>
-          <spotLight ref={spotLightRef} color={lightColor} intensity={isOn ? brightness * 4 : 0} distance={5} angle={Math.PI / 3} penumbra={0.7} decay={2} castShadow />
+          <spotLight ref={spotLightRef} color={lightColor} intensity={isOn ? brightness * 1.5 : 0} distance={3} angle={Math.PI / 4} penumbra={0.7} decay={2} position={[0, -0.012, 0]} />
           <object3D ref={spotTargetRef} position={[0, -3, 0]} />
         </>
       )}
@@ -1260,9 +1260,9 @@ function LightFixtureMarker({ position, id, onSelect, onDragStart, selected }: M
           {/* Lens */}
           <mesh position={[0, -0.008, 0]}>
             <cylinderGeometry args={[0.025, 0.025, 0.003, 24]} />
-            <meshStandardMaterial color={lightColor} emissive={lightColor} emissiveIntensity={isOn ? brightness * 3 : 0.1} transparent opacity={isOn ? 0.9 : 0.3} />
+            <meshStandardMaterial color={lightColor} emissive={lightColor} emissiveIntensity={isOn ? brightness * 2.5 : 0.1} transparent opacity={isOn ? 0.9 : 0.3} />
           </mesh>
-          <spotLight ref={spotLightRef} color={lightColor} intensity={isOn ? brightness * 5 : 0} distance={4} angle={Math.PI / 8} penumbra={0.3} decay={2} castShadow />
+          <spotLight ref={spotLightRef} color={lightColor} intensity={isOn ? brightness * 2 : 0} distance={2.5} angle={Math.PI / 10} penumbra={0.3} decay={2} position={[0, -0.008, 0]} />
           <object3D ref={spotTargetRef} position={[0, -3, 0]} />
         </>
       )}
