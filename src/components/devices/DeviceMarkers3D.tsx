@@ -1291,6 +1291,32 @@ function LightFixtureMarker({ position, id, onSelect, onDragStart, selected }: M
           <object3D ref={spotTargetRef} position={[0, -3, 0]} />
         </>
       )}
+      {fixtureModel === 'led-gu10' && (
+        <>
+          {/* GU10 conical body */}
+          <mesh position={[0, 0, 0]}>
+            <cylinderGeometry args={[0.025, 0.015, 0.045, 24]} />
+            <meshStandardMaterial color="#e0e0e0" roughness={0.25} metalness={0.6} />
+          </mesh>
+          {/* Lens face (top, emissive) */}
+          <mesh position={[0, -0.024, 0]}>
+            <cylinderGeometry args={[0.024, 0.024, 0.004, 24]} />
+            <meshStandardMaterial color={lightColor} emissive={lightColor} emissiveIntensity={isOn ? brightness * 3 : 0.1} transparent opacity={isOn ? 0.95 : 0.35} />
+          </mesh>
+          {/* GU10 pin 1 */}
+          <mesh position={[0.006, 0.028, 0]}>
+            <cylinderGeometry args={[0.0015, 0.0015, 0.012, 8]} />
+            <meshStandardMaterial color="#aaa" roughness={0.2} metalness={0.9} />
+          </mesh>
+          {/* GU10 pin 2 */}
+          <mesh position={[-0.006, 0.028, 0]}>
+            <cylinderGeometry args={[0.0015, 0.0015, 0.012, 8]} />
+            <meshStandardMaterial color="#aaa" roughness={0.2} metalness={0.9} />
+          </mesh>
+          <spotLight ref={spotLightRef} color={lightColor} intensity={isOn ? brightness * cfg.intensity : 0} distance={cfg.distance} angle={cfg.angle} penumbra={cfg.penumbra ?? 0.4} decay={2} position={[0, -0.024, 0]} />
+          <object3D ref={spotTargetRef} position={[0, -3, 0]} />
+        </>
+      )}
       {selected && <SelectionRing radius={0.15} />}
     </group>
   );
