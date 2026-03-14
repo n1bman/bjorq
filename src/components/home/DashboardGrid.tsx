@@ -86,6 +86,8 @@ function HomeCategory() {
   const customCategories = useAppStore((s) => s.customCategories);
   const moveDeviceToCategory = useAppStore((s) => s.moveDeviceToCategory);
   const reorderCategories = useAppStore((s) => s.reorderCategories);
+  const categoryLayouts = useAppStore((s) => s.dashboard.categoryLayouts);
+  const setCategoryLayout = useAppStore((s) => s.setCategoryLayout);
   const [showManager, setShowManager] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [draggingCatIndex, setDraggingCatIndex] = useState<number | null>(null);
@@ -128,17 +130,46 @@ function HomeCategory() {
     setDraggingCatIndex(null);
   };
 
+  // Build sortable items from entries
+  const sortableItems: SortableItem[] = useMemo(() => {
+    const saved = categoryLayouts?.home;
+    if (saved && saved.length > 0) {
+      // Restore saved order, add any new entries not in saved
+      const ordered: SortableItem[] = [];
+      for (const s of saved) {
+        const found = entries.find((e) => e.key === s.widgetId);
+        if (found) ordered.push({ id: s.widgetId, colSpan: s.colSpan });
+      }
+      for (const e of entries) {
+        if (!ordered.find((o) => o.id === e.key)) {
+          ordered.push({ id: e.key, colSpan: e.devices.length >= 5 ? 2 : 1 });
+        }
+      }
+      return ordered;
+    }
+    return entries.map((e) => ({
+      id: e.key,
+      colSpan: (e.devices.length >= 5 ? 2 : 1) as 1 | 2,
+    }));
+  }, [entries, categoryLayouts]);
+
+  const handleReorder = (newOrder: SortableItem[]) => {
+    setCategoryLayout('home', newOrder.map((item, i) => ({
+      widgetId: item.id,
+      order: i,
+      colSpan: item.colSpan,
+    })));
+  };
+
+  // Sort entries to match sortable order
+  const orderedEntries = useMemo(() => {
+    return sortableItems
+      .map((item) => entries.find((e) => e.key === item.id))
+      .filter(Boolean) as typeof entries;
+  }, [sortableItems, entries]);
+
   return (
     <div className="space-y-4">
-      <div className="flex items-start gap-3 flex-wrap">
-        <ClockWidget />
-        <WeatherWidget />
-        <EnergyWidget />
-        <WifiWidget />
-        <ScenesWidget />
-        <AutomationsWidget />
-      </div>
-
       <div className="flex justify-end gap-2">
         <Button size="sm" variant={editMode ? 'default' : 'outline'} className="h-7 text-[10px] gap-1"
           onClick={() => setEditMode(!editMode)}>
@@ -158,9 +189,13 @@ function HomeCategory() {
 
       {showManager && <CategoryManager />}
 
-      {entries.length > 0 ? (
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 auto-rows-auto">
-          {entries.map((entry, index) => (
+      {orderedEntries.length > 0 ? (
+        <SortableWidgetGrid
+          items={sortableItems}
+          onReorder={handleReorder}
+          columns={3}
+        >
+          {orderedEntries.map((entry, index) => (
             <CategoryCard
               key={entry.key}
               category={entry.label}
@@ -174,7 +209,7 @@ function HomeCategory() {
               onDropCategory={() => handleDropCategory(index)}
             />
           ))}
-        </div>
+        </SortableWidgetGrid>
       ) : (
         <div className="text-center py-6">
           <p className="text-sm text-muted-foreground">Inga enheter ännu</p>
