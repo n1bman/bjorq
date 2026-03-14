@@ -96,11 +96,8 @@ export function applyMaterialTextures(
   const cacheExtra = `_s${extraScale.toFixed(2)}_r${rotationDeg.toFixed(0)}`;
 
   if (preset.mapPath) {
-    const map = loadTexture(preset.mapPath + cacheExtra, effectiveRepeat);
-    // loadTexture won't find the path with suffix — use raw path but unique cache
     const realMap = loadTexture(preset.mapPath, effectiveRepeat);
     if (realMap) {
-      // Clone to avoid shared mutation across rooms
       const cloned = realMap.clone();
       configureTexture(cloned);
       cloned.colorSpace = THREE.SRGBColorSpace;
