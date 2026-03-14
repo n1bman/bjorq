@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-03-14
+
+### Added
+- **Hemvy restored** — Full-screen 3D home view (HomeView) is back as a separate mode alongside the control panel (DashboardShell)
+- **Build mode navigation** — Home (🏠) and Dashboard (📊) buttons in Build toolbar for quick switching between all three modes
+- **Hemvy link in nav rail** — Control panel sidebar includes a "Hemvy" shortcut to jump to full-screen 3D view
+
+### Changed
+- "Klar" button in Build mode now navigates to the control panel (dashboard) instead of home view
+- Renamed "Hem" to "Hemvy" in the control panel nav rail for clarity
+
 ## [1.1.0] - 2026-03-14
 
 ### Added

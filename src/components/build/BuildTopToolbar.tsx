@@ -437,7 +437,7 @@ export default function BuildTopToolbar() {
 
       {/* Done button */}
       <button
-        onClick={() => { toast.success('Sparad!'); setAppMode('home'); }}
+        onClick={() => { toast.success('Sparad!'); setAppMode('dashboard'); }}
         className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors ml-1 min-h-[44px]"
       >
         <Check size={16} />

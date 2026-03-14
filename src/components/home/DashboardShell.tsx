@@ -63,18 +63,11 @@ export default function DashboardShell() {
         {/* Bottom: Home + Design shortcuts */}
         <div className="flex flex-col gap-1 px-2 pb-4 pt-2 border-t border-sidebar-border/40">
           <button
-            onClick={() => {
-              setDashCategory('home');
-            }}
-            className={cn(
-              'flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl text-[11px] font-medium transition-all border-l-[3px] border-transparent',
-              activeCategory === 'home'
-                ? 'text-primary'
-                : 'text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/40'
-            )}
+            onClick={() => setAppMode('home')}
+            className="flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl text-[11px] font-medium text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/40 transition-all border-l-[3px] border-transparent"
           >
             <Home size={18} strokeWidth={1.5} className="shrink-0" />
-            <span>Hem</span>
+            <span>Hemvy</span>
           </button>
           <button
             onClick={() => setAppMode('build')}
