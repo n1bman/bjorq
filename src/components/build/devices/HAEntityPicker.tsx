@@ -97,7 +97,7 @@ export default function HAEntityPicker({ deviceId, kind, currentEntityId, onSele
                         onSelect(entity.entityId);
                         setOpen(false);
                       }}
-                      disabled={!!linked}
+                      disabled={false}
                       className="flex flex-col items-start gap-0"
                     >
                       <div className="flex items-center gap-2 w-full">
@@ -117,7 +117,7 @@ export default function HAEntityPicker({ deviceId, kind, currentEntityId, onSele
                         )}
                       </div>
                       {linked && (
-                        <p className="text-[9px] text-muted-foreground/60 ml-5">Kopplad till: {linked}</p>
+                        <p className="text-[9px] text-amber-500/80 ml-5">⚠ Kopplad till: {linked}</p>
                       )}
                     </CommandItem>
                   );

@@ -184,7 +184,7 @@ export function computeMiterOffsets(wall: WallSegment, allWalls: WallSegment[], 
     if (!agree) continue; // Disagreement (+ junction) → flat end
 
     // Clamp to avoid extreme miters at very acute angles
-    const maxOffset = len * 0.4;
+    const maxOffset = len * 0.35;
     useOffset = Math.max(-maxOffset, Math.min(maxOffset, useOffset));
 
     // Convert t (along wallInDir) to local X offsets
@@ -1186,8 +1186,8 @@ export function generateCornerBlocks(
       const dt = Math.abs(wall.to[0] - pos[0]) + Math.abs(wall.to[1] - pos[1]);
       if (df < eps || dt < eps) connectionCount++;
     }
-    // Phase A3: Skip L-corners (2 walls) — mitered geometry handles them
-    if (connectionCount < 3) continue;
+    // Phase v1.3: Generate corner blocks for 2+ wall junctions (L-corners included)
+    if (connectionCount < 2) continue;
 
     const dominantColor = wallColors[0]?.exteriorColor ?? '#e0e0e0';
     const matProps: Record<string, any> = {

@@ -116,16 +116,18 @@ function SceneContent() {
         const h = fl?.heightMeters ?? 2.5;
         let yPos = elev + 2.2;
         if (kind === 'light') yPos = elev + h - 0.1;
+        else if (kind === 'light-fixture') yPos = elev + h - 0.1;
         else if (kind === 'switch' || kind === 'sensor') yPos = elev + 1.2;
         else if (kind === 'climate') yPos = elev + 1.5;
         else if (kind === 'media_screen') yPos = elev + 1.5;
+        else if (kind === 'smart-outlet') yPos = elev + 0.4;
 
         const deviceData: any = {
           id: generateId(),
           kind,
           name: '',
           floorId: activeFloorId,
-          surface: kind === 'light' ? 'ceiling' : kind === 'media_screen' ? 'free' : 'floor',
+          surface: kind === 'light' || kind === 'light-fixture' ? 'ceiling' : kind === 'media_screen' ? 'free' : kind === 'smart-outlet' ? 'wall' : 'floor',
           position: [snapped[0], yPos, snapped[1]],
           rotation: [0, 0, 0],
         };

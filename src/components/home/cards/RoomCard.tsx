@@ -28,6 +28,8 @@ const deviceIcons: Record<DeviceKind, typeof Lightbulb> = {
   'lawn-mower': Trees,
   speaker: Speaker,
   soundbar: Music,
+  'light-fixture': Lightbulb,
+  'smart-outlet': Plug,
 };
 
 interface RoomCardProps {

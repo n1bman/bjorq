@@ -1116,6 +1116,8 @@ const kindLabels: Record<DeviceKind, string> = {
   'lawn-mower': 'Gräsklippare',
   speaker: 'Högtalare',
   soundbar: 'Soundbar',
+  'light-fixture': 'Ljusarmatur',
+  'smart-outlet': 'Vägguttag',
 };
 
 function DeviceInspector({ deviceId, close }: { deviceId: string; close: React.ReactNode }) {
@@ -1135,14 +1137,17 @@ function DeviceInspector({ deviceId, close }: { deviceId: string; close: React.R
 
   const isScreen = device.kind === 'media_screen';
   const isLight = device.kind === 'light';
+  const isLightFixture = device.kind === 'light-fixture';
   const screenConfig = device.screenConfig ?? { aspectRatio: 16 / 9, uiStyle: 'minimal' as const, showProgress: true };
   const scale = device.scale ?? [1.2, 0.675, 1];
 
   const lightTypeOptions: { value: LightType; label: string; emoji: string }[] = [
     { value: 'ceiling', label: 'Tak', emoji: '🔵' },
+    { value: 'ceiling-small', label: 'Tak Liten', emoji: '🔹' },
     { value: 'strip', label: 'Strip', emoji: '🟢' },
     { value: 'wall', label: 'Vägg', emoji: '🟡' },
     { value: 'spot', label: 'Spot', emoji: '⚪' },
+    { value: 'lightbar', label: 'Lightbar', emoji: '▬' },
   ];
 
   const handleDelete = () => {
@@ -1221,6 +1226,30 @@ function DeviceInspector({ deviceId, close }: { deviceId: string; close: React.R
                 onClick={() => updateDevice(device.id, { lightType: value })}
                 className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-[10px] font-medium transition-all border ${
                   (device.lightType ?? 'ceiling') === value
+                    ? 'border-primary bg-primary/15 text-primary'
+                    : 'border-border text-muted-foreground hover:border-primary/40'
+                }`}
+              >
+                <span>{emoji}</span>{label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      {isLightFixture && (
+        <div className="space-y-2">
+          <label className="text-muted-foreground text-[10px]">Armaturmodell</label>
+          <div className="flex gap-1 flex-wrap">
+            {([
+              { value: 'led-bulb' as const, label: 'LED Lampa', emoji: '💡' },
+              { value: 'led-bar' as const, label: 'LED Bar', emoji: '▬' },
+              { value: 'led-spot' as const, label: 'LED Spot', emoji: '⚪' },
+            ]).map(({ value, label, emoji }) => (
+              <button
+                key={value}
+                onClick={() => updateDevice(device.id, { fixtureModel: value })}
+                className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-[10px] font-medium transition-all border ${
+                  (device.fixtureModel ?? 'led-bulb') === value
                     ? 'border-primary bg-primary/15 text-primary'
                     : 'border-border text-muted-foreground hover:border-primary/40'
                 }`}
@@ -1350,6 +1379,15 @@ function DeviceInspector({ deviceId, close }: { deviceId: string; close: React.R
         onSelect={(entityId) => updateDevice(device.id, { ha: { entityId } })}
         onClear={() => updateDevice(device.id, { ha: undefined })}
       />
+      {/* Multi-entity warning */}
+      {device.ha?.entityId && (() => {
+        const sharedCount = markers.filter(m => m.id !== device.id && m.ha?.entityId === device.ha?.entityId).length;
+        return sharedCount > 0 ? (
+          <p className="text-[9px] text-amber-500 flex items-center gap-1 px-1">
+            ⚠ {sharedCount + 1} enheter delar denna entitet
+          </p>
+        ) : null;
+      })()}
 
       {/* Position sliders */}
       <div className="space-y-1.5">

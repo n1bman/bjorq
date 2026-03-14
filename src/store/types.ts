@@ -191,6 +191,7 @@ export type BuildTool =
   | 'copy'
   | 'measure'
   | 'calibrate'
+  | 'devices'
   | 'place-light'
   | 'place-switch'
   | 'place-sensor'
@@ -216,6 +217,8 @@ export type BuildTool =
   | 'place-lawn-mower'
   | 'place-speaker'
   | 'place-soundbar'
+  | 'place-light-fixture'
+  | 'place-smart-outlet'
   | 'place-vacuum-dock'
   | 'vacuum-zone'
   | 'furnish'
@@ -359,7 +362,7 @@ export interface HomeGeometryState {
 }
 
 // ─── Devices Layer ───
-export type DeviceKind = 'light' | 'switch' | 'sensor' | 'climate' | 'vacuum' | 'camera' | 'fridge' | 'oven' | 'washer' | 'garage-door' | 'door-lock' | 'power-outlet' | 'media_screen' | 'fan' | 'cover' | 'scene' | 'alarm' | 'water-heater' | 'humidifier' | 'siren' | 'valve' | 'remote' | 'lawn-mower' | 'speaker' | 'soundbar';
+export type DeviceKind = 'light' | 'switch' | 'sensor' | 'climate' | 'vacuum' | 'camera' | 'fridge' | 'oven' | 'washer' | 'garage-door' | 'door-lock' | 'power-outlet' | 'media_screen' | 'fan' | 'cover' | 'scene' | 'alarm' | 'water-heater' | 'humidifier' | 'siren' | 'valve' | 'remote' | 'lawn-mower' | 'speaker' | 'soundbar' | 'light-fixture' | 'smart-outlet';
 export type DeviceSurface = 'floor' | 'wall' | 'ceiling' | 'free';
 
 export interface ScreenConfig {
@@ -404,6 +407,7 @@ export interface DeviceMarker {
   widgetConfig?: WidgetConfig;
   energyTracking?: EnergyTracking;
   lightType?: LightType;
+  fixtureModel?: 'led-bulb' | 'led-bar' | 'led-spot';
   estimatedWatts?: number;
 }
 
@@ -835,7 +839,7 @@ export interface ActivityEvent {
 }
 
 // ─── User Profile ───
-export type LightType = 'ceiling' | 'strip' | 'wall' | 'spot';
+export type LightType = 'ceiling' | 'ceiling-small' | 'strip' | 'wall' | 'spot' | 'lightbar';
 
 export interface WifiSettings {
   ssid: string;
