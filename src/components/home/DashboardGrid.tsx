@@ -34,7 +34,6 @@ import WizardConnectionPanel from './cards/WizardConnectionPanel';
 import AutomationsPanel from './cards/AutomationsPanel';
 import ScenesPanel from './cards/ScenesPanel';
 import ClimateTab from './cards/ClimateTab';
-import ClimateTab from './cards/ClimateTab';
 import type { DeviceKind, DeviceMarker, StandbyCameraView } from '../../store/types';
 import { cameraRef } from '../../lib/cameraRef';
 
