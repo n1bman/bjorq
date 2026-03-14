@@ -213,7 +213,7 @@ export const presetMaterials: Material[] = [
     hasTexture: true, source: 'ambientCG', realWorldSize: [1.5, 1.5],
     ambientCGId: 'Concrete040',
     thumbnailUrl: 'https://acg-media.struffelproductions.com/file/ambientCG-Web/media/thumbnail/256-JPG-FFFFFF/Concrete040.jpg',
-    mapPath: '/textures/floor/stone/microcement_floor_diff.jpg' },
+    mapPath: 'https://acg-media.struffelproductions.com/file/ambientCG-Web/media/thumbnail/2048-JPG-FFFFFF/Concrete040.jpg' },
 
   // ─── Floor: Texture / Plaster-like (5) ───
   { id: 'floor-tadelakt', name: 'Tadelakt', type: 'texture', color: '#c8baa8', roughness: 0.42, surfaceCategory: 'texture', floorOnly: true,
