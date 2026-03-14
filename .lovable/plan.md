@@ -1,56 +1,32 @@
-# Floor Material Experience Improvement
 
-## Phase F1 — Floor Selection Highlight Fix ✅ DONE
-- Replaced solid blue fill with perimeter-only outline (`<line>` geometry)
-- Textures always applied regardless of selection state
-- Subtle emissive tint (0.08) keeps glow without hiding material
-- File: `src/components/build/Floors3D.tsx`
 
-## Phase F2 — Floor Material Browser UI ✅ DONE
-- Floor target shows larger material cards (grid-cols-3) with texture thumbnails
-- Category-first tabs: Trä & Parkett, Kakel & Klinker, Sten & Betong, Textur, Matta
-- Material name visible below each card
-- Wall target unchanged (small swatches)
-- File: `src/components/build/structure/PaintTool.tsx`
+# Fix Wall Position + Redesign Diagonal Frost to 6-Pane Window
 
-## Phase F3 — Curated Floor Texture Pack ✅ DONE
-- 25 new floor-only presets across 5 categories (Wood, Tile, Stone, Texture, Carpet)
-- `floorOnly` flag added to Material interface
-- Paths under `public/textures/floor/` — falls back to flat color if files missing
-- ambientCG (CC0) as documented source for future file placement
-- File: `src/lib/materials.ts`, `src/store/types.ts`
+## Problem 1: Walls showing only half
+The wall body mesh is positioned at `Y = elevation` (line 751), but the geometry is centered at Y=0 (extends from `-wallHeight/2` to `+wallHeight/2`). This means half the wall sits below the ground plane.
 
-## Phase F4 — Floor Texture Mapping Polish ✅ DONE
-- Aspect-ratio clamping in `calculateRepeat` prevents extreme stretching
-- `floorSizeMode` UI control (Auto/Small/Standard/Large) added to floor material browser
-- All new presets have sensible `realWorldSize` values
-- File: `src/lib/materials.ts`, `src/components/build/structure/PaintTool.tsx`
+**Fix**: Change position Y to `wallHeight / 2 + elevation`.
 
-## Phase F5 — ambientCG Thumbnails + Size Mode Fix ✅ DONE
-- Added `thumbnailUrl` and `ambientCGId` fields to Material interface
-- All 25 floor presets mapped to specific ambientCG assets with CDN thumbnails
-- PaintTool shows CDN thumbnails with category emoji badges (🪵🔲🪨✦🧶)
-- Hybrid approach: CDN thumbnail for browser preview, local files for 3D textures
-- Fixed `Floors3D.tsx` memoization — `floorSizeMode` changes now trigger re-render
-- Thumbnail URL pattern: `https://acg-media.struffelproductions.com/file/ambientCG-Web/media/thumbnail/256-JPG-FFFFFF/{AssetId}.jpg`
+**File**: `src/lib/wallGeometry.tsx` line 751
 
-## Preserved
-- Wall painting workflow untouched
-- Existing material preset IDs unchanged
-- Save/load compatibility (new fields optional with fallbacks)
-- Wall texture engine (C1 stylized walls)
+## Problem 2: "Frostat diagonalt" needs 6 panes
+The current 4-pane diagonal frost looks wrong. Based on the annotated reference image (image-248), the user wants a **6-pane** layout (3 rows × 2 columns) where the **two middle panes are frosted**:
 
-## Phase F6 — Manual Scale & Rotation Sliders ✅ DONE
-- Added `floorTextureScale` (0.2–4.0x) and `floorTextureRotation` (0°–360°) per room
-- Two sliders under size mode presets in Måla panel with live value display
-- Texture engine clones textures per room to avoid cross-room leaking
-- Rotation applied via `tex.rotation` + `tex.center` for proper pivot
-- Undo pushed once per drag (mouseDown/touchStart), not per tick
-- Files: `types.ts`, `BuildModeV2.tsx`, `wallTextureLoader.ts`, `Floors3D.tsx`
+```text
+┌───────┬───────┐
+│ clear │ clear │  top row (~30%)
+├───────┼───────┤
+│frosted│frosted│  middle row (~35%)
+├───────┼───────┤
+│ clear │ clear │  bottom row (~35%)
+└───────┴───────┘
+```
 
-## Väntar
-- Real ambientCG 1K texture file downloads (manual step — download ZIPs from ambientcg.com/get?file={ID}_1K-JPG.zip)
-- Per-wall roughness from finish selector
-- Accent zones / backsplash
-- Ceiling surfaces
-- Custom user-uploaded floor textures
+**Changes**:
+- In `openingPresets.ts`: rename label to `"6-rutors frostat mitt"`, change style to `'6pane-frost-mid'`
+- In `wallGeometry.tsx`: add a new `is6Pane` branch that renders 6 glass panes (3×2 grid) with two horizontal rails and one vertical mullion. The two middle panes get frosted material, the four outer panes get clear glass. Proportions: top ~30%, middle ~35%, bottom ~35%.
+
+### Files
+- `src/lib/wallGeometry.tsx` — fix wall Y position + add 6-pane rendering
+- `src/lib/openingPresets.ts` — update the diagonal preset to 6-pane
+
