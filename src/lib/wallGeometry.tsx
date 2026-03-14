@@ -611,6 +611,88 @@ function renderOpeningModels(
         );
       }
     }
+  } else if (op.type === 'garage-door') {
+    const sections = 4;
+    const sectionH = (op.height - 0.04) / sections;
+    const garageColor = opMat?.color ?? '#b0b0b0';
+    for (let s = 0; s < sections; s++) {
+      const sy = opBottom + 0.02 + sectionH * s + sectionH / 2;
+      segments.push(
+        <mesh key={`${wall.id}-garage-sec-${i}-${s}`}
+          position={new THREE.Vector3(localX, 0, 0)
+            .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
+            .add(new THREE.Vector3(origCx, sy + elevation, origCz)).toArray()}
+          rotation={[0, -angle, 0]} castShadow {...openingPointer}>
+          <boxGeometry args={[op.width - 0.06, sectionH - 0.02, 0.04]} />
+          <meshStandardMaterial color={garageColor} roughness={0.7} metalness={0.2}
+            emissive={opEmissive} emissiveIntensity={opEmissiveIntensity} />
+        </mesh>
+      );
+    }
+    // Garage frame
+    const gfBars: [string, number[], number[]][] = [
+      ['top', [opPos.x, opBottom + op.height - 0.025 + elevation, opPos.z], [op.width + 0.06, 0.05, 0.08]],
+    ];
+    const gfLeft = new THREE.Vector3(localX - op.width / 2 - 0.015, 0, 0)
+      .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
+      .add(new THREE.Vector3(origCx, opBottom + op.height / 2 + elevation, origCz));
+    gfBars.push(['left', gfLeft.toArray(), [0.05, op.height, 0.08]]);
+    const gfRight = new THREE.Vector3(localX + op.width / 2 + 0.015, 0, 0)
+      .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
+      .add(new THREE.Vector3(origCx, opBottom + op.height / 2 + elevation, origCz));
+    gfBars.push(['right', gfRight.toArray(), [0.05, op.height, 0.08]]);
+
+    for (const [key, pos, dims] of gfBars) {
+      segments.push(
+        <mesh key={`${wall.id}-gf-${key}-${i}`}
+          position={pos as [number, number, number]}
+          rotation={[0, -angle, 0]} castShadow>
+          <boxGeometry args={dims as [number, number, number]} />
+          <meshStandardMaterial color="#5a5a5a" roughness={0.6} metalness={0.3} />
+        </mesh>
+      );
+    }
+  } else if (op.type === 'passage') {
+    // Passage — open frame, no leaf
+    const passFrameW = 0.045;
+    const passBars: [string, number[], number[]][] = [
+      ['top', [opPos.x, opBottom + op.height - passFrameW / 2 + elevation, opPos.z], [op.width, passFrameW, frameDepth]],
+    ];
+    const pleft = new THREE.Vector3(localX - op.width / 2 + passFrameW / 2, 0, 0)
+      .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
+      .add(new THREE.Vector3(origCx, opBottom + op.height / 2 + elevation, origCz));
+    passBars.push(['left', pleft.toArray(), [passFrameW, op.height, frameDepth]]);
+    const pright = new THREE.Vector3(localX + op.width / 2 - passFrameW / 2, 0, 0)
+      .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
+      .add(new THREE.Vector3(origCx, opBottom + op.height / 2 + elevation, origCz));
+    passBars.push(['right', pright.toArray(), [passFrameW, op.height, frameDepth]]);
+
+    for (const [key, pos, dims] of passBars) {
+      segments.push(
+        <mesh key={`${wall.id}-pass-${key}-${i}`}
+          position={pos as [number, number, number]}
+          rotation={[0, -angle, 0]} castShadow {...openingPointer}>
+          <boxGeometry args={dims as [number, number, number]} />
+          <meshStandardMaterial color={frameColor} roughness={0.3}
+            emissive={opEmissive} emissiveIntensity={opEmissiveIntensity} />
+        </mesh>
+      );
+    }
+
+    // Arch style
+    if (op.style === 'arch') {
+      segments.push(
+        <mesh key={`${wall.id}-pass-arch-${i}`}
+          position={[opPos.x, opBottom + op.height - 0.08 + elevation, opPos.z]}
+          rotation={[0, -angle, 0]} castShadow>
+          <boxGeometry args={[op.width - 0.08, 0.08, frameDepth * 0.6]} />
+          <meshStandardMaterial color={frameColor} roughness={0.3}
+            emissive={opEmissive} emissiveIntensity={opEmissiveIntensity} />
+        </mesh>
+      );
+    }
+  }
+  }
 
   return segments;
 }
