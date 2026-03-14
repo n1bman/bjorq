@@ -433,8 +433,7 @@ function renderOpeningModels(
 
       const frosted = op.style === '4pane-frost-bottom'
         ? [false, false, true, true]
-        : op.style === '4pane-frost-diag'
-          ? [false, true, true, false]
+        : [false, false, false, false];
           : [false, false, false, false];
 
       const paneOffsetX = (side: 'left' | 'right') => {
