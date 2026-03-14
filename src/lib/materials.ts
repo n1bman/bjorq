@@ -203,7 +203,7 @@ export const presetMaterials: Material[] = [
     hasTexture: true, source: 'ambientCG', realWorldSize: [0.60, 0.60],
     ambientCGId: 'Marble006',
     thumbnailUrl: 'https://acg-media.struffelproductions.com/file/ambientCG-Web/media/thumbnail/256-JPG-FFFFFF/Marble006.jpg',
-    mapPath: '/textures/floor/stone/travertine_diff.jpg' },
+    mapPath: 'https://acg-media.struffelproductions.com/file/ambientCG-Web/media/thumbnail/2048-JPG-FFFFFF/Marble006.jpg' },
   { id: 'floor-granite', name: 'Granit', type: 'concrete', color: '#686868', roughness: 0.45, surfaceCategory: 'stone', floorOnly: true,
     hasTexture: true, source: 'ambientCG', realWorldSize: [0.60, 0.60],
     ambientCGId: 'Rock030',
