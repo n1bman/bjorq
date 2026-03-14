@@ -181,7 +181,7 @@ export const presetMaterials: Material[] = [
     hasTexture: true, source: 'ambientCG', realWorldSize: [0.40, 0.40],
     ambientCGId: 'Tiles012',
     thumbnailUrl: 'https://acg-media.struffelproductions.com/file/ambientCG-Web/media/thumbnail/256-JPG-FFFFFF/Tiles012.jpg',
-    mapPath: '/textures/floor/tile/checkerboard_diff.jpg' },
+    mapPath: 'https://acg-media.struffelproductions.com/file/ambientCG-Web/media/thumbnail/2048-JPG-FFFFFF/Tiles012.jpg' },
   { id: 'floor-slate-tile', name: 'Skiffer kakel', type: 'tile', color: '#505458', roughness: 0.70, surfaceCategory: 'tile', floorOnly: true,
     hasTexture: true, source: 'ambientCG', realWorldSize: [0.40, 0.40],
     ambientCGId: 'Tiles082',
