@@ -85,7 +85,7 @@ export default function HomeView() {
   return (
     <div className="fixed inset-0 bg-background">
       <div className="absolute inset-0">
-        <Scene3D />
+        <Scene3D onDeviceLongPress={(id) => setLongPressId(id)} />
       </div>
 
       {/* Floating widgets based on config */}

@@ -2,6 +2,7 @@
 import React, { useRef, useCallback, useMemo, useEffect, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { useAppStore } from '../../store/useAppStore';
+import { getDefaultState } from '../../store/useAppStore';
 import type { DeviceKind, DeviceMarker, VacuumZone, LightType } from '../../store/types';
 import * as THREE from 'three';
 import type { ThreeEvent } from '@react-three/fiber';

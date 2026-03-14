@@ -381,7 +381,7 @@ export default function Scene3D({ onDeviceLongPress }: { onDeviceLongPress?: (id
         onCreated={handleCreated}
       >
         <Suspense fallback={null}>
-          <SceneContent />
+          <SceneContent onDeviceLongPress={onDeviceLongPress} />
         </Suspense>
       </Canvas>
     </div>
