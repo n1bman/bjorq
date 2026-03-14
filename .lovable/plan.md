@@ -1,38 +1,39 @@
+# Fasplan C — Stylized Surfaces, Floor Textures & Placement Foundation
 
+## Fas C1 — Stylized Wall Surfaces ✅ DONE
+- Walls render with color/roughness/metalness only — no image textures by default
+- `applyMaterialTextures` accepts `context: 'wall' | 'floor'` and `forceTexture` flag
+- Wall context skips texture loading; floor context continues as before
+- All preset data (mapPath, normalMapPath, realWorldSize) preserved for future opt-in
+- Face-aware editing preserved, save/load compatible
 
-# Fix: Planritning-panelen visas bara vid Import-verktyget
+## Fas C2 — Floor Texture Defaults & Scaling ✅ DONE
+- Floors3D passes per-room `floorSizeMode` to `applyFloorTextures`
+- Added `floorSizeMode?: SurfaceSizeMode` to Room interface
+- Floor materials apply `metalness` from presets
+- All floor-appropriate presets verified with texture files
 
-## Problem
-Import-panelen (Opacitet, Skala, Rotation, Position, Material/Färg) och ReferenceControls visas alltid i Planritning-läget om en modell är importerad — oavsett aktivt verktyg. Den borde bara synas när Import-verktyget är valt.
+## Fas C3 — Surface Editor UX Cleanup ✅ DONE
+- WallInspector simplified: shows paint + texture categories only (no tile/stone for walls)
+- Added finish selector (Matt/Satin/Glans) for wall surfaces
+- Larger touch targets (min-h-[36px] buttons, 8×8 swatches)
+- Texture dot indicator only shown for floor target (walls are color-only)
+- RoomInspector surface section updated with same touch improvements
+- Uses `cn()` for consistent conditional class merging
 
-## Ändringar
+## Fas C4 — Placement Rules Foundation ✅ DONE
+- `checkWallCollision()` in placementEngine.ts — line-segment collision with push-out
+- `findLandingPosition()` now applies wall barriers for non-free props
+- Props3D drag handler wired through placement engine
+- `freePlacement` flag added to PropItem interface
+- "Fri placering" toggle in long-press quick menu (touch-first)
+- Wall-mounted props skip floor drag (existing behavior preserved)
+- `isWallMountable()` only triggers for placement='wall' or lighting/decor categories
 
-### 1. `BuildModeV2.tsx` — rad 2256
-Ändra villkoret för `showImportPanel` så att det kräver att `activeTool === 'import'`:
-```typescript
-// Före:
-const showImportPanel = !isBibliotek && activeTab === 'planritning' && isImported;
-// Efter:
-const showImportPanel = !isBibliotek && activeTab === 'planritning' && isImported && activeTool === 'import';
-```
-
-Samma ändring för `showImportOverlay` (rad 2248) — 3D-overlay av importerad modell bör också bara visas vid import-verktyget:
-```typescript
-// Före:
-const showImportOverlay = cameraMode === 'topdown' && isImported && hasImportedUrl;
-// Efter:
-const showImportOverlay = cameraMode === 'topdown' && isImported && hasImportedUrl && activeTool === 'import';
-```
-
-### 2. `BuildCanvas2D.tsx` — rad 807
-Ändra `ReferenceControls` villkoret till enbart `activeTool === 'import'`:
-```typescript
-// Före:
-{referenceDrawing?.url && (activeTool === 'import' || useAppStore.getState().build.tab === 'planritning') && <ReferenceControls />}
-// Efter:
-{referenceDrawing?.url && activeTool === 'import' && <ReferenceControls />}
-```
-
-## Resultat
-Import-panelen, overlay och referenskontroller dyker bara upp när användaren aktivt valt Import-verktyget i verktygsraden.
-
+## Väntar
+- Custom textures as advanced opt-in → after C3
+- Panels / accent zones / backsplash → after C4
+- Ceiling surfaces → not in scope
+- Material marketplace → not planned
+- Advanced UV editing → not planned
+- Per-wall roughness override from finish selector → future enhancement

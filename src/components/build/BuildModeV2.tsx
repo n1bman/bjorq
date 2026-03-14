@@ -2245,15 +2245,15 @@ export default function BuildModeV2() {
   const cameraMode = useAppStore((s) => s.build.view.cameraMode);
   const isImported = useAppStore((s) => s.homeGeometry.source === 'imported');
   const hasImportedUrl = useAppStore((s) => !!s.homeGeometry.imported.url);
-  const showImportOverlay = cameraMode === 'topdown' && isImported && hasImportedUrl;
   const activeTool = useAppStore((s) => s.build.activeTool);
+  const showImportOverlay = cameraMode === 'topdown' && isImported && hasImportedUrl && activeTool === 'import';
   const activeTab = useAppStore((s) => s.build.tab);
   const isBibliotek = activeTab === 'bibliotek';
   const isInredning = activeTab === 'inredning';
 
   // In Inredning: always show catalog as primary surface, device panel overlays when device tool active
   const showDevicePanel = !isBibliotek && (activeTool.startsWith('place-') || activeTool === 'vacuum-zone' || activeTool === ('place-vacuum-dock' as any));
-  const showImportPanel = !isBibliotek && activeTab === 'planritning' && isImported;
+  const showImportPanel = !isBibliotek && activeTab === 'planritning' && isImported && activeTool === 'import';
   const showSurfacePanel = !isBibliotek && activeTool === 'paint';
   // In Inredning: catalog is always visible (primary surface). In Planritning: only when furnish/wizard tool active
   const showCatalogPanel = !isBibliotek && !showSurfacePanel && (
