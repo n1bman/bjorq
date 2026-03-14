@@ -48,6 +48,7 @@ export function createDemoLayout(): LayoutState {
           { id: generateId(), name: 'Sovrum', wallIds: [wallIds.s, wallIds.w, wallIds.e, wallIds.inner2], polygon: [[0,5],[10,5],[10,8],[0,8]] },
         ],
         stairs: [],
+        kitchenFixtures: [],
       },
     ],
     activeFloorId: 'floor-1',

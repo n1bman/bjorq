@@ -115,6 +115,7 @@ export default function DataBackupCard() {
               walls: [],
               rooms: [],
               stairs: [],
+              kitchenFixtures: [],
             },
           ],
           activeFloorId: 'floor-1',
