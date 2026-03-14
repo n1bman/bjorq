@@ -19,6 +19,7 @@ export const openingPresets: OpeningPreset[] = [
   { id: 'door-wide', label: 'M13 Bred dörr', type: 'door', width: 1.3, height: 2.1, sillHeight: 0, style: 'single', description: '130 cm (M13, tillgänglighet)' },
   { id: 'door-double', label: 'Pardörr', type: 'door', width: 1.6, height: 2.1, sillHeight: 0, style: 'double', description: '160 cm pardörr' },
   { id: 'door-sliding', label: 'Skjutdörr', type: 'door', width: 1.8, height: 2.1, sillHeight: 0, style: 'sliding', description: '180 cm skjutdörr' },
+  { id: 'door-panel4', label: 'Spegeldörr', type: 'door', width: 0.9, height: 2.0, sillHeight: 0, style: 'panel-4', description: '90 cm klassisk 4-spegels innerdörr' },
   // Passages (open doorway, no leaf)
   { id: 'passage-standard', label: 'Passage', type: 'passage', width: 0.9, height: 2.1, sillHeight: 0, style: 'open', description: '90 cm öppen passage' },
   { id: 'passage-wide', label: 'Bred passage', type: 'passage', width: 1.2, height: 2.1, sillHeight: 0, style: 'open', description: '120 cm öppen passage' },
