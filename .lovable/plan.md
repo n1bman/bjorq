@@ -1,84 +1,73 @@
-# Arbetsplan: Stabilisering, buggfixar och UX-förbättringar
 
-## Status: ✅ Implementerat (v1.1.0)
 
----
+# Fix long-press timing + version bump → 1.4.0
 
-## Fas 0 — Bygg-stabilisering ✅ DONE
-- Fixat import i Scene3D till `./build/KitchenFixture3D`
-- Raderat duplikat `KitchenFixtureObject3D.tsx`
+## Problem
+Long-press på 3D-markörer i hemvyn triggas direkt vid tryck istället för efter 500ms. Orsak: R3F:s eventsystem — `onPointerUp` på yttre `<group>` firear inte alltid när klick konsumeras av inre komponent, så 500ms-timern rensas aldrig och popupen öppnas ändå.
 
-## Fas 1 — Buggar och regressioner ✅ DONE
+## Fix: Timestamp-baserad long-press (inga timers)
 
-### 1.1 Väggar: 90-gradersstöd vid ritning ✅
-- Axis-aligned snapping (±3° av 0/90/180/270°) i `BuildScene3D.tsx`
-- Visuell indikator: cyan linje + solid (ej dashed) + "90°"-label via `<Html>`
-- `cursorAxisAligned`-prop tillagd i `WallDrawing3D.tsx`
+**`src/components/devices/DeviceMarkers3D.tsx`**
 
-### 1.3 Dörr-öppningsriktning ✅
-- `flipped` appliceras nu på dörrpanelens position och rotation i `wallGeometry.tsx`
-- Gångjärnspunkt beräknas baserat på `flipped`-flagga
+Ersätt timer-baserad long-press med timestamp-approach:
+- `pointerDownTime` ref istället för `longPressTimer` + `longPressTriggered`
+- `handlePointerDown3D`: spara `Date.now()` och starta 500ms timer som sätter `longPressTriggered = true` och anropar `onLongPress`
+- `handleSelect` (onClick): om `longPressTriggered` → noop + reset. Annars → toggle som vanligt.
+- **Kritisk fix**: Flytta `onPointerUp`/`onPointerLeave` till VARJE individuell marker-komponent istället för bara outer group, ELLER bättre: ta bort timer helt och använd timestamp i `handleSelect`:
 
-### 1.4 Dörrens öppningsgrad ✅
-- `openAmount?: number` (0-1) tillagd på `WallOpening` i `types.ts`
-- Slider "Öppningsgrad" i OpeningInspector (dörrar + garageportar)
-- 3D: dörrblad roteras runt gångjärnspunkt baserat på `openAmount * π/2`
-- TODO: koppla till `haEntityId` för automatisk HA-sync
+```ts
+const pointerDownTime = useRef(0);
 
-### 1.5 Ljus går igenom väggar ✅ (pragmatisk lösning)
-- Alla ljustyper: minskad distance + decay=2
-- ceiling: 5m, strip: 6m, spot: 6m/π/7 angle, wall: 5m/π/4 angle
-- Dokumenterat: fullständig ljusblockering kräver baked lighting
+const handlePointerDown3D = useCallback((id: string) => {
+  if (buildMode || !onLongPress) return;
+  pointerDownTime.current = Date.now();
+  longPressTimer.current = setTimeout(() => {
+    longPressTriggered.current = true;
+    onLongPress(id);
+  }, 500);
+}, [buildMode, onLongPress]);
 
-## Fas 2 — UX-förbättringar ✅ DONE
+const handleSelect = useCallback((id: string) => {
+  // Always clear timer on click (acts as pointerUp substitute)
+  if (longPressTimer.current) {
+    clearTimeout(longPressTimer.current);
+    longPressTimer.current = null;
+  }
+  if (buildMode) {
+    setSelection({ type: 'device', id });
+  } else {
+    if (longPressTriggered.current) {
+      longPressTriggered.current = false;
+      return;
+    }
+    // toggle...
+  }
+}, [...]);
+```
 
-### 2.1 Sliders med exakt värdeinmatning ✅
-- Ny `SliderWithInput`-komponent (`src/components/ui/SliderWithInput.tsx`)
-- Klickbart värde → number input med Enter/Escape/blur
-- Applicerad i OpeningInspector (bredd, höjd, bröstning, position, öppningsgrad)
+Nyckel: **rensa timern i `handleSelect`** (som alltid firear vid klick) istället för att förlita sig på `onPointerUp` på outer group.
 
-### 2.2 Möbelfliken stängd som standard ✅
-- Inredning startar med `select`-verktyg (inte `furnish`)
-- Katalogen visas bara när Möbler eller Wizard-verktyg är aktivt
+## Version bump → 1.4.0
 
-### 2.3 Måla-fliken flyttad till Inredning ✅
-- `paint`-verktyg borttaget från `planritningTools`
-- Tillagt i `inredningTools` som "Måla" med Paintbrush-ikon
-- SurfaceEditor visas under Inredning-fliken
+Uppdatera version i:
+- `package.json` — `"version": "1.4.0"`
+- `bjorq_dashboard/config.yaml` — `version: "1.4.0"`
+- `README.md` — badge
+- `CHANGELOG.md` — ny `[1.4.0]`-sektion med alla ändringar sedan 1.3.0:
+  - Per-enhet ljusegenskaper (intensitet, räckvidd, konvinkel, penumbra)
+  - Spara kameravy via dubbelklick i kontrollpanelens 3D-widget
+  - Ljusarmaturer av/på i hemvy (state-migration)
+  - Long-press på 3D-markörer för kontrollpopup
+  - LED-bar nya defaults (0.5x, 1.4m, 118°, 0.70)
+  - Fix: long-press timing (timer rensas korrekt)
 
-### 2.4 Väggar: bara färger (inga texturer) ✅
-- SurfaceEditor filtrerar vägg-material till enbart `paint`-kategorin
-- 15 nya väggfärger tillagda (mjuk rosa, oliv, skifferblå, etc.)
-- Golv behåller alla texturer som tidigare
+## Filändringar
 
-## Fas 3 — Dokumentation och mappstruktur ✅ DONE
-- `public/textures/guide/README.md` uppdaterad med korrekt mappstruktur
-- Borttagen felaktig referens till `public/textures/floor/`
-- Target-paths tillagda per preset
-- `public/textures/carpet/` skapad
+| Fil | Ändring |
+|-----|---------|
+| `DeviceMarkers3D.tsx` | Rensa timer i `handleSelect` |
+| `package.json` | 1.3.0 → 1.4.0 |
+| `bjorq_dashboard/config.yaml` | 1.3.0 → 1.4.0 |
+| `README.md` | Badge 1.4.0 |
+| `CHANGELOG.md` | Ny [1.4.0]-sektion |
 
-## Fas 4 — Import/Export och long-press ✅ DONE
-
-### 4.2 Exportera från Bibliotek ✅
-- "Exportera"-knapp tillagd i BibliotekWorkspace detaljpanel
-- Exporterar metadata som JSON-fil
-
-### 4.3 Hold-long på enheter i hemmenyn ✅
-- 500ms long-press → popup med av/på + ljusstyrka-slider
-- Fungerar för alla enheter med extra kontroll för `light`
-
-## Fas 5 — Troubleshooting-pass ✅ DONE
-- Raderat dead code: `PaintTool.tsx` (ersatt av inline SurfaceEditor)
-- KitchenFixtureObject3D redan borttagen
-- Inga oanvända importer kvar
-- Tester passerar
-
-## Fas 6 — Version 1.1.0 ✅ DONE
-- `package.json` bumpat till 1.1.0
-
-## Bevarat
-- Design / Planritning / Inredning / Bibliotek-struktur
-- Save/load kompatibilitet
-- HA-sync (ej ändrad)
-- Golv-texturer med ambientCG CDN-thumbnails
-- Vägg-mitering och hörn-geometri
