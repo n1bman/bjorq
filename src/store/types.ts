@@ -133,6 +133,13 @@ export interface StairItem {
   toFloorId: string;
 }
 
+export interface KitchenFixture {
+  id: string;
+  floorId: string;
+  position: [number, number]; // x, z (bottom-center)
+  rotation: number; // radians
+}
+
 // ─── Vacuum Mapping ───
 export interface VacuumZone {
   roomId: string;
