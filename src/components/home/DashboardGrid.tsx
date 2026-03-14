@@ -91,9 +91,11 @@ function HomeCategory() {
   const reorderCategories = useAppStore((s) => s.reorderCategories);
   const categoryLayouts = useAppStore((s) => s.dashboard.categoryLayouts);
   const setCategoryLayout = useAppStore((s) => s.setCategoryLayout);
+  const saveHomeStartCamera = useAppStore((s) => s.saveHomeStartCamera);
   const [showManager, setShowManager] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [draggingCatIndex, setDraggingCatIndex] = useState<number | null>(null);
+  const [showSaveView, setShowSaveView] = useState(false);
 
   // Build room name lookup from floors
   const roomNameMap = useMemo(() => {
