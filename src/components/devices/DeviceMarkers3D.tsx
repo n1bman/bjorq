@@ -1228,6 +1228,7 @@ function LightFixtureMarker({ position, id, onSelect, onDragStart, selected }: M
       'led-bulb': { intensity: 1, distance: 2, angle: Math.PI, penumbra: 0 },
       'led-bar':  { intensity: 0.5, distance: 1.4, angle: (118 * Math.PI) / 180, penumbra: 0.7 },
       'led-spot': { intensity: 2, distance: 2.5, angle: Math.PI / 10, penumbra: 0.3 },
+      'led-gu10': { intensity: 2.5, distance: 3, angle: Math.PI / 8, penumbra: 0.4 },
     };
     const d = defaults[fixtureModel] ?? defaults['led-bulb'];
     return { ...d, ...marker?.lightConfig };
