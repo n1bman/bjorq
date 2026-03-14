@@ -171,7 +171,7 @@ export const presetMaterials: Material[] = [
     hasTexture: true, source: 'ambientCG', realWorldSize: [0.30, 0.30],
     ambientCGId: 'Tiles093',
     thumbnailUrl: 'https://acg-media.struffelproductions.com/file/ambientCG-Web/media/thumbnail/256-JPG-FFFFFF/Tiles093.jpg',
-    mapPath: '/textures/floor/tile/terracotta_diff.jpg' },
+    mapPath: 'https://acg-media.struffelproductions.com/file/ambientCG-Web/media/thumbnail/2048-JPG-FFFFFF/Tiles093.jpg' },
   { id: 'floor-hex-cement', name: 'Hexagon cement', type: 'tile', color: '#b0aaa0', roughness: 0.72, surfaceCategory: 'tile', floorOnly: true,
     hasTexture: true, source: 'ambientCG', realWorldSize: [0.25, 0.25],
     ambientCGId: 'Tiles054',
