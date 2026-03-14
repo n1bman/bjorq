@@ -1109,6 +1109,7 @@ interface DeviceToolDef {
 
 const deviceToolDefs: DeviceToolDef[] = [
   { key: 'place-light', kind: 'light', label: 'Ljus', icon: Lightbulb, color: 'text-yellow-400', category: 'Ljus' },
+  { key: 'place-light-fixture', kind: 'light-fixture', label: 'Ljusarmatur', icon: Lamp, color: 'text-amber-300', category: 'Ljus' },
   { key: 'place-switch', kind: 'switch', label: 'Knapp', icon: ToggleLeft, color: 'text-blue-400', category: 'Ljus' },
   { key: 'place-power-outlet', kind: 'power-outlet', label: 'Eluttag', icon: Plug, color: 'text-yellow-300', category: 'Ljus' },
   { key: 'place-climate', kind: 'climate', label: 'Klimat', icon: Thermometer, color: 'text-cyan-400', category: 'Klimat' },
@@ -1124,6 +1125,7 @@ const deviceToolDefs: DeviceToolDef[] = [
   { key: 'place-door-lock', kind: 'door-lock', label: 'Dörrlås', icon: Lock, color: 'text-amber-400', category: 'Säkerhet' },
   { key: 'place-alarm', kind: 'alarm', label: 'Larm', icon: ShieldAlert, color: 'text-red-500', category: 'Säkerhet' },
   { key: 'place-siren', kind: 'siren', label: 'Siren', icon: Bell, color: 'text-red-400', category: 'Säkerhet' },
+  { key: 'place-smart-outlet', kind: 'smart-outlet', label: 'Vägguttag', icon: Plug, color: 'text-green-400', category: 'Kontakter' },
   { key: 'place-cover', kind: 'cover', label: 'Persienn/Port', icon: PanelTop, color: 'text-stone-400', category: 'Hem' },
   { key: 'place-garage-door', kind: 'garage-door', label: 'Garageport', icon: DoorOpen, color: 'text-amber-500', category: 'Hem' },
   { key: 'place-valve', kind: 'valve', label: 'Ventil', icon: Grip, color: 'text-blue-500', category: 'Hem' },
@@ -1134,7 +1136,7 @@ const deviceToolDefs: DeviceToolDef[] = [
   { key: 'place-washer', kind: 'washer', label: 'Tvättmaskin', icon: WashingMachine, color: 'text-sky-300', category: 'Vitvaror' },
 ];
 
-const deviceCategoryOrder = ['Ljus', 'Klimat', 'Sensorer', 'Kameror', 'Media', 'Säkerhet', 'Hem', 'Robot', 'Vitvaror'];
+const deviceCategoryOrder = ['Ljus', 'Klimat', 'Sensorer', 'Kameror', 'Media', 'Säkerhet', 'Kontakter', 'Hem', 'Robot', 'Vitvaror'];
 
 const kindLabelsMap: Record<string, string> = {
   light: '💡 Ljus', switch: '🔌 Knapp', sensor: '🌡️ Sensor', climate: '❄️ Klimat',
@@ -1144,6 +1146,7 @@ const kindLabelsMap: Record<string, string> = {
   cover: '🪟 Persienn', scene: '🎬 Scen', alarm: '🚨 Larm', 'water-heater': '🔥 Varmvatten',
   humidifier: '💧 Luftfuktare', siren: '🔔 Siren', valve: '🔧 Ventil',
   remote: '📡 Fjärr', 'lawn-mower': '🌿 Gräsklippare', speaker: '🔊 Högtalare', soundbar: '🎵 Soundbar',
+  'light-fixture': '💡 Ljusarmatur', 'smart-outlet': '🔌 Vägguttag',
 };
 
 function InlinedDevicePlacementTools() {
