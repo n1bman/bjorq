@@ -93,7 +93,7 @@ export function findLandingPosition(
   // C4: Wall collision check for non-wall-mounted, non-free-placement props
   let finalX = dragXZ[0];
   let finalZ = dragXZ[1];
-  if (!propItem.freePlacement && !propItem.wallMountInfo && placement !== 'wall' && placement !== 'ceiling') {
+  if (!propItem.freePlacement && !propItem.wallMountInfo && placement !== 'wall' && placement !== 'ceiling' && placement !== 'free') {
     const floor = state.layout.floors.find(f => f.id === floorId);
     const walls = floor?.walls ?? [];
     if (walls.length > 0) {
