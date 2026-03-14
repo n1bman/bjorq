@@ -411,342 +411,206 @@ function renderOpeningModels(
   } else if (op.type === 'window') {
     const isFrench = op.style === 'french';
     const isFixed = op.style === 'fixed';
-    const hasMullion = !isFixed && op.width > 1.0;
+    const is4Pane = op.style?.startsWith('4pane');
     const outerFrameW = 0.05;
 
-    // Glass panel
-    segments.push(
-      <mesh key={`${wall.id}-win-glass-${i}`}
-        position={[opPos.x, opCenterY + elevation, opPos.z]}
-        rotation={[0, -angle, 0]} {...openingPointer}>
-        <boxGeometry args={[op.width - 0.06, op.height - 0.06, 0.008]} />
-        <meshStandardMaterial color="#88ccff" transparent opacity={isFrench ? 0.35 : 0.3}
-          roughness={0.05} metalness={0.1}
-          emissive={isOpSelected ? '#2244aa' : '#000000'}
-          emissiveIntensity={isOpSelected ? 0.3 : 0} />
-      </mesh>
-    );
+    if (is4Pane) {
+      // ─── 4-pane Swedish tvåluftsfönster ───
+      const innerW = op.width - outerFrameW * 2;
+      const innerH = op.height - outerFrameW * 2;
+      const mullionW = outerFrameW * 0.7;
+      const railH = outerFrameW * 0.7;
+      const splitRatio = 0.35;
 
-    // Frame bars
-    const bars: [string, number[], number[]][] = [
-      ['top', [opPos.x, opCenterY + op.height / 2 - outerFrameW / 2 + elevation, opPos.z], [op.width, outerFrameW, frameDepth]],
-      ['bottom', [opPos.x, opCenterY - op.height / 2 + outerFrameW / 2 + elevation, opPos.z], [op.width, outerFrameW, frameDepth]],
-    ];
-    const leftPos = new THREE.Vector3(localX - op.width / 2 + outerFrameW / 2, 0, 0)
-      .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
-      .add(new THREE.Vector3(origCx, opCenterY + elevation, origCz));
-    bars.push(['left', leftPos.toArray(), [outerFrameW, op.height, frameDepth]]);
-    const rightPos = new THREE.Vector3(localX + op.width / 2 - outerFrameW / 2, 0, 0)
-      .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
-      .add(new THREE.Vector3(origCx, opCenterY + elevation, origCz));
-    bars.push(['right', rightPos.toArray(), [outerFrameW, op.height, frameDepth]]);
+      const topPaneH = innerH * splitRatio - railH / 2;
+      const botPaneH = innerH * (1 - splitRatio) - railH / 2;
+      const halfPaneW = (innerW - mullionW) / 2;
 
-    if (hasMullion) {
-      bars.push(['mullion', [opPos.x, opCenterY + elevation, opPos.z], [outerFrameW * 0.7, op.height - 0.06, frameDepth * 0.8]]);
-    }
+      const railY = opCenterY + innerH / 2 - innerH * splitRatio + elevation;
+      const topCenterY = railY + railH / 2 + topPaneH / 2;
+      const botCenterY = railY - railH / 2 - botPaneH / 2;
 
-    for (const [key, pos, dims] of bars) {
-      segments.push(
-        <mesh key={`${wall.id}-win-f${key}-${i}`}
-          position={pos as [number, number, number]}
-          rotation={[0, -angle, 0]} castShadow {...openingPointer}>
-          <boxGeometry args={dims as [number, number, number]} />
-          <meshStandardMaterial color={frameColor} roughness={0.3}
-            emissive={opEmissive} emissiveIntensity={opEmissiveIntensity} />
-        </mesh>
-      );
-    }
+      const frosted = op.style === '4pane-frost-bottom'
+        ? [false, false, true, true]
+        : op.style === '4pane-frost-diag'
+          ? [true, false, false, true]
+          : [false, false, false, false];
 
-    // Inner reveal (only in interactive/build mode)
-    if (options?.includeWindowReveal) {
-      const revealDepth = wall.thickness * 0.3;
-      segments.push(
-        <mesh key={`${wall.id}-win-reveal-top-${i}`}
-          position={[opPos.x, opCenterY + op.height / 2 - 0.01 + elevation, opPos.z]}
-          rotation={[0, -angle, 0]}>
-          <boxGeometry args={[op.width - 0.02, 0.02, revealDepth]} />
-          <meshStandardMaterial color="#d0d0d0" roughness={0.8} />
-        </mesh>
-      );
-    }
+      const paneOffsetX = (side: 'left' | 'right') => {
+        const sign = side === 'left' ? -1 : 1;
+        return localX + sign * (halfPaneW / 2 + mullionW / 2);
+      };
 
-    // Window sill
-    if (!isFrench) {
-      const sillNormal = new THREE.Vector3(0, 0, flipSign)
+      const panes = [
+        { key: 'tl', lx: paneOffsetX('left'), cy: topCenterY, w: halfPaneW, h: topPaneH, frost: frosted[0] },
+        { key: 'tr', lx: paneOffsetX('right'), cy: topCenterY, w: halfPaneW, h: topPaneH, frost: frosted[1] },
+        { key: 'bl', lx: paneOffsetX('left'), cy: botCenterY, w: halfPaneW, h: botPaneH, frost: frosted[2] },
+        { key: 'br', lx: paneOffsetX('right'), cy: botCenterY, w: halfPaneW, h: botPaneH, frost: frosted[3] },
+      ];
+
+      for (const pane of panes) {
+        const pos = new THREE.Vector3(pane.lx, 0, 0)
+          .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
+          .add(new THREE.Vector3(origCx, pane.cy, origCz));
+        segments.push(
+          <mesh key={`${wall.id}-4p-${pane.key}-${i}`}
+            position={pos.toArray()} rotation={[0, -angle, 0]} {...openingPointer}>
+            <boxGeometry args={[pane.w - 0.01, pane.h - 0.01, 0.008]} />
+            <meshStandardMaterial
+              color={pane.frost ? '#e8eef4' : '#88ccff'}
+              transparent
+              opacity={pane.frost ? 0.7 : 0.3}
+              roughness={pane.frost ? 0.8 : 0.05}
+              metalness={pane.frost ? 0 : 0.1}
+              emissive={isOpSelected ? '#2244aa' : '#000000'}
+              emissiveIntensity={isOpSelected ? 0.3 : 0}
+            />
+          </mesh>
+        );
+      }
+
+      const bars4: [string, number[], number[]][] = [
+        ['top', [opPos.x, opCenterY + op.height / 2 - outerFrameW / 2 + elevation, opPos.z], [op.width, outerFrameW, frameDepth]],
+        ['bottom', [opPos.x, opCenterY - op.height / 2 + outerFrameW / 2 + elevation, opPos.z], [op.width, outerFrameW, frameDepth]],
+        ['mullion', [opPos.x, opCenterY + elevation, opPos.z], [mullionW, innerH, frameDepth * 0.8]],
+        ['rail', [opPos.x, railY, opPos.z], [innerW, railH, frameDepth * 0.8]],
+      ];
+      const leftPos4 = new THREE.Vector3(localX - op.width / 2 + outerFrameW / 2, 0, 0)
+        .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
+        .add(new THREE.Vector3(origCx, opCenterY + elevation, origCz));
+      bars4.push(['left', leftPos4.toArray(), [outerFrameW, op.height, frameDepth]]);
+      const rightPos4 = new THREE.Vector3(localX + op.width / 2 - outerFrameW / 2, 0, 0)
+        .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
+        .add(new THREE.Vector3(origCx, opCenterY + elevation, origCz));
+      bars4.push(['right', rightPos4.toArray(), [outerFrameW, op.height, frameDepth]]);
+
+      for (const [key, pos, dims] of bars4) {
+        segments.push(
+          <mesh key={`${wall.id}-4pf-${key}-${i}`}
+            position={pos as [number, number, number]}
+            rotation={[0, -angle, 0]} castShadow {...openingPointer}>
+            <boxGeometry args={dims as [number, number, number]} />
+            <meshStandardMaterial color={frameColor} roughness={0.3}
+              emissive={opEmissive} emissiveIntensity={opEmissiveIntensity} />
+          </mesh>
+        );
+      }
+
+      // Sill for 4-pane
+      const sillNormal4 = new THREE.Vector3(0, 0, flipSign)
         .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle);
-      // Exterior sill
       segments.push(
         <mesh key={`${wall.id}-win-sill-${i}`}
           position={[
-            opPos.x + sillNormal.x * 0.05,
+            opPos.x + sillNormal4.x * 0.05,
             opCenterY - op.height / 2 - 0.02 + elevation,
-            opPos.z + sillNormal.z * 0.05,
+            opPos.z + sillNormal4.z * 0.05,
           ]}
           rotation={[0, -angle, 0]} castShadow>
           <boxGeometry args={[op.width + 0.12, 0.03, wall.thickness + 0.10]} />
           <meshStandardMaterial color="#e0e0e0" roughness={0.6} />
         </mesh>
       );
-      // Interior sill
       segments.push(
         <mesh key={`${wall.id}-win-sill-int-${i}`}
           position={[
-            opPos.x - sillNormal.x * 0.04,
+            opPos.x - sillNormal4.x * 0.04,
             opCenterY - op.height / 2 - 0.01 + elevation,
-            opPos.z - sillNormal.z * 0.04,
+            opPos.z - sillNormal4.z * 0.04,
           ]}
           rotation={[0, -angle, 0]}>
           <boxGeometry args={[op.width + 0.04, 0.025, wall.thickness * 0.4]} />
           <meshStandardMaterial color="#f0f0f0" roughness={0.7} />
         </mesh>
       );
-    }
-  } else if (op.type === 'garage-door') {
-    const sections = 4;
-    const sectionH = (op.height - 0.04) / sections;
-    const garageColor = opMat?.color ?? '#b0b0b0';
-    for (let s = 0; s < sections; s++) {
-      const sy = opBottom + 0.02 + sectionH * s + sectionH / 2;
+    } else {
+      // ─── Standard window (casement / french / fixed) ───
+      const hasMullion = !isFixed && op.width > 1.0;
+
       segments.push(
-        <mesh key={`${wall.id}-garage-sec-${i}-${s}`}
-          position={new THREE.Vector3(localX, 0, 0)
-            .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
-            .add(new THREE.Vector3(origCx, sy + elevation, origCz)).toArray()}
-          rotation={[0, -angle, 0]} castShadow {...openingPointer}>
-          <boxGeometry args={[op.width - 0.06, sectionH - 0.02, 0.04]} />
-          <meshStandardMaterial color={garageColor} roughness={0.7} metalness={0.2}
-            emissive={opEmissive} emissiveIntensity={opEmissiveIntensity} />
+        <mesh key={`${wall.id}-win-glass-${i}`}
+          position={[opPos.x, opCenterY + elevation, opPos.z]}
+          rotation={[0, -angle, 0]} {...openingPointer}>
+          <boxGeometry args={[op.width - 0.06, op.height - 0.06, 0.008]} />
+          <meshStandardMaterial color="#88ccff" transparent opacity={isFrench ? 0.35 : 0.3}
+            roughness={0.05} metalness={0.1}
+            emissive={isOpSelected ? '#2244aa' : '#000000'}
+            emissiveIntensity={isOpSelected ? 0.3 : 0} />
         </mesh>
       );
-    }
 
-    // Garage door frame
-    const gFrameW = 0.05;
-    segments.push(
-      <mesh key={`${wall.id}-garage-ft-${i}`}
-        position={[opPos.x, opBottom + op.height - gFrameW / 2 + elevation, opPos.z]}
-        rotation={[0, -angle, 0]} castShadow {...openingPointer}>
-        <boxGeometry args={[op.width, gFrameW, 0.07]} />
-        <meshStandardMaterial color="#555" roughness={0.4} metalness={0.3}
-          emissive={opEmissive} emissiveIntensity={opEmissiveIntensity} />
-      </mesh>
-    );
-    segments.push(
-      <mesh key={`${wall.id}-garage-fl-${i}`}
-        position={new THREE.Vector3(localX - op.width / 2 + gFrameW / 2, 0, 0)
-          .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
-          .add(new THREE.Vector3(origCx, opBottom + op.height / 2 + elevation, origCz)).toArray()}
-        rotation={[0, -angle, 0]} castShadow {...openingPointer}>
-        <boxGeometry args={[gFrameW, op.height, 0.07]} />
-        <meshStandardMaterial color="#555" roughness={0.4} metalness={0.3}
-          emissive={opEmissive} emissiveIntensity={opEmissiveIntensity} />
-      </mesh>
-    );
-    segments.push(
-      <mesh key={`${wall.id}-garage-fr-${i}`}
-        position={new THREE.Vector3(localX + op.width / 2 - gFrameW / 2, 0, 0)
-          .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
-          .add(new THREE.Vector3(origCx, opBottom + op.height / 2 + elevation, origCz)).toArray()}
-        rotation={[0, -angle, 0]} castShadow {...openingPointer}>
-        <boxGeometry args={[gFrameW, op.height, 0.07]} />
-        <meshStandardMaterial color="#555" roughness={0.4} metalness={0.3}
-          emissive={opEmissive} emissiveIntensity={opEmissiveIntensity} />
-      </mesh>
-    );
-  } else if (op.type === 'passage') {
-    const pFrameW = 0.04;
-    const pFrameDepth = 0.06;
-    const pFrameColor = opMat?.color ?? '#b0b0b0';
-    // Top frame
-    segments.push(
-      <mesh key={`${wall.id}-pass-ft-${i}`}
-        position={[opPos.x, opBottom + op.height - pFrameW / 2 + elevation, opPos.z]}
-        rotation={[0, -angle, 0]} castShadow {...openingPointer}>
-        <boxGeometry args={[op.width, pFrameW, pFrameDepth]} />
-        <meshStandardMaterial color={pFrameColor} roughness={0.4}
-          emissive={opEmissive} emissiveIntensity={opEmissiveIntensity} />
-      </mesh>
-    );
-    // Left frame
-    segments.push(
-      <mesh key={`${wall.id}-pass-fl-${i}`}
-        position={new THREE.Vector3(localX - op.width / 2 + pFrameW / 2, 0, 0)
-          .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
-          .add(new THREE.Vector3(origCx, opBottom + op.height / 2 + elevation, origCz)).toArray()}
-        rotation={[0, -angle, 0]} castShadow {...openingPointer}>
-        <boxGeometry args={[pFrameW, op.height, pFrameDepth]} />
-        <meshStandardMaterial color={pFrameColor} roughness={0.4}
-          emissive={opEmissive} emissiveIntensity={opEmissiveIntensity} />
-      </mesh>
-    );
-    // Right frame
-    segments.push(
-      <mesh key={`${wall.id}-pass-fr-${i}`}
-        position={new THREE.Vector3(localX + op.width / 2 - pFrameW / 2, 0, 0)
-          .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
-          .add(new THREE.Vector3(origCx, opBottom + op.height / 2 + elevation, origCz)).toArray()}
-        rotation={[0, -angle, 0]} castShadow {...openingPointer}>
-        <boxGeometry args={[pFrameW, op.height, pFrameDepth]} />
-        <meshStandardMaterial color={pFrameColor} roughness={0.4}
-          emissive={opEmissive} emissiveIntensity={opEmissiveIntensity} />
-      </mesh>
-    );
-  }
-
-  return segments;
-}
-
-// ─── Main Segment Generator ───
-
-/**
- * Generate all JSX mesh elements for a single wall segment,
- * including mitered body, opening splits, and opening 3D models.
- */
-export function generateWallSegments(
-  wall: WallSegment,
-  allWalls: WallSegment[],
-  elevation: number,
-  options?: WallRenderOptions,
-): JSX.Element[] {
-  const { origLength, angle, origCx, origCz, length, cx, cz } = computeWallMitering(wall, allWalls);
-  const miterOffsets = computeMiterOffsets(wall, allWalls);
-
-  const wallColors = resolveWallColors(wall, options?.fallbackMaterialId);
-
-  const texScale = options?.extraTextureScale ?? 1;
-  const texRot = options?.textureRotationDeg ?? 0;
-
-  // Build dual-sided material array, with optional highlight override
-  const dualMats = options?.highlightColor
-    ? createWallMaterials({
-        ...wallColors,
-        exteriorColor: options.highlightColor,
-        interiorColor: options.highlightColor,
-        edgeColor: options.highlightColor,
-        emissive: options.emissive,
-        emissiveIntensity: options.emissiveIntensity,
-        wallWidth: origLength,
-        wallHeight: wall.height,
-        extraScale: texScale,
-        rotationDeg: texRot,
-      })
-    : createWallMaterials({
-        ...wallColors,
-        emissive: options?.emissive,
-        emissiveIntensity: options?.emissiveIntensity,
-        wallHeight: wall.height,
-        wallWidth: origLength,
-        extraScale: texScale,
-        rotationDeg: texRot,
-      });
-
-  const wallHeight = wall.height;
-  const segments: JSX.Element[] = [];
-
-  // No openings: single box
-  if (wall.openings.length === 0) {
-    const miterGeo = createMiteredWallGeometry(origLength, wallHeight, wall.thickness, miterOffsets);
-    segments.push(
-      <mesh key={`${wall.id}-solid`}
-        position={[origCx, wallHeight / 2 + elevation, origCz]}
-        rotation={[0, -angle, 0]}
-        castShadow receiveShadow
-        material={dualMats}>
-        <primitive object={miterGeo} attach="geometry" />
-      </mesh>
-    );
-  } else {
-    // Split wall around openings
-    const sortedOpenings = [...wall.openings].sort((a, b) => a.offset - b.offset);
-    let cursor = 0;
-
-    sortedOpenings.forEach((op, i) => {
-      const opStart = op.offset * origLength - op.width / 2;
-      const opEnd = op.offset * origLength + op.width / 2;
-      const opBottom = op.type === 'window' ? (op.sillHeight ?? (wallHeight - op.height) / 2) : 0;
-      const opTop = opBottom + op.height;
-
-      // Segment before opening
-      if (opStart > cursor) {
-        const segLen = opStart - cursor;
-        const segCenter = cursor + segLen / 2;
-        const localX = segCenter - origLength / 2;
-        const pos = new THREE.Vector3(localX, 0, 0)
-          .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
-          .add(new THREE.Vector3(origCx, wallHeight / 2 + elevation, origCz));
-        // First sub-segment touches wall's from endpoint → apply from-end miter
-        const isFirstSeg = cursor === 0;
-        const segMiter: MiterResult = isFirstSeg
-          ? { fromLeft: miterOffsets.fromLeft, fromRight: miterOffsets.fromRight, toLeft: 0, toRight: 0 }
-          : { fromLeft: 0, fromRight: 0, toLeft: 0, toRight: 0 };
-        const segGeo = createMiteredWallGeometry(segLen, wallHeight, wall.thickness, segMiter);
-        segments.push(
-          <mesh key={`${wall.id}-seg-${i}-pre`} position={pos.toArray()} rotation={[0, -angle, 0]}
-            castShadow material={dualMats}>
-            <primitive object={segGeo} attach="geometry" />
-          </mesh>
-        );
-      }
-
-      // Above opening
-      if (opTop < wallHeight) {
-        const aboveH = wallHeight - opTop;
-        const localX = op.offset * origLength - origLength / 2;
-        const pos = new THREE.Vector3(localX, 0, 0)
-          .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
-          .add(new THREE.Vector3(origCx, opTop + aboveH / 2 + elevation, origCz));
-        segments.push(
-          <mesh key={`${wall.id}-seg-${i}-above`} position={pos.toArray()} rotation={[0, -angle, 0]}
-            castShadow material={dualMats}>
-            <boxGeometry args={[op.width, aboveH, wall.thickness]} />
-          </mesh>
-        );
-      }
-
-      // Below opening (for windows with sill height > 0)
-      if (opBottom > 0) {
-        const localX = op.offset * origLength - origLength / 2;
-        const pos = new THREE.Vector3(localX, 0, 0)
-          .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
-          .add(new THREE.Vector3(origCx, opBottom / 2 + elevation, origCz));
-        segments.push(
-          <mesh key={`${wall.id}-seg-${i}-below`} position={pos.toArray()} rotation={[0, -angle, 0]}
-            castShadow material={dualMats}>
-            <boxGeometry args={[op.width, opBottom, wall.thickness]} />
-          </mesh>
-        );
-      }
-
-      // 3D opening models (door/window/garage/passage)
-      segments.push(
-        ...renderOpeningModels(wall, op, i, opBottom, elevation, origLength, origCx, origCz, angle, options)
-      );
-
-      cursor = opEnd;
-    });
-
-    // Final segment after last opening
-    if (cursor < origLength) {
-      const segLen = origLength - cursor;
-      const segCenter = cursor + segLen / 2;
-      const localX = segCenter - origLength / 2;
-      const pos = new THREE.Vector3(localX, 0, 0)
+      const bars: [string, number[], number[]][] = [
+        ['top', [opPos.x, opCenterY + op.height / 2 - outerFrameW / 2 + elevation, opPos.z], [op.width, outerFrameW, frameDepth]],
+        ['bottom', [opPos.x, opCenterY - op.height / 2 + outerFrameW / 2 + elevation, opPos.z], [op.width, outerFrameW, frameDepth]],
+      ];
+      const leftPos = new THREE.Vector3(localX - op.width / 2 + outerFrameW / 2, 0, 0)
         .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
-        .add(new THREE.Vector3(origCx, wallHeight / 2 + elevation, origCz));
-      // Last sub-segment touches wall's to endpoint → apply to-end miter
-      const lastSegMiter: MiterResult = {
-        fromLeft: 0, fromRight: 0,
-        toLeft: miterOffsets.toLeft, toRight: miterOffsets.toRight,
-      };
-      const lastSegGeo = createMiteredWallGeometry(segLen, wallHeight, wall.thickness, lastSegMiter);
-      segments.push(
-        <mesh key={`${wall.id}-seg-last`} position={pos.toArray()} rotation={[0, -angle, 0]}
-          castShadow material={dualMats}>
-          <primitive object={lastSegGeo} attach="geometry" />
-        </mesh>
-      );
+        .add(new THREE.Vector3(origCx, opCenterY + elevation, origCz));
+      bars.push(['left', leftPos.toArray(), [outerFrameW, op.height, frameDepth]]);
+      const rightPos = new THREE.Vector3(localX + op.width / 2 - outerFrameW / 2, 0, 0)
+        .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
+        .add(new THREE.Vector3(origCx, opCenterY + elevation, origCz));
+      bars.push(['right', rightPos.toArray(), [outerFrameW, op.height, frameDepth]]);
+
+      if (hasMullion) {
+        bars.push(['mullion', [opPos.x, opCenterY + elevation, opPos.z], [outerFrameW * 0.7, op.height - 0.06, frameDepth * 0.8]]);
+      }
+
+      for (const [key, pos, dims] of bars) {
+        segments.push(
+          <mesh key={`${wall.id}-win-f${key}-${i}`}
+            position={pos as [number, number, number]}
+            rotation={[0, -angle, 0]} castShadow {...openingPointer}>
+            <boxGeometry args={dims as [number, number, number]} />
+            <meshStandardMaterial color={frameColor} roughness={0.3}
+              emissive={opEmissive} emissiveIntensity={opEmissiveIntensity} />
+          </mesh>
+        );
+      }
+
+      // Inner reveal
+      if (options?.includeWindowReveal) {
+        const revealDepth = wall.thickness * 0.3;
+        segments.push(
+          <mesh key={`${wall.id}-win-reveal-top-${i}`}
+            position={[opPos.x, opCenterY + op.height / 2 - 0.01 + elevation, opPos.z]}
+            rotation={[0, -angle, 0]}>
+            <boxGeometry args={[op.width - 0.02, 0.02, revealDepth]} />
+            <meshStandardMaterial color="#d0d0d0" roughness={0.8} />
+          </mesh>
+        );
+      }
+
+      // Window sill
+      if (!isFrench) {
+        const sillNormal = new THREE.Vector3(0, 0, flipSign)
+          .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle);
+        segments.push(
+          <mesh key={`${wall.id}-win-sill-${i}`}
+            position={[
+              opPos.x + sillNormal.x * 0.05,
+              opCenterY - op.height / 2 - 0.02 + elevation,
+              opPos.z + sillNormal.z * 0.05,
+            ]}
+            rotation={[0, -angle, 0]} castShadow>
+            <boxGeometry args={[op.width + 0.12, 0.03, wall.thickness + 0.10]} />
+            <meshStandardMaterial color="#e0e0e0" roughness={0.6} />
+          </mesh>
+        );
+        segments.push(
+          <mesh key={`${wall.id}-win-sill-int-${i}`}
+            position={[
+              opPos.x - sillNormal.x * 0.04,
+              opCenterY - op.height / 2 - 0.01 + elevation,
+              opPos.z - sillNormal.z * 0.04,
+            ]}
+            rotation={[0, -angle, 0]}>
+            <boxGeometry args={[op.width + 0.04, 0.025, wall.thickness * 0.4]} />
+            <meshStandardMaterial color="#f0f0f0" roughness={0.7} />
+          </mesh>
+        );
+      }
     }
-  }
 
   return segments;
 }
