@@ -26,6 +26,14 @@
 - All new presets have sensible `realWorldSize` values
 - File: `src/lib/materials.ts`, `src/components/build/structure/PaintTool.tsx`
 
+## Phase F5 — ambientCG Thumbnails + Size Mode Fix ✅ DONE
+- Added `thumbnailUrl` and `ambientCGId` fields to Material interface
+- All 25 floor presets mapped to specific ambientCG assets with CDN thumbnails
+- PaintTool shows CDN thumbnails with category emoji badges (🪵🔲🪨✦🧶)
+- Hybrid approach: CDN thumbnail for browser preview, local files for 3D textures
+- Fixed `Floors3D.tsx` memoization — `floorSizeMode` changes now trigger re-render
+- Thumbnail URL pattern: `https://acg-media.struffelproductions.com/file/ambientCG-Web/media/thumbnail/256-JPG-FFFFFF/{AssetId}.jpg`
+
 ## Preserved
 - Wall painting workflow untouched
 - Existing material preset IDs unchanged
@@ -33,7 +41,7 @@
 - Wall texture engine (C1 stylized walls)
 
 ## Väntar
-- Real ambientCG texture file downloads (manual step)
+- Real ambientCG 1K texture file downloads (manual step — download ZIPs from ambientcg.com/get?file={ID}_1K-JPG.zip)
 - Per-wall roughness from finish selector
 - Accent zones / backsplash
 - Ceiling surfaces
