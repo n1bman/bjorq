@@ -161,6 +161,7 @@ export interface Floor {
   walls: WallSegment[];
   rooms: Room[];
   stairs: StairItem[];
+  kitchenFixtures: KitchenFixture[];
   floorplanImage?: string;
   pixelsPerMeter?: number;
   vacuumMapping?: VacuumMapping;
