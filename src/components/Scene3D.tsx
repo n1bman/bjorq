@@ -23,14 +23,14 @@ import type { CameraPreset, StandbyCameraView } from '../store/types';
 const presetPositions: Record<CameraPreset, THREE.Vector3> = {
   free: new THREE.Vector3(12, 12, 12),
   topdown: new THREE.Vector3(0, 25, 0.01),
-  angle: new THREE.Vector3(12, 12, 12),
+  angle: new THREE.Vector3(8, 7, 8),
   front: new THREE.Vector3(0, 6, 20),
 };
 
 const presetTargets: Record<CameraPreset, THREE.Vector3> = {
   free: new THREE.Vector3(0, 0, 0),
   topdown: new THREE.Vector3(0, 0, 0),
-  angle: new THREE.Vector3(0, 0, 0),
+  angle: new THREE.Vector3(0, 0.5, 0),
   front: new THREE.Vector3(0, 2, 0),
 };
 

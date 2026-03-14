@@ -4,18 +4,11 @@ import { cn } from '../../lib/utils';
 import { useAppStore } from '../../store/useAppStore';
 import { useWeatherSync } from '../../hooks/useWeatherSync';
 import { categories, categoryContent } from './DashboardGrid';
-import Scene3D from '../Scene3D';
 import ClockWidget from './cards/ClockWidget';
 import WeatherWidget from './cards/WeatherWidget';
 import EnergyWidget from './cards/EnergyWidget';
 import ScenesWidget from './cards/ScenesWidget';
 import type { DashCategory } from '../../store/types';
-
-/** Categories where the 3D preview is shown */
-const SHOW_3D: Set<DashCategory> = new Set(['home', 'devices', 'surveillance', 'robot']);
-
-/** Categories that use page-like layout instead of widget grid */
-const PAGE_LAYOUT: Set<DashCategory> = new Set(['graphics', 'settings']);
 
 export default function DashboardShell() {
   useWeatherSync();
@@ -25,8 +18,6 @@ export default function DashboardShell() {
   const unreadCount = useAppStore((s) => s.activityLog.filter((e) => !e.read).length);
 
   const Content = categoryContent[activeCategory];
-  const show3D = SHOW_3D.has(activeCategory);
-  const isPage = PAGE_LAYOUT.has(activeCategory);
 
   const handleCategoryClick = useCallback((key: DashCategory) => {
     setDashCategory(key);
@@ -105,32 +96,10 @@ export default function DashboardShell() {
           <ScenesWidget />
         </div>
 
-        {/* Content body */}
+        {/* Content body — always full width, 3D is a widget inside HomeCategory */}
         <div className="flex-1 min-h-0 overflow-y-auto">
-          <div className="p-5 pb-8 space-y-5">
-            {/* 3D Preview + first content row side by side */}
-            {show3D && !isPage && (
-              <div className="grid gap-5 grid-cols-1 lg:grid-cols-[minmax(280px,2fr)_3fr]">
-                <div className="glass-panel glass-panel-hover rounded-2xl overflow-hidden h-[280px]">
-                  <Scene3D />
-                </div>
-                {/* First content block next to 3D */}
-                <div className="min-w-0">
-                  <Content />
-                </div>
-              </div>
-            )}
-
-            {/* Non-3D categories or page layouts */}
-            {!show3D && (
-              <div className={cn(
-                isPage
-                  ? 'w-full'
-                  : 'max-w-[1200px] mx-auto w-full'
-              )}>
-                <Content />
-              </div>
-            )}
+          <div className="p-5 pb-8">
+            <Content />
           </div>
         </div>
       </div>
