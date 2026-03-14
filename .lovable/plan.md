@@ -1,48 +1,39 @@
-# Floor Material Experience Improvement
 
-## Phase F1 — Floor Selection Highlight Fix ✅ DONE
-- Replaced solid blue fill with perimeter-only outline (`<line>` geometry)
-- Textures always applied regardless of selection state
-- Subtle emissive tint (0.08) keeps glow without hiding material
-- File: `src/components/build/Floors3D.tsx`
 
-## Phase F2 — Floor Material Browser UI ✅ DONE
-- Floor target shows larger material cards (grid-cols-3) with texture thumbnails
-- Category-first tabs: Trä & Parkett, Kakel & Klinker, Sten & Betong, Textur, Matta
-- Material name visible below each card
-- Wall target unchanged (small swatches)
-- File: `src/components/build/structure/PaintTool.tsx`
+# Fix Floor Textures, Add Download Guide, Room Dropdown
 
-## Phase F3 — Curated Floor Texture Pack ✅ DONE
-- 25 new floor-only presets across 5 categories (Wood, Tile, Stone, Texture, Carpet)
-- `floorOnly` flag added to Material interface
-- Paths under `public/textures/floor/` — falls back to flat color if files missing
-- ambientCG (CC0) as documented source for future file placement
-- File: `src/lib/materials.ts`, `src/store/types.ts`
+## Three Issues
 
-## Phase F4 — Floor Texture Mapping Polish ✅ DONE
-- Aspect-ratio clamping in `calculateRepeat` prevents extreme stretching
-- `floorSizeMode` UI control (Auto/Small/Standard/Large) added to floor material browser
-- All new presets have sensible `realWorldSize` values
-- File: `src/lib/materials.ts`, `src/components/build/structure/PaintTool.tsx`
+### 1. Size mode doesn't visually change anything
+**Root cause**: All 25 floor texture files (e.g. `/textures/floor/wood/light_oak_diff.jpg`) return 404. The `calculateRepeat` logic works correctly, but there's no texture to scale — only flat color shows. Additionally, `THREE.TextureLoader` doesn't have `crossOrigin` set, so even CDN URLs would fail.
 
-## Phase F5 — ambientCG Thumbnails + Size Mode Fix ✅ DONE
-- Added `thumbnailUrl` and `ambientCGId` fields to Material interface
-- All 25 floor presets mapped to specific ambientCG assets with CDN thumbnails
-- PaintTool shows CDN thumbnails with category emoji badges (🪵🔲🪨✦🧶)
-- Hybrid approach: CDN thumbnail for browser preview, local files for 3D textures
-- Fixed `Floors3D.tsx` memoization — `floorSizeMode` changes now trigger re-render
-- Thumbnail URL pattern: `https://acg-media.struffelproductions.com/file/ambientCG-Web/media/thumbnail/256-JPG-FFFFFF/{AssetId}.jpg`
+**Fix**:
+- Set `mapPath` on all 25 floor presets to the ambientCG CDN URL (the 2048px flat thumbnail which is a tileable preview): `https://acg-media.struffelproductions.com/file/ambientCG-Web/media/thumbnail/2048-JPG-FFFFFF/{ambientCGId}.jpg`
+- Add `textureLoader.setCrossOrigin('anonymous')` in `wallTextureLoader.ts`
+- Widen size mode multipliers for more visible effect: `small: 0.4, standard: 1.0, large: 2.5` (currently 0.6/1.0/1.6 — too subtle)
 
-## Preserved
-- Wall painting workflow untouched
-- Existing material preset IDs unchanged
-- Save/load compatibility (new fields optional with fallbacks)
-- Wall texture engine (C1 stylized walls)
+**Files**: `src/lib/materials.ts`, `src/lib/wallTextureLoader.ts`
 
-## Väntar
-- Real ambientCG 1K texture file downloads (manual step — download ZIPs from ambientcg.com/get?file={ID}_1K-JPG.zip)
-- Per-wall roughness from finish selector
-- Accent zones / backsplash
-- Ceiling surfaces
-- Custom user-uploaded floor textures
+### 2. Missing texture download guide
+Create `public/textures/guide/README.md` listing all 25 assets with:
+- ambientCG asset name and ID
+- Direct download link for 1K-JPG ZIP
+- Which file to extract (e.g. `WoodFloor051_1K-JPG/WoodFloor051_1K_Color.jpg`)
+- Where to place it locally (optional override path)
+
+**Files**: new `public/textures/guide/README.md`
+
+### 3. Room list should be a dropdown, not all visible
+Currently all rooms are listed vertically with their full material grids, causing heavy scrolling. Replace with:
+- A `<select>` dropdown to pick the active room
+- Only show the material grid for the selected room
+- Default to first room
+
+**Files**: `src/components/build/BuildModeV2.tsx` (SurfaceEditor function, lines ~1430-1513)
+
+## What's Preserved
+- All existing material IDs and presets
+- Wall painting workflow unchanged
+- Undo system and per-room assignment
+- Outline selection highlight (F1)
+
