@@ -1702,6 +1702,7 @@ const PLACEMENT_OPTIONS: { value: import('../../store/types').AssetPlacement; la
   { value: 'wall', label: 'Vägg' },
   { value: 'ceiling', label: 'Tak' },
   { value: 'table', label: 'Bord/yta' },
+  { value: 'free', label: 'Fri' },
 ];
 
 const VISIBILITY_OPTIONS: { value: import('../../store/types').AssetVisibility; label: string; icon: React.ElementType }[] = [
