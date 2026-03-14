@@ -32,6 +32,7 @@ export default function BuildInspector() {
   if (selection.type === 'room') return <RoomInspector floorId={activeFloorId!} roomId={selection.id} floor={floor} close={closeBtn} />;
   if (selection.type === 'opening') return <OpeningInspector floorId={activeFloorId!} openingId={selection.id} floor={floor} close={closeBtn} />;
   if (selection.type === 'device') return <DeviceInspector deviceId={selection.id} close={closeBtn} />;
+  if (selection.type === 'kitchen-fixture') return <KitchenFixtureInspector floorId={activeFloorId!} fixtureId={selection.id} close={closeBtn} />;
 
   return null;
 }
