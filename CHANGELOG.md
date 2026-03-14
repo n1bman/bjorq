@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-03-14
+
+### Added
+- **Per-device light properties** — customize intensity, range, cone angle, and penumbra individually for each light in the Build Inspector
+- **Save camera view** — double-click the 3D widget in the Dashboard to save the current camera position as default start view
+- **Long-press on 3D markers** — 500ms long-press on any device marker in Home view opens the device control popup (same as device cards)
+
+### Fixed
+- **Light fixtures not toggling** — older light-fixture devices with stale `generic` state now auto-migrate to proper `LightState` on render, enabling on/off control in Home view
+- **Long-press triggering immediately** — long-press timer now correctly cleared on click to prevent instant popup on tap
+- **LED-bar defaults** — updated to intensity 0.5×, distance 1.4m, angle 118°, penumbra 0.70 for more realistic lighting
+
 ## [1.3.0] - 2026-03-14
 
 ### Fixed
