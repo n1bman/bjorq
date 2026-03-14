@@ -2,6 +2,7 @@ import { useAppStore } from '../../store/useAppStore';
 import { cn } from '../../lib/utils';
 import { X, Plus, DoorOpen, RotateCcw, Move, Trash2, Layers, Home, Lightbulb, ArrowRightLeft, Monitor, RectangleHorizontal, Warehouse, Upload, Paintbrush, Image, RotateCw } from 'lucide-react';
 import { Slider } from '../ui/slider';
+import { SliderWithInput } from '../ui/SliderWithInput';
 import { Input } from '../ui/input';
 import { Switch } from '../ui/switch';
 import { presetMaterials, addCustomMaterial, wallSurfaceCategories, floorSurfaceCategories, surfaceCategoryLabels, getMaterialsByCategory } from '../../lib/materials';
