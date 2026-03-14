@@ -262,7 +262,7 @@ export const presetMaterials: Material[] = [
     hasTexture: true, source: 'ambientCG', realWorldSize: [0.60, 0.60],
     ambientCGId: 'Fabric026',
     thumbnailUrl: 'https://acg-media.struffelproductions.com/file/ambientCG-Web/media/thumbnail/256-JPG-FFFFFF/Fabric026.jpg',
-    mapPath: '/textures/floor/carpet/berber_diff.jpg' },
+    mapPath: 'https://acg-media.struffelproductions.com/file/ambientCG-Web/media/thumbnail/2048-JPG-FFFFFF/Fabric026.jpg' },
   { id: 'floor-wool-charcoal', name: 'Ull antracit', type: 'custom', color: '#3e3e3e', roughness: 0.94, surfaceCategory: 'carpet', floorOnly: true,
     hasTexture: true, source: 'ambientCG', realWorldSize: [0.50, 0.50],
     ambientCGId: 'Fabric036',
