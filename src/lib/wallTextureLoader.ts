@@ -71,9 +71,6 @@ export function applyMaterialTextures(
 ): void {
   if (!preset.hasTexture) return;
 
-  // C1: Walls render with color/roughness/metalness only — no image textures by default.
-  if (context === 'wall' && !forceTexture) return;
-
   const effectiveRepeat = calculateRepeat(preset, wallWidth, wallHeight, sizeMode);
 
   // F6: Apply manual scale multiplier (higher scale = fewer repeats = bigger pattern)

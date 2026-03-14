@@ -26,7 +26,7 @@ export const presetMaterials: Material[] = [
   { id: 'mat-wp-velvet', name: 'Sammetstapet', type: 'wallpaper', color: '#4a3050', roughness: 0.65, surfaceCategory: 'wallpaper',
     realWorldSize: [0.53, 0.53] },
   { id: 'mat-wp-stripe', name: 'Randig tapet', type: 'wallpaper', color: '#c8d0d8', roughness: 0.70, surfaceCategory: 'wallpaper',
-    hasTexture: true, repeat: [4, 1], source: 'procedural', realWorldSize: [0.53, 1.0],
+    hasTexture: true, repeat: [4, 1], source: 'procedural', realWorldSize: [0.53, 0.53],
     mapPath: '/textures/wallpaper/stripe_diff.jpg' },
   { id: 'mat-wp-damask', name: 'Damast', type: 'wallpaper', color: '#a89878', roughness: 0.68, surfaceCategory: 'wallpaper',
     hasTexture: true, repeat: [2, 2], source: 'ambientCG', realWorldSize: [0.53, 0.53],
