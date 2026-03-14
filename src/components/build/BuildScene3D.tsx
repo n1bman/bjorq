@@ -59,6 +59,7 @@ function SceneContent() {
   const [cursorPos, setCursorPos] = useState<[number, number] | null>(null);
   const [cursorSnapped, setCursorSnapped] = useState(false);
   const [cursorMidSnap, setCursorMidSnap] = useState(false);
+  const [cursorAxisAligned, setCursorAxisAligned] = useState(false);
   const controlsRef = useRef<any>(null);
 
   const snapToGrid = useCallback(
