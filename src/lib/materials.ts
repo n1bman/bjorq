@@ -149,7 +149,7 @@ export const presetMaterials: Material[] = [
     hasTexture: true, source: 'ambientCG', realWorldSize: [0.18, 1.2],
     ambientCGId: 'WoodFloor044',
     thumbnailUrl: 'https://acg-media.struffelproductions.com/file/ambientCG-Web/media/thumbnail/256-JPG-FFFFFF/WoodFloor044.jpg',
-    mapPath: '/textures/floor/wood/ash_white_diff.jpg' },
+    mapPath: 'https://acg-media.struffelproductions.com/file/ambientCG-Web/media/thumbnail/2048-JPG-FFFFFF/WoodFloor044.jpg' },
   { id: 'floor-smoked-oak', name: 'Rökt ek', type: 'wood', color: '#6e5038', roughness: 0.62, surfaceCategory: 'wood', floorOnly: true,
     hasTexture: true, source: 'ambientCG', realWorldSize: [0.20, 1.2],
     ambientCGId: 'WoodFloor043',
