@@ -1,56 +1,77 @@
-# Floor Material Experience Improvement
 
-## Phase F1 — Floor Selection Highlight Fix ✅ DONE
-- Replaced solid blue fill with perimeter-only outline (`<line>` geometry)
-- Textures always applied regardless of selection state
-- Subtle emissive tint (0.08) keeps glow without hiding material
-- File: `src/components/build/Floors3D.tsx`
 
-## Phase F2 — Floor Material Browser UI ✅ DONE
-- Floor target shows larger material cards (grid-cols-3) with texture thumbnails
-- Category-first tabs: Trä & Parkett, Kakel & Klinker, Sten & Betong, Textur, Matta
-- Material name visible below each card
-- Wall target unchanged (small swatches)
-- File: `src/components/build/structure/PaintTool.tsx`
+# Standardkök — Procedural Kitchen Template
 
-## Phase F3 — Curated Floor Texture Pack ✅ DONE
-- 25 new floor-only presets across 5 categories (Wood, Tile, Stone, Texture, Carpet)
-- `floorOnly` flag added to Material interface
-- Paths under `public/textures/floor/` — falls back to flat color if files missing
-- ambientCG (CC0) as documented source for future file placement
-- File: `src/lib/materials.ts`, `src/store/types.ts`
+## Approach
+Follow the existing **Stairs3D pattern**: store kitchen fixtures on the Floor, render them as procedural box geometry, place via TemplatesPicker. No GLTF models, no new abstraction layer.
 
-## Phase F4 — Floor Texture Mapping Polish ✅ DONE
-- Aspect-ratio clamping in `calculateRepeat` prevents extreme stretching
-- `floorSizeMode` UI control (Auto/Small/Standard/Large) added to floor material browser
-- All new presets have sensible `realWorldSize` values
-- File: `src/lib/materials.ts`, `src/components/build/structure/PaintTool.tsx`
+## Changes
 
-## Phase F5 — ambientCG Thumbnails + Size Mode Fix ✅ DONE
-- Added `thumbnailUrl` and `ambientCGId` fields to Material interface
-- All 25 floor presets mapped to specific ambientCG assets with CDN thumbnails
-- PaintTool shows CDN thumbnails with category emoji badges (🪵🔲🪨✦🧶)
-- Hybrid approach: CDN thumbnail for browser preview, local files for 3D textures
-- Fixed `Floors3D.tsx` memoization — `floorSizeMode` changes now trigger re-render
-- Thumbnail URL pattern: `https://acg-media.struffelproductions.com/file/ambientCG-Web/media/thumbnail/256-JPG-FFFFFF/{AssetId}.jpg`
+### 1. `src/store/types.ts`
+- Add `KitchenFixture` interface:
+  ```typescript
+  export interface KitchenFixture {
+    id: string;
+    floorId: string;
+    position: [number, number]; // x, z (bottom-center)
+    rotation: number; // radians
+  }
+  ```
+- Add `kitchenFixtures: KitchenFixture[]` to `Floor` interface (alongside `stairs`)
 
-## Preserved
-- Wall painting workflow untouched
-- Existing material preset IDs unchanged
-- Save/load compatibility (new fields optional with fallbacks)
-- Wall texture engine (C1 stylized walls)
+### 2. `src/store/useAppStore.ts`
+- Add `addKitchenFixture(floorId, fixture)` and `removeKitchenFixture(floorId, id)` actions (same pattern as `addStair`/`removeStair`)
+- Include in undo snapshots
 
-## Phase F6 — Manual Scale & Rotation Sliders ✅ DONE
-- Added `floorTextureScale` (0.2–4.0x) and `floorTextureRotation` (0°–360°) per room
-- Two sliders under size mode presets in Måla panel with live value display
-- Texture engine clones textures per room to avoid cross-room leaking
-- Rotation applied via `tex.rotation` + `tex.center` for proper pivot
-- Undo pushed once per drag (mouseDown/touchStart), not per tick
-- Files: `types.ts`, `BuildModeV2.tsx`, `wallTextureLoader.ts`, `Floors3D.tsx`
+### 3. `src/lib/roomTemplates.ts`
+- Add new template entry:
+  ```
+  { id: 'tpl-kitchen-standard', name: 'Standardkök', width: 3.8, depth: 3, category: 'kitchen', fixture: 'standard-kitchen' }
+  ```
+- Add optional `fixture?: string` to `RoomTemplate` type
 
-## Väntar
-- Real ambientCG 1K texture file downloads (manual step — download ZIPs from ambientcg.com/get?file={ID}_1K-JPG.zip)
-- Per-wall roughness from finish selector
-- Accent zones / backsplash
-- Ceiling surfaces
-- Custom user-uploaded floor textures
+### 4. `src/components/build/structure/TemplatesPicker.tsx`
+- When placing a template with `fixture === 'standard-kitchen'`, also call `addKitchenFixture` to spawn the kitchen along the back wall of the new room (z = -depth/2 + 0.3)
+
+### 5. `src/components/build/KitchenFixture3D.tsx` (new, ~250 lines)
+Procedural low-poly kitchen using `<mesh>` + `<boxGeometry>`. All dimensions from the prompt:
+
+```text
+Left → Right (3.80m total):
+┌────────┬──────┬──────┬────────┬──────┐
+│  Tall  │Stove │Dish- │  Sink  │Drawer│
+│ Fridge │ 0.60 │wash. │  0.80  │ 0.60 │
+│  0.60  │      │ 0.60 │        │      │
+│ h=2.10 │      │      │        │      │
+│+top cab│ h=0.87│h=0.87│ h=0.87│h=0.87│
+└────────┴──────┴──────┴────────┴──────┘
+
+Upper cabs: h=0.80, depth=0.30, mounted at y=1.40
+Range hood: 0.60×0.10×0.35 above stove
+Countertop: 3.20×0.04×0.62 at y=0.90
+```
+
+Colors (matching reference):
+- Cabinets: `#f5f0e8` (warm white)
+- Wood trim/edges: `#c8a86e` (light wood)
+- Countertop: `#c8a86e` (light wood)
+- Sink: `#b8bcc0` (metal, metalness 0.5)
+- Appliances: `#e8e4de` (off-white)
+- Handles: `#c8a86e` (wood knobs)
+
+~25 mesh boxes total, well under 3000 triangles.
+
+### 6. `src/components/build/BuildScene3D.tsx`
+- Import and render `<KitchenFixture3D />` alongside `<Stairs3D />` (line ~293)
+
+### Selection & deletion
+Kitchen fixtures selectable via existing select tool. Click sets `selection.type = 'kitchen-fixture'`, Delete key removes it. Add `'kitchen-fixture'` to `BuildSelection.type` union.
+
+## Files touched
+1. `src/store/types.ts`
+2. `src/store/useAppStore.ts`
+3. `src/lib/roomTemplates.ts`
+4. `src/components/build/structure/TemplatesPicker.tsx`
+5. `src/components/build/KitchenFixture3D.tsx` (new)
+6. `src/components/build/BuildScene3D.tsx`
+
