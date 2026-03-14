@@ -5,7 +5,6 @@ import { Home, Cloud, Cpu, Zap, Bell, Video, Settings, Pencil, X, CalendarDays, 
 import { cn } from '../../lib/utils';
 import { Button } from '../ui/button';
 import { useAppStore } from '../../store/useAppStore';
-import ClockWidget from './cards/ClockWidget';
 import WeatherWidget from './cards/WeatherWidget';
 import EnergyWidget from './cards/EnergyWidget';
 import EnergyDeviceList from './cards/EnergyDeviceList';
