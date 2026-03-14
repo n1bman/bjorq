@@ -1,15 +1,17 @@
 import { useMemo } from 'react';
 import { useAppStore } from '../../store/useAppStore';
 import * as THREE from 'three';
-import { Line } from '@react-three/drei';
+import { Line, Html } from '@react-three/drei';
 
 interface WallDrawing3DProps {
   cursorPos: [number, number] | null;
   cursorSnapped?: boolean;
   cursorMidSnap?: boolean;
+  /** True when cursor is axis-aligned (0/90/180/270°) with last node */
+  cursorAxisAligned?: boolean;
 }
 
-export default function WallDrawing3D({ cursorPos, cursorSnapped, cursorMidSnap }: WallDrawing3DProps) {
+export default function WallDrawing3D({ cursorPos, cursorSnapped, cursorMidSnap, cursorAxisAligned }: WallDrawing3DProps) {
   const wallDrawing = useAppStore((s) => s.build.wallDrawing);
 
   const linePoints = useMemo(() => {
@@ -41,13 +43,16 @@ export default function WallDrawing3D({ cursorPos, cursorSnapped, cursorMidSnap 
     return null;
   }
 
+  // When axis-aligned: solid cyan line. Otherwise: dashed amber.
+  const lineColor = cursorAxisAligned ? '#38bdf8' : '#e8a845';
+
   return (
     <group>
       <Line
         points={linePoints}
-        color="#e8a845"
-        lineWidth={2}
-        dashed
+        color={lineColor}
+        lineWidth={cursorAxisAligned ? 3 : 2}
+        dashed={!cursorAxisAligned}
         dashSize={0.3}
         gapSize={0.15}
       />
@@ -60,16 +65,35 @@ export default function WallDrawing3D({ cursorPos, cursorSnapped, cursorMidSnap 
       ))}
       {/* Cursor sphere */}
       {cursorPos && (
-        <mesh position={[cursorPos[0], 0.1, cursorPos[1]]}>
-          <sphereGeometry args={[cursorSnapped ? 0.12 : 0.06, 16, 16]} />
-          <meshStandardMaterial
-            color={cursorSnapped ? (cursorMidSnap ? '#facc15' : '#4ade80') : '#ffffff'}
-            emissive={cursorSnapped ? (cursorMidSnap ? '#facc15' : '#4ade80') : '#ffffff'}
-            emissiveIntensity={cursorSnapped ? 0.8 : 0.3}
-            transparent
-            opacity={cursorSnapped ? 0.9 : 0.6}
-          />
-        </mesh>
+        <group>
+          <mesh position={[cursorPos[0], 0.1, cursorPos[1]]}>
+            <sphereGeometry args={[cursorSnapped ? 0.12 : cursorAxisAligned ? 0.09 : 0.06, 16, 16]} />
+            <meshStandardMaterial
+              color={cursorAxisAligned ? '#38bdf8' : cursorSnapped ? (cursorMidSnap ? '#facc15' : '#4ade80') : '#ffffff'}
+              emissive={cursorAxisAligned ? '#38bdf8' : cursorSnapped ? (cursorMidSnap ? '#facc15' : '#4ade80') : '#ffffff'}
+              emissiveIntensity={cursorAxisAligned ? 1.0 : cursorSnapped ? 0.8 : 0.3}
+              transparent
+              opacity={cursorAxisAligned ? 0.95 : cursorSnapped ? 0.9 : 0.6}
+            />
+          </mesh>
+          {/* 90° label */}
+          {cursorAxisAligned && (
+            <Html position={[cursorPos[0], 0.4, cursorPos[1]]} center>
+              <div style={{
+                background: 'rgba(56, 189, 248, 0.9)',
+                color: '#fff',
+                padding: '1px 6px',
+                borderRadius: 4,
+                fontSize: 10,
+                fontWeight: 700,
+                whiteSpace: 'nowrap',
+                pointerEvents: 'none',
+              }}>
+                90°
+              </div>
+            </Html>
+          )}
+        </group>
       )}
     </group>
   );
