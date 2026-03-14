@@ -341,7 +341,8 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
     const placement = catItem?.placement || curatedMeta?.placement;
     const category = catItem?.category || curatedMeta?.category;
 
-    if (isWallMountable({ placement, category })) {
+    // 'free' placement skips wall mount entirely
+    if (placement !== 'free' && isWallMountable({ placement, category })) {
       setPendingWallMount({ catalogId, url });
       toast.info('Klicka på en vägg för att placera');
       return;
@@ -351,7 +352,7 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
     const tz = Math.round(cameraRef.target.z * 10) / 10;
     const existing = floorProps.filter((p: any) => p.catalogId === catalogId);
     const offset = existing.length * 0.5;
-    addProp({ id: generateId(), catalogId, floorId: activeFloorId, url, position: [tx + offset, 0, tz + offset], rotation: [0,0,0], scale: [1,1,1] });
+    addProp({ id: generateId(), catalogId, floorId: activeFloorId, url, position: [tx + offset, 0, tz + offset], rotation: [0,0,0], scale: [1,1,1], freePlacement: placement === 'free' });
   }, [activeFloorId, addProp, floorProps, setPendingWallMount]);
 
   const handleImportConfirm = useCallback(async () => {
