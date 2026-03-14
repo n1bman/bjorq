@@ -2419,7 +2419,7 @@ const inredningTools: SubToolDef[] = [
   { tool: 'furnish' as BuildTool, label: 'Möbler', icon: Sofa },
   { tool: 'paint', label: 'Måla', icon: Paintbrush },
   { tool: 'wizard' as BuildTool, label: 'Wizard', icon: Wand2 },
-  { tool: 'place-light', label: 'Enheter', icon: Cpu },
+  { tool: 'devices' as BuildTool, label: 'Enheter', icon: Cpu },
 ];
 
 function DesignTabBar() {
