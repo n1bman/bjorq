@@ -409,6 +409,14 @@ export interface DeviceMarker {
   lightType?: LightType;
   fixtureModel?: 'led-bulb' | 'led-bar' | 'led-spot';
   estimatedWatts?: number;
+  lightConfig?: LightConfig;
+}
+
+export interface LightConfig {
+  intensity: number;    // multiplier applied to brightness
+  distance: number;     // meters
+  angle?: number;       // radians (spot/bar/wall/lightbar only)
+  penumbra?: number;    // 0-1 (spot/bar/wall/lightbar only)
 }
 
 // ─── Rich Device States (HA-ready) ───
