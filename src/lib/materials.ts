@@ -235,7 +235,7 @@ export const presetMaterials: Material[] = [
     hasTexture: true, source: 'ambientCG', realWorldSize: [0.18, 1.2],
     ambientCGId: 'WoodFloor038',
     thumbnailUrl: 'https://acg-media.struffelproductions.com/file/ambientCG-Web/media/thumbnail/256-JPG-FFFFFF/WoodFloor038.jpg',
-    mapPath: '/textures/floor/texture/vinyl_plank_diff.jpg' },
+    mapPath: 'https://acg-media.struffelproductions.com/file/ambientCG-Web/media/thumbnail/2048-JPG-FFFFFF/WoodFloor038.jpg' },
   { id: 'floor-linoleum', name: 'Linoleum', type: 'texture', color: '#a0a898', roughness: 0.55, surfaceCategory: 'texture', floorOnly: true,
     hasTexture: true, source: 'ambientCG', realWorldSize: [2.0, 2.0],
     ambientCGId: 'PaintedPlaster020',
