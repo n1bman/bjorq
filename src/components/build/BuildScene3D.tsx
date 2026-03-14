@@ -12,7 +12,7 @@ import Floors3D from './Floors3D';
 import Stairs3D from './Stairs3D';
 import ImportedHome3D from './ImportedHome3D';
 import Props3D from './Props3D';
-import KitchenUnit3DComponent from './KitchenUnit3D';
+import ProceduralKitchen from './ProceduralKitchen';
 import WeatherEffects3D from './WeatherEffects3D';
 import Ceilings3D from './Ceilings3D';
 
