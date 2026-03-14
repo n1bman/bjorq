@@ -1867,14 +1867,35 @@ function BibliotekWorkspace() {
     const finalFile = bibOptimizedResult
       ? new File([bibOptimizedResult.blob], bibImportName.trim().replace(/\s+/g, '_') + '.glb', { type: 'model/gltf-binary' })
       : bibImportFile;
+    const finalStats = bibOptimizedResult ? bibOptimizedResult.stats : bibImportResult.stats;
+    const finalThumbnail = bibOptimizedResult?.thumbnail || bibImportResult.thumbnail;
     setBibProcessing(true);
     try {
       if (isHostedSync()) {
-        const r = await ingestToCatalog(finalFile, { name: bibImportName, category: bibImportCat }, bibImportResult.thumbnail);
+        const r = await ingestToCatalog(finalFile, { name: bibImportName, category: bibImportCat, subcategory: bibImportSub || undefined, placement: 'floor', dimensions: bibImportResult.dimensions, performance: finalStats }, finalThumbnail);
         if (r) toast.success('Importerad till katalogen');
       } else {
-        addToCatalog({ id: `user-${Date.now()}`, name: bibImportName || bibImportFile.name, url: URL.createObjectURL(finalFile), source: 'user', category: bibImportCat, visibility: 'visible' });
-        toast.success('Tillagd i lokalt bibliotek');
+        const url = URL.createObjectURL(finalFile);
+        const catalogId = `user-${Date.now()}`;
+        const item: any = {
+          id: catalogId, name: bibImportName || bibImportFile.name, url, source: 'user',
+          category: bibImportCat, subcategory: bibImportSub || undefined,
+          thumbnail: finalThumbnail || undefined,
+          dimensions: bibImportResult.dimensions, performance: finalStats,
+          placement: 'floor', visibility: 'visible',
+        };
+        // Store base64 for persistence if small enough
+        if (finalFile.size <= 4 * 1024 * 1024) {
+          const reader = new FileReader();
+          reader.onload = () => {
+            addToCatalog({ ...item, fileData: (reader.result as string).split(',')[1] });
+            toast.success('Tillagd i lokalt bibliotek');
+          };
+          reader.readAsDataURL(finalFile);
+        } else {
+          addToCatalog(item);
+          toast.success('Tillagd i lokalt bibliotek (sessionsbaserad)');
+        }
       }
     } catch { toast.error('Import misslyckades'); }
     finally { setBibProcessing(false); setBibImportOpen(false); setBibImportFile(null); setBibImportResult(null); setBibOptimizedResult(null); }
