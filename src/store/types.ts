@@ -110,6 +110,10 @@ export interface Room {
   wallMaterialId?: string;
   /** C2: User-selected floor texture size mode */
   floorSizeMode?: SurfaceSizeMode;
+  /** F6: Manual floor texture scale multiplier (0.2–4.0, default 1) */
+  floorTextureScale?: number;
+  /** F6: Manual floor texture rotation in degrees (0–360, default 0) */
+  floorTextureRotation?: number;
   polygon?: [number, number][]; // cached polygon for rendering
   cameraPreset?: RoomCameraPreset;
 }
