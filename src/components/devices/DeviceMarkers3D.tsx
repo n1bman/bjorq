@@ -35,9 +35,10 @@ function miredsToColor(mireds: number): THREE.Color {
 function LightMarker({ position, id, onSelect, onDragStart, selected }: MarkerProps) {
   const state = useAppStore((s) => s.devices.deviceStates[id]);
   const marker = useAppStore((s) => s.devices.markers.find((m) => m.id === id));
+  const appMode = useAppStore((s) => s.appMode);
   const hasState = state?.kind === 'light';
   const lightData = hasState ? state.data : null;
-  const isOn = hasState ? (lightData?.on ?? false) : true;
+  const isOn = hasState ? (lightData?.on ?? false) : appMode === 'build';
   const lightType: LightType = marker?.lightType ?? 'ceiling';
 
   const spotTargetRef = useRef<THREE.Object3D>(null);
