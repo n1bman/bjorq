@@ -362,3 +362,58 @@ export default function Scene3D() {
     </div>
   );
 }
+
+/* ─── Inline kitchen fixtures for home/standby views ─── */
+function SceneKitchenFixtures() {
+  const floors = useAppStore((s) => s.layout.floors);
+  const activeFloorId = useAppStore((s) => s.layout.activeFloorId);
+  const floor = floors.find((f) => f.id === activeFloorId);
+  const fixtures = floor?.kitchenFixtures ?? [];
+  const elevation = floor?.elevation ?? 0;
+  if (fixtures.length === 0) return null;
+  return (
+    <group>
+      {fixtures.map((fix) => (
+        <group key={fix.id} position={[fix.position[0], elevation, fix.position[1]]} rotation={[0, -fix.rotation, 0]}>
+          <SceneKitchenGeometry />
+        </group>
+      ))}
+    </group>
+  );
+}
+
+const SK_TW = 3.80; const SK_BD = 0.60; const SK_BH = 0.85; const SK_UH = 0.70; const SK_UB = 1.40; const SK_G = 0.005;
+const SK_DW = 0.60; const SK_SW = 0.85; const SK_DWW = 0.60; const SK_STW = 0.60; const SK_FW = 0.60; const SK_PW = 0.55;
+const SK_X0 = -SK_TW / 2;
+const SK_DX = SK_X0 + SK_DW / 2; const SK_SX = SK_X0 + SK_DW + SK_SW / 2;
+const SK_DWX = SK_X0 + SK_DW + SK_SW + SK_DWW / 2; const SK_STX = SK_X0 + SK_DW + SK_SW + SK_DWW + SK_STW / 2;
+const SK_FX = SK_X0 + SK_DW + SK_SW + SK_DWW + SK_STW + SK_FW / 2;
+const SK_PX = SK_X0 + SK_DW + SK_SW + SK_DWW + SK_STW + SK_FW + SK_PW / 2;
+
+function SKH({ x, y, z, v }: { x: number; y: number; z: number; v?: boolean }) {
+  return <mesh position={[x, y, z]}><boxGeometry args={v ? [0.02, 0.12, 0.02] : [0.10, 0.02, 0.02]} /><meshStandardMaterial color="#aaa" metalness={0.6} roughness={0.3} /></mesh>;
+}
+
+function SceneKitchenGeometry() {
+  const fz = -SK_BD;
+  return (
+    <group>
+      <mesh position={[SK_DX, SK_BH/2, -SK_BD/2]}><boxGeometry args={[SK_DW-SK_G, SK_BH, SK_BD]} /><meshStandardMaterial color="#f5f0e8" /></mesh>
+      <mesh position={[SK_DX, SK_BH+0.015, -SK_BD/2]}><boxGeometry args={[SK_DW-SK_G, 0.03, SK_BD]} /><meshStandardMaterial color="#c8a86e" /></mesh>
+      <mesh position={[SK_DX, SK_UB+SK_UH/2, -SK_BD/2]}><boxGeometry args={[SK_DW-SK_G, SK_UH, SK_BD]} /><meshStandardMaterial color="#f5f0e8" /></mesh>
+      <mesh position={[SK_SX, SK_BH/2, -SK_BD/2]}><boxGeometry args={[SK_SW-SK_G, SK_BH, SK_BD]} /><meshStandardMaterial color="#f5f0e8" /></mesh>
+      <mesh position={[SK_SX, SK_BH+0.015, -SK_BD/2]}><boxGeometry args={[SK_SW-SK_G, 0.03, SK_BD]} /><meshStandardMaterial color="#c8a86e" /></mesh>
+      <mesh position={[SK_SX, SK_BH+0.015, -SK_BD/2]}><boxGeometry args={[0.45, 0.02, 0.35]} /><meshStandardMaterial color="#888" metalness={0.7} roughness={0.2} /></mesh>
+      <mesh position={[SK_SX, SK_UB+SK_UH/2, -SK_BD/2]}><boxGeometry args={[SK_SW-SK_G, SK_UH, SK_BD]} /><meshStandardMaterial color="#f5f0e8" /></mesh>
+      <mesh position={[SK_DWX, SK_BH/2, -SK_BD/2]}><boxGeometry args={[SK_DWW-SK_G, SK_BH, SK_BD]} /><meshStandardMaterial color="#f5f0e8" /></mesh>
+      <mesh position={[SK_DWX, SK_BH+0.015, -SK_BD/2]}><boxGeometry args={[SK_DWW-SK_G, 0.03, SK_BD]} /><meshStandardMaterial color="#c8a86e" /></mesh>
+      <mesh position={[SK_DWX, SK_UB+SK_UH/2, -SK_BD/2]}><boxGeometry args={[SK_DWW-SK_G, SK_UH, SK_BD]} /><meshStandardMaterial color="#f5f0e8" /></mesh>
+      <mesh position={[SK_STX, SK_BH/2, -SK_BD/2]}><boxGeometry args={[SK_STW-SK_G, SK_BH, SK_BD]} /><meshStandardMaterial color="#f5f0e8" /></mesh>
+      <mesh position={[SK_STX, SK_BH+0.01, -SK_BD/2]}><boxGeometry args={[SK_STW-SK_G, 0.02, SK_BD]} /><meshStandardMaterial color="#333" /></mesh>
+      <mesh position={[SK_STX, SK_UB+SK_UH/2, -SK_BD/2+0.05]}><boxGeometry args={[SK_STW, SK_UH*0.5, SK_BD*0.6]} /><meshStandardMaterial color="#888" metalness={0.5} roughness={0.3} /></mesh>
+      <mesh position={[SK_FX, 1.05, -SK_BD/2]}><boxGeometry args={[SK_FW-SK_G, 2.10, SK_BD]} /><meshStandardMaterial color="#e8e8e8" /></mesh>
+      <mesh position={[SK_FX, 2.10+0.15, -SK_BD/2]}><boxGeometry args={[SK_FW-SK_G, 0.30, SK_BD]} /><meshStandardMaterial color="#f5f0e8" /></mesh>
+      <mesh position={[SK_PX, 1.20, -SK_BD/2]}><boxGeometry args={[SK_PW-SK_G, 2.40, SK_BD]} /><meshStandardMaterial color="#f5f0e8" /></mesh>
+    </group>
+  );
+}
