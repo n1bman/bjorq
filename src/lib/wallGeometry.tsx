@@ -30,6 +30,10 @@ export interface WallRenderOptions {
   selectedOpeningId?: string | null;
   /** Whether to render inner window reveal geometry */
   includeWindowReveal?: boolean;
+  /** Extra texture scale multiplier from room */
+  extraTextureScale?: number;
+  /** Texture rotation in degrees from room */
+  textureRotationDeg?: number;
 }
 
 export interface CornerBlockOptions {
