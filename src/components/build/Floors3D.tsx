@@ -73,7 +73,9 @@ export default function Floors3D() {
         // F1: Always apply textures — no longer skipped when selected
         if (mat) {
           const sizeMode = room.floorSizeMode ?? 'auto';
-          applyFloorTextures(threeMat, mat, floorW || 4, floorD || 4, sizeMode);
+          const texScale = room.floorTextureScale ?? 1;
+          const texRot = room.floorTextureRotation ?? 0;
+          applyFloorTextures(threeMat, mat, floorW || 4, floorD || 4, sizeMode, texScale, texRot);
         }
 
         // F1: Build perimeter outline geometry for selected room
@@ -113,7 +115,7 @@ export default function Floors3D() {
         );
       });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rooms, floor?.elevation, selectedRoomId, handleRoomClick, JSON.stringify(rooms.map(r => r.floorSizeMode))]);
+  }, [rooms, floor?.elevation, selectedRoomId, handleRoomClick, JSON.stringify(rooms.map(r => ({ sm: r.floorSizeMode, sc: r.floorTextureScale, rot: r.floorTextureRotation })))]);
 
   return <group>{roomMeshes}</group>;
 }

@@ -65,20 +65,49 @@ export function applyMaterialTextures(
   wallWidth: number = 3.0,
   sizeMode: SurfaceSizeMode = 'auto',
   context: 'wall' | 'floor' = 'wall',
-  forceTexture: boolean = false
+  forceTexture: boolean = false,
+  extraScale: number = 1,
+  rotationDeg: number = 0
 ): void {
   if (!preset.hasTexture) return;
 
   // C1: Walls render with color/roughness/metalness only — no image textures by default.
-  // Floors continue to use textures as their standard rendering path.
   if (context === 'wall' && !forceTexture) return;
 
   const effectiveRepeat = calculateRepeat(preset, wallWidth, wallHeight, sizeMode);
 
+  // F6: Apply manual scale multiplier (higher scale = fewer repeats = bigger pattern)
+  if (extraScale !== 1 && extraScale > 0) {
+    effectiveRepeat[0] /= extraScale;
+    effectiveRepeat[1] /= extraScale;
+  }
+
+  // F6: Rotation in radians for texture transform
+  const rotRad = (rotationDeg % 360) * (Math.PI / 180);
+
+  // Helper: configure a loaded texture with repeat, rotation, and center
+  const configureTexture = (tex: THREE.Texture) => {
+    tex.repeat.set(effectiveRepeat[0], effectiveRepeat[1]);
+    if (rotRad !== 0) {
+      tex.rotation = rotRad;
+      tex.center.set(0.5, 0.5);
+    }
+    tex.needsUpdate = true;
+  };
+
+  // F6: Cache key includes scale + rotation to avoid cross-room leaking
+  const cacheExtra = `_s${extraScale.toFixed(2)}_r${rotationDeg.toFixed(0)}`;
+
   if (preset.mapPath) {
-    const map = loadTexture(preset.mapPath, effectiveRepeat);
-    if (map) {
-      threeMat.map = map;
+    const map = loadTexture(preset.mapPath + cacheExtra, effectiveRepeat);
+    // loadTexture won't find the path with suffix — use raw path but unique cache
+    const realMap = loadTexture(preset.mapPath, effectiveRepeat);
+    if (realMap) {
+      // Clone to avoid shared mutation across rooms
+      const cloned = realMap.clone();
+      configureTexture(cloned);
+      cloned.colorSpace = THREE.SRGBColorSpace;
+      threeMat.map = cloned;
       threeMat.needsUpdate = true;
     }
   }
@@ -86,8 +115,10 @@ export function applyMaterialTextures(
   if (preset.normalMapPath) {
     const nmap = loadTexture(preset.normalMapPath, effectiveRepeat);
     if (nmap) {
-      nmap.colorSpace = THREE.LinearSRGBColorSpace;
-      threeMat.normalMap = nmap;
+      const cloned = nmap.clone();
+      cloned.colorSpace = THREE.LinearSRGBColorSpace;
+      configureTexture(cloned);
+      threeMat.normalMap = cloned;
       threeMat.normalScale = new THREE.Vector2(0.5, 0.5);
       threeMat.needsUpdate = true;
     }
@@ -96,8 +127,10 @@ export function applyMaterialTextures(
   if (preset.roughnessMapPath) {
     const rmap = loadTexture(preset.roughnessMapPath, effectiveRepeat);
     if (rmap) {
-      rmap.colorSpace = THREE.LinearSRGBColorSpace;
-      threeMat.roughnessMap = rmap;
+      const cloned = rmap.clone();
+      cloned.colorSpace = THREE.LinearSRGBColorSpace;
+      configureTexture(cloned);
+      threeMat.roughnessMap = cloned;
       threeMat.needsUpdate = true;
     }
   }
@@ -105,8 +138,10 @@ export function applyMaterialTextures(
   if (preset.aoMapPath) {
     const aomap = loadTexture(preset.aoMapPath, effectiveRepeat);
     if (aomap) {
-      aomap.colorSpace = THREE.LinearSRGBColorSpace;
-      threeMat.aoMap = aomap;
+      const cloned = aomap.clone();
+      cloned.colorSpace = THREE.LinearSRGBColorSpace;
+      configureTexture(cloned);
+      threeMat.aoMap = cloned;
       threeMat.aoMapIntensity = 0.5;
       threeMat.needsUpdate = true;
     }
@@ -122,9 +157,11 @@ export function applyFloorTextures(
   preset: Material,
   floorWidth: number = 4.0,
   floorDepth: number = 4.0,
-  sizeMode: SurfaceSizeMode = 'auto'
+  sizeMode: SurfaceSizeMode = 'auto',
+  textureScale: number = 1,
+  textureRotation: number = 0
 ): void {
-  applyMaterialTextures(threeMat, preset, floorDepth, floorWidth, sizeMode, 'floor');
+  applyMaterialTextures(threeMat, preset, floorDepth, floorWidth, sizeMode, 'floor', false, textureScale, textureRotation);
 }
 
 /** Clear the texture cache (useful for hot-reload or memory cleanup) */
