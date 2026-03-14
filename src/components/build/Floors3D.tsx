@@ -73,7 +73,9 @@ export default function Floors3D() {
         // F1: Always apply textures — no longer skipped when selected
         if (mat) {
           const sizeMode = room.floorSizeMode ?? 'auto';
-          applyFloorTextures(threeMat, mat, floorW || 4, floorD || 4, sizeMode);
+          const texScale = room.floorTextureScale ?? 1;
+          const texRot = room.floorTextureRotation ?? 0;
+          applyFloorTextures(threeMat, mat, floorW || 4, floorD || 4, sizeMode, texScale, texRot);
         }
 
         // F1: Build perimeter outline geometry for selected room
