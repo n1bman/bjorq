@@ -1221,6 +1221,17 @@ function LightFixtureMarker({ position, id, onSelect, onDragStart, selected }: M
 
   const brightness = isOn ? (lightData?.brightness ?? 200) / 255 : 0;
 
+  // Per-device light config with fixture-model defaults
+  const cfg = useMemo(() => {
+    const defaults: Record<string, { intensity: number; distance: number; angle: number; penumbra: number }> = {
+      'led-bulb': { intensity: 1, distance: 2, angle: Math.PI, penumbra: 0 },
+      'led-bar':  { intensity: 1.5, distance: 3, angle: Math.PI / 4, penumbra: 0.7 },
+      'led-spot': { intensity: 2, distance: 2.5, angle: Math.PI / 10, penumbra: 0.3 },
+    };
+    const d = defaults[fixtureModel] ?? defaults['led-bulb'];
+    return { ...d, ...marker?.lightConfig };
+  }, [fixtureModel, marker?.lightConfig]);
+
   useFrame(() => {
     if (spotLightRef.current && spotTargetRef.current) {
       spotLightRef.current.target = spotTargetRef.current;
