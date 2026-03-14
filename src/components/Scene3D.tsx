@@ -54,12 +54,27 @@ function StandbyStaticCamera() {
   const cameraView = useAppStore((s) => s.standby.cameraView);
   const customPos = useAppStore((s) => s.standby.customPos);
   const customTarget = useAppStore((s) => s.standby.customTarget);
+  const targetPosRef = useRef(new THREE.Vector3());
+  const targetLookRef = useRef(new THREE.Vector3());
+  const currentLookAt = useRef(new THREE.Vector3());
+  const initialized = useRef(false);
 
-  useFrame(({ camera }) => {
+  useFrame(({ camera }, delta) => {
     const pos = cameraView === 'custom' && customPos ? customPos : standbyCameraPositions[cameraView] || standbyCameraPositions.standard;
     const target = cameraView === 'custom' && customTarget ? customTarget : standbyCameraTargets[cameraView] || standbyCameraTargets.standard;
-    if (pos) camera.position.set(pos[0], pos[1], pos[2]);
-    if (target) camera.lookAt(target[0], target[1], target[2]);
+    if (pos) targetPosRef.current.set(pos[0], pos[1], pos[2]);
+    if (target) targetLookRef.current.set(target[0], target[1], target[2]);
+
+    if (!initialized.current) {
+      camera.position.copy(targetPosRef.current);
+      currentLookAt.current.copy(targetLookRef.current);
+      camera.lookAt(currentLookAt.current);
+      initialized.current = true;
+    } else {
+      camera.position.lerp(targetPosRef.current, Math.min(1, delta * 3));
+      currentLookAt.current.lerp(targetLookRef.current, Math.min(1, delta * 3));
+      camera.lookAt(currentLookAt.current);
+    }
   });
 
   return null;
