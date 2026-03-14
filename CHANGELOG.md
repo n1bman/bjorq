@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-03-14
+
+### Fixed
+- **Enheter auto-placement** — Clicking "Enheter" no longer immediately enters light placement mode; a neutral `devices` tool opens the panel without placing on click
+- **Models below floor** — Y position clamped to ≥ 0 in device inspector height slider
+- **Wall corner geometry** — L-corners (2-wall junctions) now generate convex hull corner fill blocks; miter offset clamping tightened from 0.4 to 0.35 to reduce corner gaps
+
+### Added
+- **New light types** — `ceiling-small` (half-sized ceiling light) and `lightbar` (directional bar with spotlight)
+- **Ljusarmatur device type** — New `light-fixture` kind with 3 procedural 3D models: LED Bulb (E27 scale), LED Bar (frosted diffuser), LED Spot (puck-style)
+- **Smart Outlet (Vägguttag)** — New `smart-outlet` device under "Kontakter" category with wall-mounted 3D model and green status LED
+- **Multi-entity HA warning** — Inspector shows warning when multiple devices share the same HA entity; HAEntityPicker allows linking (no longer disabled for shared entities)
+- **Fixture model selector** — Device inspector shows armature model picker for light-fixture devices
+
+### Changed
+- Device placement tools panel defaults to no category expanded (prevents accidental placement)
+- "Kontakter" added as new device category in placement tools
+
 ## [1.2.1] - 2026-03-14
 
 ### Fixed
