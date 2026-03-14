@@ -232,7 +232,7 @@ export const presetMaterials: Material[] = [
     thumbnailUrl: 'https://acg-media.struffelproductions.com/file/ambientCG-Web/media/thumbnail/256-JPG-FFFFFF/Cork002.jpg',
     mapPath: 'https://acg-media.struffelproductions.com/file/ambientCG-Web/media/thumbnail/2048-JPG-FFFFFF/Cork002.jpg' },
   { id: 'floor-vinyl-plank', name: 'Vinylplanka', type: 'texture', color: '#b8a480', roughness: 0.50, surfaceCategory: 'texture', floorOnly: true,
-    hasTexture: true, source: 'ambientCG', realWorldSize: [0.18, 1.2],
+    hasTexture: true, source: 'ambientCG', realWorldSize: [1.0, 1.0],
     ambientCGId: 'WoodFloor038',
     thumbnailUrl: 'https://acg-media.struffelproductions.com/file/ambientCG-Web/media/thumbnail/256-JPG-FFFFFF/WoodFloor038.jpg',
     mapPath: 'https://acg-media.struffelproductions.com/file/ambientCG-Web/media/thumbnail/2048-JPG-FFFFFF/WoodFloor038.jpg' },

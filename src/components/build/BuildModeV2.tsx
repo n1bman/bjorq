@@ -1526,7 +1526,7 @@ function SurfaceEditor() {
                       <span className="text-[9px] text-muted-foreground">Skala</span>
                       <span className="text-[9px] font-mono text-foreground">{(room.floorTextureScale ?? 1).toFixed(1)}x</span>
                     </div>
-                    <input type="range" min="0.2" max="4" step="0.1"
+                    <input type="range" min="0.2" max="10" step="0.1"
                       value={room.floorTextureScale ?? 1}
                       onChange={(e) => {
                         if (!activeFloorId) return;
