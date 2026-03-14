@@ -247,7 +247,7 @@ export const presetMaterials: Material[] = [
     hasTexture: true, source: 'ambientCG', realWorldSize: [0.50, 0.50],
     ambientCGId: 'Fabric032',
     thumbnailUrl: 'https://acg-media.struffelproductions.com/file/ambientCG-Web/media/thumbnail/256-JPG-FFFFFF/Fabric032.jpg',
-    mapPath: '/textures/floor/carpet/loop_grey_diff.jpg' },
+    mapPath: 'https://acg-media.struffelproductions.com/file/ambientCG-Web/media/thumbnail/2048-JPG-FFFFFF/Fabric032.jpg' },
   { id: 'floor-cut-beige', name: 'Velour beige', type: 'custom', color: '#c8b898', roughness: 0.92, surfaceCategory: 'carpet', floorOnly: true,
     hasTexture: true, source: 'ambientCG', realWorldSize: [0.50, 0.50],
     ambientCGId: 'Fabric030',
