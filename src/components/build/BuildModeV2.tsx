@@ -2358,7 +2358,7 @@ const planritningTools: SubToolDef[] = [
   { tool: 'window', label: 'Fönster', icon: PanelTop },
   { tool: 'garage-door', label: 'Garage', icon: Warehouse },
   { tool: 'stairs', label: 'Trappa', icon: Footprints },
-  { tool: 'template', label: 'Mallar', icon: Package },
+  
   { tool: 'measure', label: 'Mät', icon: Ruler },
   { tool: 'calibrate', label: 'Skala', icon: Ruler },
   { tool: 'copy', label: 'Kopiera', icon: Import },
