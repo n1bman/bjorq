@@ -81,7 +81,7 @@ function LightMarker({ position, id, onSelect, onDragStart, selected }: MarkerPr
       )}
       {lightType === 'strip' && (
         <>
-          <pointLight color={lightColor} intensity={intensity * 0.6} distance={10} decay={1.5} />
+          <pointLight color={lightColor} intensity={intensity * 0.5} distance={6} decay={2} />
           {/* Elongated emissive strip mesh */}
           <mesh>
             <boxGeometry args={[0.6, 0.03, 0.05]} />
