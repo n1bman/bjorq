@@ -62,6 +62,7 @@ const kindLabels: Record<DeviceKind, string> = {
   cover: '🪟 Persienn', scene: '🎬 Scen', alarm: '🚨 Larm', 'water-heater': '🔥 Varmvatten',
   humidifier: '💧 Luftfuktare', siren: '🔔 Siren', valve: '🔧 Ventil',
   remote: '📡 Fjärr', 'lawn-mower': '🌿 Gräsklippare', speaker: '🔊 Högtalare', soundbar: '🎵 Soundbar',
+  'light-fixture': '💡 Ljusarmatur', 'smart-outlet': '🔌 Vägguttag',
 };
 
 export default function DevicePlacementTools() {
