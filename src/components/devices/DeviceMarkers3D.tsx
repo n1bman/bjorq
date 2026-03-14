@@ -1255,7 +1255,7 @@ function LightFixtureMarker({ position, id, onSelect, onDragStart, selected }: M
             <sphereGeometry args={[0.03, 16, 16]} />
             <meshStandardMaterial color={lightColor} emissive={lightColor} emissiveIntensity={isOn ? brightness * 3 : 0.1} transparent opacity={isOn ? 0.95 : 0.5} />
           </mesh>
-          <pointLight color={lightColor} intensity={isOn ? brightness * 1 : 0} distance={2} decay={2} />
+          <pointLight color={lightColor} intensity={isOn ? brightness * cfg.intensity : 0} distance={cfg.distance} decay={2} />
         </>
       )}
       {fixtureModel === 'led-bar' && (
