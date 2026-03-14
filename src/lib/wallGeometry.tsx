@@ -708,7 +708,7 @@ export function generateWallSegments(
   elevation: number,
   options?: WallRenderOptions,
 ): JSX.Element[] {
-  const { origLength, origCx, origCz, angle, length: trimmedLength, cx: centerX, cz: centerZ } = computeWallMitering(wall, allWalls);
+  const { origLength, origCx, origCz, angle } = computeWallMitering(wall, allWalls);
   const miter = computeMiterOffsets(wall, allWalls);
   const wallHeight = wall.height;
 
@@ -719,7 +719,7 @@ export function generateWallSegments(
   const emissiveIntensity = options?.emissiveIntensity ?? 0;
 
   // Create mitered geometry
-  const geo = createMiteredWallGeometry(origLength, wallHeight, wall.thickness, miter, wall.openings);
+  const geo = createMiteredWallGeometry(origLength, wallHeight, wall.thickness, miter);
 
   // Build material array
   const mats = createWallMaterials({
