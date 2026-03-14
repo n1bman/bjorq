@@ -184,7 +184,7 @@ export function computeMiterOffsets(wall: WallSegment, allWalls: WallSegment[], 
     if (!agree) continue; // Disagreement (+ junction) → flat end
 
     // Clamp to avoid extreme miters at very acute angles
-    const maxOffset = len * 0.4;
+    const maxOffset = len * 0.35;
     useOffset = Math.max(-maxOffset, Math.min(maxOffset, useOffset));
 
     // Convert t (along wallInDir) to local X offsets
