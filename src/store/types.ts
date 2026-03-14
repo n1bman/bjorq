@@ -407,6 +407,7 @@ export interface DeviceMarker {
   widgetConfig?: WidgetConfig;
   energyTracking?: EnergyTracking;
   lightType?: LightType;
+  fixtureModel?: 'led-bulb' | 'led-bar' | 'led-spot';
   estimatedWatts?: number;
 }
 
