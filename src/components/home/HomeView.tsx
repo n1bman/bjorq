@@ -13,7 +13,7 @@ import { useWeatherSync } from '../../hooks/useWeatherSync';
 import { Eye, EyeOff, Lightbulb, Thermometer, Wind, Camera, Power, Tv, Fan, Shield, Droplets, X, Wifi, Save } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Switch } from '../ui/switch';
-import { Slider } from '../ui/slider';
+import { Button } from '../ui/button';
 import { Button } from '../ui/button';
 import type { DeviceKind } from '../../store/types';
 import { cameraRef } from '../../lib/cameraRef';
