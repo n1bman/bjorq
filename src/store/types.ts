@@ -839,7 +839,7 @@ export interface ActivityEvent {
 }
 
 // ─── User Profile ───
-export type LightType = 'ceiling' | 'strip' | 'wall' | 'spot';
+export type LightType = 'ceiling' | 'ceiling-small' | 'strip' | 'wall' | 'spot' | 'lightbar';
 
 export interface WifiSettings {
   ssid: string;
