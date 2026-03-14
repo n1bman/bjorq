@@ -634,20 +634,25 @@ function PropInspector({ propId, close }: { propId: string; close: React.ReactNo
 
       <div className="space-y-1.5">
         <div className="flex items-center gap-1 text-muted-foreground"><Move size={12} /> Position</div>
-        {(['X', 'Y', 'Z'] as const).map((axis, i) => (
-          <div key={axis} className="flex items-center gap-2">
-            <span className="text-[10px] text-muted-foreground w-3">{axis}</span>
-            <Slider min={-20} max={20} step={0.1} value={[prop.position[i]]}
-              onValueChange={([v]) => {
-                const pos = [...prop.position] as [number, number, number];
-                pos[i] = v;
-                updateProp(prop.id, { position: pos });
-              }}
-              className="flex-1"
-            />
-            <span className="text-[10px] text-foreground w-8 text-right">{prop.position[i].toFixed(1)}</span>
-          </div>
-        ))}
+        {(['X', 'Y', 'Z'] as const).map((axis, i) => {
+          const propFloor = useAppStore.getState().layout.floors.find(f => f.id === prop.floorId);
+          const propFloorElev = propFloor?.elevation ?? 0;
+          const minVal = i === 1 ? propFloorElev : -20;
+          return (
+            <div key={axis} className="flex items-center gap-2">
+              <span className="text-[10px] text-muted-foreground w-3">{axis}</span>
+              <Slider min={minVal} max={20} step={0.1} value={[i === 1 ? Math.max(propFloorElev, prop.position[i]) : prop.position[i]]}
+                onValueChange={([v]) => {
+                  const pos = [...prop.position] as [number, number, number];
+                  pos[i] = i === 1 ? Math.max(propFloorElev, v) : v;
+                  updateProp(prop.id, { position: pos });
+                }}
+                className="flex-1"
+              />
+              <span className="text-[10px] text-foreground w-8 text-right">{prop.position[i].toFixed(1)}</span>
+            </div>
+          );
+        })}
       </div>
 
       <div className="space-y-1.5">
