@@ -94,7 +94,15 @@ export default function HomeView() {
 
   return (
     <div className="fixed inset-0 bg-background">
-      <div className="absolute inset-0">
+      <div
+        className="absolute inset-0"
+        onPointerDown={() => {
+          sceneLongPressRef.current = setTimeout(() => setShowSaveView(true), 800);
+        }}
+        onPointerUp={() => { if (sceneLongPressRef.current) { clearTimeout(sceneLongPressRef.current); sceneLongPressRef.current = null; } }}
+        onPointerCancel={() => { if (sceneLongPressRef.current) { clearTimeout(sceneLongPressRef.current); sceneLongPressRef.current = null; } }}
+        onPointerLeave={() => { if (sceneLongPressRef.current) { clearTimeout(sceneLongPressRef.current); sceneLongPressRef.current = null; } }}
+      >
         <Scene3D />
       </div>
 
