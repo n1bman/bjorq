@@ -207,9 +207,35 @@ function SceneContent() {
           }
         }
 
+        // 90° axis-aligned snapping
+        let isAxisAligned = false;
+        if (wallDrawing.isDrawing && wallDrawing.nodes.length > 0) {
+          const lastNode = wallDrawing.nodes[wallDrawing.nodes.length - 1];
+          const dx = snapped[0] - lastNode[0];
+          const dz = snapped[1] - lastNode[1];
+          const dist = Math.hypot(dx, dz);
+          if (dist > 0.1) {
+            const angleDeg = (Math.atan2(dz, dx) * 180 / Math.PI + 360) % 360;
+            // Check if within ±3° of 0/90/180/270
+            for (const target of [0, 90, 180, 270, 360]) {
+              if (Math.abs(angleDeg - target) < 3) {
+                isAxisAligned = true;
+                // Snap to exact axis
+                if (target === 0 || target === 180 || target === 360) {
+                  snapped = [snapped[0], lastNode[1]]; // lock Z
+                } else {
+                  snapped = [lastNode[0], snapped[1]]; // lock X
+                }
+                break;
+              }
+            }
+          }
+        }
+
         setCursorPos(snapped);
         setCursorSnapped(nodeSnap.isSnapped || isFirstNodeSnap);
         setCursorMidSnap(!!nodeSnap.isMidSnap && !isFirstNodeSnap);
+        setCursorAxisAligned(isAxisAligned);
       }
     },
     [activeTool, snapToGrid, floors, activeFloorId, wallDrawing]
