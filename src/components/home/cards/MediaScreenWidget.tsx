@@ -59,32 +59,32 @@ export default function MediaScreenWidget() {
         const volume = data.volume;
 
         return (
-          <div key={m.id} className="glass-panel rounded-2xl overflow-hidden">
-            {/* Artwork / header */}
+          <div key={m.id} className="glass-panel glass-panel-hover rounded-2xl overflow-hidden">
+            {/* Artwork / header — compact */}
             <div className={cn(
-              'relative h-28 flex items-end p-3',
+              'relative h-16 flex items-end p-3',
               isOn ? 'bg-gradient-to-br from-primary/20 to-secondary' : 'bg-muted'
             )}>
               {artworkUrl && isOn && (
                 <img
                   src={artworkUrl}
                   alt=""
-                  className="absolute inset-0 w-full h-full object-cover opacity-60"
+                  className="absolute inset-0 w-full h-full object-cover opacity-50"
                   onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                 />
               )}
               <div className="absolute inset-0 bg-gradient-to-t from-background/90 to-transparent" />
               <div className="relative z-10 flex items-center gap-2 w-full">
-                {isScreen ? <Tv size={16} className="text-primary shrink-0" /> : <Music size={16} className="text-primary shrink-0" />}
+                {isScreen ? <Tv size={14} className="text-primary shrink-0" /> : <Music size={14} className="text-primary shrink-0" />}
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-foreground truncate">{title || m.name || m.kind}</p>
-                  {artist && <p className="text-[10px] text-muted-foreground truncate">{artist}</p>}
-                  <div className="flex items-center gap-2 mt-0.5">
+                  <div className="flex items-center gap-2">
+                    {artist && <span className="text-[10px] text-muted-foreground truncate">{artist}</span>}
                     {appName && <span className="text-[9px] text-primary/70">{appName}</span>}
                     {source && <span className="text-[9px] text-muted-foreground">{source}</span>}
                   </div>
                 </div>
-                <span className={cn('w-2.5 h-2.5 rounded-full shrink-0', isOn ? 'bg-green-400' : 'bg-muted-foreground/30')} />
+                <span className={cn('w-2 h-2 rounded-full shrink-0', isOn ? 'bg-green-400' : 'bg-muted-foreground/30')} />
               </div>
             </div>
 

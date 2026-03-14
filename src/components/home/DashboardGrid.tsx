@@ -461,46 +461,40 @@ function WidgetsCategory() {
 
 function SettingsCategory() {
   return (
-    <div className="max-w-[1100px] mx-auto space-y-[var(--space-section)]">
-      {/* Profil */}
-      <section className="space-y-1">
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1">Profil</h2>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+    <div className="settings-page">
+      <section>
+        <h2>Profil</h2>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
           <ProfilePanel />
         </div>
       </section>
 
-      {/* Utseende */}
-      <section className="space-y-1">
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1">Utseende</h2>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+      <section>
+        <h2>Utseende</h2>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
           <ThemeCard />
         </div>
       </section>
 
-      {/* Skärm */}
-      <section className="space-y-1">
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1">Skärm</h2>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+      <section>
+        <h2>Skärm</h2>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
           <DisplaySettings />
           <StandbySettingsPanel />
           <CameraStartSettings />
         </div>
       </section>
 
-
-      {/* System */}
-      <section className="space-y-1">
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1">System</h2>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+      <section>
+        <h2>System</h2>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
           <SystemStatusCard />
         </div>
       </section>
 
-      {/* Anslutning */}
-      <section className="space-y-1">
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1">Anslutning</h2>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+      <section>
+        <h2>Anslutning</h2>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
           <HAConnectionPanel />
           <WizardConnectionPanel />
           <LocationSettings />
@@ -508,10 +502,9 @@ function SettingsCategory() {
         </div>
       </section>
 
-      {/* Data */}
-      <section className="space-y-1">
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1">Data</h2>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+      <section>
+        <h2>Data</h2>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
           <ProjectManagerPanel />
           <DataBackupCard />
         </div>
@@ -522,10 +515,19 @@ function SettingsCategory() {
 
 function GraphicsCategory() {
   return (
-    <div className="max-w-[700px] mx-auto space-y-4">
-      <GraphicsSettings />
-      <SunWeatherPanel />
-      <EnvironmentPanel />
+    <div className="settings-page">
+      <section>
+        <h2>Renderingsinställningar</h2>
+        <GraphicsSettings />
+      </section>
+      <section>
+        <h2>Sol & Väder</h2>
+        <SunWeatherPanel />
+      </section>
+      <section>
+        <h2>Miljö & Atmosfär</h2>
+        <EnvironmentPanel />
+      </section>
     </div>
   );
 }
