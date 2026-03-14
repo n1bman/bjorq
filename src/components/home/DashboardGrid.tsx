@@ -81,8 +81,12 @@ const kindCategory: Record<DeviceKind, string> = {
   speaker: 'Media', soundbar: 'Media',
 };
 
+/** Light-type device kinds that should be grouped by room */
+const LIGHT_KINDS: Set<DeviceKind> = new Set(['light', 'switch', 'power-outlet']);
+
 function HomeCategory() {
   const markers = useAppStore((s) => s.devices.markers);
+  const floors = useAppStore((s) => s.layout.floors);
   const customCategories = useAppStore((s) => s.customCategories);
   const moveDeviceToCategory = useAppStore((s) => s.moveDeviceToCategory);
   const reorderCategories = useAppStore((s) => s.reorderCategories);
@@ -91,6 +95,17 @@ function HomeCategory() {
   const [showManager, setShowManager] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [draggingCatIndex, setDraggingCatIndex] = useState<number | null>(null);
+
+  // Build room name lookup from floors
+  const roomNameMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const floor of floors) {
+      for (const room of floor.rooms) {
+        map[room.id] = room.name || 'Rum';
+      }
+    }
+    return map;
+  }, [floors]);
 
   let entries: { key: string; label: string; catId?: string; devices: DeviceMarker[] }[];
 
@@ -110,13 +125,27 @@ function HomeCategory() {
       entries.push({ key: 'uncategorized', label: '⚙️ Övrigt', devices: uncategorized });
     }
   } else {
-    const grouped: Record<string, DeviceMarker[]> = {};
+    // Room-based grouping for lights, kind-based for everything else
+    const lightsByRoom: Record<string, DeviceMarker[]> = {};
+    const otherByKind: Record<string, DeviceMarker[]> = {};
+
     for (const m of markers) {
-      const cat = m.userCategory || kindCategory[m.kind] || 'Övrigt';
-      if (!grouped[cat]) grouped[cat] = [];
-      grouped[cat].push(m);
+      if (LIGHT_KINDS.has(m.kind)) {
+        const roomName = m.roomId ? (roomNameMap[m.roomId] || 'Rum') : 'Övrigt';
+        const key = `💡 ${roomName}`;
+        if (!lightsByRoom[key]) lightsByRoom[key] = [];
+        lightsByRoom[key].push(m);
+      } else {
+        const cat = m.userCategory || kindCategory[m.kind] || 'Övrigt';
+        if (!otherByKind[cat]) otherByKind[cat] = [];
+        otherByKind[cat].push(m);
+      }
     }
-    entries = Object.entries(grouped).map(([label, devices]) => ({ key: label, label, devices }));
+
+    entries = [
+      ...Object.entries(lightsByRoom).map(([label, devices]) => ({ key: label, label, devices })),
+      ...Object.entries(otherByKind).map(([label, devices]) => ({ key: label, label, devices })),
+    ];
   }
 
   const handleDropDevice = (categoryId: string, deviceId: string) => {
