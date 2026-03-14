@@ -154,7 +154,7 @@ export const presetMaterials: Material[] = [
     hasTexture: true, source: 'ambientCG', realWorldSize: [0.20, 1.2],
     ambientCGId: 'WoodFloor043',
     thumbnailUrl: 'https://acg-media.struffelproductions.com/file/ambientCG-Web/media/thumbnail/256-JPG-FFFFFF/WoodFloor043.jpg',
-    mapPath: '/textures/floor/wood/smoked_oak_diff.jpg' },
+    mapPath: 'https://acg-media.struffelproductions.com/file/ambientCG-Web/media/thumbnail/2048-JPG-FFFFFF/WoodFloor043.jpg' },
   { id: 'floor-bamboo', name: 'Bambu', type: 'wood', color: '#c8b480', roughness: 0.55, surfaceCategory: 'wood', floorOnly: true,
     hasTexture: true, source: 'ambientCG', realWorldSize: [0.15, 0.90],
     ambientCGId: 'WoodFloor006',
