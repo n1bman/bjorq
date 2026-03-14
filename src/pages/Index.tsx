@@ -1,9 +1,7 @@
 import { useEffect, useState } from 'react';
 import BuildModeV2 from '../components/build/BuildModeV2';
-import HomeView from '../components/home/HomeView';
-import DashboardView from '../components/home/DashboardView';
+import DashboardShell from '../components/home/DashboardShell';
 import StandbyMode from '../components/standby/StandbyMode';
-import ModeHeader from '../components/ModeHeader';
 import PerformanceHUD from '../components/home/PerformanceHUD';
 import { useAppStore, initHostedMode, autoDetectPerformance } from '../store/useAppStore';
 import { useHomeAssistant } from '../hooks/useHomeAssistant';
@@ -26,8 +24,7 @@ const IndexInner = () => {
   useComfortEngine();
 
   if (appMode === 'standby') return <StandbyMode />;
-  if (appMode === 'home') return <><HomeView /><PerformanceHUD /></>;
-  if (appMode === 'dashboard') return <><DashboardView /><PerformanceHUD /></>;
+  if (appMode === 'home' || appMode === 'dashboard') return <><DashboardShell /><PerformanceHUD /></>;
 
   return (
     <div className="fixed inset-0 bg-background overflow-hidden">

@@ -987,6 +987,20 @@ export interface BuildProject {
 // ─── App State ───
 export type AppMode = 'home' | 'dashboard' | 'build' | 'standby';
 
+// ─── Dashboard Categories & Widget Layouts ───
+export type DashCategory = 'home' | 'weather' | 'calendar' | 'devices' | 'energy' | 'climate' | 'automations' | 'scenes' | 'surveillance' | 'robot' | 'activity' | 'widgets' | 'graphics' | 'settings';
+
+export interface WidgetPlacement {
+  widgetId: string;
+  order: number;
+  colSpan?: 1 | 2;
+}
+
+export interface DashboardSettings {
+  activeCategory: DashCategory;
+  categoryLayouts: Partial<Record<DashCategory, WidgetPlacement[]>>;
+}
+
 // ─── Wizard Connection ───
 export interface WizardConnection {
   url: string;
@@ -1022,6 +1036,11 @@ export interface AppState {
   comfort: ComfortState;
   terrain: TerrainSettings;
   wizard: WizardConnection;
+  dashboard: DashboardSettings;
+
+  // Dashboard actions
+  setDashCategory: (cat: DashCategory) => void;
+  setCategoryLayout: (cat: DashCategory, widgets: WidgetPlacement[]) => void;
 
   // Wizard actions
   setWizard: (changes: Partial<WizardConnection>) => void;

@@ -92,6 +92,7 @@ function syncProfileToServer() {
       automations: s.automations,
       savedScenes: s.savedScenes,
       wizard: s.wizard,
+      dashboard: s.dashboard,
     }).catch((err) => console.warn('[Sync] Failed to save profiles:', err));
   });
 }
@@ -321,6 +322,9 @@ const storeCreator = (set: any, get: any): AppState => ({
   comfort: { rules: [], override: { active: false } },
   terrain: { enabled: false, grassColor: '#4a7c3f', grassRadius: 30, trees: [] },
   wizard: { url: '', status: 'disconnected' },
+  dashboard: { activeCategory: 'home' as const, categoryLayouts: {} },
+  setDashCategory: (cat) => { set((s: any) => ({ dashboard: { ...s.dashboard, activeCategory: cat } })); syncProfileToServer(); },
+  setCategoryLayout: (cat, widgets) => { set((s: any) => ({ dashboard: { ...s.dashboard, categoryLayouts: { ...s.dashboard.categoryLayouts, [cat]: widgets } } })); syncProfileToServer(); },
   setWizard: (changes) => { set((s: any) => ({ wizard: { ...s.wizard, ...changes } })); syncProfileToServer(); },
   addComfortRule: (rule) => { set((s: any) => ({ comfort: { ...s.comfort, rules: [...s.comfort.rules, rule] } })); syncProfileToServer(); },
   removeComfortRule: (id) => { set((s: any) => ({ comfort: { ...s.comfort, rules: s.comfort.rules.filter((r: any) => r.id !== id) } })); syncProfileToServer(); },
