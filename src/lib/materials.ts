@@ -146,7 +146,7 @@ export const presetMaterials: Material[] = [
     thumbnailUrl: 'https://acg-media.struffelproductions.com/file/ambientCG-Web/media/thumbnail/256-JPG-FFFFFF/WoodFloor040.jpg',
     mapPath: 'https://acg-media.struffelproductions.com/file/ambientCG-Web/media/thumbnail/2048-JPG-FFFFFF/WoodFloor040.jpg' },
   { id: 'floor-ash-white', name: 'Ask vitvax', type: 'wood', color: '#e8dcc8', roughness: 0.68, surfaceCategory: 'wood', floorOnly: true,
-    hasTexture: true, source: 'ambientCG', realWorldSize: [0.18, 1.2],
+    hasTexture: true, source: 'ambientCG', realWorldSize: [1.0, 1.0],
     ambientCGId: 'WoodFloor044',
     thumbnailUrl: 'https://acg-media.struffelproductions.com/file/ambientCG-Web/media/thumbnail/256-JPG-FFFFFF/WoodFloor044.jpg',
     mapPath: 'https://acg-media.struffelproductions.com/file/ambientCG-Web/media/thumbnail/2048-JPG-FFFFFF/WoodFloor044.jpg' },
