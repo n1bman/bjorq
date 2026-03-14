@@ -1,7 +1,7 @@
 import type { Material, SurfaceSizeMode } from '../store/types';
 
 export const presetMaterials: Material[] = [
-  // ─── Paint ───
+  // ─── Paint (expanded palette) ───
   { id: 'mat-white-paint', name: 'Vit färg', type: 'paint', color: '#f2f0eb', roughness: 0.92, surfaceCategory: 'paint' },
   { id: 'mat-grey-paint', name: 'Grå färg', type: 'paint', color: '#8e8c88', roughness: 0.88, surfaceCategory: 'paint' },
   { id: 'mat-warm-beige', name: 'Varm beige', type: 'paint', color: '#d6c6a8', roughness: 0.92, surfaceCategory: 'paint' },
@@ -12,6 +12,22 @@ export const presetMaterials: Material[] = [
   { id: 'mat-charcoal', name: 'Kol', type: 'paint', color: '#3a3a3a', roughness: 0.88, surfaceCategory: 'paint' },
   { id: 'mat-cream', name: 'Grädde', type: 'paint', color: '#f5e8d0', roughness: 0.92, surfaceCategory: 'paint' },
   { id: 'mat-navy', name: 'Marinblå', type: 'paint', color: '#1e2a4a', roughness: 0.88, surfaceCategory: 'paint' },
+  // ─── Paint: Extended colors ───
+  { id: 'mat-soft-pink', name: 'Mjuk rosa', type: 'paint', color: '#e8c4c8', roughness: 0.92, surfaceCategory: 'paint' },
+  { id: 'mat-olive', name: 'Oliv', type: 'paint', color: '#6b7040', roughness: 0.90, surfaceCategory: 'paint' },
+  { id: 'mat-slate-blue', name: 'Skifferblå', type: 'paint', color: '#5a6a80', roughness: 0.88, surfaceCategory: 'paint' },
+  { id: 'mat-sand', name: 'Sand', type: 'paint', color: '#d8c8a8', roughness: 0.92, surfaceCategory: 'paint' },
+  { id: 'mat-moss', name: 'Mossa', type: 'paint', color: '#4a6848', roughness: 0.90, surfaceCategory: 'paint' },
+  { id: 'mat-plum', name: 'Plommon', type: 'paint', color: '#5a3050', roughness: 0.88, surfaceCategory: 'paint' },
+  { id: 'mat-rust', name: 'Rost', type: 'paint', color: '#a05030', roughness: 0.90, surfaceCategory: 'paint' },
+  { id: 'mat-sky-blue', name: 'Himmelsblå', type: 'paint', color: '#88b0d0', roughness: 0.90, surfaceCategory: 'paint' },
+  { id: 'mat-ivory', name: 'Elfenben', type: 'paint', color: '#f0e8d8', roughness: 0.92, surfaceCategory: 'paint' },
+  { id: 'mat-graphite', name: 'Grafit', type: 'paint', color: '#4a4a50', roughness: 0.86, surfaceCategory: 'paint' },
+  { id: 'mat-linen-white', name: 'Linnevit', type: 'paint', color: '#eae4d8', roughness: 0.92, surfaceCategory: 'paint' },
+  { id: 'mat-deep-green', name: 'Djupgrön', type: 'paint', color: '#2a4a38', roughness: 0.88, surfaceCategory: 'paint' },
+  { id: 'mat-mustard', name: 'Senap', type: 'paint', color: '#c8a030', roughness: 0.90, surfaceCategory: 'paint' },
+  { id: 'mat-pewter', name: 'Tenn', type: 'paint', color: '#9a9898', roughness: 0.85, surfaceCategory: 'paint' },
+  { id: 'mat-burgundy', name: 'Vinröd', type: 'paint', color: '#6a2030', roughness: 0.88, surfaceCategory: 'paint' },
 
   // ─── Wallpaper (B4: texture-ready, B5: realWorldSize) ───
   { id: 'mat-wp-linen', name: 'Linnetapet', type: 'wallpaper', color: '#e8e0d0', roughness: 0.75, surfaceCategory: 'wallpaper',

@@ -82,6 +82,7 @@ export interface WallOpening {
   materialId?: string;
   haEntityId?: string; // HA entity for garage-doors
   flipped?: boolean; // flip inside/outside orientation
+  openAmount?: number; // 0-1, how open the door/garage is (0=closed, 1=fully open)
 }
 
 export interface WallSegment {

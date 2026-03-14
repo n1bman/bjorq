@@ -478,17 +478,43 @@ function renderOpeningModels(
       );
     } else {
       const panelOffset = isSliding ? -0.15 : 0;
-      segments.push(
-        <mesh key={`${wall.id}-door-panel-${i}`}
-          position={new THREE.Vector3(localX + panelOffset, 0, 0)
-            .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
-            .add(new THREE.Vector3(origCx, opBottom + op.height / 2 + elevation, origCz)).toArray()}
-          rotation={[0, -angle, 0]} castShadow {...openingPointer}>
-          <boxGeometry args={[panelW, op.height - 0.06, 0.04]} />
-          <meshStandardMaterial color={isSliding ? '#5a4a3a' : doorColor} roughness={0.5}
-            emissive={opEmissive} emissiveIntensity={opEmissiveIntensity} />
-        </mesh>
-      );
+      const openAmt = op.openAmount ?? 0;
+      // Hinge point: left edge of panel (or right if flipped)
+      const hingeLocalX = localX + (op.flipped ? panelW / 2 : -panelW / 2);
+      const panelCenterLocalX = isSliding ? localX + panelOffset : hingeLocalX + (op.flipped ? -panelW / 2 : panelW / 2);
+      const doorRotY = op.flipped ? openAmt * Math.PI / 2 : -openAmt * Math.PI / 2;
+
+      const panelPos = new THREE.Vector3(panelCenterLocalX, 0, 0)
+        .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
+        .add(new THREE.Vector3(origCx, opBottom + op.height / 2 + elevation, origCz));
+
+      // For open doors, we need a group to rotate around hinge
+      if (openAmt > 0.01 && !isSliding) {
+        const hingePos = new THREE.Vector3(hingeLocalX, 0, 0)
+          .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
+          .add(new THREE.Vector3(origCx, opBottom + op.height / 2 + elevation, origCz));
+        segments.push(
+          <group key={`${wall.id}-door-pivot-${i}`}
+            position={hingePos.toArray()}
+            rotation={[0, -angle + doorRotY, 0]}>
+            <mesh position={[op.flipped ? -panelW / 2 : panelW / 2, 0, 0]} castShadow {...openingPointer}>
+              <boxGeometry args={[panelW, op.height - 0.06, 0.04]} />
+              <meshStandardMaterial color={isSliding ? '#5a4a3a' : doorColor} roughness={0.5}
+                emissive={opEmissive} emissiveIntensity={opEmissiveIntensity} />
+            </mesh>
+          </group>
+        );
+      } else {
+        segments.push(
+          <mesh key={`${wall.id}-door-panel-${i}`}
+            position={panelPos.toArray()}
+            rotation={[0, -angle, 0]} castShadow {...openingPointer}>
+            <boxGeometry args={[panelW, op.height - 0.06, 0.04]} />
+            <meshStandardMaterial color={isSliding ? '#5a4a3a' : doorColor} roughness={0.5}
+              emissive={opEmissive} emissiveIntensity={opEmissiveIntensity} />
+          </mesh>
+        );
+      }
       if (isSliding) {
         segments.push(
           <mesh key={`${wall.id}-door-rail-${i}`}

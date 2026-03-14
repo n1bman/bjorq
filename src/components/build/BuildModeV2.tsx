@@ -1371,10 +1371,10 @@ function SurfaceEditor() {
   }
 
   const isFloor = target === 'floor';
-  const categories = isFloor ? floorSurfaceCategories : wallSurfaceCategories;
-  const mats = getMaterialsByCategory(surfaceCat).filter((m: any) =>
-    isFloor ? true : !m.floorOnly
-  );
+  const categories = isFloor ? floorSurfaceCategories : (['paint'] as const);
+  const mats = isFloor
+    ? getMaterialsByCategory(surfaceCat).filter((m: any) => true)
+    : getMaterialsByCategory('paint'); // Wall: only flat paint colors, no textures
 
   const categoryIcons: Record<string, string> = {
     wood: '🪵', tile: '🔲', stone: '🪨', texture: '✦', carpet: '🧶',
@@ -2161,6 +2161,30 @@ function BibliotekWorkspace() {
                     <CheckCircle className="w-3.5 h-3.5" /> Spara ändringar
                   </Button>
                 )}
+                {/* Export button */}
+                <Button variant="outline" size="sm" className="w-full gap-1.5" onClick={() => {
+                  const entry = selectedAsset;
+                  if (!entry) return;
+                  // For user assets with catalog item, export as JSON metadata + model link
+                  const meta = {
+                    name: entry.name,
+                    category: entry.category,
+                    subcategory: entry.subcategory,
+                    source: entry.source,
+                    dimensions: entry.dimensions,
+                    tags: entry.tags,
+                  };
+                  const blob = new Blob([JSON.stringify(meta, null, 2)], { type: 'application/json' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `${entry.name.replace(/\s+/g, '_')}_meta.json`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                  toast.success('Metadata exporterad');
+                }}>
+                  <Download className="w-3.5 h-3.5" /> Exportera
+                </Button>
                 {selectedAsset.source === 'user' && selectedAsset.catalogItem && (
                   <Button variant="destructive" size="sm" className="w-full gap-1.5" onClick={() => {
                     removeFromCatalog(selectedAsset.catalogItem!.id);
@@ -2335,7 +2359,6 @@ const planritningTools: SubToolDef[] = [
   { tool: 'window', label: 'Fönster', icon: PanelTop },
   { tool: 'garage-door', label: 'Garage', icon: Warehouse },
   { tool: 'stairs', label: 'Trappa', icon: Footprints },
-  { tool: 'paint', label: 'Måla', icon: Paintbrush },
   { tool: 'template', label: 'Mallar', icon: Package },
   { tool: 'measure', label: 'Mät', icon: Ruler },
   { tool: 'calibrate', label: 'Skala', icon: Ruler },
@@ -2347,6 +2370,7 @@ const planritningTools: SubToolDef[] = [
 const inredningTools: SubToolDef[] = [
   { tool: 'select', label: 'Välj', icon: MousePointer2 },
   { tool: 'furnish' as BuildTool, label: 'Möbler', icon: Sofa },
+  { tool: 'paint', label: 'Måla', icon: Paintbrush },
   { tool: 'wizard' as BuildTool, label: 'Wizard', icon: Wand2 },
   { tool: 'place-light', label: 'Enheter', icon: Cpu },
 ];
@@ -2364,7 +2388,7 @@ function DesignTabBar() {
       setBuildTool('select');
       setCameraMode('topdown'); // 2D-first for structural work
     } else if (tab === 'inredning') {
-      setBuildTool('furnish' as any); // Catalog as primary surface
+      setBuildTool('select'); // Start with select — user clicks Möbler/Måla explicitly
       setCameraMode('3d'); // 3D-first for interior design
     }
     // bibliotek has no sub-tools or camera preference
@@ -2434,10 +2458,10 @@ export default function BuildModeV2() {
   const showImportPanel = !isBibliotek && activeTab === 'planritning' && isImported && activeTool === 'import';
   const showSurfacePanel = !isBibliotek && activeTool === 'paint';
   const showTemplatePanel = !isBibliotek && activeTab === 'planritning' && activeTool === 'template';
-  // In Inredning: catalog is always visible (primary surface). In Planritning: only when furnish/wizard tool active
+  // In Inredning: catalog only when furnish or wizard tool is active (not always). In Planritning: when furnish/wizard tool active
   const showCatalogPanel = !isBibliotek && !showSurfacePanel && (
     isInredning
-      ? !showDevicePanel  // always show unless device tool is active
+      ? (activeTool === ('furnish' as any) || activeTool === ('wizard' as any)) && !showDevicePanel
       : (activeTool === ('furnish' as any) || activeTool === ('wizard' as any))
   );
 

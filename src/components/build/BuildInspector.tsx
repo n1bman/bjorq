@@ -2,6 +2,7 @@ import { useAppStore } from '../../store/useAppStore';
 import { cn } from '../../lib/utils';
 import { X, Plus, DoorOpen, RotateCcw, Move, Trash2, Layers, Home, Lightbulb, ArrowRightLeft, Monitor, RectangleHorizontal, Warehouse, Upload, Paintbrush, Image, RotateCw } from 'lucide-react';
 import { Slider } from '../ui/slider';
+import { SliderWithInput } from '../ui/SliderWithInput';
 import { Input } from '../ui/input';
 import { Switch } from '../ui/switch';
 import { presetMaterials, addCustomMaterial, wallSurfaceCategories, floorSurfaceCategories, surfaceCategoryLabels, getMaterialsByCategory } from '../../lib/materials';
@@ -109,37 +110,33 @@ function OpeningInspector({ floorId, openingId, floor, close }: { floorId: strin
       )}
 
       <div className="space-y-2">
-        <label className="text-muted-foreground text-[10px]">Bredd (m)</label>
-        <div className="flex items-center gap-2">
-          <Slider min={0.3} max={isGarage ? 6 : 3} step={0.05} value={[foundOpening.width]}
-            onValueChange={([v]) => handleChange({ width: v })} className="flex-1" />
-          <span className="text-[10px] text-foreground w-8 text-right">{foundOpening.width.toFixed(2)}</span>
-        </div>
+        <SliderWithInput label="Bredd (m)" min={0.3} max={isGarage ? 6 : 3} step={0.05}
+          value={foundOpening.width} onValueChange={(v) => handleChange({ width: v })}
+          onCommitStart={pushUndo} />
 
-        <label className="text-muted-foreground text-[10px]">Höjd (m)</label>
-        <div className="flex items-center gap-2">
-          <Slider min={0.3} max={isGarage ? 4 : 3} step={0.05} value={[foundOpening.height]}
-            onValueChange={([v]) => handleChange({ height: v })} className="flex-1" />
-          <span className="text-[10px] text-foreground w-8 text-right">{foundOpening.height.toFixed(2)}</span>
-        </div>
+        <SliderWithInput label="Höjd (m)" min={0.3} max={isGarage ? 4 : 3} step={0.05}
+          value={foundOpening.height} onValueChange={(v) => handleChange({ height: v })}
+          onCommitStart={pushUndo} />
 
         {isWindow && (
-          <>
-            <label className="text-muted-foreground text-[10px]">Bröstningshöjd (m)</label>
-            <div className="flex items-center gap-2">
-              <Slider min={0} max={2} step={0.05} value={[foundOpening.sillHeight]}
-                onValueChange={([v]) => handleChange({ sillHeight: v })} className="flex-1" />
-              <span className="text-[10px] text-foreground w-8 text-right">{foundOpening.sillHeight.toFixed(2)}</span>
-            </div>
-          </>
+          <SliderWithInput label="Bröstningshöjd (m)" min={0} max={2} step={0.05}
+            value={foundOpening.sillHeight} onValueChange={(v) => handleChange({ sillHeight: v })}
+            onCommitStart={pushUndo} />
         )}
 
-        <label className="text-muted-foreground text-[10px]">Position längs vägg</label>
-        <div className="flex items-center gap-2">
-          <Slider min={0.05} max={0.95} step={0.01} value={[foundOpening.offset]}
-            onValueChange={([v]) => handleChange({ offset: v })} className="flex-1" />
-          <span className="text-[10px] text-foreground w-8 text-right">{(foundOpening.offset * 100).toFixed(0)}%</span>
-        </div>
+        <SliderWithInput label="Position längs vägg" min={0.05} max={0.95} step={0.01}
+          value={foundOpening.offset} onValueChange={(v) => handleChange({ offset: v })}
+          onCommitStart={pushUndo} suffix="%" decimals={0}
+        />
+
+        {/* Open amount for doors and garage doors */}
+        {(foundOpening.type === 'door' || foundOpening.type === 'garage-door') && (
+          <SliderWithInput label="Öppningsgrad" min={0} max={1} step={0.05}
+            value={foundOpening.openAmount ?? 0}
+            onValueChange={(v) => handleChange({ openAmount: v })}
+            onCommitStart={pushUndo} suffix="%" decimals={0}
+          />
+        )}
 
         {/* Style selector */}
         {foundOpening.type === 'door' && (

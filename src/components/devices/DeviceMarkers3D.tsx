@@ -71,17 +71,17 @@ function LightMarker({ position, id, onSelect, onDragStart, selected }: MarkerPr
     if (selected && onDragStart) { onDragStart(id, e); }
   }, [selected, onDragStart, id]);
 
-  const intensity = isOn ? brightness * 5 : 0;
+  const intensity = isOn ? brightness * 4 : 0;
 
   return (
     <group position={position} onClick={handleClick} onPointerDown={handlePointerDown}>
       {/* Light source varies by type */}
       {lightType === 'ceiling' && (
-        <pointLight color={lightColor} intensity={intensity} distance={8} decay={2} />
+        <pointLight color={lightColor} intensity={intensity} distance={5} decay={2} />
       )}
       {lightType === 'strip' && (
         <>
-          <pointLight color={lightColor} intensity={intensity * 0.6} distance={10} decay={1.5} />
+          <pointLight color={lightColor} intensity={intensity * 0.5} distance={6} decay={2} />
           {/* Elongated emissive strip mesh */}
           <mesh>
             <boxGeometry args={[0.6, 0.03, 0.05]} />
@@ -94,10 +94,10 @@ function LightMarker({ position, id, onSelect, onDragStart, selected }: MarkerPr
           <spotLight
             ref={spotLightRef}
             color={lightColor}
-            intensity={intensity * 2}
-            distance={12}
-            angle={Math.PI / 6}
-            penumbra={0.3}
+            intensity={intensity * 1.5}
+            distance={6}
+            angle={Math.PI / 7}
+            penumbra={0.4}
             decay={2}
             castShadow
             shadow-mapSize-width={512}
@@ -117,10 +117,10 @@ function LightMarker({ position, id, onSelect, onDragStart, selected }: MarkerPr
           <spotLight
             ref={spotLightRef}
             color={lightColor}
-            intensity={intensity * 1.5}
-            distance={8}
-            angle={Math.PI / 3}
-            penumbra={0.5}
+            intensity={intensity * 1.2}
+            distance={5}
+            angle={Math.PI / 4}
+            penumbra={0.6}
             decay={2}
             castShadow
             shadow-mapSize-width={512}
