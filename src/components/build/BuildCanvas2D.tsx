@@ -467,6 +467,9 @@ export default function BuildCanvas2D({ overlayMode = false }: { overlayMode?: b
   const updateDevice = useAppStore((s) => s.updateDevice);
   const setVacuumDock = useAppStore((s) => s.setVacuumDock);
   const addVacuumZone = useAppStore((s) => s.addVacuumZone);
+  const updateKitchenFixture = useAppStore((s) => s.updateKitchenFixture);
+  const [dragKitchenId, setDragKitchenId] = useState<string | null>(null);
+  const [dragKitchenOffset, setDragKitchenOffset] = useState<[number, number]>([0, 0]);
 
   const floor = floors.find((f) => f.id === activeFloorId);
   const walls = floor?.walls ?? [];
