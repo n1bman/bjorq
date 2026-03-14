@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.2] - 2026-03-14
+
+### Added
+- **Transparent hjälpsfär för ljusarmaturer i designläge** — alla ljusarmaturer (led-bulb, led-bar, led-spot, led-gu10) renderar nu en ljusblå semi-transparent sfär (radie 0.09, 20 % opacity) i Build-läge för bättre synlighet och enklare markering
+
 ## [1.5.1] - 2026-03-14
 
 ### Added
