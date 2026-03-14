@@ -1317,6 +1317,12 @@ function LightFixtureMarker({ position, id, onSelect, onDragStart, selected }: M
           <object3D ref={spotTargetRef} position={[0, -3, 0]} />
         </>
       )}
+      {useAppStore.getState().appMode === 'build' && (
+        <mesh>
+          <sphereGeometry args={[0.06, 16, 16]} />
+          <meshStandardMaterial color="#ffffff" transparent opacity={0.15} depthWrite={false} />
+        </mesh>
+      )}
       {selected && <SelectionRing radius={0.15} />}
     </group>
   );
