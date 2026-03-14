@@ -183,7 +183,7 @@ const CameraController = React.forwardRef(function CameraController(_props, _ref
 });
 
 
-function SceneContent() {
+function SceneContent({ onDeviceLongPress }: { onDeviceLongPress?: (id: string) => void }) {
   const appMode = useAppStore((s) => s.appMode);
   const sunAzimuth = useAppStore((s) => s.environment.sunAzimuth);
   const sunElevation = useAppStore((s) => s.environment.sunElevation);
@@ -270,7 +270,7 @@ function SceneContent() {
       <SceneKitchenFixtures />
       <WeatherEffects3D />
       <InlineTerrainEnvironment3D />
-      <DeviceMarkers3D />
+      <DeviceMarkers3D onLongPress={onDeviceLongPress} />
 
       {perf.environmentLight && <Environment preset="night" />}
       <CameraController />
@@ -305,7 +305,7 @@ function InlineTerrainEnvironment3D() {
 
 const MAX_RECOVERY = 3;
 
-export default function Scene3D() {
+export default function Scene3D({ onDeviceLongPress }: { onDeviceLongPress?: (id: string) => void }) {
   const shadows = useAppStore((s) => s.performance.shadows);
   const quality = useAppStore((s) => s.performance.quality);
   const postprocessing = useAppStore((s) => s.performance.postprocessing);
@@ -381,7 +381,7 @@ export default function Scene3D() {
         onCreated={handleCreated}
       >
         <Suspense fallback={null}>
-          <SceneContent />
+          <SceneContent onDeviceLongPress={onDeviceLongPress} />
         </Suspense>
       </Canvas>
     </div>

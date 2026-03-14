@@ -2,6 +2,7 @@
 import React, { useRef, useCallback, useMemo, useEffect, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { useAppStore } from '../../store/useAppStore';
+import { getDefaultState } from '../../store/useAppStore';
 import type { DeviceKind, DeviceMarker, VacuumZone, LightType } from '../../store/types';
 import * as THREE from 'three';
 import type { ThreeEvent } from '@react-three/fiber';
@@ -1225,7 +1226,7 @@ function LightFixtureMarker({ position, id, onSelect, onDragStart, selected }: M
   const cfg = useMemo(() => {
     const defaults: Record<string, { intensity: number; distance: number; angle: number; penumbra: number }> = {
       'led-bulb': { intensity: 1, distance: 2, angle: Math.PI, penumbra: 0 },
-      'led-bar':  { intensity: 1.5, distance: 3, angle: Math.PI / 4, penumbra: 0.7 },
+      'led-bar':  { intensity: 0.5, distance: 1.4, angle: (118 * Math.PI) / 180, penumbra: 0.7 },
       'led-spot': { intensity: 2, distance: 2.5, angle: Math.PI / 10, penumbra: 0.3 },
     };
     const d = defaults[fixtureModel] ?? defaults['led-bulb'];
@@ -1368,9 +1369,10 @@ const markerComponents: Record<DeviceKind, React.FC<MarkerProps>> = {
 
 interface DeviceMarkers3DProps {
   buildMode?: boolean;
+  onLongPress?: (id: string) => void;
 }
 
-export default function DeviceMarkers3D({ buildMode }: DeviceMarkers3DProps) {
+export default function DeviceMarkers3D({ buildMode, onLongPress }: DeviceMarkers3DProps) {
   const markers = useAppStore((s) => s.devices.markers);
   const floors = useAppStore((s) => s.layout.floors);
   const showDeviceMarkers = useAppStore((s) => s.homeView.showDeviceMarkers ?? true);
@@ -1395,10 +1397,35 @@ export default function DeviceMarkers3D({ buildMode }: DeviceMarkers3DProps) {
     'light-fixture', 'smart-outlet',
   ]), []);
 
+  // Long-press support for 3D markers in home mode
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressTriggered = useRef(false);
+
+  const handlePointerDown3D = useCallback((id: string) => {
+    if (buildMode || !onLongPress) return;
+    longPressTriggered.current = false;
+    longPressTimer.current = setTimeout(() => {
+      longPressTriggered.current = true;
+      onLongPress(id);
+    }, 500);
+  }, [buildMode, onLongPress]);
+
+  const handlePointerUp3D = useCallback(() => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  }, []);
+
   const handleSelect = useCallback((id: string) => {
     if (buildMode) {
       setSelection({ type: 'device', id });
     } else {
+      // If long-press was triggered, don't toggle
+      if (longPressTriggered.current) {
+        longPressTriggered.current = false;
+        return;
+      }
       // In home/dashboard mode: toggle device state on click
       const marker = markers.find((m) => m.id === id);
       if (marker && toggleableKinds.has(marker.kind)) {
@@ -1455,8 +1482,21 @@ export default function DeviceMarkers3D({ buildMode }: DeviceMarkers3DProps) {
     window.addEventListener('pointerup', onPointerUp);
   }, [buildMode, markers, camera, raycaster, gl, updateDevice]);
 
-  if (markers.length === 0) return null;
+  // Migrate stale light-fixture states (generic → light)
+  const setDeviceState = useAppStore((s) => s.setDeviceState);
+  useEffect(() => {
+    const states = useAppStore.getState().devices.deviceStates;
+    markers.forEach((m) => {
+      if (m.kind === 'light-fixture') {
+        const st = states[m.id];
+        if (!st || st.kind === 'generic') {
+          setDeviceState(m.id, getDefaultState('light-fixture'));
+        }
+      }
+    });
+  }, [markers, setDeviceState]);
 
+  if (markers.length === 0) return null;
   // When not in build mode and markers hidden: only render lights (for pointLight effect)
   const hideVisuals = !buildMode && !showDeviceMarkers;
 
@@ -1502,7 +1542,7 @@ export default function DeviceMarkers3D({ buildMode }: DeviceMarkers3DProps) {
         // Vacuum manages its own world-space position internally via useFrame,
         // so we must NOT set position on the outer group (causes double-offset).
         return (
-          <group key={marker.id} position={isVacuum ? [0, 0, 0] : marker.position} rotation={isVacuum ? [0, 0, 0] : rot} scale={[markerScale, markerScale, markerScale]} onContextMenu={(e: any) => { e.nativeEvent?.preventDefault?.(); e.stopPropagation(); }}>
+          <group key={marker.id} position={isVacuum ? [0, 0, 0] : marker.position} rotation={isVacuum ? [0, 0, 0] : rot} scale={[markerScale, markerScale, markerScale]} onContextMenu={(e: any) => { e.nativeEvent?.preventDefault?.(); e.stopPropagation(); }} onPointerDown={() => handlePointerDown3D(marker.id)} onPointerUp={handlePointerUp3D} onPointerLeave={handlePointerUp3D}>
             <Component
               position={isVacuum ? marker.position : ([0, 0, 0] as [number, number, number])}
               id={marker.id}
