@@ -1199,6 +1199,7 @@ function SoundbarMarker3D({ position, id, onSelect, onDragStart, selected }: Mar
 
 // ─── Light Fixture Marker ───
 function LightFixtureMarker({ position, id, onSelect, onDragStart, selected }: MarkerProps) {
+  const appMode = useAppStore((s) => s.appMode);
   const state = useAppStore((s) => s.devices.deviceStates[id]);
   const marker = useAppStore((s) => s.devices.markers.find((m) => m.id === id));
   const hasState = state?.kind === 'light';
