@@ -270,7 +270,7 @@ function SceneContent() {
       <SceneKitchenFixtures />
       <WeatherEffects3D />
       <InlineTerrainEnvironment3D />
-      <DeviceMarkers3D />
+      <DeviceMarkers3D onLongPress={onDeviceLongPress} />
 
       {perf.environmentLight && <Environment preset="night" />}
       <CameraController />
