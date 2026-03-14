@@ -10,13 +10,15 @@ import EnergyWidget from './cards/EnergyWidget';
 import TemperatureWidget from './cards/TemperatureWidget';
 import DeviceControlCard from './cards/DeviceControlCard';
 import { useWeatherSync } from '../../hooks/useWeatherSync';
-import { Eye, EyeOff, Lightbulb, Thermometer, Wind, Camera, Power, Tv, Fan, Shield, Droplets, X } from 'lucide-react';
+import { Eye, EyeOff, Lightbulb, Thermometer, Wind, Camera, Power, Tv, Fan, Shield, Droplets, X, Wifi, Save } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Switch } from '../ui/switch';
 import { Slider } from '../ui/slider';
+import { Button } from '../ui/button';
 import type { DeviceKind } from '../../store/types';
+import { cameraRef } from '../../lib/cameraRef';
 
-const TOGGLEABLE_KINDS = new Set(['light', 'switch', 'climate', 'vacuum', 'media_screen', 'power-outlet', 'camera', 'fridge', 'oven', 'washer']);
+const TOGGLEABLE_KINDS = new Set(['light', 'switch', 'climate', 'vacuum', 'media_screen', 'power-outlet', 'camera', 'fridge', 'oven', 'washer', 'light-fixture', 'smart-outlet']);
 
 const KIND_ICONS: Partial<Record<DeviceKind, typeof Lightbulb>> = {
   light: Lightbulb,
