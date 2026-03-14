@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-03-14
+
+### Added
+- **Unified Dashboard Shell** — new vertical nav rail (120px) replaces bottom tab bar; all categories accessible from left sidebar
+- **3D View as Widget** — 3D preview is now a draggable widget card in the Home grid, allowing other widgets to flow below it
+- **Room-based device grouping** — lights automatically grouped by room name instead of generic "Ljus" category
+- **Drag-to-reorder widgets** — touch-friendly long-press edit mode with wobble animation and pointer-based reordering
+- **Standby 3D preview** — live Scene3D preview in Standby settings for camera angle visualization
+- **Category management** — create custom device categories with drag-and-drop device assignment between categories
+
+### Changed
+- Dashboard layout uses full-width content flow instead of fixed 2-column 3D split
+- "Redigera", "Hantera kategorier", and "Klar" buttons unified on same toolbar row
+- Default camera angle moved closer (8,7,8) for better visibility in compact dashboard widget
+- Nav rail background unified with page background color
+- Device name text truncation improved to prevent names from disappearing in narrow cards
+
+### Fixed
+- Device names truncated to invisible in CategoryCard when slider and switch occupied too much space
+- Widgets could not appear below the 3D view due to rigid 2-column grid layout
+
 ## [1.0.8] - 2026-03-11
 
 ### Added
