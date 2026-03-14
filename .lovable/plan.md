@@ -1,84 +1,82 @@
-# Arbetsplan: Stabilisering, buggfixar och UX-förbättringar
 
-## Status: ✅ Implementerat (v1.1.0)
 
----
+# Dashboard Correction Plan
 
-## Fas 0 — Bygg-stabilisering ✅ DONE
-- Fixat import i Scene3D till `./build/KitchenFixture3D`
-- Raderat duplikat `KitchenFixtureObject3D.tsx`
+## 1. Layout Issues & Fixes
 
-## Fas 1 — Buggar och regressioner ✅ DONE
+**Current problems:**
+- Nav rail is 72px — too narrow, cramped labels (9px font)
+- Cards auto-stretch via CSS grid with no max-height control
+- MediaScreenWidget has unconstrained `h-28` artwork + controls that stretch awkwardly
+- No Home mode button in nav rail — only "Design" at bottom
+- Scrollbars use browser defaults (harsh)
+- Graphics & Settings use card grid when they should be page-like sections
 
-### 1.1 Väggar: 90-gradersstöd vid ritning ✅
-- Axis-aligned snapping (±3° av 0/90/180/270°) i `BuildScene3D.tsx`
-- Visuell indikator: cyan linje + solid (ej dashed) + "90°"-label via `<Html>`
-- `cursorAxisAligned`-prop tillagd i `WallDrawing3D.tsx`
+**Fixes:**
 
-### 1.3 Dörr-öppningsriktning ✅
-- `flipped` appliceras nu på dörrpanelens position och rotation i `wallGeometry.tsx`
-- Gångjärnspunkt beräknas baserat på `flipped`-flagga
+### Nav Rail → 120px wide
+- Widen to `w-[120px]`, left-align icon+label in a row (not stacked), `text-[11px]`
+- Active state: subtle left border accent + bg highlight
+- Add BJORQ logo/icon at top
+- Bottom section: both "Hem" (Home icon) and "Design" (PenTool) buttons
 
-### 1.4 Dörrens öppningsgrad ✅
-- `openAmount?: number` (0-1) tillagd på `WallOpening` i `types.ts`
-- Slider "Öppningsgrad" i OpeningInspector (dörrar + garageportar)
-- 3D: dörrblad roteras runt gångjärnspunkt baserat på `openAmount * π/2`
-- TODO: koppla till `haEntityId` för automatisk HA-sync
+### Home card sizing
+- Widget grid: use `grid-auto-rows: min-content` so cards don't stretch
+- MediaScreenWidget: cap artwork to `h-20`, make entire card compact (~160px max)
+- CategoryCard: add `max-h` behavior, scroll internally if many devices
 
-### 1.5 Ljus går igenom väggar ✅ (pragmatisk lösning)
-- Alla ljustyper: minskad distance + decay=2
-- ceiling: 5m, strip: 6m, spot: 6m/π/7 angle, wall: 5m/π/4 angle
-- Dokumenterat: fullständig ljusblockering kräver baked lighting
+### 3D preview
+- Keep current ~40% width, cap height to 280px on home view
 
-## Fas 2 — UX-förbättringar ✅ DONE
+## 2. Lights → Room-Based Grouping
 
-### 2.1 Sliders med exakt värdeinmatning ✅
-- Ny `SliderWithInput`-komponent (`src/components/ui/SliderWithInput.tsx`)
-- Klickbart värde → number input med Enter/Escape/blur
-- Applicerad i OpeningInspector (bredd, höjd, bröstning, position, öppningsgrad)
+**Current:** `HomeCategory` groups by `kindCategory` mapping (Ljus, Klimat, Media etc.) or custom categories. No room awareness.
 
-### 2.2 Möbelfliken stängd som standard ✅
-- Inredning startar med `select`-verktyg (inte `furnish`)
-- Katalogen visas bara när Möbler eller Wizard-verktyg är aktivt
+**Fix:** When no custom categories exist, group lights by room:
+- Read `markers` and cross-reference each device's `roomId` with `layout.floors[].rooms[]` to get room name
+- Build groups: `{ roomName: DeviceMarker[] }` for light-type devices
+- Non-light devices keep current kind-based grouping
+- Result: "💡 Vardagsrum", "💡 Kök", "💡 Hall" etc. as default cards
+- Devices without `roomId` go to "💡 Övrigt"
 
-### 2.3 Måla-fliken flyttad till Inredning ✅
-- `paint`-verktyg borttaget från `planritningTools`
-- Tillagt i `inredningTools` som "Måla" med Paintbrush-ikon
-- SurfaceEditor visas under Inredning-fliken
+## 3. Page-Like Sections (not widget grids)
 
-### 2.4 Väggar: bara färger (inga texturer) ✅
-- SurfaceEditor filtrerar vägg-material till enbart `paint`-kategorin
-- 15 nya väggfärger tillagda (mjuk rosa, oliv, skifferblå, etc.)
-- Golv behåller alla texturer som tidigare
+**Graphics & Settings already use section-based layout** — they just need polish:
+- Graphics: remove `max-w-[700px]`, use full width with two-column section layout
+- Settings: already has sections — just clean up spacing, use `gap-6` between sections, larger section headers
 
-## Fas 3 — Dokumentation och mappstruktur ✅ DONE
-- `public/textures/guide/README.md` uppdaterad med korrekt mappstruktur
-- Borttagen felaktig referens till `public/textures/floor/`
-- Target-paths tillagda per preset
-- `public/textures/carpet/` skapad
+These will NOT use `SortableWidgetGrid` — they stay as structured settings pages.
 
-## Fas 4 — Import/Export och long-press ✅ DONE
+## 4. Navigation Hierarchy Fix
 
-### 4.2 Exportera från Bibliotek ✅
-- "Exportera"-knapp tillagd i BibliotekWorkspace detaljpanel
-- Exporterar metadata som JSON-fil
+Bottom of nav rail currently only has "Design". Fix:
+- When in dashboard: show "Design" button at bottom
+- The nav rail categories already include "Hem" as first item, so Home is accessible
+- Ensure `appMode` toggle works: clicking "Design" → build mode, and build mode has a way back to dashboard (already exists via BuildModeV2's header)
 
-### 4.3 Hold-long på enheter i hemmenyn ✅
-- 500ms long-press → popup med av/på + ljusstyrka-slider
-- Fungerar för alla enheter med extra kontroll för `light`
+## 5. Visual Design Push
 
-## Fas 5 — Troubleshooting-pass ✅ DONE
-- Raderat dead code: `PaintTool.tsx` (ersatt av inline SurfaceEditor)
-- KitchenFixtureObject3D redan borttagen
-- Inga oanvända importer kvar
-- Tester passerar
+- **Scrollbars**: Add global thin scrollbar styling (like `.catalog-scroll` but for all `overflow-y-auto`)
+- **Glass panels**: Increase `box-shadow` depth, add subtle inner glow on hover
+- **Nav rail**: Add warm gradient background (`from-[hsl(222,18%,10%)] to-[hsl(222,16%,13%)]`)
+- **Active nav item**: Amber left-border accent + soft glow
+- **Summary cards top row**: Add subtle bottom gradient separator instead of flat `border-b`
+- **Card hover**: Subtle scale + glow on hover for interactive feel
 
-## Fas 6 — Version 1.1.0 ✅ DONE
-- `package.json` bumpat till 1.1.0
+## Files Changed
 
-## Bevarat
-- Design / Planritning / Inredning / Bibliotek-struktur
-- Save/load kompatibilitet
-- HA-sync (ej ändrad)
-- Golv-texturer med ambientCG CDN-thumbnails
-- Vägg-mitering och hörn-geometri
+| File | Change |
+|------|--------|
+| `src/components/home/DashboardShell.tsx` | Wider nav rail (120px), restore Home nav, improve visual styling, scrollbar classes |
+| `src/components/home/DashboardGrid.tsx` | Room-based light grouping in HomeCategory, polish Graphics/Settings layouts |
+| `src/components/home/cards/CategoryCard.tsx` | Add max-height + internal scroll for large device lists |
+| `src/components/home/cards/MediaScreenWidget.tsx` | Compact card height, smaller artwork area |
+| `src/index.css` | Global scrollbar styling, enhanced glass-panel variants, nav glow utilities |
+
+## Implementation Order
+1. CSS: scrollbars, glass enhancements, nav styling
+2. DashboardShell: wider nav, Home button, visual polish
+3. HomeCategory: room-based light grouping
+4. Card sizing: MediaScreenWidget compact, CategoryCard max-height
+5. Graphics/Settings: page-like section polish
+
