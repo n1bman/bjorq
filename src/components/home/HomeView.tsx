@@ -143,7 +143,18 @@ export default function HomeView() {
                   step={1}
                   value={[getDeviceBrightness(longPressId)]}
                   onValueChange={([v]) => {
-                    if (setDeviceBrightness) setDeviceBrightness(longPressId, v);
+                    useAppStore.setState((s) => ({
+                      devices: {
+                        ...s.devices,
+                        deviceStates: {
+                          ...s.devices.deviceStates,
+                          [longPressId!]: {
+                            ...s.devices.deviceStates[longPressId!],
+                            data: { ...(s.devices.deviceStates[longPressId!]?.data as any), brightness: v },
+                          },
+                        },
+                      },
+                    }));
                   }}
                 />
               </div>
