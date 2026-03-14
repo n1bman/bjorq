@@ -305,7 +305,7 @@ function InlineTerrainEnvironment3D() {
 
 const MAX_RECOVERY = 3;
 
-export default function Scene3D() {
+export default function Scene3D({ onDeviceLongPress }: { onDeviceLongPress?: (id: string) => void }) {
   const shadows = useAppStore((s) => s.performance.shadows);
   const quality = useAppStore((s) => s.performance.quality);
   const postprocessing = useAppStore((s) => s.performance.postprocessing);
