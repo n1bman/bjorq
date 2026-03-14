@@ -1,20 +1,56 @@
+# Floor Material Experience Improvement
 
+## Phase F1 — Floor Selection Highlight Fix ✅ DONE
+- Replaced solid blue fill with perimeter-only outline (`<line>` geometry)
+- Textures always applied regardless of selection state
+- Subtle emissive tint (0.08) keeps glow without hiding material
+- File: `src/components/build/Floors3D.tsx`
 
-# Fix Spegeldörr: Thickness and Panel Flickering
+## Phase F2 — Floor Material Browser UI ✅ DONE
+- Floor target shows larger material cards (grid-cols-3) with texture thumbnails
+- Category-first tabs: Trä & Parkett, Kakel & Klinker, Sten & Betong, Textur, Matta
+- Material name visible below each card
+- Wall target unchanged (small swatches)
+- File: `src/components/build/structure/PaintTool.tsx`
 
-## Problems
-1. **Flickering panels** — Z-fighting: panel surfaces sit at exactly the same Z as the leaf surface (`panelRecess = leafThick/2 - 0.003 = 0.0195`, panel depth 0.006 → outer face at 0.0195+0.003 = 0.0225 = leafThick/2`). GPU can't decide which surface to render.
-2. **Door too thick** — Currently 0.045m, user wants ~0.04m (standard Swedish interior door).
+## Phase F3 — Curated Floor Texture Pack ✅ DONE
+- 25 new floor-only presets across 5 categories (Wood, Tile, Stone, Texture, Carpet)
+- `floorOnly` flag added to Material interface
+- Paths under `public/textures/floor/` — falls back to flat color if files missing
+- ambientCG (CC0) as documented source for future file placement
+- File: `src/lib/materials.ts`, `src/store/types.ts`
 
-## Solution
+## Phase F4 — Floor Texture Mapping Polish ✅ DONE
+- Aspect-ratio clamping in `calculateRepeat` prevents extreme stretching
+- `floorSizeMode` UI control (Auto/Small/Standard/Large) added to floor material browser
+- All new presets have sensible `realWorldSize` values
+- File: `src/lib/materials.ts`, `src/components/build/structure/PaintTool.tsx`
 
-### `src/lib/wallGeometry.tsx` (lines 352–407)
+## Phase F5 — ambientCG Thumbnails + Size Mode Fix ✅ DONE
+- Added `thumbnailUrl` and `ambientCGId` fields to Material interface
+- All 25 floor presets mapped to specific ambientCG assets with CDN thumbnails
+- PaintTool shows CDN thumbnails with category emoji badges (🪵🔲🪨✦🧶)
+- Hybrid approach: CDN thumbnail for browser preview, local files for 3D textures
+- Fixed `Floors3D.tsx` memoization — `floorSizeMode` changes now trigger re-render
+- Thumbnail URL pattern: `https://acg-media.struffelproductions.com/file/ambientCG-Web/media/thumbnail/256-JPG-FFFFFF/{AssetId}.jpg`
 
-1. **`leafThick`**: Change from `0.045` to `0.04`
-2. **Panel recess**: Change from `leafThick/2 - 0.003` to `leafThick/2 - 0.008` — panels clearly recessed ~8mm into the surface, no coplanar faces
-3. **Panel depth**: Reduce from `0.006` to `0.004` — thinner panel boxes that sit fully inside the leaf volume
-4. **Add `polygonOffset`** to leaf material as a safety net: `polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1`
-5. **Add negative `polygonOffset`** to panel materials: `polygonOffsetFactor: -1` so panels always render in front of the leaf recess
+## Preserved
+- Wall painting workflow untouched
+- Existing material preset IDs unchanged
+- Save/load compatibility (new fields optional with fallbacks)
+- Wall texture engine (C1 stylized walls)
 
-This ensures panels are geometrically recessed and GPU depth-ordering is unambiguous.
+## Phase F6 — Manual Scale & Rotation Sliders ✅ DONE
+- Added `floorTextureScale` (0.2–4.0x) and `floorTextureRotation` (0°–360°) per room
+- Two sliders under size mode presets in Måla panel with live value display
+- Texture engine clones textures per room to avoid cross-room leaking
+- Rotation applied via `tex.rotation` + `tex.center` for proper pivot
+- Undo pushed once per drag (mouseDown/touchStart), not per tick
+- Files: `types.ts`, `BuildModeV2.tsx`, `wallTextureLoader.ts`, `Floors3D.tsx`
 
+## Väntar
+- Real ambientCG 1K texture file downloads (manual step — download ZIPs from ambientcg.com/get?file={ID}_1K-JPG.zip)
+- Per-wall roughness from finish selector
+- Accent zones / backsplash
+- Ceiling surfaces
+- Custom user-uploaded floor textures

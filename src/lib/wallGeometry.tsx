@@ -353,7 +353,7 @@ function renderOpeningModels(
       // ─── Classic 4-panel Swedish Spegeldörr ───
       const leafW = op.width - 0.08;
       const leafH = op.height - 0.06;
-      const leafThick = 0.045;
+      const leafThick = 0.04;
       const stileW = 0.06;
       const railH = 0.05;
       const panelInset = 0.04;
@@ -367,7 +367,8 @@ function renderOpeningModels(
           rotation={[0, -angle, 0]} castShadow {...openingPointer}>
           <boxGeometry args={[leafW, leafH, leafThick]} />
           <meshStandardMaterial color="#f5f0eb" roughness={0.45}
-            emissive={opEmissive} emissiveIntensity={opEmissiveIntensity} />
+            emissive={opEmissive} emissiveIntensity={opEmissiveIntensity}
+            polygonOffset polygonOffsetFactor={1} polygonOffsetUnits={1} />
         </mesh>
       );
 
@@ -388,7 +389,7 @@ function renderOpeningModels(
 
       const panelColor = '#f0ebe5';
       const railColor = '#e8e0d8';
-      const panelRecess = leafThick / 2 - 0.003;
+      const panelRecess = leafThick / 2 - 0.008;
 
       // Helper: render a recessed panel on BOTH sides of the door
       const panelMeshBoth = (key: string, lx: number, cy: number, w: number, h: number, color: string, depth: number) => {
@@ -400,23 +401,24 @@ function renderOpeningModels(
             <mesh key={`${key}-s${si}`} position={pos.toArray()} rotation={[0, -angle, 0]} castShadow {...openingPointer}>
               <boxGeometry args={[w, h, depth]} />
               <meshStandardMaterial color={color} roughness={0.4}
-                emissive={opEmissive} emissiveIntensity={opEmissiveIntensity} />
+                emissive={opEmissive} emissiveIntensity={opEmissiveIntensity}
+                polygonOffset polygonOffsetFactor={-1} polygonOffsetUnits={-1} />
             </mesh>
           );
         });
       };
 
       // Top panel — both sides
-      segments.push(...panelMeshBoth(`${wall.id}-p4-top-${i}`, localX, topY, usableW - 0.02, topPanelH, panelColor, 0.006));
+      segments.push(...panelMeshBoth(`${wall.id}-p4-top-${i}`, localX, topY, usableW - 0.02, topPanelH, panelColor, 0.004));
 
       // Mid left panel — both sides
-      segments.push(...panelMeshBoth(`${wall.id}-p4-ml-${i}`, localX - (midPaneW / 2 + stileW / 2), midY, midPaneW - 0.02, midPanelH, panelColor, 0.006));
+      segments.push(...panelMeshBoth(`${wall.id}-p4-ml-${i}`, localX - (midPaneW / 2 + stileW / 2), midY, midPaneW - 0.02, midPanelH, panelColor, 0.004));
 
       // Mid right panel — both sides
-      segments.push(...panelMeshBoth(`${wall.id}-p4-mr-${i}`, localX + (midPaneW / 2 + stileW / 2), midY, midPaneW - 0.02, midPanelH, panelColor, 0.006));
+      segments.push(...panelMeshBoth(`${wall.id}-p4-mr-${i}`, localX + (midPaneW / 2 + stileW / 2), midY, midPaneW - 0.02, midPanelH, panelColor, 0.004));
 
       // Bottom panel — both sides
-      segments.push(...panelMeshBoth(`${wall.id}-p4-bot-${i}`, localX, bottomY, usableW - 0.02, bottomPanelH, panelColor, 0.006));
+      segments.push(...panelMeshBoth(`${wall.id}-p4-bot-${i}`, localX, bottomY, usableW - 0.02, bottomPanelH, panelColor, 0.004));
 
       // Horizontal rails — both sides
       segments.push(...panelMeshBoth(`${wall.id}-p4-rail1-${i}`, localX, topY - topPanelH / 2 - railH / 2, usableW, railH, railColor, 0.005));
