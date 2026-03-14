@@ -1225,7 +1225,7 @@ function LightFixtureMarker({ position, id, onSelect, onDragStart, selected }: M
   const cfg = useMemo(() => {
     const defaults: Record<string, { intensity: number; distance: number; angle: number; penumbra: number }> = {
       'led-bulb': { intensity: 1, distance: 2, angle: Math.PI, penumbra: 0 },
-      'led-bar':  { intensity: 1.5, distance: 3, angle: Math.PI / 4, penumbra: 0.7 },
+      'led-bar':  { intensity: 0.5, distance: 1.4, angle: (118 * Math.PI) / 180, penumbra: 0.7 },
       'led-spot': { intensity: 2, distance: 2.5, angle: Math.PI / 10, penumbra: 0.3 },
     };
     const d = defaults[fixtureModel] ?? defaults['led-bulb'];
