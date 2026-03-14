@@ -113,11 +113,12 @@ export default function CategoryCard({
   return (
     <div
       className={cn(
-        'glass-panel rounded-2xl p-4 transition-all',
+        'glass-panel glass-panel-hover rounded-2xl p-4 transition-all',
         span && 'col-span-2',
         dragOverActive && 'ring-2 ring-primary/50 bg-primary/5',
         editMode && 'ring-1 ring-dashed ring-muted-foreground/30'
       )}
+      style={{ maxHeight: '320px', display: 'flex', flexDirection: 'column' }}
       onDragOver={editMode ? handleDragOver : undefined}
       onDragLeave={editMode ? handleDragLeave : undefined}
       onDrop={editMode ? handleDrop : undefined}
@@ -145,7 +146,7 @@ export default function CategoryCard({
 
       {/* Compact device list */}
       {!collapsed && (
-        <div className="space-y-1 mt-2">
+        <div className="space-y-1 mt-2 overflow-y-auto flex-1 min-h-0">
           {devices.map((d) => {
             const state = deviceStates[d.id];
             const on = isOn(state);

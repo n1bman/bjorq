@@ -5,7 +5,6 @@ import { Home, Cloud, Cpu, Zap, Bell, Video, Settings, Pencil, X, CalendarDays, 
 import { cn } from '../../lib/utils';
 import { Button } from '../ui/button';
 import { useAppStore } from '../../store/useAppStore';
-import ClockWidget from './cards/ClockWidget';
 import WeatherWidget from './cards/WeatherWidget';
 import EnergyWidget from './cards/EnergyWidget';
 import EnergyDeviceList from './cards/EnergyDeviceList';
@@ -32,11 +31,8 @@ import EnvironmentPanel from './cards/EnvironmentPanel';
 import DisplaySettings from './cards/DisplaySettings';
 import WifiPanel from './cards/WifiPanel';
 import WizardConnectionPanel from './cards/WizardConnectionPanel';
-import WifiWidget from './cards/WifiWidget';
 import AutomationsPanel from './cards/AutomationsPanel';
 import ScenesPanel from './cards/ScenesPanel';
-import ScenesWidget from './cards/ScenesWidget';
-import AutomationsWidget from './cards/AutomationsWidget';
 import ClimateTab from './cards/ClimateTab';
 import type { DeviceKind, DeviceMarker, StandbyCameraView } from '../../store/types';
 import { cameraRef } from '../../lib/cameraRef';
@@ -81,8 +77,12 @@ const kindCategory: Record<DeviceKind, string> = {
   speaker: 'Media', soundbar: 'Media',
 };
 
+/** Light-type device kinds that should be grouped by room */
+const LIGHT_KINDS: Set<DeviceKind> = new Set(['light', 'switch', 'power-outlet']);
+
 function HomeCategory() {
   const markers = useAppStore((s) => s.devices.markers);
+  const floors = useAppStore((s) => s.layout.floors);
   const customCategories = useAppStore((s) => s.customCategories);
   const moveDeviceToCategory = useAppStore((s) => s.moveDeviceToCategory);
   const reorderCategories = useAppStore((s) => s.reorderCategories);
@@ -91,6 +91,17 @@ function HomeCategory() {
   const [showManager, setShowManager] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [draggingCatIndex, setDraggingCatIndex] = useState<number | null>(null);
+
+  // Build room name lookup from floors
+  const roomNameMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const floor of floors) {
+      for (const room of floor.rooms) {
+        map[room.id] = room.name || 'Rum';
+      }
+    }
+    return map;
+  }, [floors]);
 
   let entries: { key: string; label: string; catId?: string; devices: DeviceMarker[] }[];
 
@@ -110,13 +121,27 @@ function HomeCategory() {
       entries.push({ key: 'uncategorized', label: '⚙️ Övrigt', devices: uncategorized });
     }
   } else {
-    const grouped: Record<string, DeviceMarker[]> = {};
+    // Room-based grouping for lights, kind-based for everything else
+    const lightsByRoom: Record<string, DeviceMarker[]> = {};
+    const otherByKind: Record<string, DeviceMarker[]> = {};
+
     for (const m of markers) {
-      const cat = m.userCategory || kindCategory[m.kind] || 'Övrigt';
-      if (!grouped[cat]) grouped[cat] = [];
-      grouped[cat].push(m);
+      if (LIGHT_KINDS.has(m.kind)) {
+        const roomName = m.roomId ? (roomNameMap[m.roomId] || 'Rum') : 'Övrigt';
+        const key = `💡 ${roomName}`;
+        if (!lightsByRoom[key]) lightsByRoom[key] = [];
+        lightsByRoom[key].push(m);
+      } else {
+        const cat = m.userCategory || kindCategory[m.kind] || 'Övrigt';
+        if (!otherByKind[cat]) otherByKind[cat] = [];
+        otherByKind[cat].push(m);
+      }
     }
-    entries = Object.entries(grouped).map(([label, devices]) => ({ key: label, label, devices }));
+
+    entries = [
+      ...Object.entries(lightsByRoom).map(([label, devices]) => ({ key: label, label, devices })),
+      ...Object.entries(otherByKind).map(([label, devices]) => ({ key: label, label, devices })),
+    ];
   }
 
   const handleDropDevice = (categoryId: string, deviceId: string) => {
@@ -432,46 +457,40 @@ function WidgetsCategory() {
 
 function SettingsCategory() {
   return (
-    <div className="max-w-[1100px] mx-auto space-y-[var(--space-section)]">
-      {/* Profil */}
-      <section className="space-y-1">
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1">Profil</h2>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+    <div className="settings-page">
+      <section>
+        <h2>Profil</h2>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
           <ProfilePanel />
         </div>
       </section>
 
-      {/* Utseende */}
-      <section className="space-y-1">
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1">Utseende</h2>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+      <section>
+        <h2>Utseende</h2>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
           <ThemeCard />
         </div>
       </section>
 
-      {/* Skärm */}
-      <section className="space-y-1">
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1">Skärm</h2>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+      <section>
+        <h2>Skärm</h2>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
           <DisplaySettings />
           <StandbySettingsPanel />
           <CameraStartSettings />
         </div>
       </section>
 
-
-      {/* System */}
-      <section className="space-y-1">
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1">System</h2>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+      <section>
+        <h2>System</h2>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
           <SystemStatusCard />
         </div>
       </section>
 
-      {/* Anslutning */}
-      <section className="space-y-1">
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1">Anslutning</h2>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+      <section>
+        <h2>Anslutning</h2>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
           <HAConnectionPanel />
           <WizardConnectionPanel />
           <LocationSettings />
@@ -479,10 +498,9 @@ function SettingsCategory() {
         </div>
       </section>
 
-      {/* Data */}
-      <section className="space-y-1">
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1">Data</h2>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+      <section>
+        <h2>Data</h2>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
           <ProjectManagerPanel />
           <DataBackupCard />
         </div>
@@ -493,10 +511,19 @@ function SettingsCategory() {
 
 function GraphicsCategory() {
   return (
-    <div className="max-w-[700px] mx-auto space-y-4">
-      <GraphicsSettings />
-      <SunWeatherPanel />
-      <EnvironmentPanel />
+    <div className="settings-page">
+      <section>
+        <h2>Renderingsinställningar</h2>
+        <GraphicsSettings />
+      </section>
+      <section>
+        <h2>Sol & Väder</h2>
+        <SunWeatherPanel />
+      </section>
+      <section>
+        <h2>Miljö & Atmosfär</h2>
+        <EnvironmentPanel />
+      </section>
     </div>
   );
 }
