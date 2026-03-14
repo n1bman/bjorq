@@ -412,6 +412,7 @@ function renderOpeningModels(
     const isFrench = op.style === 'french';
     const isFixed = op.style === 'fixed';
     const is4Pane = op.style?.startsWith('4pane');
+    const is6Pane = op.style === '6pane-frost-mid';
     const outerFrameW = 0.05;
 
     if (is4Pane) {
@@ -432,9 +433,7 @@ function renderOpeningModels(
 
       const frosted = op.style === '4pane-frost-bottom'
         ? [false, false, true, true]
-        : op.style === '4pane-frost-diag'
-          ? [false, true, true, false]
-          : [false, false, false, false];
+        : [false, false, false, false];
 
       const paneOffsetX = (side: 'left' | 'right') => {
         const sign = side === 'left' ? -1 : 1;
@@ -517,6 +516,120 @@ function renderOpeningModels(
             opPos.x - sillNormal4.x * 0.04,
             opCenterY - op.height / 2 - 0.01 + elevation,
             opPos.z - sillNormal4.z * 0.04,
+          ]}
+          rotation={[0, -angle, 0]}>
+          <boxGeometry args={[op.width + 0.04, 0.025, wall.thickness * 0.4]} />
+          <meshStandardMaterial color="#f0f0f0" roughness={0.7} />
+        </mesh>
+      );
+    } else if (is6Pane) {
+      // ─── 6-pane window (3 rows × 2 cols), middle row frosted ───
+      const innerW = op.width - outerFrameW * 2;
+      const innerH = op.height - outerFrameW * 2;
+      const mullionW = outerFrameW * 0.7;
+      const railH = outerFrameW * 0.7;
+
+      // Row proportions: top 30%, mid 35%, bot 35%
+      const topRatio = 0.30, midRatio = 0.35;
+      const topH = innerH * topRatio - railH / 2;
+      const midH = innerH * midRatio - railH;
+      const botH = innerH * (1 - topRatio - midRatio) - railH / 2;
+      const halfPaneW = (innerW - mullionW) / 2;
+
+      // Rail Y positions (two horizontal rails)
+      const rail1Y = opCenterY + innerH / 2 - innerH * topRatio + elevation;
+      const rail2Y = opCenterY + innerH / 2 - innerH * (topRatio + midRatio) + elevation;
+
+      const topCY = rail1Y + railH / 2 + topH / 2;
+      const midCY = (rail1Y + rail2Y) / 2;
+      const botCY = rail2Y - railH / 2 - botH / 2;
+
+      const paneOffsetX6 = (side: 'left' | 'right') => {
+        const sign = side === 'left' ? -1 : 1;
+        return localX + sign * (halfPaneW / 2 + mullionW / 2);
+      };
+
+      // 6 panes: top-left, top-right, mid-left(frost), mid-right(frost), bot-left, bot-right
+      const panes6 = [
+        { key: 'tl', lx: paneOffsetX6('left'), cy: topCY, w: halfPaneW, h: topH, frost: false },
+        { key: 'tr', lx: paneOffsetX6('right'), cy: topCY, w: halfPaneW, h: topH, frost: false },
+        { key: 'ml', lx: paneOffsetX6('left'), cy: midCY, w: halfPaneW, h: midH, frost: true },
+        { key: 'mr', lx: paneOffsetX6('right'), cy: midCY, w: halfPaneW, h: midH, frost: true },
+        { key: 'bl', lx: paneOffsetX6('left'), cy: botCY, w: halfPaneW, h: botH, frost: false },
+        { key: 'br', lx: paneOffsetX6('right'), cy: botCY, w: halfPaneW, h: botH, frost: false },
+      ];
+
+      for (const pane of panes6) {
+        const pos = new THREE.Vector3(pane.lx, 0, 0)
+          .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
+          .add(new THREE.Vector3(origCx, pane.cy, origCz));
+        segments.push(
+          <mesh key={`${wall.id}-6p-${pane.key}-${i}`}
+            position={pos.toArray()} rotation={[0, -angle, 0]} {...openingPointer}>
+            <boxGeometry args={[pane.w - 0.01, pane.h - 0.01, 0.008]} />
+            <meshStandardMaterial
+              color={pane.frost ? '#e8eef4' : '#88ccff'}
+              transparent
+              opacity={pane.frost ? 0.7 : 0.3}
+              roughness={pane.frost ? 0.8 : 0.05}
+              metalness={pane.frost ? 0 : 0.1}
+              emissive={isOpSelected ? '#2244aa' : '#000000'}
+              emissiveIntensity={isOpSelected ? 0.3 : 0}
+            />
+          </mesh>
+        );
+      }
+
+      // Frame bars: outer frame + mullion + two rails
+      const bars6: [string, number[], number[]][] = [
+        ['top', [opPos.x, opCenterY + op.height / 2 - outerFrameW / 2 + elevation, opPos.z], [op.width, outerFrameW, frameDepth]],
+        ['bottom', [opPos.x, opCenterY - op.height / 2 + outerFrameW / 2 + elevation, opPos.z], [op.width, outerFrameW, frameDepth]],
+        ['mullion', [opPos.x, opCenterY + elevation, opPos.z], [mullionW, innerH, frameDepth * 0.8]],
+        ['rail1', [opPos.x, rail1Y, opPos.z], [innerW, railH, frameDepth * 0.8]],
+        ['rail2', [opPos.x, rail2Y, opPos.z], [innerW, railH, frameDepth * 0.8]],
+      ];
+      const leftPos6 = new THREE.Vector3(localX - op.width / 2 + outerFrameW / 2, 0, 0)
+        .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
+        .add(new THREE.Vector3(origCx, opCenterY + elevation, origCz));
+      bars6.push(['left', leftPos6.toArray(), [outerFrameW, op.height, frameDepth]]);
+      const rightPos6 = new THREE.Vector3(localX + op.width / 2 - outerFrameW / 2, 0, 0)
+        .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
+        .add(new THREE.Vector3(origCx, opCenterY + elevation, origCz));
+      bars6.push(['right', rightPos6.toArray(), [outerFrameW, op.height, frameDepth]]);
+
+      for (const [key, pos, dims] of bars6) {
+        segments.push(
+          <mesh key={`${wall.id}-6pf-${key}-${i}`}
+            position={pos as [number, number, number]}
+            rotation={[0, -angle, 0]} castShadow {...openingPointer}>
+            <boxGeometry args={dims as [number, number, number]} />
+            <meshStandardMaterial color={frameColor} roughness={0.3}
+              emissive={opEmissive} emissiveIntensity={opEmissiveIntensity} />
+          </mesh>
+        );
+      }
+
+      // Sill for 6-pane
+      const sillNormal6 = new THREE.Vector3(0, 0, flipSign)
+        .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle);
+      segments.push(
+        <mesh key={`${wall.id}-win-sill6-${i}`}
+          position={[
+            opPos.x + sillNormal6.x * 0.05,
+            opCenterY - op.height / 2 - 0.02 + elevation,
+            opPos.z + sillNormal6.z * 0.05,
+          ]}
+          rotation={[0, -angle, 0]} castShadow>
+          <boxGeometry args={[op.width + 0.12, 0.03, wall.thickness + 0.10]} />
+          <meshStandardMaterial color="#e0e0e0" roughness={0.6} />
+        </mesh>
+      );
+      segments.push(
+        <mesh key={`${wall.id}-win-sill6-int-${i}`}
+          position={[
+            opPos.x - sillNormal6.x * 0.04,
+            opCenterY - op.height / 2 - 0.01 + elevation,
+            opPos.z - sillNormal6.z * 0.04,
           ]}
           rotation={[0, -angle, 0]}>
           <boxGeometry args={[op.width + 0.04, 0.025, wall.thickness * 0.4]} />
@@ -748,7 +861,7 @@ export function generateWallSegments(
       key={`${wall.id}-body`}
       geometry={geo}
       material={mats}
-      position={[origCx, elevation, origCz]}
+      position={[origCx, wallHeight / 2 + elevation, origCz]}
       rotation={[0, -angle, 0]}
       castShadow
       receiveShadow
