@@ -166,7 +166,7 @@ export const presetMaterials: Material[] = [
     hasTexture: true, source: 'ambientCG', realWorldSize: [0.60, 0.60],
     ambientCGId: 'Tiles074',
     thumbnailUrl: 'https://acg-media.struffelproductions.com/file/ambientCG-Web/media/thumbnail/256-JPG-FFFFFF/Tiles074.jpg',
-    mapPath: '/textures/floor/tile/porcelain_large_diff.jpg' },
+    mapPath: 'https://acg-media.struffelproductions.com/file/ambientCG-Web/media/thumbnail/2048-JPG-FFFFFF/Tiles074.jpg' },
   { id: 'floor-terracotta', name: 'Terrakotta golv', type: 'tile', color: '#c07040', roughness: 0.78, surfaceCategory: 'tile', floorOnly: true,
     hasTexture: true, source: 'ambientCG', realWorldSize: [0.30, 0.30],
     ambientCGId: 'Tiles093',
