@@ -4,6 +4,15 @@ import { cn } from '../../../lib/utils';
 import { useState } from 'react';
 import type { SurfaceSizeMode } from '../../../store/types';
 
+/** Category icon SVGs for floor material badges */
+const categoryIcons: Record<string, string> = {
+  wood: '🪵',
+  tile: '🔲',
+  stone: '🪨',
+  texture: '✦',
+  carpet: '🧶',
+};
+
 export default function PaintTool() {
   const activeFloorId = useAppStore((s) => s.layout.activeFloorId);
   const floors = useAppStore((s) => s.layout.floors);
@@ -84,40 +93,51 @@ export default function PaintTool() {
           <div key={room.id} className="space-y-1.5 px-1">
             <span className="text-xs text-foreground font-medium">{room.name}</span>
 
-            {/* F2: Floor uses larger material cards with texture preview */}
+            {/* Floor: larger material cards with ambientCG thumbnails */}
             {isFloor ? (
               <div className="grid grid-cols-3 gap-1.5">
-                {mats.map((mat) => (
-                  <button
-                    key={mat.id}
-                    onClick={() => handleSetMaterial(room.id, mat.id)}
-                    className={cn(
-                      'rounded-md border-2 transition-all overflow-hidden flex flex-col items-center',
-                      currentId === mat.id
-                        ? 'border-primary ring-1 ring-primary'
-                        : 'border-transparent hover:border-muted-foreground/30'
-                    )}
-                  >
-                    {/* Texture thumbnail or color swatch */}
-                    <div
-                      className="w-full aspect-square relative"
-                      style={{ backgroundColor: mat.color }}
-                    >
-                      {mat.mapPath && (
-                        <img
-                          src={mat.mapPath}
-                          alt={mat.name}
-                          className="absolute inset-0 w-full h-full object-cover"
-                          loading="lazy"
-                          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                        />
+                {mats.map((mat) => {
+                  const thumbSrc = mat.thumbnailUrl || mat.mapPath;
+                  const catIcon = categoryIcons[mat.surfaceCategory ?? ''] ?? '';
+                  return (
+                    <button
+                      key={mat.id}
+                      onClick={() => handleSetMaterial(room.id, mat.id)}
+                      className={cn(
+                        'rounded-md border-2 transition-all overflow-hidden flex flex-col items-center relative',
+                        currentId === mat.id
+                          ? 'border-primary ring-1 ring-primary'
+                          : 'border-transparent hover:border-muted-foreground/30'
                       )}
-                    </div>
-                    <span className="text-[8px] text-muted-foreground leading-tight py-0.5 px-0.5 truncate w-full text-center">
-                      {mat.name}
-                    </span>
-                  </button>
-                ))}
+                    >
+                      {/* Texture thumbnail or color swatch */}
+                      <div
+                        className="w-full aspect-square relative"
+                        style={{ backgroundColor: mat.color }}
+                      >
+                        {thumbSrc && (
+                          <img
+                            src={thumbSrc}
+                            alt={mat.name}
+                            className="absolute inset-0 w-full h-full object-cover"
+                            loading="lazy"
+                            crossOrigin="anonymous"
+                            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                          />
+                        )}
+                        {/* Category badge */}
+                        {catIcon && (
+                          <span className="absolute top-0.5 right-0.5 text-[8px] bg-background/70 rounded px-0.5 leading-tight backdrop-blur-sm">
+                            {catIcon}
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[8px] text-muted-foreground leading-tight py-0.5 px-0.5 truncate w-full text-center">
+                        {mat.name}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             ) : (
               /* Wall: keep existing small swatch grid */
@@ -146,7 +166,7 @@ export default function PaintTool() {
               </div>
             )}
 
-            {/* F4: Floor size mode selector */}
+            {/* Floor size mode selector */}
             {isFloor && currentId && (
               <div className="flex gap-0.5 mt-1">
                 {(['auto', 'small', 'standard', 'large'] as SurfaceSizeMode[]).map((mode) => (
