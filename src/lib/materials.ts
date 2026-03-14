@@ -124,6 +124,98 @@ export const presetMaterials: Material[] = [
   { id: 'mat-microcement', name: 'Mikrociment', type: 'texture', color: '#a8a4a0', roughness: 0.50, surfaceCategory: 'texture',
     hasTexture: true, repeat: [1, 1], source: 'ambientCG', realWorldSize: [1.5, 1.5],
     mapPath: '/textures/texture/microcement_diff.jpg', normalMapPath: '/textures/texture/microcement_nor.jpg', roughnessMapPath: '/textures/texture/microcement_rough.jpg' },
+
+  // ═══════════════════════════════════════════════════════════════
+  // F3: Curated Floor Texture Pack — ambientCG-sourced (CC0)
+  // These presets are floor-only and appear in the floor material browser.
+  // Texture files go under public/textures/floor/<category>/
+  // Until real ambientCG files are placed, flat color fallback is used.
+  // ═══════════════════════════════════════════════════════════════
+
+  // ─── Floor: Wood (5) ───
+  { id: 'floor-light-oak', name: 'Ljus ek planka', type: 'wood', color: '#d4b88c', roughness: 0.65, surfaceCategory: 'wood', floorOnly: true,
+    hasTexture: true, source: 'ambientCG', realWorldSize: [0.20, 1.2],
+    mapPath: '/textures/floor/wood/light_oak_diff.jpg' },
+  { id: 'floor-dark-walnut', name: 'Mörk valnöt planka', type: 'wood', color: '#4a2e18', roughness: 0.60, surfaceCategory: 'wood', floorOnly: true,
+    hasTexture: true, source: 'ambientCG', realWorldSize: [0.20, 1.2],
+    mapPath: '/textures/floor/wood/dark_walnut_diff.jpg' },
+  { id: 'floor-ash-white', name: 'Ask vitvax', type: 'wood', color: '#e8dcc8', roughness: 0.68, surfaceCategory: 'wood', floorOnly: true,
+    hasTexture: true, source: 'ambientCG', realWorldSize: [0.18, 1.2],
+    mapPath: '/textures/floor/wood/ash_white_diff.jpg' },
+  { id: 'floor-smoked-oak', name: 'Rökt ek', type: 'wood', color: '#6e5038', roughness: 0.62, surfaceCategory: 'wood', floorOnly: true,
+    hasTexture: true, source: 'ambientCG', realWorldSize: [0.20, 1.2],
+    mapPath: '/textures/floor/wood/smoked_oak_diff.jpg' },
+  { id: 'floor-bamboo', name: 'Bambu', type: 'wood', color: '#c8b480', roughness: 0.55, surfaceCategory: 'wood', floorOnly: true,
+    hasTexture: true, source: 'ambientCG', realWorldSize: [0.15, 0.90],
+    mapPath: '/textures/floor/wood/bamboo_diff.jpg' },
+
+  // ─── Floor: Tile (5) ───
+  { id: 'floor-porcelain-large', name: 'Stor porslin', type: 'tile', color: '#e8e4e0', roughness: 0.22, surfaceCategory: 'tile', floorOnly: true,
+    hasTexture: true, source: 'ambientCG', realWorldSize: [0.60, 0.60],
+    mapPath: '/textures/floor/tile/porcelain_large_diff.jpg' },
+  { id: 'floor-terracotta', name: 'Terrakotta golv', type: 'tile', color: '#c07040', roughness: 0.78, surfaceCategory: 'tile', floorOnly: true,
+    hasTexture: true, source: 'ambientCG', realWorldSize: [0.30, 0.30],
+    mapPath: '/textures/floor/tile/terracotta_diff.jpg' },
+  { id: 'floor-hex-cement', name: 'Hexagon cement', type: 'tile', color: '#b0aaa0', roughness: 0.72, surfaceCategory: 'tile', floorOnly: true,
+    hasTexture: true, source: 'ambientCG', realWorldSize: [0.25, 0.25],
+    mapPath: '/textures/floor/tile/hex_cement_diff.jpg' },
+  { id: 'floor-checkerboard', name: 'Schackrutigt', type: 'tile', color: '#d0d0d0', roughness: 0.25, surfaceCategory: 'tile', floorOnly: true,
+    hasTexture: true, source: 'ambientCG', realWorldSize: [0.40, 0.40],
+    mapPath: '/textures/floor/tile/checkerboard_diff.jpg' },
+  { id: 'floor-slate-tile', name: 'Skiffer kakel', type: 'tile', color: '#505458', roughness: 0.70, surfaceCategory: 'tile', floorOnly: true,
+    hasTexture: true, source: 'ambientCG', realWorldSize: [0.40, 0.40],
+    mapPath: '/textures/floor/tile/slate_tile_diff.jpg' },
+
+  // ─── Floor: Stone / Concrete (5) ───
+  { id: 'floor-polished-concrete', name: 'Polerad betong golv', type: 'concrete', color: '#b8b4ae', roughness: 0.30, surfaceCategory: 'stone', floorOnly: true,
+    hasTexture: true, source: 'ambientCG', realWorldSize: [1.5, 1.5],
+    mapPath: '/textures/floor/stone/polished_concrete_diff.jpg' },
+  { id: 'floor-raw-concrete', name: 'Rå betong', type: 'concrete', color: '#9a9690', roughness: 0.92, surfaceCategory: 'stone', floorOnly: true,
+    hasTexture: true, source: 'ambientCG', realWorldSize: [1.0, 1.0],
+    mapPath: '/textures/floor/stone/raw_concrete_diff.jpg' },
+  { id: 'floor-travertine', name: 'Travertin', type: 'concrete', color: '#d8ccb4', roughness: 0.55, surfaceCategory: 'stone', floorOnly: true,
+    hasTexture: true, source: 'ambientCG', realWorldSize: [0.60, 0.60],
+    mapPath: '/textures/floor/stone/travertine_diff.jpg' },
+  { id: 'floor-granite', name: 'Granit', type: 'concrete', color: '#686868', roughness: 0.45, surfaceCategory: 'stone', floorOnly: true,
+    hasTexture: true, source: 'ambientCG', realWorldSize: [0.60, 0.60],
+    mapPath: '/textures/floor/stone/granite_diff.jpg' },
+  { id: 'floor-microcement', name: 'Mikrociment golv', type: 'concrete', color: '#a8a4a0', roughness: 0.48, surfaceCategory: 'stone', floorOnly: true,
+    hasTexture: true, source: 'ambientCG', realWorldSize: [1.5, 1.5],
+    mapPath: '/textures/floor/stone/microcement_floor_diff.jpg' },
+
+  // ─── Floor: Texture / Plaster-like (5) ───
+  { id: 'floor-tadelakt', name: 'Tadelakt', type: 'texture', color: '#c8baa8', roughness: 0.42, surfaceCategory: 'texture', floorOnly: true,
+    hasTexture: true, source: 'ambientCG', realWorldSize: [1.0, 1.0],
+    mapPath: '/textures/floor/texture/tadelakt_diff.jpg' },
+  { id: 'floor-epoxy', name: 'Epoxigolv', type: 'texture', color: '#d4d0ca', roughness: 0.15, metalness: 0.05, surfaceCategory: 'texture', floorOnly: true,
+    hasTexture: true, source: 'ambientCG', realWorldSize: [2.0, 2.0],
+    mapPath: '/textures/floor/texture/epoxy_diff.jpg' },
+  { id: 'floor-cork', name: 'Kork', type: 'texture', color: '#c4a870', roughness: 0.80, surfaceCategory: 'texture', floorOnly: true,
+    hasTexture: true, source: 'ambientCG', realWorldSize: [0.30, 0.30],
+    mapPath: '/textures/floor/texture/cork_diff.jpg' },
+  { id: 'floor-vinyl-plank', name: 'Vinylplanka', type: 'texture', color: '#b8a480', roughness: 0.50, surfaceCategory: 'texture', floorOnly: true,
+    hasTexture: true, source: 'ambientCG', realWorldSize: [0.18, 1.2],
+    mapPath: '/textures/floor/texture/vinyl_plank_diff.jpg' },
+  { id: 'floor-linoleum', name: 'Linoleum', type: 'texture', color: '#a0a898', roughness: 0.55, surfaceCategory: 'texture', floorOnly: true,
+    hasTexture: true, source: 'ambientCG', realWorldSize: [2.0, 2.0],
+    mapPath: '/textures/floor/texture/linoleum_diff.jpg' },
+
+  // ─── Floor: Carpet / Fabric (5) ───
+  { id: 'floor-loop-grey', name: 'Slinga grå', type: 'custom', color: '#8a8a8a', roughness: 0.95, surfaceCategory: 'carpet', floorOnly: true,
+    hasTexture: true, source: 'ambientCG', realWorldSize: [0.50, 0.50],
+    mapPath: '/textures/floor/carpet/loop_grey_diff.jpg' },
+  { id: 'floor-cut-beige', name: 'Velour beige', type: 'custom', color: '#c8b898', roughness: 0.92, surfaceCategory: 'carpet', floorOnly: true,
+    hasTexture: true, source: 'ambientCG', realWorldSize: [0.50, 0.50],
+    mapPath: '/textures/floor/carpet/cut_beige_diff.jpg' },
+  { id: 'floor-sisal', name: 'Sisal natur', type: 'custom', color: '#b8a878', roughness: 0.88, surfaceCategory: 'carpet', floorOnly: true,
+    hasTexture: true, source: 'ambientCG', realWorldSize: [0.40, 0.40],
+    mapPath: '/textures/floor/carpet/sisal_diff.jpg' },
+  { id: 'floor-berber', name: 'Berber grädde', type: 'custom', color: '#e0d4c0', roughness: 0.90, surfaceCategory: 'carpet', floorOnly: true,
+    hasTexture: true, source: 'ambientCG', realWorldSize: [0.60, 0.60],
+    mapPath: '/textures/floor/carpet/berber_diff.jpg' },
+  { id: 'floor-wool-charcoal', name: 'Ull antracit', type: 'custom', color: '#3e3e3e', roughness: 0.94, surfaceCategory: 'carpet', floorOnly: true,
+    hasTexture: true, source: 'ambientCG', realWorldSize: [0.50, 0.50],
+    mapPath: '/textures/floor/carpet/wool_charcoal_diff.jpg' },
 ];
 
 // In-memory custom materials (runtime only)
@@ -146,6 +238,16 @@ export function getMaterialsByCategory(category: string): Material[] {
   return presetMaterials.filter((m) => m.surfaceCategory === category);
 }
 
+/** F2: Get floor-appropriate materials by category (includes floorOnly + shared presets) */
+export function getFloorMaterialsByCategory(category: string): Material[] {
+  return presetMaterials.filter((m) => m.surfaceCategory === category && m.floorOnly !== false);
+}
+
+/** F2: Get wall-only materials by category (excludes floorOnly presets) */
+export function getWallMaterialsByCategory(category: string): Material[] {
+  return presetMaterials.filter((m) => m.surfaceCategory === category && !m.floorOnly);
+}
+
 /** All surface categories with labels */
 export const surfaceCategoryLabels: Record<string, string> = {
   paint: 'Väggfärg',
@@ -155,13 +257,23 @@ export const surfaceCategoryLabels: Record<string, string> = {
   wood: 'Trä',
   metal: 'Metall',
   texture: 'Textur & Puts',
+  carpet: 'Matta',
 };
 
 /** Wall-appropriate surface categories (ordered) */
 export const wallSurfaceCategories = ['paint', 'wallpaper', 'tile', 'stone', 'wood', 'metal', 'texture'] as const;
 
-/** Floor-appropriate surface categories */
-export const floorSurfaceCategories = ['wood', 'tile', 'stone', 'metal', 'texture'] as const;
+/** F2: Floor-appropriate surface categories with better labels */
+export const floorSurfaceCategories = ['wood', 'tile', 'stone', 'texture', 'carpet'] as const;
+
+/** F2: Floor category labels (Swedish) */
+export const floorCategoryLabels: Record<string, string> = {
+  wood: 'Trä & Parkett',
+  tile: 'Kakel & Klinker',
+  stone: 'Sten & Betong',
+  texture: 'Textur',
+  carpet: 'Matta',
+};
 
 /** Size mode labels */
 export const sizeModelLabels: Record<SurfaceSizeMode, string> = {
@@ -181,11 +293,7 @@ export const sizeModeMultipliers: Record<SurfaceSizeMode, number> = {
 
 /**
  * B5: Calculate texture repeat values from real-world size and surface dimensions.
- * @param preset Material preset with optional realWorldSize
- * @param surfaceWidth Surface width in meters
- * @param surfaceHeight Surface height in meters
- * @param sizeMode User-selected size override
- * @returns [repeatX, repeatY] for texture UV
+ * F4: Added aspect-ratio clamping for elongated floors.
  */
 export function calculateRepeat(
   preset: Material,
@@ -199,15 +307,19 @@ export function calculateRepeat(
     const [rw, rh] = preset.realWorldSize;
     const effectiveW = rw * multiplier;
     const effectiveH = rh * multiplier;
-    return [
-      surfaceWidth / effectiveW,
-      surfaceHeight / effectiveH,
-    ];
+    let repeatX = surfaceWidth / effectiveW;
+    let repeatY = surfaceHeight / effectiveH;
+
+    // F4: Clamp aspect ratio to prevent extreme stretching on elongated floors
+    const ratio = repeatX / repeatY;
+    if (ratio > 8) repeatY = repeatX / 8;
+    if (ratio < 0.125) repeatX = repeatY * 0.125;
+
+    return [repeatX, repeatY];
   }
 
   // Fallback to preset repeat or [1,1]
   const base = preset.repeat ?? [1, 1];
   if (sizeMode === 'auto') return base;
-  // For non-auto without realWorldSize, scale the preset repeat inversely
   return [base[0] / multiplier, base[1] / multiplier];
 }

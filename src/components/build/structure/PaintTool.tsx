@@ -1,7 +1,8 @@
 import { useAppStore } from '../../../store/useAppStore';
-import { wallSurfaceCategories, floorSurfaceCategories, surfaceCategoryLabels, getMaterialsByCategory } from '../../../lib/materials';
+import { wallSurfaceCategories, floorSurfaceCategories, surfaceCategoryLabels, floorCategoryLabels, getMaterialsByCategory, sizeModelLabels } from '../../../lib/materials';
 import { cn } from '../../../lib/utils';
 import { useState } from 'react';
+import type { SurfaceSizeMode } from '../../../store/types';
 
 export default function PaintTool() {
   const activeFloorId = useAppStore((s) => s.layout.activeFloorId);
@@ -29,8 +30,11 @@ export default function PaintTool() {
     );
   }
 
-  const categories = target === 'wall' ? wallSurfaceCategories : floorSurfaceCategories;
-  const mats = getMaterialsByCategory(surfaceCat);
+  const isFloor = target === 'floor';
+  const categories = isFloor ? floorSurfaceCategories : wallSurfaceCategories;
+  const mats = getMaterialsByCategory(surfaceCat).filter((m) =>
+    isFloor ? true : !m.floorOnly
+  );
 
   const handleSetMaterial = (roomId: string, materialId: string) => {
     if (!activeFloorId) return;
@@ -67,40 +71,117 @@ export default function PaintTool() {
               surfaceCat === cat
                 ? 'bg-primary/20 text-primary'
                 : 'bg-secondary/20 text-muted-foreground hover:text-foreground hover:bg-secondary/40')}>
-            {surfaceCategoryLabels[cat]}
+            {isFloor ? (floorCategoryLabels[cat] ?? surfaceCategoryLabels[cat]) : surfaceCategoryLabels[cat]}
           </button>
         ))}
       </div>
 
       {/* Per-room material application */}
       {rooms.map((room) => {
-        const currentId = target === 'floor' ? room.floorMaterialId : room.wallMaterialId;
+        const currentId = isFloor ? room.floorMaterialId : room.wallMaterialId;
+        const currentSizeMode = room.floorSizeMode ?? 'auto';
         return (
           <div key={room.id} className="space-y-1.5 px-1">
             <span className="text-xs text-foreground font-medium">{room.name}</span>
-            <div className="flex flex-wrap gap-1">
-              {mats.map((mat) => (
-                <button
-                  key={mat.id}
-                  onClick={() => handleSetMaterial(room.id, mat.id)}
-                  title={mat.name}
-                  className={cn(
-                    'w-6 h-6 rounded-sm border-2 transition-all min-w-[24px] min-h-[24px] relative group',
-                    currentId === mat.id
-                      ? 'border-primary ring-1 ring-primary scale-110'
-                      : 'border-transparent hover:border-muted-foreground/30'
-                  )}
-                  style={{ backgroundColor: mat.color }}
-                >
-                  {mat.hasTexture && (
-                    <span className="absolute -bottom-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-accent border border-background" />
-                  )}
-                  <span className="absolute -top-5 left-1/2 -translate-x-1/2 px-1 py-0.5 rounded bg-popover text-popover-foreground text-[8px] whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity shadow-sm border border-border z-20">
-                    {mat.name}{mat.hasTexture ? ' ✦' : ''}
-                  </span>
-                </button>
-              ))}
-            </div>
+
+            {/* F2: Floor uses larger material cards with texture preview */}
+            {isFloor ? (
+              <div className="grid grid-cols-3 gap-1.5">
+                {mats.map((mat) => (
+                  <button
+                    key={mat.id}
+                    onClick={() => handleSetMaterial(room.id, mat.id)}
+                    className={cn(
+                      'rounded-md border-2 transition-all overflow-hidden flex flex-col items-center',
+                      currentId === mat.id
+                        ? 'border-primary ring-1 ring-primary'
+                        : 'border-transparent hover:border-muted-foreground/30'
+                    )}
+                  >
+                    {/* Texture thumbnail or color swatch */}
+                    <div
+                      className="w-full aspect-square relative"
+                      style={{ backgroundColor: mat.color }}
+                    >
+                      {mat.mapPath && (
+                        <img
+                          src={mat.mapPath}
+                          alt={mat.name}
+                          className="absolute inset-0 w-full h-full object-cover"
+                          loading="lazy"
+                          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                        />
+                      )}
+                    </div>
+                    <span className="text-[8px] text-muted-foreground leading-tight py-0.5 px-0.5 truncate w-full text-center">
+                      {mat.name}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              /* Wall: keep existing small swatch grid */
+              <div className="flex flex-wrap gap-1">
+                {mats.map((mat) => (
+                  <button
+                    key={mat.id}
+                    onClick={() => handleSetMaterial(room.id, mat.id)}
+                    title={mat.name}
+                    className={cn(
+                      'w-6 h-6 rounded-sm border-2 transition-all min-w-[24px] min-h-[24px] relative group',
+                      currentId === mat.id
+                        ? 'border-primary ring-1 ring-primary scale-110'
+                        : 'border-transparent hover:border-muted-foreground/30'
+                    )}
+                    style={{ backgroundColor: mat.color }}
+                  >
+                    {mat.hasTexture && (
+                      <span className="absolute -bottom-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-accent border border-background" />
+                    )}
+                    <span className="absolute -top-5 left-1/2 -translate-x-1/2 px-1 py-0.5 rounded bg-popover text-popover-foreground text-[8px] whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity shadow-sm border border-border z-20">
+                      {mat.name}{mat.hasTexture ? ' ✦' : ''}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* F4: Floor size mode selector */}
+            {isFloor && currentId && (
+              <div className="flex gap-0.5 mt-1">
+                {(['auto', 'small', 'standard', 'large'] as SurfaceSizeMode[]).map((mode) => (
+                  <button
+                    key={mode}
+                    onClick={() => {
+                      if (!activeFloorId) return;
+                      pushUndo();
+                      const store = useAppStore.getState();
+                      const updatedFloors = store.layout.floors.map((fl) => {
+                        if (fl.id !== activeFloorId) return fl;
+                        return {
+                          ...fl,
+                          rooms: fl.rooms.map((r) =>
+                            r.id === room.id ? { ...r, floorSizeMode: mode } : r
+                          ),
+                        };
+                      });
+                      useAppStore.setState((s) => ({
+                        layout: { ...s.layout, floors: updatedFloors },
+                      }));
+                    }}
+                    className={cn(
+                      'flex-1 py-0.5 rounded text-[8px] font-medium transition-colors',
+                      currentSizeMode === mode
+                        ? 'bg-primary/20 text-primary'
+                        : 'bg-secondary/20 text-muted-foreground hover:text-foreground'
+                    )}
+                  >
+                    {sizeModelLabels[mode]}
+                  </button>
+                ))}
+              </div>
+            )}
+
             <div className="border-b border-border" />
           </div>
         );
