@@ -41,7 +41,7 @@ import { cameraRef } from '../../lib/cameraRef';
 
 import type { DashCategory } from '../../store/types';
 
-const categories: { key: DashCategory; label: string; icon: typeof Home }[] = [
+export const categories: { key: DashCategory; label: string; icon: typeof Home }[] = [
   { key: 'home', label: 'Hem', icon: Home },
   { key: 'weather', label: 'Väder', icon: Cloud },
   { key: 'calendar', label: 'Kalender', icon: CalendarDays },

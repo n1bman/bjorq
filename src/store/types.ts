@@ -1036,6 +1036,11 @@ export interface AppState {
   comfort: ComfortState;
   terrain: TerrainSettings;
   wizard: WizardConnection;
+  dashboard: DashboardSettings;
+
+  // Dashboard actions
+  setDashCategory: (cat: DashCategory) => void;
+  setCategoryLayout: (cat: DashCategory, widgets: WidgetPlacement[]) => void;
 
   // Wizard actions
   setWizard: (changes: Partial<WizardConnection>) => void;

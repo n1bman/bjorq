@@ -24,8 +24,7 @@ const IndexInner = () => {
   useComfortEngine();
 
   if (appMode === 'standby') return <StandbyMode />;
-  if (appMode === 'home') return <><HomeView /><PerformanceHUD /></>;
-  if (appMode === 'dashboard') return <><DashboardView /><PerformanceHUD /></>;
+  if (appMode === 'home' || appMode === 'dashboard') return <><DashboardShell /><PerformanceHUD /></>;
 
   return (
     <div className="fixed inset-0 bg-background overflow-hidden">
