@@ -1,53 +1,56 @@
+# Floor Material Experience Improvement
 
+## Phase F1 — Floor Selection Highlight Fix ✅ DONE
+- Replaced solid blue fill with perimeter-only outline (`<line>` geometry)
+- Textures always applied regardless of selection state
+- Subtle emissive tint (0.08) keeps glow without hiding material
+- File: `src/components/build/Floors3D.tsx`
 
-# Fix: Kitchen Template Rework
+## Phase F2 — Floor Material Browser UI ✅ DONE
+- Floor target shows larger material cards (grid-cols-3) with texture thumbnails
+- Category-first tabs: Trä & Parkett, Kakel & Klinker, Sten & Betong, Textur, Matta
+- Material name visible below each card
+- Wall target unchanged (small swatches)
+- File: `src/components/build/structure/PaintTool.tsx`
 
-## Problems identified
-1. **Build error**: `KitchenFixture3D` file not resolving — need to rewrite the file fresh
-2. **Mallar tab wrong purpose**: Currently shows room templates (Sovrum, Kök, etc.) — user wants Mallar to contain ready-made 3D objects only, not room creation (that belongs under "Rum")
-3. **Kitchen orientation**: Cabinets face outward (z=0 front) but should face toward the wall (back side open, front against wall)
-4. **Kitchen layout issues**: Missing proper fridge, last section broken
+## Phase F3 — Curated Floor Texture Pack ✅ DONE
+- 25 new floor-only presets across 5 categories (Wood, Tile, Stone, Texture, Carpet)
+- `floorOnly` flag added to Material interface
+- Paths under `public/textures/floor/` — falls back to flat color if files missing
+- ambientCG (CC0) as documented source for future file placement
+- File: `src/lib/materials.ts`, `src/store/types.ts`
 
-## Changes
+## Phase F4 — Floor Texture Mapping Polish ✅ DONE
+- Aspect-ratio clamping in `calculateRepeat` prevents extreme stretching
+- `floorSizeMode` UI control (Auto/Small/Standard/Large) added to floor material browser
+- All new presets have sensible `realWorldSize` values
+- File: `src/lib/materials.ts`, `src/components/build/structure/PaintTool.tsx`
 
-### 1. `src/components/build/KitchenFixture3D.tsx` — Rewrite file
-- Fix build error by rewriting the full file
-- **Flip orientation**: All cabinet fronts/handles currently at z≈0 should be at z≈-BASE_D (facing away from wall). The back of the cabinets (flat panels) should be at z=0 (against the wall). This means the kitchen "opens" toward the room, not toward the wall.
-- Fix layout left-to-right: Skafferi (tall pantry) → Kylskåp (fridge with small cabinet above) → Spis/ugn with fläkt → Diskmaskin → Diskbänk med kran → Lådskåp
-- Adjust widths to sum to 3.80m total
+## Phase F5 — ambientCG Thumbnails + Size Mode Fix ✅ DONE
+- Added `thumbnailUrl` and `ambientCGId` fields to Material interface
+- All 25 floor presets mapped to specific ambientCG assets with CDN thumbnails
+- PaintTool shows CDN thumbnails with category emoji badges (🪵🔲🪨✦🧶)
+- Hybrid approach: CDN thumbnail for browser preview, local files for 3D textures
+- Fixed `Floors3D.tsx` memoization — `floorSizeMode` changes now trigger re-render
+- Thumbnail URL pattern: `https://acg-media.struffelproductions.com/file/ambientCG-Web/media/thumbnail/256-JPG-FFFFFF/{AssetId}.jpg`
 
-### 2. `src/components/build/structure/TemplatesPicker.tsx` — Convert to 3D object picker
-- Remove all room template categories and room-creation logic
-- Replace with a list of placeable 3D objects (starting with "Standardkök")
-- Clicking places a `KitchenFixture` on the active floor at origin
-- No room creation — just the 3D kitchen object
+## Preserved
+- Wall painting workflow untouched
+- Existing material preset IDs unchanged
+- Save/load compatibility (new fields optional with fallbacks)
+- Wall texture engine (C1 stylized walls)
 
-### 3. `src/lib/roomTemplates.ts` — Keep room templates for Rum functionality
-- Remove the `fixture` field and `tpl-kitchen-standard` entry (kitchen is now a standalone 3D object, not a room template)
-- Room templates stay available for the Rum feature but are no longer shown in Mallar
+## Phase F6 — Manual Scale & Rotation Sliders ✅ DONE
+- Added `floorTextureScale` (0.2–4.0x) and `floorTextureRotation` (0°–360°) per room
+- Two sliders under size mode presets in Måla panel with live value display
+- Texture engine clones textures per room to avoid cross-room leaking
+- Rotation applied via `tex.rotation` + `tex.center` for proper pivot
+- Undo pushed once per drag (mouseDown/touchStart), not per tick
+- Files: `types.ts`, `BuildModeV2.tsx`, `wallTextureLoader.ts`, `Floors3D.tsx`
 
-### 4. `src/store/types.ts` — Minor cleanup
-- Remove `fixture?: string` from `RoomTemplate` interface (no longer needed)
-
-## Kitchen layout (revised, 3.80m total)
-
-```text
-Left → Right:
-┌────────┬──────┬──────┬──────┬────────┬──────┐
-│Skafferi│Kylsk.│ Spis │Disk- │ Disk-  │ Låd- │
-│  0.50  │ 0.60 │ 0.60 │mask. │ bänk   │ skåp │
-│ h=2.40 │h=2.10│      │ 0.60 │  0.80  │ 0.60 │
-│        │+0.30 │      │      │        │      │
-│        │ top  │      │      │        │      │
-└────────┴──────┴──────┴──────┴────────┴──────┘
-Total: 0.50 + 0.60 + 0.60 + 0.60 + 0.80 + 0.60 = 3.70m (+0.10 filler)
-```
-
-Orientation: origin at bottom-center, cabinets open toward -Z (into room), backs at Z=0 (wall).
-
-## Files touched
-1. `src/components/build/KitchenFixture3D.tsx` (rewrite)
-2. `src/components/build/structure/TemplatesPicker.tsx` (convert to 3D object picker)
-3. `src/lib/roomTemplates.ts` (remove fixture field)
-4. `src/store/types.ts` (remove fixture from RoomTemplate)
-
+## Väntar
+- Real ambientCG 1K texture file downloads (manual step — download ZIPs from ambientcg.com/get?file={ID}_1K-JPG.zip)
+- Per-wall roughness from finish selector
+- Accent zones / backsplash
+- Ceiling surfaces
+- Custom user-uploaded floor textures
