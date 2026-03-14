@@ -1236,6 +1236,30 @@ function DeviceInspector({ deviceId, close }: { deviceId: string; close: React.R
           </div>
         </div>
       )}
+      {isLightFixture && (
+        <div className="space-y-2">
+          <label className="text-muted-foreground text-[10px]">Armaturmodell</label>
+          <div className="flex gap-1 flex-wrap">
+            {([
+              { value: 'led-bulb' as const, label: 'LED Lampa', emoji: '💡' },
+              { value: 'led-bar' as const, label: 'LED Bar', emoji: '▬' },
+              { value: 'led-spot' as const, label: 'LED Spot', emoji: '⚪' },
+            ]).map(({ value, label, emoji }) => (
+              <button
+                key={value}
+                onClick={() => updateDevice(device.id, { fixtureModel: value })}
+                className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-[10px] font-medium transition-all border ${
+                  (device.fixtureModel ?? 'led-bulb') === value
+                    ? 'border-primary bg-primary/15 text-primary'
+                    : 'border-border text-muted-foreground hover:border-primary/40'
+                }`}
+              >
+                <span>{emoji}</span>{label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Screen-specific controls */}
       {isScreen && (
