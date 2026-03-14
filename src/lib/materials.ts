@@ -193,7 +193,7 @@ export const presetMaterials: Material[] = [
     hasTexture: true, source: 'ambientCG', realWorldSize: [1.5, 1.5],
     ambientCGId: 'Concrete034',
     thumbnailUrl: 'https://acg-media.struffelproductions.com/file/ambientCG-Web/media/thumbnail/256-JPG-FFFFFF/Concrete034.jpg',
-    mapPath: '/textures/floor/stone/polished_concrete_diff.jpg' },
+    mapPath: 'https://acg-media.struffelproductions.com/file/ambientCG-Web/media/thumbnail/2048-JPG-FFFFFF/Concrete034.jpg' },
   { id: 'floor-raw-concrete', name: 'Rå betong', type: 'concrete', color: '#9a9690', roughness: 0.92, surfaceCategory: 'stone', floorOnly: true,
     hasTexture: true, source: 'ambientCG', realWorldSize: [1.0, 1.0],
     ambientCGId: 'Concrete032',
