@@ -1,47 +1,56 @@
+# Floor Material Experience Improvement
 
+## Phase F1 — Floor Selection Highlight Fix ✅ DONE
+- Replaced solid blue fill with perimeter-only outline (`<line>` geometry)
+- Textures always applied regardless of selection state
+- Subtle emissive tint (0.08) keeps glow without hiding material
+- File: `src/components/build/Floors3D.tsx`
 
-# Add 4-Pane Swedish Window Presets
+## Phase F2 — Floor Material Browser UI ✅ DONE
+- Floor target shows larger material cards (grid-cols-3) with texture thumbnails
+- Category-first tabs: Trä & Parkett, Kakel & Klinker, Sten & Betong, Textur, Matta
+- Material name visible below each card
+- Wall target unchanged (small swatches)
+- File: `src/components/build/structure/PaintTool.tsx`
 
-## What We're Adding
-Three new window presets in the Fönster toolbar — a classic Swedish tvåluftsfönster (two-sash, 4-pane) with asymmetric horizontal split (35% top, 65% bottom):
+## Phase F3 — Curated Floor Texture Pack ✅ DONE
+- 25 new floor-only presets across 5 categories (Wood, Tile, Stone, Texture, Carpet)
+- `floorOnly` flag added to Material interface
+- Paths under `public/textures/floor/` — falls back to flat color if files missing
+- ambientCG (CC0) as documented source for future file placement
+- File: `src/lib/materials.ts`, `src/store/types.ts`
 
-1. **4-rutors fönster** — all clear glass
-2. **4-rutors frostat variant 1** — clear top, frosted bottom
-3. **4-rutors frostat variant 2** — frosted top-left + bottom-right (diagonal pattern, matching reference photos)
+## Phase F4 — Floor Texture Mapping Polish ✅ DONE
+- Aspect-ratio clamping in `calculateRepeat` prevents extreme stretching
+- `floorSizeMode` UI control (Auto/Small/Standard/Large) added to floor material browser
+- All new presets have sensible `realWorldSize` values
+- File: `src/lib/materials.ts`, `src/components/build/structure/PaintTool.tsx`
 
-All: 1.40×1.00 m, sillHeight 0.9 m, depth 0.15 m.
+## Phase F5 — ambientCG Thumbnails + Size Mode Fix ✅ DONE
+- Added `thumbnailUrl` and `ambientCGId` fields to Material interface
+- All 25 floor presets mapped to specific ambientCG assets with CDN thumbnails
+- PaintTool shows CDN thumbnails with category emoji badges (🪵🔲🪨✦🧶)
+- Hybrid approach: CDN thumbnail for browser preview, local files for 3D textures
+- Fixed `Floors3D.tsx` memoization — `floorSizeMode` changes now trigger re-render
+- Thumbnail URL pattern: `https://acg-media.struffelproductions.com/file/ambientCG-Web/media/thumbnail/256-JPG-FFFFFF/{AssetId}.jpg`
 
-## Layout
-```text
-┌───────┬───────┐
-│  35%  │  35%  │  ← upper panes (shorter)
-├───────┼───────┤
-│  65%  │  65%  │  ← lower panes (taller)
-└───────┴───────┘
-```
+## Preserved
+- Wall painting workflow untouched
+- Existing material preset IDs unchanged
+- Save/load compatibility (new fields optional with fallbacks)
+- Wall texture engine (C1 stylized walls)
 
-## Changes
+## Phase F6 — Manual Scale & Rotation Sliders ✅ DONE
+- Added `floorTextureScale` (0.2–4.0x) and `floorTextureRotation` (0°–360°) per room
+- Two sliders under size mode presets in Måla panel with live value display
+- Texture engine clones textures per room to avoid cross-room leaking
+- Rotation applied via `tex.rotation` + `tex.center` for proper pivot
+- Undo pushed once per drag (mouseDown/touchStart), not per tick
+- Files: `types.ts`, `BuildModeV2.tsx`, `wallTextureLoader.ts`, `Floors3D.tsx`
 
-### 1. `src/lib/openingPresets.ts`
-Add three new presets with `style: '4pane'`, `style: '4pane-frost-bottom'`, `style: '4pane-frost-diag'`.
-
-### 2. `src/lib/wallGeometry.tsx` — `renderOpeningModels`
-Inside the `op.type === 'window'` branch, detect `style` starting with `'4pane'` and render:
-- White outer frame (4 bars) — same pattern as existing windows
-- Vertical mullion (center divider)
-- Horizontal rail at 35% from top (not centered)
-- 4 individual glass panes with per-pane material:
-  - `'4pane'`: all clear (`opacity: 0.3, color: #88ccff`)
-  - `'4pane-frost-bottom'`: top clear, bottom frosted (`opacity: 0.7, color: #e8eef4, roughness: 0.8`)
-  - `'4pane-frost-diag'`: top-left & bottom-right frosted, others clear
-
-Frosted glass: higher opacity (0.7), whitish tint (#e8eef4), high roughness (0.8). Clear glass: existing style.
-
-### 3. No type changes needed
-`WallOpening.style` is already `string?` — no schema change required.
-
-## What stays the same
-- All existing window/door/passage presets unchanged
-- Frame color logic (user material override) unchanged
-- Selection highlight, sill rendering, reveal logic all reused
-
+## Väntar
+- Real ambientCG 1K texture file downloads (manual step — download ZIPs from ambientcg.com/get?file={ID}_1K-JPG.zip)
+- Per-wall roughness from finish selector
+- Accent zones / backsplash
+- Ceiling surfaces
+- Custom user-uploaded floor textures
