@@ -1349,6 +1349,7 @@ function SurfaceEditor() {
 
   const [target, setTarget] = useState<'wall' | 'floor'>('floor');
   const [surfaceCat, setSurfaceCat] = useState<string>('wood');
+  const [selectedRoomId, setSelectedRoomId] = useState<string>('');
 
   const floor = floors.find((f) => f.id === activeFloorId);
   const allRooms = floor?.rooms ?? [];
