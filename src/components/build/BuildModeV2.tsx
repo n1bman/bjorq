@@ -2364,7 +2364,7 @@ function DesignTabBar() {
       setBuildTool('select');
       setCameraMode('topdown'); // 2D-first for structural work
     } else if (tab === 'inredning') {
-      setBuildTool('furnish' as any); // Catalog as primary surface
+      setBuildTool('select'); // Start with select — user clicks Möbler/Måla explicitly
       setCameraMode('3d'); // 3D-first for interior design
     }
     // bibliotek has no sub-tools or camera preference
