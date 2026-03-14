@@ -23,10 +23,16 @@ export function createWallMaterials(opts: {
   exteriorMatId?: string;
   interiorMatId?: string;
   wallHeight?: number;
+  wallWidth?: number;
+  extraScale?: number;
+  rotationDeg?: number;
 }): THREE.MeshStandardMaterial[] {
   const em = opts.emissive ?? '#000000';
   const ei = opts.emissiveIntensity ?? 0;
   const wh = opts.wallHeight ?? 2.5;
+  const ww = opts.wallWidth ?? 3.0;
+  const scale = opts.extraScale ?? 1;
+  const rot = opts.rotationDeg ?? 0;
 
   const offsetProps = { polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 };
   const edge = new THREE.MeshStandardMaterial({ color: opts.edgeColor, roughness: 0.9, emissive: em, emissiveIntensity: ei, ...offsetProps });
@@ -43,16 +49,14 @@ export function createWallMaterials(opts: {
     emissive: em, emissiveIntensity: ei, ...offsetProps,
   });
 
-  // C1: Wall textures are disabled by default (stylized color/roughness only).
-  // Texture application is kept as opt-in for future advanced use.
-  // applyMaterialTextures calls with context='wall' will return early unless forceTexture is set.
+  // Apply wall textures with scale/rotation support
   if (opts.exteriorMatId) {
     const preset = getMaterialById(opts.exteriorMatId);
-    if (preset) applyMaterialTextures(exterior, preset, wh, 3.0, 'auto', 'wall');
+    if (preset) applyMaterialTextures(exterior, preset, wh, ww, 'auto', 'wall', false, scale, rot);
   }
   if (opts.interiorMatId) {
     const preset = getMaterialById(opts.interiorMatId);
-    if (preset) applyMaterialTextures(interior, preset, wh, 3.0, 'auto', 'wall');
+    if (preset) applyMaterialTextures(interior, preset, wh, ww, 'auto', 'wall', false, scale, rot);
   }
 
   // +x, -x, +y, -y, +z (front=exterior), -z (back=interior)

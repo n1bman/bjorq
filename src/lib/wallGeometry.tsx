@@ -613,6 +613,9 @@ export function generateWallSegments(
 
   const wallColors = resolveWallColors(wall, options?.fallbackMaterialId);
 
+  const texScale = options?.extraTextureScale ?? 1;
+  const texRot = options?.textureRotationDeg ?? 0;
+
   // Build dual-sided material array, with optional highlight override
   const dualMats = options?.highlightColor
     ? createWallMaterials({
@@ -622,12 +625,19 @@ export function generateWallSegments(
         edgeColor: options.highlightColor,
         emissive: options.emissive,
         emissiveIntensity: options.emissiveIntensity,
+        wallWidth: origLength,
+        wallHeight: wall.height,
+        extraScale: texScale,
+        rotationDeg: texRot,
       })
     : createWallMaterials({
         ...wallColors,
         emissive: options?.emissive,
         emissiveIntensity: options?.emissiveIntensity,
         wallHeight: wall.height,
+        wallWidth: origLength,
+        extraScale: texScale,
+        rotationDeg: texRot,
       });
 
   const wallHeight = wall.height;
