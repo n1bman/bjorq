@@ -353,7 +353,7 @@ function renderOpeningModels(
       // ─── Classic 4-panel Swedish Spegeldörr ───
       const leafW = op.width - 0.08;
       const leafH = op.height - 0.06;
-      const leafThick = 0.045;
+      const leafThick = 0.04;
       const stileW = 0.06;
       const railH = 0.05;
       const panelInset = 0.04;
@@ -367,7 +367,8 @@ function renderOpeningModels(
           rotation={[0, -angle, 0]} castShadow {...openingPointer}>
           <boxGeometry args={[leafW, leafH, leafThick]} />
           <meshStandardMaterial color="#f5f0eb" roughness={0.45}
-            emissive={opEmissive} emissiveIntensity={opEmissiveIntensity} />
+            emissive={opEmissive} emissiveIntensity={opEmissiveIntensity}
+            polygonOffset polygonOffsetFactor={1} polygonOffsetUnits={1} />
         </mesh>
       );
 
