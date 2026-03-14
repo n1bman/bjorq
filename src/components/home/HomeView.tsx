@@ -46,8 +46,6 @@ export default function HomeView() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [longPressId, setLongPressId] = useState<string | null>(null);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [showSaveView, setShowSaveView] = useState(false);
-  const sceneLongPressRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useWeatherSync();
 
   const selectedMarkers = markers.filter((m) => homeScreenDevices.includes(m.id));
