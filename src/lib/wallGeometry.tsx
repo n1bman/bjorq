@@ -696,7 +696,78 @@ function renderOpeningModels(
   return segments;
 }
 
-// ─── Convex Hull (Andrew's monotone chain) ───
+// ─── Main Wall Segment Renderer ───
+
+/**
+ * Generates 3D mesh elements for a single wall, including mitered geometry,
+ * face materials, and opening models (doors, windows, passages, garage doors).
+ */
+export function generateWallSegments(
+  wall: WallSegment,
+  allWalls: WallSegment[],
+  elevation: number,
+  options?: WallRenderOptions,
+): JSX.Element[] {
+  const { trimmedLength, centerX, centerZ, origLength, origCx, origCz, angle } = computeWallMitering(wall, allWalls);
+  const miter = computeMiterOffsets(wall, allWalls);
+  const wallHeight = wall.height;
+
+  // Resolve per-face colors
+  const { exteriorColor, interiorColor, edgeColor, exteriorRoughness, interiorRoughness, exteriorMetalness, interiorMetalness, exteriorMatId, interiorMatId } = resolveWallColors(wall, options?.fallbackMaterialId);
+
+  const emissive = options?.emissive ?? '#000000';
+  const emissiveIntensity = options?.emissiveIntensity ?? 0;
+
+  // Create mitered geometry
+  const geo = createMiteredWallGeometry(origLength, wallHeight, wall.thickness, miter, wall.openings);
+
+  // Build material array
+  const mats = createWallMaterials({
+    exteriorColor: options?.highlightColor ?? exteriorColor,
+    interiorColor: options?.highlightColor ?? interiorColor,
+    edgeColor: options?.highlightColor ?? edgeColor,
+    exteriorRoughness,
+    interiorRoughness,
+    exteriorMetalness,
+    interiorMetalness,
+    emissive,
+    emissiveIntensity,
+    exteriorMatId,
+    interiorMatId,
+    wallHeight,
+    wallWidth: origLength,
+    extraScale: options?.extraTextureScale,
+    rotationDeg: options?.textureRotationDeg,
+  });
+
+  const segments: JSX.Element[] = [];
+
+  // Wall body mesh
+  segments.push(
+    <mesh
+      key={`${wall.id}-body`}
+      geometry={geo}
+      material={mats}
+      position={[origCx, elevation, origCz]}
+      rotation={[0, -angle, 0]}
+      castShadow
+      receiveShadow
+    />
+  );
+
+  // Openings
+  if (wall.openings) {
+    for (let i = 0; i < wall.openings.length; i++) {
+      const op = wall.openings[i];
+      const opBottom = op.type === 'window' ? (op.sillHeight ?? (wallHeight - op.height) / 2) : 0;
+      const openingElements = renderOpeningModels(wall, op, i, opBottom, elevation, origLength, origCx, origCz, angle, options);
+      segments.push(...openingElements);
+    }
+  }
+
+  return segments;
+}
+
 
 function convexHull2D(points: [number, number][]): [number, number][] {
   const pts = [...points].sort((a, b) => a[0] - b[0] || a[1] - b[1]);
