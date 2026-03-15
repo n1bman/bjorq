@@ -4,6 +4,12 @@ import type { PropItem, PropCatalogItem, WallSegment } from '../store/types';
 import { getGoldenSceneForProp } from './modelCache';
 
 /**
+ * Visual offset applied to floor meshes in Floors3D — ensures placed objects
+ * sit flush with the visible floor surface rather than floating or sinking.
+ */
+export const FLOOR_VISUAL_OFFSET = 0.02;
+
+/**
  * Categories whose props can act as support surfaces for "table" placement items.
  */
 const SUPPORT_CATEGORIES = new Set([
