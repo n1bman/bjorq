@@ -69,6 +69,8 @@ export default function InteractiveWalls3D() {
     return map;
   }, [rooms]);
 
+  const editLock = useAppStore((s) => s.build.editLock ?? 'all');
+
   const handleWallClick = useCallback((e: ThreeEvent<PointerEvent>, wallId: string) => {
     // ─── Phase C1: Wall-mount placement ───
     if (isWallMountMode && pendingWallMount) {
