@@ -131,7 +131,7 @@ export function findLandingPosition(
   }
 
   if (placement === 'wall' || placement === 'ceiling') {
-    return { position: [finalX, Math.max(floorElevation, currentY), finalZ], snappedTo: 'free' };
+    return { position: [finalX, Math.max(floorElevation + FLOOR_VISUAL_OFFSET, currentY), finalZ], snappedTo: 'free' };
   }
 
   if (placement === 'free') {
