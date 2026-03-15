@@ -1125,6 +1125,31 @@ const kindLabels: Record<DeviceKind, string> = {
   'smart-outlet': 'Vägguttag',
 };
 
+const kindIcons: Partial<Record<DeviceKind, React.ReactNode>> = {
+  light: <Lightbulb size={14} />,
+  switch: <ToggleLeft size={14} />,
+  sensor: <Activity size={14} />,
+  climate: <Thermometer size={14} />,
+  vacuum: <Bot size={14} />,
+  camera: <Camera size={14} />,
+  fridge: <CookingPot size={14} />,
+  oven: <Flame size={14} />,
+  washer: <WashingMachine size={14} />,
+  'garage-door': <Warehouse size={14} />,
+  'door-lock': <Lock size={14} />,
+  'power-outlet': <Plug size={14} />,
+  media_screen: <Monitor size={14} />,
+  fan: <Fan size={14} />,
+  cover: <RectangleHorizontal size={14} />,
+  alarm: <ShieldAlert size={14} />,
+  speaker: <Speaker size={14} />,
+  soundbar: <Music size={14} />,
+  'light-fixture': <Lamp size={14} />,
+  'smart-outlet': <Plug size={14} />,
+  humidifier: <Droplets size={14} />,
+  siren: <Bell size={14} />,
+};
+
 function DeviceInspector({ deviceId, close }: { deviceId: string; close: React.ReactNode }) {
   const markers = useAppStore((s) => s.devices.markers);
   const updateDevice = useAppStore((s) => s.updateDevice);

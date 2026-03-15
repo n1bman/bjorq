@@ -1956,7 +1956,11 @@ function BibliotekWorkspace() {
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
             <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Sök namn, kategori, taggar..." className="pl-8 h-8 text-sm" />
           </div>
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setBibImportOpen(true)}>
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
+            setBibImportOpen(true);
+            // Delay to ensure dialog is mounted before triggering file picker
+            setTimeout(() => bibFileRef.current?.click(), 100);
+          }}>
             <Upload className="w-4 h-4" /> Importera
           </Button>
           <button onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}

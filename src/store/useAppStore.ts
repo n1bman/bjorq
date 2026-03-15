@@ -139,7 +139,10 @@ function recomputeEnvProfile(get: any, set: any): void {
 const storeCreator = (set: any, get: any): AppState => ({
   _hostedMode: false,
   appMode: 'home',
-  setAppMode: (mode) => set({ appMode: mode }),
+  setAppMode: (mode) => set((s: any) => ({
+    appMode: mode,
+    build: { ...s.build, selection: { type: null, id: null, faceSide: null } },
+  })),
 
   homeView: {
     cameraPreset: 'angle',
