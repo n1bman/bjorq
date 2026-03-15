@@ -173,13 +173,19 @@ function InteractiveCameraController() {
     lerpingTo.current = { pos, target };
   }, [customStartPos, customStartTarget]);
 
+  const presetMountedRef = useRef(false);
   useEffect(() => {
-    if (cameraPreset !== 'free') {
-      lerpingTo.current = {
-        pos: presetPositions[cameraPreset].clone(),
-        target: presetTargets[cameraPreset].clone(),
-      };
+    if (cameraPreset === 'free') { presetMountedRef.current = true; return; }
+    // On first mount, don't override saved custom position with default preset
+    if (!presetMountedRef.current && customStartPos && cameraPreset === 'angle') {
+      presetMountedRef.current = true;
+      return;
     }
+    presetMountedRef.current = true;
+    lerpingTo.current = {
+      pos: presetPositions[cameraPreset].clone(),
+      target: presetTargets[cameraPreset].clone(),
+    };
   }, [cameraPreset]);
 
   useFrame(({ camera }, delta) => {

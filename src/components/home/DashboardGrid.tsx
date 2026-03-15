@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import SortableWidgetGrid from './SortableWidgetGrid';
 import type { SortableItem } from './SortableWidgetGrid';
 import { Home, Cloud, Cpu, Zap, Bell, Video, Settings, Pencil, X, CalendarDays, Bot, Moon, Save, Workflow, Palette, LayoutGrid, Thermometer, Trees } from 'lucide-react';
@@ -35,6 +35,7 @@ import AutomationsPanel from './cards/AutomationsPanel';
 import ScenesPanel from './cards/ScenesPanel';
 import ClimateTab from './cards/ClimateTab';
 import DashboardPreview3D from './DashboardPreview3D';
+import type { PreviewCameraState } from './DashboardPreview3D';
 import type { DeviceKind, DeviceMarker, StandbyCameraView } from '../../store/types';
 import { cameraRef } from '../../lib/cameraRef';
 
@@ -96,6 +97,7 @@ function HomeCategory() {
   const [editMode, setEditMode] = useState(false);
   const [draggingCatIndex, setDraggingCatIndex] = useState<number | null>(null);
   const [showSaveView, setShowSaveView] = useState(false);
+  const previewCamRef = useRef<PreviewCameraState>({ position: [10, 12, 10], target: [0, 0, 0] });
 
   // Build room name lookup from floors
   const roomNameMap = useMemo(() => {
@@ -241,7 +243,7 @@ function HomeCategory() {
           className="rounded-2xl overflow-hidden h-[280px] relative cursor-pointer border border-border/40 bg-card"
           onDoubleClick={() => setShowSaveView(true)}
         >
-          <DashboardPreview3D className="absolute inset-0" />
+          <DashboardPreview3D className="absolute inset-0" cameraStateRef={previewCamRef} />
           {showSaveView && (
             <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/50 backdrop-blur-sm" onClick={(e) => e.stopPropagation()}>
               <div className="glass-panel rounded-2xl p-5 w-64 shadow-xl space-y-3">
@@ -251,8 +253,8 @@ function HomeCategory() {
                   <Button size="sm" variant="outline" className="flex-1" onClick={() => setShowSaveView(false)}>Avbryt</Button>
                   <Button size="sm" className="flex-1 gap-1" onClick={() => {
                     saveHomeStartCamera(
-                      [cameraRef.position.x, cameraRef.position.y, cameraRef.position.z],
-                      [cameraRef.target.x, cameraRef.target.y, cameraRef.target.z],
+                      previewCamRef.current.position,
+                      previewCamRef.current.target,
                     );
                     setShowSaveView(false);
                   }}>
