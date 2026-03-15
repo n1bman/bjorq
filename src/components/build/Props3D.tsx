@@ -374,6 +374,15 @@ function PropModel({ id, url: rawUrl, position, rotation, scale, colorOverride, 
         child.receiveShadow = true;
         child.material = child.material.clone();
 
+        // Fix extreme PBR values that cause models to appear black
+        if (child.material.metalness > 0.95 && metalnessOverride === undefined) {
+          child.material.metalness = 0.5;
+        }
+        if (child.material.roughness < 0.05 && roughnessOverride === undefined) {
+          child.material.roughness = 0.3;
+        }
+        child.material.envMapIntensity = 1.0;
+
         if (colorOverride) {
           child.material.color = new THREE.Color(colorOverride);
         }
@@ -387,13 +396,7 @@ function PropModel({ id, url: rawUrl, position, rotation, scale, colorOverride, 
         if (roughnessOverride !== undefined) child.material.roughness = roughnessOverride;
         if (metalnessOverride !== undefined) child.material.metalness = metalnessOverride;
 
-        if (isSelected) {
-          child.material.emissive = new THREE.Color('#d4a574');
-          child.material.emissiveIntensity = 0.15;
-        } else if (isHovered) {
-          child.material.emissive = new THREE.Color('#f5e6d3');
-          child.material.emissiveIntensity = 0.08;
-        }
+        child.material.needsUpdate = true;
       }
     });
     return clone;
