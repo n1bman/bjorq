@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.3] - 2026-03-15
+
+### Fixed
+- **Platt solljus / överexponerade väggar** — justerad CLEAR-profil med högre riktningsljus (1.4×) och lägre ambient/hemisphere för bättre kontrast och djup i 3D-scenen
+- **3D-modeller som inte tar emot omgivningsljus** — automatisk korrigering av extrema PBR-materialvärden (metalness > 0.95, roughness < 0.05) vid import
+- **Emissive-highlight vid markering** — borttagen emissive-glow, ersatt med blå wireframe-box (#4a9eff) med tjockare linjer för tydligare markering utan att dölja färg
+- **Möbler genomtränger golvet** — freePlacement sätts nu som default, floor-clamping appliceras korrekt, och long-press "Fri"-knappen fungerar nu
+- **Kamera snäpper tillbaka vid lägeshyte** — kameran bevarar sin position vid byte mellan Design och Hem
+- **Väderpartiklar pulserar** — jämn Y-fördelning vid spawn, hastighetsvariation per partikel (±20%), gradual count-ändringar
+
+### Added
+- **Duplicera-knapp i enhetsinspektör** — kopiera enheter med offset direkt i Build-inspektören
+- **3D-förhandsvisning i Grafik & Miljö** — live 3D-vy visas ovanför inställningarna så man ser effekten direkt
+- **Filtrerad enhetsmarkör-visning** — bara enheter med generiska markörer (hjälpsfärer) kan döljas; enheter med 3D-modeller (ljusarmaturer, speakers etc.) visas alltid
+
+### Changed
+- Ögonikon för enhetsmarkörer förstorad (20px, knapp 48px)
+- Yta- och Kategori-fält borttagna från enhetsinspektören (redan synligt i biblioteket)
+- Skugginställningar förbättrade: större shadow-camera frustum, lägre bias för skarpare skuggor
+
 ## [1.5.2] - 2026-03-14
 
 ### Added
