@@ -2592,7 +2592,7 @@ export default function BuildModeV2() {
               </div>
             </div>
           )}
-          {cameraMode === 'topdown' ? (
+          {cameraMode === 'topdown' && (
             <>
               {showImportOverlay && (
                 <Suspense fallback={null}>
@@ -2601,9 +2601,8 @@ export default function BuildModeV2() {
               )}
               <BuildCanvas2D overlayMode={showImportOverlay} />
             </>
-          ) : (
-            <BuildScene3D />
           )}
+          {/* 3D scene is provided by PersistentScene3D in Index.tsx */}
           <BuildInspector />
         </div>
       )}
