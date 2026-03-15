@@ -6,59 +6,22 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import * as THREE from 'three';
 import type { ThreeEvent } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
-import type { PropModelStats } from '../../store/types';
 import { findLandingPosition } from '../../lib/placementEngine';
+import {
+  acquireModel,
+  releaseModel,
+  acquireTexture,
+  releaseTexture,
+  buildCacheKey,
+} from '../../lib/modelCache';
+
 const LOAD_TIMEOUT = 30_000;
 const loader = new GLTFLoader();
 const LONG_PRESS_MS = 500;
 const LONG_PRESS_MOVE_THRESHOLD = 5;
 
-// Module-level map of loaded scenes for placement engine
-export const sceneRefs = new Map<string, THREE.Group>();
-
-function disposeScene(scene: THREE.Group) {
-  scene.traverse((child: any) => {
-    if (child.isMesh) {
-      child.geometry?.dispose();
-      if (child.material) {
-        const mats = Array.isArray(child.material) ? child.material : [child.material];
-        mats.forEach((mat: any) => {
-          Object.values(mat).forEach((v: any) => {
-            if (v instanceof THREE.Texture) v.dispose();
-          });
-          mat.dispose();
-        });
-      }
-    }
-  });
-}
-
 function isBlobOrDataUrl(url: string) {
   return url.startsWith('blob:') || url.startsWith('data:');
-}
-
-function analyzeModel(scene: THREE.Group): PropModelStats {
-  let triangles = 0;
-  let meshCount = 0;
-  const materials = new Set<string>();
-
-  scene.traverse((child: any) => {
-    if (child.isMesh) {
-      meshCount++;
-      const geo = child.geometry;
-      if (geo) {
-        triangles += geo.index ? geo.index.count / 3 : (geo.attributes.position?.count ?? 0) / 3;
-      }
-      const mats = Array.isArray(child.material) ? child.material : [child.material];
-      mats.forEach((m: any) => materials.add(m.uuid));
-    }
-  });
-
-  let rating: string = 'OK';
-  if (triangles > 500_000 || materials.size > 50) rating = 'För tung';
-  else if (triangles > 100_000 || materials.size > 20) rating = 'Tung';
-
-  return { triangles: Math.round(triangles), meshCount, materialCount: materials.size, rating };
 }
 
 function loadFromBase64(base64: string): Promise<THREE.Group> {
@@ -123,6 +86,11 @@ function PropModel({ id, url: rawUrl, position, rotation, scale, colorOverride, 
   const loadingRef = useRef(false);
   const lastLoadedUrl = useRef('');
   const retryCount = useRef(0);
+  const cacheKeyRef = useRef<string>('');
+
+  // Track current texture override for cleanup
+  const currentTextureUrl = useRef<string | undefined>(undefined);
+  const cachedTexture = useRef<THREE.Texture | null>(null);
 
   const items = useAppStore((s) => s.props.items);
   const propItem = items.find((p) => p.id === id);
@@ -148,10 +116,17 @@ function PropModel({ id, url: rawUrl, position, rotation, scale, colorOverride, 
     }
   };
 
+  // ─── Cache-aware loading ───
   const doLoad = (propId: string, loadUrl: string) => {
     if (loadingRef.current) return;
     loadingRef.current = true;
     setStatus('loading');
+
+    const state = useAppStore.getState();
+    const prop = state.props.items.find((p) => p.id === propId);
+    const catalogId = prop?.catalogId || '';
+    const cacheKey = buildCacheKey(catalogId, propId);
+    cacheKeyRef.current = cacheKey;
 
     const timeout = setTimeout(() => {
       if (loadingRef.current) {
@@ -161,59 +136,54 @@ function PropModel({ id, url: rawUrl, position, rotation, scale, colorOverride, 
       }
     }, LOAD_TIMEOUT);
 
-    const handleSuccess = (loadedScene: THREE.Group) => {
-      clearTimeout(timeout);
-      loadingRef.current = false;
-      const info = analyzeModel(loadedScene);
-      console.info(`[Props3D] Loaded "${modelName}": ${info.triangles.toLocaleString()} △ · ${info.meshCount} mesh · ${info.materialCount} mat — ${info.rating}`);
-      useAppStore.getState().updateProp(propId, { modelStats: info });
-      // Store in module-level map for placement engine
-      sceneRefs.set(propId, loadedScene);
-      setScene(loadedScene);
-      setStatus('ready');
+    // Build the loader function for cache miss
+    const loaderFn = (): Promise<THREE.Group> => {
+      const fileData = getFileDataForProp(propId);
+      if (fileData) {
+        console.info(`[Props3D] Loading "${modelName}" from fileData (base64)`);
+        return loadFromBase64(fileData);
+      }
+      if (!isBlobOrDataUrl(loadUrl)) {
+        return loadGltfFromUrl(loadUrl);
+      }
+      return Promise.reject(new Error(`No fileData for "${modelName}", blob URL may fail`));
     };
 
-    const handleError = () => {
-      clearTimeout(timeout);
-      loadingRef.current = false;
-      setStatus('error');
-    };
-
-    const fileData = getFileDataForProp(propId);
-    if (fileData) {
-      console.info(`[Props3D] Loading "${modelName}" from fileData (base64)`);
-      loadFromBase64(fileData).then(handleSuccess).catch((err: unknown) => {
-        console.warn(`[Props3D] fileData parse failed for "${modelName}":`, err);
-        handleError();
-      });
-      return;
-    }
-
-    if (!isBlobOrDataUrl(loadUrl)) {
-      loadGltfFromUrl(loadUrl).then(handleSuccess).catch((err: unknown) => {
-        console.warn(`[Props3D] Network load failed for "${modelName}":`, err);
-        if (retryCount.current < 1) {
+    acquireModel(cacheKey, loaderFn, propId)
+      .then(({ clone, stats }) => {
+        clearTimeout(timeout);
+        loadingRef.current = false;
+        console.info(`[Props3D] Loaded "${modelName}": ${stats.triangles.toLocaleString()} △ · ${stats.meshCount} mesh · ${stats.materialCount} mat — ${stats.rating}`);
+        useAppStore.getState().updateProp(propId, { modelStats: stats });
+        setScene(clone);
+        setStatus('ready');
+      })
+      .catch((err: unknown) => {
+        clearTimeout(timeout);
+        loadingRef.current = false;
+        console.warn(`[Props3D] Load failed for "${modelName}":`, err);
+        if (retryCount.current < 1 && !isBlobOrDataUrl(loadUrl)) {
           retryCount.current++;
           loadingRef.current = false;
           const bustUrl = loadUrl + (loadUrl.includes('?') ? '&' : '?') + `v=${Date.now()}`;
           console.info(`[Props3D] Retrying "${modelName}" with cache bust`);
           doLoad(propId, bustUrl);
         } else {
-          handleError();
+          setStatus('error');
         }
       });
-      return;
-    }
-
-    console.warn(`[Props3D] No fileData for "${modelName}", blob URL may fail`);
-    handleError();
   };
 
   useEffect(() => {
     if (!url) { setStatus('idle'); return; }
     const baseUrl = url.split('?')[0];
     if (baseUrl === lastLoadedUrl.current) return;
-    if (scene) { disposeScene(scene); setScene(null); }
+
+    // Release previous cache entry if switching models
+    if (cacheKeyRef.current) {
+      releaseModel(cacheKeyRef.current, id);
+    }
+    setScene(null);
     lastLoadedUrl.current = baseUrl;
     retryCount.current = 0;
     loadingRef.current = false;
@@ -221,9 +191,38 @@ function PropModel({ id, url: rawUrl, position, rotation, scale, colorOverride, 
 
     return () => {
       lastLoadedUrl.current = '';
-      sceneRefs.delete(id);
+      if (cacheKeyRef.current) {
+        releaseModel(cacheKeyRef.current, id);
+        cacheKeyRef.current = '';
+      }
     };
   }, [url]);
+
+  // Cleanup texture on unmount or change
+  useEffect(() => {
+    return () => {
+      if (currentTextureUrl.current) {
+        releaseTexture(currentTextureUrl.current);
+        currentTextureUrl.current = undefined;
+        cachedTexture.current = null;
+      }
+    };
+  }, []);
+
+  // Acquire/release texture when textureOverride changes
+  useEffect(() => {
+    // Release old
+    if (currentTextureUrl.current && currentTextureUrl.current !== textureOverride) {
+      releaseTexture(currentTextureUrl.current);
+      currentTextureUrl.current = undefined;
+      cachedTexture.current = null;
+    }
+    // Acquire new
+    if (textureOverride && textureOverride !== currentTextureUrl.current) {
+      cachedTexture.current = acquireTexture(textureOverride);
+      currentTextureUrl.current = textureOverride;
+    }
+  }, [textureOverride]);
 
   const canInteract = appMode === 'build' && (activeTool === 'select' || activeTool === 'furnish');
 
@@ -248,10 +247,8 @@ function PropModel({ id, url: rawUrl, position, rotation, scale, colorOverride, 
     setShowQuickMenu(false);
     longPressTriggered.current = false;
 
-    // Record pointer position for long-press detection
     pointerDownPos.current = { x: e.nativeEvent.clientX, y: e.nativeEvent.clientY };
 
-    // Start long-press timer
     cancelLongPress();
     longPressTimer.current = setTimeout(() => {
       longPressTriggered.current = true;
@@ -282,7 +279,6 @@ function PropModel({ id, url: rawUrl, position, rotation, scale, colorOverride, 
     gl.domElement.style.cursor = 'grabbing';
 
     const onPointerMove = (moveEvent: PointerEvent) => {
-      // Check long-press movement threshold
       if (pointerDownPos.current && longPressTimer.current) {
         const dx = moveEvent.clientX - pointerDownPos.current.x;
         const dy = moveEvent.clientY - pointerDownPos.current.y;
@@ -309,7 +305,7 @@ function PropModel({ id, url: rawUrl, position, rotation, scale, colorOverride, 
         const stableY = currentProp?.position[1] ?? position[1];
 
         // C4: Apply wall collision + placement rules via placement engine
-        const result = findLandingPosition(id, [dragX, dragZ], stableY, currentProp?.floorId || '', sceneRefs);
+        const result = findLandingPosition(id, [dragX, dragZ], stableY, currentProp?.floorId || '');
         store.updateProp(id, { position: result.position });
         setDragShadowPos([result.position[0], result.position[1] + 0.02, result.position[2]]);
       }
@@ -364,7 +360,8 @@ function PropModel({ id, url: rawUrl, position, rotation, scale, colorOverride, 
     store.updateProp(id, { freePlacement: !current?.freePlacement });
   };
 
-  // ─── Display scene with selection feedback ───
+  // ─── Display scene with material overrides ───
+  // Removed isSelected/isHovered from deps — they no longer affect materials
   const displayScene = useMemo(() => {
     if (!scene) return null;
     const clone = scene.clone();
@@ -386,10 +383,12 @@ function PropModel({ id, url: rawUrl, position, rotation, scale, colorOverride, 
         if (colorOverride) {
           child.material.color = new THREE.Color(colorOverride);
         }
-        if (textureOverride) {
-          const tex = new THREE.TextureLoader().load(textureOverride);
+        if (cachedTexture.current) {
+          // Use cache-managed texture — clone for per-instance repeat settings
+          const tex = cachedTexture.current.clone();
           tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
           tex.repeat.set(textureScale, textureScale);
+          tex.needsUpdate = true;
           child.material.map = tex;
           child.material.needsUpdate = true;
         }
@@ -400,15 +399,13 @@ function PropModel({ id, url: rawUrl, position, rotation, scale, colorOverride, 
       }
     });
     return clone;
-  }, [scene, isSelected, isHovered, colorOverride, textureOverride, textureScale, roughnessOverride, metalnessOverride]);
+  }, [scene, colorOverride, textureOverride, textureScale, roughnessOverride, metalnessOverride]);
 
-  // ─── Bounding-box selection indicator (always correct, scale-aware) ───
+  // ─── Bounding-box selection indicator — uses scene directly (read-only bbox) ───
   const selectionBox = useMemo(() => {
     if (!isSelected || !scene) return null;
-    // Compute world-space bbox of the entire scene at identity transform
-    const tempGroup = scene.clone();
-    const bbox = new THREE.Box3().setFromObject(tempGroup);
-    disposeScene(tempGroup);
+    // Compute bbox on the clone without creating another clone
+    const bbox = new THREE.Box3().setFromObject(scene);
     if (bbox.isEmpty()) return null;
 
     const size = new THREE.Vector3();
@@ -416,7 +413,6 @@ function PropModel({ id, url: rawUrl, position, rotation, scale, colorOverride, 
     bbox.getSize(size);
     bbox.getCenter(center);
 
-    // Add a small margin so the box doesn't sit flush on the mesh
     const margin = 0.03;
     const bw = size.x + margin;
     const bh = size.y + margin;
@@ -487,7 +483,7 @@ function PropModel({ id, url: rawUrl, position, rotation, scale, colorOverride, 
         onContextMenu={(e: any) => { e.nativeEvent?.preventDefault?.(); }}
       />
 
-      {/* Bounding-box selection wireframe — always correct regardless of geometry */}
+      {/* Bounding-box selection wireframe */}
       {selectionBox && (
         <lineSegments
           position={[

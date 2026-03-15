@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { useAppStore } from '../store/useAppStore';
 import type { PropItem, PropCatalogItem, WallSegment } from '../store/types';
+import { getGoldenSceneForProp } from './modelCache';
 
 /**
  * Categories whose props can act as support surfaces for "table" placement items.
@@ -71,13 +72,14 @@ export function checkWallCollision(
 /**
  * Find the best landing Y position for a prop being dragged.
  * C4: Also applies wall collision barriers for non-free-placement props.
+ * 
+ * Note: sceneRefs parameter removed — now uses modelCache.getGoldenSceneForProp() internally.
  */
 export function findLandingPosition(
   propId: string,
   dragXZ: [number, number],
   currentY: number,
   floorId: string,
-  sceneRefs: Map<string, THREE.Group>,
 ): PlacementResult {
   const state = useAppStore.getState();
   const floorElevation = getFloorElevation(floorId);
@@ -115,7 +117,7 @@ export function findLandingPosition(
   }
 
   if (placement === 'table') {
-    const surfaceY = findSupportSurfaceY(propId, [finalX, finalZ], floorId, floorElevation, sceneRefs, state);
+    const surfaceY = findSupportSurfaceY(propId, [finalX, finalZ], floorId, floorElevation, state);
     if (surfaceY !== null) {
       return { position: [finalX, surfaceY, finalZ], snappedTo: 'surface' };
     }
@@ -136,15 +138,13 @@ export function findLandingPosition(
 
 /**
  * Scan other props on the same floor that qualify as support surfaces.
- * If the drag position is within the horizontal bounds of a support,
- * return the top Y of that support's bounding box.
+ * Uses modelCache golden scenes for bounding box calculations.
  */
 function findSupportSurfaceY(
   draggedPropId: string,
   dragXZ: [number, number],
   floorId: string,
   floorElevation: number,
-  sceneRefs: Map<string, THREE.Group>,
   state: ReturnType<typeof useAppStore.getState>,
 ): number | null {
   const floorProps = state.props.items.filter(
@@ -158,14 +158,14 @@ function findSupportSurfaceY(
     const otherCat = state.props.catalog.find(c => c.id === otherProp.catalogId);
     if (!otherCat || !isSupportSurface(otherCat)) continue;
 
-    // Get loaded scene ref for bounding box
-    const sceneRef = sceneRefs.get(otherProp.id);
-    if (!sceneRef) continue;
+    // Get golden scene from cache for bounding box
+    const goldenScene = getGoldenSceneForProp(otherProp.id);
+    if (!goldenScene) continue;
 
-    // Compute world-space bounding box
-    const bbox = new THREE.Box3().setFromObject(sceneRef);
+    // Compute bounding box on golden scene (read-only, at identity)
+    const bbox = new THREE.Box3().setFromObject(goldenScene);
 
-    // Apply the prop's position offset (scenes are at origin, positioned via primitive)
+    // Apply the prop's position offset
     const pos = otherProp.position;
     bbox.min.add(new THREE.Vector3(pos[0], pos[1], pos[2]));
     bbox.max.add(new THREE.Vector3(pos[0], pos[1], pos[2]));
