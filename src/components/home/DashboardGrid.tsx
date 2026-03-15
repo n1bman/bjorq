@@ -237,12 +237,10 @@ function HomeCategory() {
       >
         {/* 3D Preview widget — double-click to save camera view */}
         <div
-          className="glass-panel glass-panel-hover rounded-2xl overflow-hidden h-[280px] relative cursor-pointer"
+          className="rounded-2xl overflow-hidden h-[280px] relative cursor-pointer border border-border/40 bg-transparent"
           onDoubleClick={() => setShowSaveView(true)}
         >
-          <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">
-            <p>3D-vy (bakgrund)</p>
-          </div>
+          {/* Transparent — persistent 3D canvas is visible behind this */}
           {showSaveView && (
             <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/50 backdrop-blur-sm" onClick={(e) => e.stopPropagation()}>
               <div className="glass-panel rounded-2xl p-5 w-64 shadow-xl space-y-3">
@@ -441,9 +439,9 @@ function StandbySettingsPanel() {
         </select>
       </div>
 
-      {/* 3D Camera preview — uses persistent canvas */}
-      <div className="glass-panel rounded-xl overflow-hidden h-[200px] flex items-center justify-center text-muted-foreground text-xs">
-        <p>3D-vy (bakgrund)</p>
+      {/* 3D Camera preview — persistent canvas visible through transparent window */}
+      <div className="rounded-xl overflow-hidden h-[200px] border border-border/40 bg-transparent">
+        {/* Transparent — persistent 3D canvas is visible behind */}
       </div>
 
       <Button
@@ -564,11 +562,11 @@ function SettingsCategory() {
 function GraphicsCategory() {
   return (
     <div className="settings-page">
-      {/* Live 3D preview so you can see changes in real-time */}
+      {/* Live 3D preview — persistent canvas visible through transparent window */}
       <section>
         <h2>3D-förhandsvisning</h2>
-        <div className="glass-panel rounded-2xl overflow-hidden h-[250px] flex items-center justify-center text-muted-foreground text-xs">
-          <p>3D-vy (bakgrund)</p>
+        <div className="rounded-2xl overflow-hidden h-[250px] border border-border/40 bg-transparent">
+          {/* Transparent — persistent 3D canvas is visible behind */}
         </div>
       </section>
       <section>

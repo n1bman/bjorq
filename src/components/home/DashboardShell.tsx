@@ -24,9 +24,9 @@ export default function DashboardShell() {
   }, [setDashCategory]);
 
   return (
-    <div className="fixed inset-0 bg-background flex">
+    <div className="fixed inset-0 flex">
       {/* ── Left Nav Rail ── */}
-      <nav className="w-[140px] shrink-0 flex flex-col nav-rail-bg overflow-y-auto overflow-x-hidden">
+      <nav className="w-[140px] shrink-0 flex flex-col nav-rail-bg bg-background/90 backdrop-blur-sm overflow-y-auto overflow-x-hidden">
         {/* Logo area */}
         <div className="flex items-center justify-center py-4 px-3">
           <span className="text-sm font-bold tracking-widest text-primary" style={{ fontFamily: 'Space Grotesk, system-ui' }}>
@@ -80,7 +80,7 @@ export default function DashboardShell() {
       </nav>
 
       {/* ── Main Content Area ── */}
-      <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
+      <div className="flex-1 min-w-0 flex flex-col overflow-hidden bg-background/80 backdrop-blur-sm">
         {/* Top summary cards */}
         <div className="shrink-0 flex items-start gap-3 px-5 py-3 summary-bar overflow-x-auto">
           <ClockWidget />
