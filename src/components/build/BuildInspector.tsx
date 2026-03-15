@@ -451,23 +451,37 @@ function WallInspector({ floorId, wallId, floor, close }: { floorId: string; wal
       {/* Wall thickness presets */}
       <div className="space-y-1">
         <label className="text-muted-foreground text-[10px]">Väggtjocklek</label>
-        <div className="flex gap-1">
+        <div className="flex gap-1 flex-wrap">
           {[
-            { label: 'Innervägg', value: 0.10 },
-            { label: 'Standard', value: 0.15 },
-            { label: 'Yttervägg', value: 0.20 },
+            { label: '45mm', value: 0.045 },
+            { label: '70mm', value: 0.07 },
+            { label: '95mm', value: 0.095 },
+            { label: '120mm', value: 0.12 },
+            { label: '145mm', value: 0.145 },
+            { label: '195mm', value: 0.195 },
           ].map((preset) => (
             <button key={preset.label}
               onClick={() => { pushUndo(); updateWall(floorId, wall.id, { thickness: preset.value }); }}
-              className={`flex-1 py-1.5 rounded-md text-[10px] font-medium transition-colors ${
-                wall.thickness === preset.value
+              className={`px-2 py-1.5 rounded-md text-[10px] font-medium transition-colors ${
+                Math.abs(wall.thickness - preset.value) < 0.005
                   ? 'bg-primary text-primary-foreground'
                   : 'bg-secondary/50 hover:bg-secondary text-foreground'
               }`}>
-              {preset.label} ({preset.value}m)
+              {preset.label}
             </button>
           ))}
         </div>
+        <SliderWithInput
+          label="mm"
+          min={30}
+          max={300}
+          step={5}
+          value={Math.round(wall.thickness * 1000)}
+          onValueChange={(v) => { updateWall(floorId, wall.id, { thickness: v / 1000 }); }}
+          onCommitStart={pushUndo}
+          suffix=" mm"
+          decimals={0}
+        />
       </div>
 
       {/* Wall height presets */}

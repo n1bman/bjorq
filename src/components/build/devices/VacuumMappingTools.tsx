@@ -105,6 +105,55 @@ export default function VacuumMappingTools() {
         </button>
       </div>
 
+      {/* Use existing rooms as vacuum zones */}
+      {rooms.length > 0 && (
+        <div className="mt-2 space-y-1">
+          <p className="text-[9px] text-muted-foreground uppercase tracking-wider px-1 hidden lg:block">
+            Befintliga rum
+          </p>
+          {rooms.map((room) => {
+            const existingZone = mapping?.zones?.find((z) => z.roomId === room.id);
+            const isIncluded = !!existingZone;
+            return (
+              <div key={room.id} className="flex items-center gap-2 px-2 py-1.5 rounded text-[10px] hover:bg-secondary/20">
+                <input
+                  type="checkbox"
+                  checked={isIncluded}
+                  onChange={() => {
+                    if (!activeFloorId) return;
+                    if (isIncluded) {
+                      removeVacuumZone(activeFloorId, room.id);
+                    } else if (room.polygon && room.polygon.length >= 3) {
+                      const addZone = useAppStore.getState().addVacuumZone;
+                      addZone(activeFloorId, { roomId: room.id, polygon: room.polygon });
+                    }
+                  }}
+                  className="rounded border-border"
+                />
+                <span className="text-foreground/80 truncate flex-1">{room.name}</span>
+                {isIncluded && (
+                  <div className="flex items-center gap-1">
+                    <Hash size={10} className="text-muted-foreground/50" />
+                    <input
+                      type="number"
+                      placeholder="Seg-ID"
+                      className="w-12 bg-secondary/40 border border-border rounded px-1 py-0.5 text-[9px] text-foreground outline-none focus:ring-1 focus:ring-primary/50"
+                      value={existingZone?.segmentId ?? ''}
+                      onChange={(e) => {
+                        if (activeFloorId) {
+                          const val = e.target.value ? parseInt(e.target.value) : undefined;
+                          updateVacuumZoneSegmentId(activeFloorId, room.id, val);
+                        }
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       {/* Dock status */}
       {mapping?.dockPosition && (
         <div className="mt-2 px-1 text-[10px] text-muted-foreground flex items-center gap-1">
