@@ -10,10 +10,6 @@ import { Button } from '../../ui/button';
 import { toast } from 'sonner';
 import type { QualityLevel } from '../../../store/types';
 import { getStats as getCacheStats } from '../../../lib/modelCache';
-import OptionButton from '../../ui/OptionButton';
-import { Button } from '../../ui/button';
-import { toast } from 'sonner';
-import type { QualityLevel } from '../../../store/types';
 
 const qualityOptions: { value: QualityLevel; label: string; desc: string }[] = [
   { value: 'low', label: 'Låg', desc: 'Minimal – bra för surfplatta/RPi' },
