@@ -68,6 +68,9 @@ import DeviceMarkers3D from './devices/DeviceMarkers3D';
 
 import type { CameraPreset, StandbyCameraView, WallSegment, DeviceKind } from '../store/types';
 import { clearAllCaches } from '../lib/modelCache';
+import FPSController from './home/FPSController';
+import { findRobertoSpawn, type SpawnResult } from '../lib/fpsSpawn';
+import { toast } from '../hooks/use-toast';
 
 // ─── Camera presets ───
 
