@@ -920,7 +920,8 @@ export default function PersistentScene3D({ onDeviceLongPress, onFpsStateChange 
   const handleFpsExit = useCallback(() => {
     setFpsActive(false);
     setFpsSpawn(null);
-  }, []);
+    onFpsStateChange?.(false);
+  }, [onFpsStateChange]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
