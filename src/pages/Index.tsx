@@ -58,6 +58,7 @@ const IndexInner = () => {
 
 const Index = () => {
   const [initDone, setInitDone] = useState(false);
+  const [showLoading, setShowLoading] = useState(true);
 
   useEffect(() => {
     initHostedMode().then((hosted) => {
@@ -87,7 +88,13 @@ const Index = () => {
     });
   }, []);
 
-  if (!initDone) return null;
+  if (!initDone) {
+    return <LoadingScreen />;
+  }
+
+  if (showLoading) {
+    return <LoadingScreen onComplete={() => setShowLoading(false)} />;
+  }
 
   return <IndexInner />;
 };
