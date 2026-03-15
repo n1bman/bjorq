@@ -51,6 +51,57 @@ function getDeviceInfo() {
   return { cores, screenRes, memGB };
 }
 
+const DEVICE_LIMITS = [
+  { label: 'Raspberry Pi', triangles: 50_000, textures: 10, color: 'hsl(0, 84%, 60%)' },
+  { label: 'Mobil / Surfplatta', triangles: 150_000, textures: 30, color: 'hsl(45, 93%, 47%)' },
+  { label: 'Desktop', triangles: 500_000, textures: 80, color: 'hsl(142, 71%, 45%)' },
+];
+
+function SceneLoadMetrics() {
+  const stats = getCacheStats();
+  return (
+    <Collapsible>
+      <CollapsibleTrigger className="flex items-center justify-between w-full py-2 group">
+        <div className="flex items-center gap-2">
+          <BarChart3 size={14} className="text-muted-foreground" />
+          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Scenbelastning</span>
+        </div>
+        <ChevronRight size={14} className="text-muted-foreground transition-transform group-data-[state=open]:rotate-90" />
+      </CollapsibleTrigger>
+      <CollapsibleContent className="space-y-3 pt-1 pb-2">
+        <div className="grid grid-cols-3 gap-2 text-[10px] text-muted-foreground text-center">
+          <div><span className="block text-foreground font-medium">{stats.modelCount}</span>Modeller</div>
+          <div><span className="block text-foreground font-medium">{(stats.totalTriangles / 1000).toFixed(1)}k</span>Trianglar</div>
+          <div><span className="block text-foreground font-medium">{stats.textureCount}</span>Texturer</div>
+        </div>
+        <div className="space-y-2">
+          {DEVICE_LIMITS.map((device) => {
+            const pct = Math.min((stats.totalTriangles / device.triangles) * 100, 100);
+            const over = stats.totalTriangles > device.triangles;
+            return (
+              <div key={device.label} className="space-y-1">
+                <div className="flex items-center justify-between text-[10px]">
+                  <span className="text-muted-foreground">{device.label}</span>
+                  <span className={`font-medium ${over ? 'text-destructive' : 'text-foreground'}`}>
+                    {over ? '⚠ Över gräns' : `${pct.toFixed(0)}%`}
+                  </span>
+                </div>
+                <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all"
+                    style={{ width: `${pct}%`, backgroundColor: over ? 'hsl(0, 84%, 60%)' : device.color }}
+                  />
+                </div>
+                <p className="text-[8px] text-muted-foreground/60">Max: {(device.triangles / 1000).toFixed(0)}k trianglar / {device.textures} texturer</p>
+              </div>
+            );
+          })}
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
+
 function getRecommendation(score: number, cores: number, memGB: number | null) {
   const isWeak = cores > 0 && cores <= 4;
   const isLowMem = memGB !== null && memGB <= 4;
@@ -279,6 +330,9 @@ export default function GraphicsSettings() {
           </div>
         </CollapsibleContent>
       </Collapsible>
+
+      {/* Scene Load Metrics */}
+      <SceneLoadMetrics />
 
       {/* Performance HUD */}
       <div className="flex items-center justify-between">

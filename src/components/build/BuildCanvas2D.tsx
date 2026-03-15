@@ -267,9 +267,19 @@ function drawWallPreview(
       const dist = Math.hypot(dx, dz);
       if (dist > 0.1) {
         const angleDeg = (Math.atan2(dz, dx) * 180 / Math.PI + 360) % 360;
+        // Use wider tolerance for axis detection, then SNAP to exact axis
+        const AXIS_TOLERANCE = 5; // degrees
         for (const target of [0, 90, 180, 270, 360]) {
-          if (Math.abs(angleDeg - target) < 3) {
+          if (Math.abs(angleDeg - target) < AXIS_TOLERANCE) {
             isAxisAligned = true;
+            // Snap cursor to exact axis-aligned position to prevent wobble
+            if (target === 0 || target === 180 || target === 360) {
+              // Horizontal: lock Z to match last node
+              snappedCursor = [snappedCursor[0], lastNode[1]];
+            } else {
+              // Vertical: lock X to match last node
+              snappedCursor = [lastNode[0], snappedCursor[1]];
+            }
             break;
           }
         }
