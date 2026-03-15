@@ -1165,7 +1165,7 @@ function DeviceInspector({ deviceId, close }: { deviceId: string; close: React.R
   const rooms = floor?.rooms ?? [];
   const currentRoom = rooms.find((r) => r.id === device.roomId);
 
-  const isScreen = device.kind === 'media_screen';
+  const isScreen = device.kind === 'media_screen' || (device.kind as string) === 'media-screen';
   const isLight = device.kind === 'light';
   const isLightFixture = device.kind === 'light-fixture';
   const screenConfig = device.screenConfig ?? { aspectRatio: 16 / 9, uiStyle: 'minimal' as const, showProgress: true };
