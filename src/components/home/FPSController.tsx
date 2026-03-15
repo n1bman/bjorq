@@ -74,6 +74,9 @@ export default function FPSController({ spawnPosition, floorId, elevation, onExi
       // Restore camera
       camera.position.copy(savedCameraRef.current.pos);
       camera.lookAt(savedCameraRef.current.target);
+      // Restore FOV
+      (camera as THREE.PerspectiveCamera).fov = savedCameraRef.current.fov;
+      (camera as THREE.PerspectiveCamera).updateProjectionMatrix();
       // Release pointer lock
       if (document.pointerLockElement) {
         document.exitPointerLock?.();

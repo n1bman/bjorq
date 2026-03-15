@@ -1399,6 +1399,7 @@ const markerComponents: Record<DeviceKind, React.FC<MarkerProps>> = {
   soundbar: SoundbarMarker3D,
   'light-fixture': LightFixtureMarker,
   'smart-outlet': SmartOutletMarker,
+  egg: (props) => <GenericMarker {...props} color="#d4a017" emissive="#b8860b" />,
 };
 
 interface DeviceMarkers3DProps {

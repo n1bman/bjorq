@@ -10,6 +10,7 @@ const deviceKinds: { kind: DeviceKind; label: string; icon: typeof Lightbulb }[]
   { kind: 'sensor', label: 'Sensor', icon: Thermometer },
   { kind: 'climate', label: 'Klimat', icon: Wind },
   { kind: 'vacuum', label: 'Robotdammsugare', icon: Bot },
+  { kind: 'egg', label: 'Egg', icon: Egg },
 ];
 
 const generateId = () => Math.random().toString(36).slice(2, 10);

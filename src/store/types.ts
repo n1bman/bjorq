@@ -219,6 +219,7 @@ export type BuildTool =
   | 'place-soundbar'
   | 'place-light-fixture'
   | 'place-smart-outlet'
+  | 'place-egg'
   | 'place-vacuum-dock'
   | 'vacuum-zone'
   | 'furnish'
