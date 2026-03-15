@@ -4,6 +4,7 @@ import HomeView from '../components/home/HomeView';
 import DashboardShell from '../components/home/DashboardShell';
 import StandbyMode from '../components/standby/StandbyMode';
 import PerformanceHUD from '../components/home/PerformanceHUD';
+import LoadingScreen from '../components/LoadingScreen';
 import PersistentScene3D from '../components/PersistentScene3D';
 import { useAppStore, initHostedMode, autoDetectPerformance } from '../store/useAppStore';
 import { useHomeAssistant } from '../hooks/useHomeAssistant';
@@ -57,6 +58,7 @@ const IndexInner = () => {
 
 const Index = () => {
   const [initDone, setInitDone] = useState(false);
+  const [showLoading, setShowLoading] = useState(true);
 
   useEffect(() => {
     initHostedMode().then((hosted) => {
@@ -86,7 +88,13 @@ const Index = () => {
     });
   }, []);
 
-  if (!initDone) return null;
+  if (!initDone) {
+    return <LoadingScreen />;
+  }
+
+  if (showLoading) {
+    return <LoadingScreen onComplete={() => setShowLoading(false)} />;
+  }
 
   return <IndexInner />;
 };

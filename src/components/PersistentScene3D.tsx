@@ -7,6 +7,52 @@ import { useAppStore } from '../store/useAppStore';
 import { cameraRef, pendingFlyTo, clearPendingFlyTo } from '../lib/cameraRef';
 import { findWallAtWorld, pointToSegment, snapToNode, generateId } from '../lib/buildUtils';
 import { openingPresets } from '../lib/openingPresets';
+import { getStats as getCacheStats } from '../lib/modelCache';
+
+// ─── Phase 3.5: Adaptive frame throttle ───
+// Reduces GPU load in standby/dashboard modes by skipping frames.
+// vio = pause entirely, standby = ~10fps, dashboard = paused (canvas hidden), home/build = full speed
+
+function FrameThrottle() {
+  const appMode = useAppStore((s) => s.appMode);
+  const standbyPhase = useAppStore((s) => s.standby.phase);
+  const lastRender = useRef(0);
+
+  useFrame((state, _delta) => {
+    // Vio mode: near-black screen, no 3D needed — pause rendering
+    if (appMode === 'standby' && standbyPhase === 'vio') {
+      state.gl.setAnimationLoop(null);
+      return;
+    }
+
+    // Standby mode: slow camera drift, only need ~10fps
+    if (appMode === 'standby' && standbyPhase === 'standby') {
+      const now = performance.now();
+      if (now - lastRender.current < 100) return; // skip frame (~10fps)
+      lastRender.current = now;
+    }
+
+    // home/build: full speed, no throttling
+  });
+
+  // Re-enable animation loop when leaving vio
+  const prevVio = useRef(false);
+  useEffect(() => {
+    const isVio = appMode === 'standby' && standbyPhase === 'vio';
+    if (prevVio.current && !isVio) {
+      // Canvas will re-enable its own loop on next invalidation/render cycle
+      // Force a state change to restart the loop
+      const store = useAppStore.getState();
+      useAppStore.setState({ ...store });
+    }
+    prevVio.current = isVio;
+  }, [appMode, standbyPhase]);
+
+  return null;
+}
+
+// Export cache stats getter for PerformanceHUD
+export { getCacheStats };
 
 import Walls3D from './build/Walls3D';
 import InteractiveWalls3D from './build/InteractiveWalls3D';
@@ -809,6 +855,7 @@ function UnifiedSceneContent({ onDeviceLongPress }: { onDeviceLongPress?: (id: s
 
       <Environment preset="night" />
       <CameraController />
+      <FrameThrottle />
     </>
   );
 }
