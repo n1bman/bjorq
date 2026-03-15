@@ -809,6 +809,16 @@ export default function PersistentScene3D({ onDeviceLongPress }: { onDeviceLongP
   const exposure = useAppStore((s) => s.performance.exposure);
   const appMode = useAppStore((s) => s.appMode);
   const buildCameraMode = useAppStore((s) => s.build.view.cameraMode);
+  const activeTool = useAppStore((s) => s.build.activeTool);
+  const wallDrawing = useAppStore((s) => s.build.wallDrawing);
+  const activeFloorId = useAppStore((s) => s.layout.activeFloorId);
+  const activeFloor = useAppStore((s) => s.layout.floors.find((f) => f.id === s.layout.activeFloorId));
+  const addWall = useAppStore((s) => s.addWall);
+  const setWallDrawing = useAppStore((s) => s.setWallDrawing);
+  const pushUndo = useAppStore((s) => s.pushUndo);
+  const exposure = useAppStore((s) => s.performance.exposure);
+  const appMode = useAppStore((s) => s.appMode);
+  const buildCameraMode = useAppStore((s) => s.build.view.cameraMode);
 
   const dpr = tabletMode ? 0.75 : quality === 'low' ? 1 : quality === 'medium' ? 1.5 : undefined;
 
