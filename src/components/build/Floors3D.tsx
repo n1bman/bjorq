@@ -17,6 +17,7 @@ export default function Floors3D() {
   const appMode = useAppStore((s) => s.appMode);
   const selection = useAppStore((s) => s.build.selection);
   const activeTool = useAppStore((s) => s.build.activeTool);
+  const editLock = useAppStore((s) => s.build.editLock ?? 'all');
   const setSelection = useAppStore((s) => s.setSelection);
 
   const selectedRoomId = selection.type === 'room' ? selection.id : null;
