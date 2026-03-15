@@ -24,7 +24,7 @@ import CategoryCard from './cards/CategoryCard';
 import CategoryManager from './cards/CategoryManager';
 import CalendarWidget from './cards/CalendarWidget';
 import RobotPanel from './cards/RobotPanel';
-import CameraStartSettings from './cards/CameraStartSettings';
+
 import GraphicsSettings from './cards/GraphicsSettings';
 import SunWeatherPanel from './cards/SunWeatherPanel';
 import EnvironmentPanel from './cards/EnvironmentPanel';
