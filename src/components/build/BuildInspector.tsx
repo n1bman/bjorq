@@ -444,7 +444,7 @@ function WallInspector({ floorId, wallId, floor, close }: { floorId: string; wal
         <div className="grid grid-cols-2 gap-2 text-muted-foreground">
           <span>Längd:</span><span className="text-foreground">{length.toFixed(2)} m</span>
           <span>Höjd:</span><span className="text-foreground">{wall.height} m</span>
-          <span>Tjocklek:</span><span className="text-foreground">{wall.thickness} m</span>
+          <span>Tjocklek:</span><span className="text-foreground">{Math.round(wall.thickness * 1000)} mm</span>
         </div>
       </div>
 
