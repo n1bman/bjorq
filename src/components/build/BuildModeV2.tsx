@@ -2542,7 +2542,7 @@ export default function BuildModeV2() {
         <div className="flex-1 relative overflow-hidden">
           {/* Device placement tools (overlays catalog when active) */}
           {showDevicePanel && (
-            <div className="absolute left-0 top-0 bottom-0 w-[220px] bg-card/95 backdrop-blur-sm border-r border-border z-20 overflow-y-auto py-3">
+            <div className="absolute left-0 top-0 bottom-0 w-[220px] bg-card/95 backdrop-blur-sm border-r border-border z-20 overflow-y-auto py-3 pointer-events-auto">
               <InlinedDevicePlacementTools />
             </div>
           )}
