@@ -771,7 +771,12 @@ function BuildGroundInteractions() {
 
 // ─── Unified scene content ───
 
-function UnifiedSceneContent({ onDeviceLongPress }: { onDeviceLongPress?: (id: string) => void }) {
+function UnifiedSceneContent({ onDeviceLongPress, fpsActive, fpsSpawn, onFpsExit }: {
+  onDeviceLongPress?: (id: string) => void;
+  fpsActive?: boolean;
+  fpsSpawn?: SpawnResult | null;
+  onFpsExit?: () => void;
+}) {
   const appMode = useAppStore((s) => s.appMode);
   const sunAzimuth = useAppStore((s) => s.environment.sunAzimuth);
   const sunElevation = useAppStore((s) => s.environment.sunElevation);
