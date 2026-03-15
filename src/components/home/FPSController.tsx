@@ -43,6 +43,7 @@ export default function FPSController({ spawnPosition, floorId, elevation, onExi
   useEffect(() => {
     mountedRef.current = true;
     savedCameraRef.current.pos.copy(camera.position);
+    savedCameraRef.current.fov = (camera as THREE.PerspectiveCamera).fov;
     // Compute current look target
     const dir = new THREE.Vector3();
     camera.getWorldDirection(dir);
@@ -50,6 +51,10 @@ export default function FPSController({ spawnPosition, floorId, elevation, onExi
 
     // Set initial position
     camera.position.set(spawnPosition[0], spawnPosition[1], spawnPosition[2]);
+
+    // Set FPS FOV (wider = more natural scale feeling)
+    (camera as THREE.PerspectiveCamera).fov = 90;
+    (camera as THREE.PerspectiveCamera).updateProjectionMatrix();
 
     // Compute initial yaw from camera direction (face forward)
     yawRef.current = Math.atan2(
