@@ -1,84 +1,116 @@
-# Arbetsplan: Stabilisering, buggfixar och UX-förbättringar
 
-## Status: ✅ Implementerat (v1.1.0)
+
+# Buggfixar och förbättringar — 9 punkter
+
+## Översikt
+
+Nio problem har identifierats som spänner över ljussättning, 3D-modellhantering, UI-interaktion och kamerabeteende. Planen är uppdelad i logiska arbetsblock.
 
 ---
 
-## Fas 0 — Bygg-stabilisering ✅ DONE
-- Fixat import i Scene3D till `./build/KitchenFixture3D`
-- Raderat duplikat `KitchenFixtureObject3D.tsx`
+## 1. Platt solljus / överexponerade väggar
 
-## Fas 1 — Buggar och regressioner ✅ DONE
+**Problem:** Ljuset känns platt och väggar är överexponerade.
 
-### 1.1 Väggar: 90-gradersstöd vid ritning ✅
-- Axis-aligned snapping (±3° av 0/90/180/270°) i `BuildScene3D.tsx`
-- Visuell indikator: cyan linje + solid (ej dashed) + "90°"-label via `<Html>`
-- `cursorAxisAligned`-prop tillagd i `WallDrawing3D.tsx`
+**Orsak:** I `environmentEngine.ts` multipliceras `ambientIntensity` med `atmosphereIntensity` (rad 279), men `hemisphereIntensity` multipliceras med `indoorBounce` som har minimum 0.35 (rad 225). Vid klart väder ger CLEAR-profilen `sunIntensity: 1.1` + `ambientIntensity: 0.40` + `hemisphereIntensity: 0.45` — kombinerat med indoorBounce och atmosphere-multiplikatorer blir det för ljust och platt.
 
-### 1.3 Dörr-öppningsriktning ✅
-- `flipped` appliceras nu på dörrpanelens position och rotation i `wallGeometry.tsx`
-- Gångjärnspunkt beräknas baserat på `flipped`-flagga
+**Åtgärd:**
+- `environmentEngine.ts`: Sänk CLEAR-profilens `ambientIntensity` 0.40 → 0.30, `hemisphereIntensity` 0.45 → 0.35, höj `sunIntensity` 1.1 → 1.4 för tydligare riktningsljus och kontrast.
+- Justera `hemisphereSkyColor` till en kallare ton för att motverka uttvättad känsla.
+- `Scene3D.tsx`: Öka `shadow-camera` frustum och sänk `shadow-bias` för skarpare skuggor.
 
-### 1.4 Dörrens öppningsgrad ✅
-- `openAmount?: number` (0-1) tillagd på `WallOpening` i `types.ts`
-- Slider "Öppningsgrad" i OpeningInspector (dörrar + garageportar)
-- 3D: dörrblad roteras runt gångjärnspunkt baserat på `openAmount * π/2`
-- TODO: koppla till `haEntityId` för automatisk HA-sync
+---
 
-### 1.5 Ljus går igenom väggar ✅ (pragmatisk lösning)
-- Alla ljustyper: minskad distance + decay=2
-- ceiling: 5m, strip: 6m, spot: 6m/π/7 angle, wall: 5m/π/4 angle
-- Dokumenterat: fullständig ljusblockering kräver baked lighting
+## 2. 3D-modell (skåp) hanterar inte omgivningsljus
 
-## Fas 2 — UX-förbättringar ✅ DONE
+**Problem:** Importerad modell tar inte emot ljus korrekt (ser helt svart ut förutom lampor).
 
-### 2.1 Sliders med exakt värdeinmatning ✅
-- Ny `SliderWithInput`-komponent (`src/components/ui/SliderWithInput.tsx`)
-- Klickbart värde → number input med Enter/Escape/blur
-- Applicerad i OpeningInspector (bredd, höjd, bröstning, position, öppningsgrad)
+**Orsak:** I `Props3D.tsx` rad 373-374 sätts `child.castShadow = false; child.receiveShadow = true;` — men det klonade materialet kan ha `metalness: 1` eller felaktiga PBR-värden som gör att det absorberar allt diffust ljus. Dessutom klonas materialet vid varje renderloop.
 
-### 2.2 Möbelfliken stängd som standard ✅
-- Inredning startar med `select`-verktyg (inte `furnish`)
-- Katalogen visas bara när Möbler eller Wizard-verktyg är aktivt
+**Åtgärd:**
+- `Props3D.tsx` `displayScene`: Efter kloning, kontrollera och korrigera extrema materialvärden. Om `metalness > 0.95` och ingen metallkänsla-override finns, sänk till 0.5. Om `roughness < 0.05`, höj till 0.3. Lägg till `child.material.envMapIntensity = 1.0` och säkerställ `child.material.needsUpdate = true`.
 
-### 2.3 Måla-fliken flyttad till Inredning ✅
-- `paint`-verktyg borttaget från `planritningTools`
-- Tillagt i `inredningTools` som "Måla" med Paintbrush-ikon
-- SurfaceEditor visas under Inredning-fliken
+---
 
-### 2.4 Väggar: bara färger (inga texturer) ✅
-- SurfaceEditor filtrerar vägg-material till enbart `paint`-kategorin
-- 15 nya väggfärger tillagda (mjuk rosa, oliv, skifferblå, etc.)
-- Golv behåller alla texturer som tidigare
+## 3. Emissive-highlight vid markering av möbel — byt till blå box
 
-## Fas 3 — Dokumentation och mappstruktur ✅ DONE
-- `public/textures/guide/README.md` uppdaterad med korrekt mappstruktur
-- Borttagen felaktig referens till `public/textures/floor/`
-- Target-paths tillagda per preset
-- `public/textures/carpet/` skapad
+**Problem:** Emissive-highlight (#d4a574) gör det omöjligt att se färgändringar.
 
-## Fas 4 — Import/Export och long-press ✅ DONE
+**Åtgärd:**
+- `Props3D.tsx` rad 390-396: Ta bort emissive-highlight helt (både `isSelected` och `isHovered` blocken).
+- `Props3D.tsx` rad 498-504: Ändra selection wireframe från vit till blå (`#4a9eff`), öka `linewidth` till 2, höj opacity till 0.9.
 
-### 4.2 Exportera från Bibliotek ✅
-- "Exportera"-knapp tillagd i BibliotekWorkspace detaljpanel
-- Exporterar metadata som JSON-fil
+---
 
-### 4.3 Hold-long på enheter i hemmenyn ✅
-- 500ms long-press → popup med av/på + ljusstyrka-slider
-- Fungerar för alla enheter med extra kontroll för `light`
+## 4. Placering: Fri som default + golv-genomträngning + long-press Fri funkar inte
 
-## Fas 5 — Troubleshooting-pass ✅ DONE
-- Raderat dead code: `PaintTool.tsx` (ersatt av inline SurfaceEditor)
-- KitchenFixtureObject3D redan borttagen
-- Inga oanvända importer kvar
-- Tester passerar
+**Problem:** Modeller med "golv"-inställning hamnar under golvet. Long-press "Fri"-knappen fungerar inte.
 
-## Fas 6 — Version 1.1.0 ✅ DONE
-- `package.json` bumpat till 1.1.0
+**Åtgärd:**
+- `placementEngine.ts` `findLandingPosition`: I slutet av funktionen (fallback), clamp Y till `Math.max(floorElevation, currentY)`. Gör detsamma i `placement === 'floor'`-grenen.
+- `Props3D.tsx` `handleToggleFreePlacement` (rad 361-365): Undersök och fixa — nuvarande kod sätter `freePlacement` men `placementEngine` kollar `propItem.freePlacement` korrekt. Problemet kan vara att catalog-item `placement` fortfarande styr. Lägg till explicit logik: om `freePlacement === true`, skippa alla collision checks och placement rules helt.
+- Ändra default placement i `addProp` till `freePlacement: true`.
+- Fixa long-press-menyns knappar (Rotera, Duplicera, Ta bort, Fri) — de fungerar troligen inte pga att `onClick` stoppas av event-hanteringen. Flytta `e.stopPropagation()` och säkerställ att Html-klick propageras korrekt.
 
-## Bevarat
-- Design / Planritning / Inredning / Bibliotek-struktur
-- Save/load kompatibilitet
-- HA-sync (ej ändrad)
-- Golv-texturer med ambientCG CDN-thumbnails
-- Vägg-mitering och hörn-geometri
+---
+
+## 5. Duplicera-knapp i device-inspektör + numerisk input + ta bort Yta/Kategori
+
+**Åtgärd:**
+- `BuildInspector.tsx` `DeviceInspector`: Lägg till en "Duplicera"-knapp (kopierar marker med offset +0.5 X).
+- Byt ut alla position/rotation `Slider` mot `SliderWithInput` (redan importerad) i `DeviceInspector`.
+- Ta bort "Yta"-dropdown (rad 1418-1430) och "Kategori"-input (rad 1432-1441) från DeviceInspector.
+
+---
+
+## 6. 3D-vy i Grafik & Miljö-inställningar
+
+**Problem:** Man ser inte effekten av ändringar direkt.
+
+**Åtgärd:**
+- `DashboardGrid.tsx`: I rendering-sektionen, lägg till en inline `<Scene3D>` preview-widget (kompakt, ~250px hög) ovanför GraphicsSettings. Wrappa i en Container med begränsad höjd. Använd en mini-Canvas med samma SceneContent som huvudscenen men utan interaktiva kontroller.
+
+---
+
+## 7. Väder pulserar — bättre realism
+
+**Problem:** Partiklar spawnar i pulser istället för jämnt.
+
+**Åtgärd:**
+- `WeatherEffects3D.tsx`: Problemet är att `positions` återskapas via `useMemo` med `count` som beroende, vilket ger en "burst". Randomisera initiala Y-positioner jämnt (0 till MAX_HEIGHT). Lägg till variation i fallhastigheten per partikel (±20%). Lägg till liten XZ-drift för regn. Låt `intensity` driva count mer gradvis genom att bara ändra count när diff > 10%.
+
+---
+
+## 8. Kamera hänger sig vid byte mellan lägen
+
+**Problem:** Kameran "snäpper tillbaka" vid byte från Design till Hem-vy.
+
+**Åtgärd:**
+- `Scene3D.tsx` `CameraController`: Vid `appMode`-byte, bevara kamerans nuvarande position istället för att trigga lerp till preset. Lägg till en `useEffect` som, vid byte från `build` till `home`, sätter `lerpingTo` baserat på den sparade `customStartPos/Target` — men INTE om `cameraPreset === 'free'`. I `InteractiveCameraController`, skippa initialApplied-logiken om det redan finns en aktiv kameraposition.
+
+---
+
+## 9. Enhetsmarkörer: dölj bara hjälpsfär-enheter + större ögonikon
+
+**Problem:** Användaren vill bara kunna dölja enheter som har en "hjälpsfär" (generiska markörer), inte de med 3D-modeller (ljusarmaturer, speakers, soundbar, etc.).
+
+**Åtgärd:**
+- `HomeView.tsx`: Definiera en `Set` med DeviceKinds som har 3D-modeller: `light-fixture`, `speaker`, `soundbar`, `smart-outlet`, `vacuum`, `light`, `switch`, `sensor`, `climate`. Filtrera `markers` i picker-listan så att bara enheter som INTE har 3D-modeller (dvs. GenericMarker-typer) visas.
+- Ögonikon: Ändra `<Eye size={16} />` till `<Eye size={20} />` och öka knappens storlek från `w-10 h-10` till `w-12 h-12`.
+
+---
+
+## Filer som ändras
+
+| Fil | Ändring |
+|-----|---------|
+| `src/lib/environmentEngine.ts` | Justera CLEAR-profil, hemisphere-färger |
+| `src/components/Scene3D.tsx` | Skuggor, kamera-modeövergång |
+| `src/components/build/Props3D.tsx` | Material-fix, emissive bort, blå box, freePlacement default |
+| `src/lib/placementEngine.ts` | Floor elevation clamp, freePlacement bypass |
+| `src/components/build/BuildInspector.tsx` | Duplicera-knapp, SliderWithInput, ta bort Yta/Kategori |
+| `src/components/build/WeatherEffects3D.tsx` | Jämn partikelfördelning, hastighetsvariation |
+| `src/components/home/HomeView.tsx` | Filtrera dölj-lista, större ögonikon |
+| `src/components/home/DashboardGrid.tsx` | 3D-preview i grafik-inställningar |
+| `package.json` + `config.yaml` + `README.md` + `CHANGELOG.md` | Version bump till 1.5.3 |
+
