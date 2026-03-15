@@ -1480,6 +1480,7 @@ export default function DeviceMarkers3D({ buildMode, onLongPress }: DeviceMarker
 
   const handleDragStart = useCallback((id: string, e: ThreeEvent<PointerEvent>) => {
     if (!buildMode) return;
+    if (editLock !== 'all' && editLock !== 'devices') return;
     e.stopPropagation();
 
     const marker = markers.find((m) => m.id === id);
