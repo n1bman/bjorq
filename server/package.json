@@ -1,6 +1,6 @@
 {
   "name": "bjorq-dashboard-server",
-  "version": "1.0.8",
+  "version": "1.6.3",
   "private": true,
   "type": "module",
   "scripts": {
