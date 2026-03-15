@@ -1418,6 +1418,7 @@ export default function DeviceMarkers3D({ buildMode, onLongPress }: DeviceMarker
   const toggleDeviceState = useAppStore((s) => s.toggleDeviceState);
   const selectedId = useAppStore((s) => s.build.selection.id);
   const selectedType = useAppStore((s) => s.build.selection.type);
+  const editLock = useAppStore((s) => s.build.editLock ?? 'all');
   const { camera, raycaster, gl } = useThree();
 
   const dragPlane = useRef(new THREE.Plane(new THREE.Vector3(0, 1, 0), 0));
