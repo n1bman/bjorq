@@ -1882,7 +1882,12 @@ function BibliotekWorkspace() {
     try {
       if (isHostedSync()) {
         const r = await ingestToCatalog(finalFile, { name: bibImportName, category: bibImportCat, subcategory: bibImportSub || undefined, placement: 'floor', dimensions: bibImportResult.dimensions, performance: finalStats }, finalThumbnail);
-        if (r) toast.success('Importerad till katalogen');
+        if (r) {
+          clearCatalogCache();
+          loadCuratedCatalog().then(setCuratedAssets);
+          const catLabel = BIB_CAT_LABELS[bibImportCat] || bibImportCat;
+          toast.success(`Tillagd i biblioteket under ${catLabel}`);
+        }
       } else {
         const url = URL.createObjectURL(finalFile);
         const catalogId = `user-${generateId()}-${Date.now()}`;

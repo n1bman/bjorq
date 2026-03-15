@@ -526,11 +526,10 @@ function SettingsCategory() {
       </section>
 
       <section>
-        <h2>Skärm</h2>
+        <h2>Skärm & Standby</h2>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
           <DisplaySettings />
           <StandbySettingsPanel />
-          <CameraStartSettings />
         </div>
       </section>
 
