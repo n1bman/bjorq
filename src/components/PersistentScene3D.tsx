@@ -898,6 +898,8 @@ export default function PersistentScene3D({ onDeviceLongPress }: { onDeviceLongP
   return (
     <div
       className="absolute inset-0 z-0"
+      onDoubleClick={handleDoubleClick}
+      onContextMenu={(e) => e.preventDefault()}
       style={{
         visibility: isHidden ? 'hidden' : 'visible',
         pointerEvents: isHidden ? 'none' : 'auto',
