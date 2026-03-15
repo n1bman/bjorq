@@ -443,8 +443,8 @@ function StandbySettingsPanel() {
       </div>
 
       {/* 3D Camera preview */}
-      <div className="rounded-xl overflow-hidden h-[200px] border border-border/40 bg-card flex items-center justify-center text-muted-foreground text-xs">
-        3D-vy (bakgrund)
+      <div className="rounded-xl overflow-hidden h-[200px] border border-border/40 bg-card">
+        <DashboardPreview3D />
       </div>
 
       <Button
