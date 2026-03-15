@@ -32,9 +32,10 @@ const KIND_ICONS: Partial<Record<DeviceKind, typeof Lightbulb>> = {
 interface HomeViewProps {
   longPressDeviceId?: string | null;
   onDismissLongPress?: () => void;
+  fpsActive?: boolean;
 }
 
-export default function HomeView({ longPressDeviceId, onDismissLongPress }: HomeViewProps) {
+export default function HomeView({ longPressDeviceId, onDismissLongPress, fpsActive }: HomeViewProps) {
   const visibleWidgets = useAppStore((s) => s.homeView.visibleWidgets);
   const homeScreenDevices = useAppStore((s) => s.homeView.homeScreenDevices ?? []);
   const markers = useAppStore((s) => s.devices.markers);
