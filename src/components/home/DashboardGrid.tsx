@@ -237,10 +237,10 @@ function HomeCategory() {
       >
         {/* 3D Preview widget — double-click to save camera view */}
         <div
-          className="rounded-2xl overflow-hidden h-[280px] relative cursor-pointer border border-border/40 bg-transparent"
+          className="rounded-2xl overflow-hidden h-[280px] relative cursor-pointer border border-border/40 bg-card"
           onDoubleClick={() => setShowSaveView(true)}
         >
-          {/* Transparent — persistent 3D canvas is visible behind this */}
+          <div className="absolute inset-0 flex items-center justify-center text-muted-foreground text-xs">3D-vy (bakgrund)</div>
           {showSaveView && (
             <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/50 backdrop-blur-sm" onClick={(e) => e.stopPropagation()}>
               <div className="glass-panel rounded-2xl p-5 w-64 shadow-xl space-y-3">
