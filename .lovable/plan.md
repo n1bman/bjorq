@@ -1,84 +1,52 @@
-# Arbetsplan: Persistent 3D Runtime & Optimering
 
-## Status: ✅ Implementerat (v1.6.0)
 
----
+# Fix: Camera Save View Persistence + Version Bump
 
-## Fas 0 — Bygg-stabilisering ✅ DONE
-- Fixat import i Scene3D till `./build/KitchenFixture3D`
-- Raderat duplikat `KitchenFixtureObject3D.tsx`
+## Bugs Found
 
-## Fas 1 — Buggar och regressioner ✅ DONE
+### Bug 1: Camera preset overrides saved position on reload
+In `InteractiveCameraController` (PersistentScene3D.tsx), three effects run on mount:
+1. **Initial effect** (line 152): Sets `lerpingTo` to `customStartPos` if it exists — correct.
+2. **Preset effect** (line 176): Fires with `cameraPreset = 'angle'` (default) and overwrites `lerpingTo` with the angle preset — **this erases the saved position**.
 
-### 1.1 Väggar: 90-gradersstöd vid ritning ✅
-- Axis-aligned snapping (±3° av 0/90/180/270°) i `BuildScene3D.tsx`
-- Visuell indikator: cyan linje + solid (ej dashed) + "90°"-label via `<Html>`
-- `cursorAxisAligned`-prop tillagd i `WallDrawing3D.tsx`
+**Fix**: When `customStartPos` exists, the preset effect should not override it on initial mount. Add a guard: skip the preset effect if `customStartPos` is set and the preset hasn't actually changed from its initial value.
 
-### 1.3 Dörr-öppningsriktning ✅
-- `flipped` appliceras nu på dörrpanelens position och rotation i `wallGeometry.tsx`
-- Gångjärnspunkt beräknas baserat på `flipped`-flagga
+### Bug 2: Dashboard save reads wrong camera
+The DashboardPreview3D has its own `<Canvas>` with its own camera, but the save dialog reads from `cameraRef` which tracks the **PersistentScene3D** camera (hidden behind the opaque dashboard). The user rotates the preview widget camera, clicks save, but captures the wrong camera's position.
 
-### 1.4 Dörrens öppningsgrad ✅
-- `openAmount?: number` (0-1) tillagd på `WallOpening` i `types.ts`
-- Slider "Öppningsgrad" i OpeningInspector (dörrar + garageportar)
-- 3D: dörrblad roteras runt gångjärnspunkt baserat på `openAmount * π/2`
-- TODO: koppla till `haEntityId` för automatisk HA-sync
+**Fix**: The DashboardPreview3D component needs to expose its own camera position. We'll add an `onCameraChange` callback that updates a local ref with the preview camera's position/target, then use that ref when saving.
 
-### 1.5 Ljus går igenom väggar ✅ (pragmatisk lösning)
-- Alla ljustyper: minskad distance + decay=2
-- ceiling: 5m, strip: 6m, spot: 6m/π/7 angle, wall: 5m/π/4 angle
-- Dokumenterat: fullständig ljusblockering kräver baked lighting
+## Files to Change
 
-## Fas 2 — UX-förbättringar ✅ DONE
+| File | Change |
+|------|--------|
+| `src/components/PersistentScene3D.tsx` | Fix preset effect to not override `customStartPos` on initial mount |
+| `src/components/home/DashboardPreview3D.tsx` | Add camera tracking via `useFrame` + expose camera ref via callback prop |
+| `src/components/home/DashboardGrid.tsx` | Use DashboardPreview3D's camera ref instead of `cameraRef` when saving |
+| `package.json` | Bump to `1.6.1` |
+| `CHANGELOG.md` | Add 1.6.1 entry |
+| `docs/patchnotes-v1.6.0.md` | Update with v1.6.1 fixes |
 
-### 2.1 Sliders med exakt värdeinmatning ✅
-- Ny `SliderWithInput`-komponent (`src/components/ui/SliderWithInput.tsx`)
-- Klickbart värde → number input med Enter/Escape/blur
-- Applicerad i OpeningInspector (bredd, höjd, bröstning, position, öppningsgrad)
+## Key Fix Details
 
-### 2.2 Möbelfliken stängd som standard ✅
-- Inredning startar med `select`-verktyg (inte `furnish`)
-- Katalogen visas bara när Möbler eller Wizard-verktyg är aktivt
+### PersistentScene3D — InteractiveCameraController
+```typescript
+// Preset effect: skip if we have a saved custom position (already applied by initial effect)
+useEffect(() => {
+  if (!initialApplied.current) return;
+  if (cameraPreset === 'free') return;
+  // Don't override saved position with default preset on mount
+  if ((customStartPos) && cameraPreset === 'angle') return;
+  lerpingTo.current = {
+    pos: presetPositions[cameraPreset].clone(),
+    target: presetTargets[cameraPreset].clone(),
+  };
+}, [cameraPreset]);
+```
 
-### 2.3 Måla-fliken flyttad till Inredning ✅
-- `paint`-verktyg borttaget från `planritningTools`
-- Tillagt i `inredningTools` som "Måla" med Paintbrush-ikon
-- SurfaceEditor visas under Inredning-fliken
+### DashboardPreview3D — Camera tracking
+Add a `useFrame` hook inside PreviewScene that writes to a shared ref, and accept an `onCameraRef` prop to expose it to parent.
 
-### 2.4 Väggar: bara färger (inga texturer) ✅
-- SurfaceEditor filtrerar vägg-material till enbart `paint`-kategorin
-- 15 nya väggfärger tillagda (mjuk rosa, oliv, skifferblå, etc.)
-- Golv behåller alla texturer som tidigare
+### DashboardGrid — Save from correct camera
+Use a `useRef` to capture the preview camera position from DashboardPreview3D, then read from that ref (instead of `cameraRef`) in the save handler.
 
-## Fas 3 — Dokumentation och mappstruktur ✅ DONE
-- `public/textures/guide/README.md` uppdaterad med korrekt mappstruktur
-- Borttagen felaktig referens till `public/textures/floor/`
-- Target-paths tillagda per preset
-- `public/textures/carpet/` skapad
-
-## Fas 4 — Import/Export och long-press ✅ DONE
-
-### 4.2 Exportera från Bibliotek ✅
-- "Exportera"-knapp tillagd i BibliotekWorkspace detaljpanel
-- Exporterar metadata som JSON-fil
-
-### 4.3 Hold-long på enheter i hemmenyn ✅
-- 500ms long-press → popup med av/på + ljusstyrka-slider
-- Fungerar för alla enheter med extra kontroll för `light`
-
-## Fas 5 — Troubleshooting-pass ✅ DONE
-- Raderat dead code: `PaintTool.tsx` (ersatt av inline SurfaceEditor)
-- KitchenFixtureObject3D redan borttagen
-- Inga oanvända importer kvar
-- Tester passerar
-
-## Fas 6 — Version 1.1.0 ✅ DONE
-- `package.json` bumpat till 1.1.0
-
-## Bevarat
-- Design / Planritning / Inredning / Bibliotek-struktur
-- Save/load kompatibilitet
-- HA-sync (ej ändrad)
-- Golv-texturer med ambientCG CDN-thumbnails
-- Vägg-mitering och hörn-geometri
