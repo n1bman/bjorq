@@ -240,7 +240,9 @@ function HomeCategory() {
           className="glass-panel glass-panel-hover rounded-2xl overflow-hidden h-[280px] relative cursor-pointer"
           onDoubleClick={() => setShowSaveView(true)}
         >
-          <Scene3D />
+          <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">
+            <p>3D-vy (bakgrund)</p>
+          </div>
           {showSaveView && (
             <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/50 backdrop-blur-sm" onClick={(e) => e.stopPropagation()}>
               <div className="glass-panel rounded-2xl p-5 w-64 shadow-xl space-y-3">

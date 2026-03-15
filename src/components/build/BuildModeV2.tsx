@@ -2605,8 +2605,8 @@ export default function BuildModeV2() {
           <div className="pointer-events-auto"><BuildInspector /></div>
         </div>
       )}
-      {!isBibliotek && <BuildCatalogRow />}
-      <DesignTabBar />
+      {!isBibliotek && <div className="pointer-events-auto"><BuildCatalogRow /></div>}
+      <div className="pointer-events-auto"><DesignTabBar /></div>
     </div>
   );
 }
