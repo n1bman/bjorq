@@ -80,7 +80,7 @@ export default function DashboardShell() {
       </nav>
 
       {/* ── Main Content Area ── */}
-      <div className="flex-1 min-w-0 flex flex-col overflow-hidden bg-background/80 backdrop-blur-sm">
+      <div className="flex-1 min-w-0 flex flex-col overflow-hidden bg-background">
         {/* Top summary cards */}
         <div className="shrink-0 flex items-start gap-3 px-5 py-3 summary-bar overflow-x-auto">
           <ClockWidget />

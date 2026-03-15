@@ -565,8 +565,8 @@ function GraphicsCategory() {
       {/* Live 3D preview — persistent canvas visible through transparent window */}
       <section>
         <h2>3D-förhandsvisning</h2>
-        <div className="rounded-2xl overflow-hidden h-[250px] border border-border/40 bg-transparent">
-          {/* Transparent — persistent 3D canvas is visible behind */}
+        <div className="rounded-2xl overflow-hidden h-[250px] border border-border/40 bg-card flex items-center justify-center text-muted-foreground text-xs">
+          3D-vy (bakgrund)
         </div>
       </section>
       <section>
