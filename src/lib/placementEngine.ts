@@ -119,7 +119,7 @@ export function findLandingPosition(
   }
 
   if (placement === 'floor') {
-    return { position: [finalX, floorElevation, finalZ], snappedTo: 'floor' };
+    return { position: [finalX, floorElevation + FLOOR_VISUAL_OFFSET, finalZ], snappedTo: 'floor' };
   }
 
   if (placement === 'table') {
