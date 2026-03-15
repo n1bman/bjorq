@@ -100,7 +100,7 @@ export function findLandingPosition(
 
   // If freePlacement is true, skip all collision checks and placement rules
   if (propItem.freePlacement) {
-    return { position: [dragXZ[0], Math.max(floorElevation, currentY), dragXZ[1]], snappedTo: 'free' };
+    return { position: [dragXZ[0], Math.max(floorElevation + FLOOR_VISUAL_OFFSET, currentY), dragXZ[1]], snappedTo: 'free' };
   }
 
   // C4: Wall collision check for non-wall-mounted props
