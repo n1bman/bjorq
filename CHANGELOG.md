@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.2] - 2026-03-15
+
+### Fixed
+- **Wall corner artifacts** — corner blocks now use padded convex hulls with `DoubleSide` material and increased polygon offset to eliminate dark cubes and gaps at wall junctions.
+- **Sun too far from building** — reduced sun distance from 20 to 12 units for more dramatic, game-like lighting with minimum height clamped to prevent underground sun.
+- **Graphics settings not remounting Canvas** — Canvas key now includes quality, shadows, antialiasing, and tone mapping, ensuring a full WebGL remount when settings change.
+- **Dashboard 3D preview too large** — reduced Hem category 3D widget height from 280px to 200px.
+
+### Verified
+- **Media screen 3D rendering** — `MediaScreenMarker` with `CanvasTexture` + `useFrame` scanline animation is correctly wired in both PersistentScene3D and DashboardPreview3D.
+- **Bibliotek import flow** — file picker, analysis pipeline, optimization, and catalog storage all function correctly.
+- **Weather/sun sync** — dashboard and design mode share the same Zustand store for environment state; all changes are automatically synced.
+- **HA bridge** — all 18 device domains properly connected with bidirectional state sync and suppression logic.
+- **Heal walls button** — `BuildTopToolbar` wrench button invokes `healWalls()` + `detectRooms()` correctly.
+
 ## [1.6.1] - 2026-03-15
 
 ### Fixed

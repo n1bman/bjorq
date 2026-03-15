@@ -240,7 +240,7 @@ function HomeCategory() {
       >
         {/* 3D Preview widget — double-click to save camera view */}
         <div
-          className="rounded-2xl overflow-hidden h-[280px] relative cursor-pointer border border-border/40 bg-card"
+          className="rounded-2xl overflow-hidden h-[200px] relative cursor-pointer border border-border/40 bg-card"
           onDoubleClick={() => setShowSaveView(true)}
         >
           <DashboardPreview3D className="absolute inset-0" cameraStateRef={previewCamRef} />

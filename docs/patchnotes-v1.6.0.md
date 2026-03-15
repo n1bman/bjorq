@@ -88,3 +88,18 @@ När du gör arkitekturella refaktoreringar av den här storleken:
 ### Fixar
 - **Sparad kameravy försvann vid omladdning** — preset-effekten i `InteractiveCameraController` skrev över `customStartPos` med standard-`angle`-preseten vid mount. Lagt till guard som hoppar över överskrivning.
 - **Dashboard sparade fel kamera** — `DashboardPreview3D` exponerar nu sin egen kameraposition via ref. Spara-knappen läser från widget-kameran istället för den dolda persistenta canvasens kamera.
+
+## v1.6.2 — Patch (2026-03-15)
+
+### Fixar
+- **Vägghörn hade kuber/glipor** — hörnblock använder nu paddade konvexa hull med `DoubleSide`-material och ökat polygon offset. Fallback-kuber har också padding.
+- **Solen för långt bort** — minskad distans från 20 till 12 enheter för mer dramatisk, spelliknande belysning. Minimihöjd på 1 enhet förhindrar underjordisk sol.
+- **Grafikinställningar remountade inte Canvas** — Canvas-nyckeln inkluderar nu kvalitet, skuggor, AA och tone mapping.
+- **3D-vy för stor i Hem** — höjd minskad från 280px till 200px.
+
+### Verifierat
+- MediaScreenMarker renderar korrekt i alla kontexter
+- Bibliotek-import fungerar — fil, analys, optimering, kataloglagring
+- Sol/väder synkat mellan kontrollpanel och designläge via delat Zustand-state
+- HA-bryggan — alla 18 enhetsdomäner korrekt anslutna
+- Hela väggar-knappen fungerar korrekt

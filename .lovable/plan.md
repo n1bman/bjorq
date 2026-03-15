@@ -1,82 +1,84 @@
+# Arbetsplan: Persistent 3D Runtime & Optimering
 
+## Status: ✅ Implementerat (v1.6.0)
 
-# Patch v1.6.2 — 7 Fixes + Version Bump
+---
 
-## Issues & Fixes
+## Fas 0 — Bygg-stabilisering ✅ DONE
+- Fixat import i Scene3D till `./build/KitchenFixture3D`
+- Raderat duplikat `KitchenFixtureObject3D.tsx`
 
-### 1. Media Screen lost 3D visual rendering
-**Problem**: The `media_screen` device kind maps to `GenericMarker` (a plain sphere) in the `markerComponents` lookup table (line 1387 in DeviceMarkers3D.tsx). The `MediaScreenMarker` is only used in a special-case block further down — BUT the issue is the `markerComponents` entry is still hit for some code paths.
+## Fas 1 — Buggar och regressioner ✅ DONE
 
-**Actual problem found**: The `MediaScreenMarker` IS being rendered (lines 1564-1578). The Canvas texture draws properly. Need to check if something in the rebuild broke the texture. Looking at the code, the texture uses `CanvasTexture` which should work. The `drawScreenCanvas` function is intact. The screen DOES render — it just might not be visible in dashboard preview because `DashboardPreview3D` uses its own lightweight canvas. The screen rendering requires `useFrame` for scanline animation, which works in PersistentScene3D but may not work well in the dashboard preview.
+### 1.1 Väggar: 90-gradersstöd vid ritning ✅
+- Axis-aligned snapping (±3° av 0/90/180/270°) i `BuildScene3D.tsx`
+- Visuell indikator: cyan linje + solid (ej dashed) + "90°"-label via `<Html>`
+- `cursorAxisAligned`-prop tillagd i `WallDrawing3D.tsx`
 
-**Fix**: The media_screen entry in `markerComponents` (line 1387) returns `GenericMarker` — this is a fallback that shouldn't be reached since the special case on line 1565 catches it first. The actual issue is likely that the screen texture/canvas rendering is intact but not updating properly. Need to verify the flow is correct and ensure screens show their visual 3D plane (not just a sphere) in both main scene and dashboard preview.
+### 1.3 Dörr-öppningsriktning ✅
+- `flipped` appliceras nu på dörrpanelens position och rotation i `wallGeometry.tsx`
+- Gångjärnspunkt beräknas baserat på `flipped`-flagga
 
-After re-reading: The special case check on line 1565 `if (marker.kind === 'media_screen')` runs BEFORE the generic `markerComponents` fallback on line 1580. So the screen visual IS being rendered. The user says "denna enhet har tappat sin funktion med visuell 3D skärm" — this suggests something specific broke. Let me check if `DeviceMarkers3D` is properly included in `DashboardPreview3D`.
+### 1.4 Dörrens öppningsgrad ✅
+- `openAmount?: number` (0-1) tillagd på `WallOpening` i `types.ts`
+- Slider "Öppningsgrad" i OpeningInspector (dörrar + garageportar)
+- 3D: dörrblad roteras runt gångjärnspunkt baserat på `openAmount * π/2`
+- TODO: koppla till `haEntityId` för automatisk HA-sync
 
-Looking at `DashboardPreview3D` — yes, it includes `<DeviceMarkers3D />` without `buildMode` prop, so screens should render. The issue might be that `useFrame` in `MediaScreenMarker` needs the canvas to be in focus. But `useFrame` works per-canvas, so the DashboardPreview3D canvas should have its own useFrame loop running.
+### 1.5 Ljus går igenom väggar ✅ (pragmatisk lösning)
+- Alla ljustyper: minskad distance + decay=2
+- ceiling: 5m, strip: 6m, spot: 6m/π/7 angle, wall: 5m/π/4 angle
+- Dokumenterat: fullständig ljusblockering kräver baked lighting
 
-The likely issue: `DashboardPreview3D` renders `<DeviceMarkers3D />` which creates a `CanvasTexture` — but the canvas element is created via `document.createElement('canvas')` and may work fine. Let me check if there's a missing import or a rendering issue. Actually the code looks correct. Perhaps the screen device just isn't placed yet, or the preview canvas's lower DPR/simpler rendering is hiding it. I'll ensure the media_screen rendering is fully functional by checking the flow end-to-end.
+## Fas 2 — UX-förbättringar ✅ DONE
 
-**Real fix needed**: In the `markerComponents` map (line 1387), `media_screen` maps to `GenericMarker`. This is redundant since the special case handles it, but let's make it explicit and clean. No actual bug here — the visual 3D screen works. The user might be seeing an issue in the dashboard view specifically. Will ensure proper rendering.
+### 2.1 Sliders med exakt värdeinmatning ✅
+- Ny `SliderWithInput`-komponent (`src/components/ui/SliderWithInput.tsx`)
+- Klickbart värde → number input med Enter/Escape/blur
+- Applicerad i OpeningInspector (bredd, höjd, bröstning, position, öppningsgrad)
 
-### 2. Cannot import 3D models in Bibliotek
-**Problem**: The `handleBibFileSelect` function (line 1847) processes the file with `processModel`. Looking at the import flow: `validateFormat` → `processModel` → display analysis → confirm → `handleBibImportConfirm`. The flow reads correct in code.
+### 2.2 Möbelfliken stängd som standard ✅
+- Inredning startar med `select`-verktyg (inte `furnish`)
+- Katalogen visas bara när Möbler eller Wizard-verktyg är aktivt
 
-**Likely issue**: The file input `ref` or dialog opening might be broken. The dialog is controlled by `bibImportOpen` state. Need to check if the "Import" button exists in the Bibliotek view and triggers `setBibImportOpen(true)`.
+### 2.3 Måla-fliken flyttad till Inredning ✅
+- `paint`-verktyg borttaget från `planritningTools`
+- Tillagt i `inredningTools` som "Måla" med Paintbrush-ikon
+- SurfaceEditor visas under Inredning-fliken
 
-Let me check the Bibliotek tab rendering to find the import trigger button.
+### 2.4 Väggar: bara färger (inga texturer) ✅
+- SurfaceEditor filtrerar vägg-material till enbart `paint`-kategorin
+- 15 nya väggfärger tillagda (mjuk rosa, oliv, skifferblå, etc.)
+- Golv behåller alla texturer som tidigare
 
-**Fix**: Need to find and verify the import trigger in the Bibliotek workspace. If it's missing, add it back.
+## Fas 3 — Dokumentation och mappstruktur ✅ DONE
+- `public/textures/guide/README.md` uppdaterad med korrekt mappstruktur
+- Borttagen felaktig referens till `public/textures/floor/`
+- Target-paths tillagda per preset
+- `public/textures/carpet/` skapad
 
-### 3. Wall corners have cubes/gaps
-**Problem**: The corner block generator (line 1148-1262) uses convex hull to fill corners. The images show dark cubes at corners and gaps. The issue is:
-- The extruded corner block starts at `position={[pos[0], elevation, pos[1]]}` with `rotation={[-Math.PI / 2, 0, 0]}` — this positions the bottom of the extrusion at `y = elevation`. For a floor with `elevation = 0`, the block starts at ground level and goes UP. This is correct.
-- BUT the height of the extrusion: `{ depth: height }` extrudes along the local Z axis (which after the -90° X rotation becomes the Y axis). So it extrudes from `elevation` to `elevation + height`. This seems correct.
-- The dark cube appearance suggests the hull geometry is malformed or the material is wrong. The `dominantColor` comes from `wallColors[0]?.exteriorColor` — if walls have different colors, the first wall's color is used.
+## Fas 4 — Import/Export och long-press ✅ DONE
 
-**Key problem**: The fallback square block (line 1249-1258) uses `position={[pos[0], height / 2 + elevation, pos[1]]}` with a `boxGeometry` centered on the position — this is correct. But the hull-based block uses `position={[pos[0], elevation, pos[1]]}` and extrudes UPWARD from that point. The visual mismatch (dark cube visible at corners) suggests the hull corners are being generated with incorrect geometry or the convex hull produces shapes that don't match the actual wall corners.
+### 4.2 Exportera från Bibliotek ✅
+- "Exportera"-knapp tillagd i BibliotekWorkspace detaljpanel
+- Exporterar metadata som JSON-fil
 
-**Fix**: Improve the corner block generation:
-1. Increase the hull's Z offset tolerance to avoid Z-fighting
-2. Add slight scale padding to ensure corners fully seal
-3. Fix the "heal walls" button functionality to ensure it works
+### 4.3 Hold-long på enheter i hemmenyn ✅
+- 500ms long-press → popup med av/på + ljusstyrka-slider
+- Fungerar för alla enheter med extra kontroll för `light`
 
-### 4. Weather/sun synchronization between dashboard and design mode
-**Both modes share the same store state** (`environment.sunAzimuth`, `environment.sunElevation`, `environment.weather`, etc.). The `SunWeatherPanel` component is used in `GraphicsCategory` (dashboard). In design mode, there's no separate weather panel found — design mode shares the same `UnifiedSceneContent` which reads the same environment profile.
+## Fas 5 — Troubleshooting-pass ✅ DONE
+- Raderat dead code: `PaintTool.tsx` (ersatt av inline SurfaceEditor)
+- KitchenFixtureObject3D redan borttagen
+- Inga oanvända importer kvar
+- Tester passerar
 
-**Fix**: These ARE synced already since they share the same Zustand store. The user wants more realistic sun positioning (closer to building, more game-like). Will:
-- Reduce `dist` in sun position calculation from 20 to 12 for a closer, more dramatic sun
-- Add clearer tooltips to calibration controls
-- Ensure design mode has easy access to environment settings
+## Fas 6 — Version 1.1.0 ✅ DONE
+- `package.json` bumpat till 1.1.0
 
-### 5. Graphics settings working with new persistent 3D
-The `GraphicsSettings` component modifies `performance` state which `PersistentScene3D` reads for quality, shadows, DPR, antialiasing, toneMapping, exposure. The Canvas uses a `key` that includes `recoveryCount` — but NOT quality/shadows changes. In the old system, changing quality triggered a Canvas remount.
-
-**Fix**: Add quality/shadow/antialiasing/toneMapping to the Canvas key so changes trigger a full remount, as documented.
-
-### 6. 3D view too large in Hem + camera save not persisting
-The 3D preview in HomeCategory is `h-[280px]` — user wants it smaller. Camera save was fixed in v1.6.1 but might still have the race condition issue.
-
-**Fix**: Reduce height to `h-[200px]`. Verify camera save path uses the preview camera ref correctly.
-
-### 7. HA integration check
-The HA WebSocket integration looks comprehensive. Verify entity mapping, state sync, and service calls are properly wired through the persistent scene architecture.
-
-**Fix**: Audit the HA bridge for any broken connections after the scene consolidation. Ensure `haServiceCaller` is properly initialized and `useHABridge` toggle functions work through the persistent scene.
-
-## Files to Change
-
-| File | Change |
-|------|--------|
-| `src/lib/wallGeometry.tsx` | Fix corner block geometry — add polygon offset, padding, better hull validation |
-| `src/components/PersistentScene3D.tsx` | Add Canvas key based on quality/shadows/AA for remounting; move sun closer (dist 20→12) |
-| `src/components/home/DashboardGrid.tsx` | Reduce 3D preview height 280→200px |
-| `src/components/home/DashboardPreview3D.tsx` | Minor cleanup |
-| `src/components/devices/DeviceMarkers3D.tsx` | Ensure media_screen renders correctly in all contexts |
-| `src/components/build/BuildModeV2.tsx` | Verify/fix Bibliotek import button accessibility |
-| `src/components/home/cards/SunWeatherPanel.tsx` | Add clearer descriptions for calibration controls |
-| `src/components/home/cards/GraphicsSettings.tsx` | Minor — ensure canvas remount notification |
-| `package.json` | Bump to 1.6.2 |
-| `CHANGELOG.md` | Add 1.6.2 entry |
-| `docs/patchnotes-v1.6.0.md` | Update with v1.6.2 fixes |
-
+## Bevarat
+- Design / Planritning / Inredning / Bibliotek-struktur
+- Save/load kompatibilitet
+- HA-sync (ej ändrad)
+- Golv-texturer med ambientCG CDN-thumbnails
+- Vägg-mitering och hörn-geometri

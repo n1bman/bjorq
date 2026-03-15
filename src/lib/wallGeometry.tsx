@@ -1193,12 +1193,12 @@ export function generateCornerBlocks(
     const matProps: Record<string, any> = {
       color: dominantColor,
       roughness: 0.7,
-      side: THREE.FrontSide,
+      side: THREE.DoubleSide,
     };
     if (options?.polygonOffset) {
       matProps.polygonOffset = true;
-      matProps.polygonOffsetFactor = -1;
-      matProps.polygonOffsetUnits = -1;
+      matProps.polygonOffsetFactor = -2;
+      matProps.polygonOffsetUnits = -2;
     }
 
     // Try angle-aware convex hull corner
@@ -1221,10 +1221,19 @@ export function generateCornerBlocks(
 
           if (area > 0.0001 && area < 10) {
             // Build Shape in local coordinates relative to nodePos
+            // Expand hull slightly to seal gaps
+            const padding = 0.005;
+            const cx = hull.reduce((s, p) => s + p[0], 0) / hull.length;
+            const cz = hull.reduce((s, p) => s + p[1], 0) / hull.length;
             const shape = new THREE.Shape();
-            shape.moveTo(hull[0][0] - pos[0], hull[0][1] - pos[1]);
-            for (let i = 1; i < hull.length; i++) {
-              shape.lineTo(hull[i][0] - pos[0], hull[i][1] - pos[1]);
+            const padded = hull.map(([hx, hz]) => {
+              const dx = hx - cx, dz = hz - cz;
+              const d = Math.sqrt(dx * dx + dz * dz) || 1;
+              return [hx + (dx / d) * padding - pos[0], hz + (dz / d) * padding - pos[1]] as [number, number];
+            });
+            shape.moveTo(padded[0][0], padded[0][1]);
+            for (let i = 1; i < padded.length; i++) {
+              shape.lineTo(padded[i][0], padded[i][1]);
             }
             shape.closePath();
 
@@ -1245,13 +1254,14 @@ export function generateCornerBlocks(
       }
     }
 
-    // Fallback: axis-aligned square block (original behavior)
+    // Fallback: axis-aligned square block with slight padding
     if (!usedHull) {
+      const pad = maxThickness + 0.01;
       blocks.push(
         <mesh key={`corner-${key}`}
           position={[pos[0], height / 2 + elevation, pos[1]]}
           castShadow receiveShadow>
-          <boxGeometry args={[maxThickness, height, maxThickness]} />
+          <boxGeometry args={[pad, height, pad]} />
           <meshStandardMaterial {...matProps} />
         </mesh>
       );
