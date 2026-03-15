@@ -30,6 +30,7 @@ const deviceIcons: Record<DeviceKind, typeof Lightbulb> = {
   soundbar: Music,
   'light-fixture': Lightbulb,
   'smart-outlet': Plug,
+  egg: Egg,
 };
 
 interface RoomCardProps {

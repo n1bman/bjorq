@@ -36,6 +36,7 @@ const kindInfo: Record<DeviceKind, { emoji: string; label: string; category: str
   soundbar: { emoji: '🎵', label: 'Soundbar', category: 'Media' },
   'light-fixture': { emoji: '💡', label: 'Ljusarmatur', category: 'Ljus' },
   'smart-outlet': { emoji: '🔌', label: 'Vägguttag', category: 'Ljus' },
+  egg: { emoji: '🥚', label: 'Egg', category: 'Hem' },
 };
 
 function isDeviceOn(state?: DeviceState): boolean {
