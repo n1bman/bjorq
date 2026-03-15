@@ -29,7 +29,7 @@ export default function FPSController({ spawnPosition, floorId, elevation, onExi
   const keysRef = useRef(new Set<string>());
   const yawRef = useRef(0);
   const pitchRef = useRef(0);
-  const savedCameraRef = useRef({ pos: new THREE.Vector3(), target: new THREE.Vector3() });
+  const savedCameraRef = useRef({ pos: new THREE.Vector3(), target: new THREE.Vector3(), fov: 75 });
   const mountedRef = useRef(true);
   const eyeHeight = elevation + 1.80;
 
