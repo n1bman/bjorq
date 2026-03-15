@@ -1,6 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
 import { useAppStore } from '../../store/useAppStore';
-import Scene3D from '../Scene3D';
 import HomeNav from './HomeNav';
 import CameraFab from './CameraFab';
 import RoomNavigator from './RoomNavigator';
@@ -30,7 +29,12 @@ const KIND_ICONS: Partial<Record<DeviceKind, typeof Lightbulb>> = {
   humidifier: Droplets,
 };
 
-export default function HomeView() {
+interface HomeViewProps {
+  longPressDeviceId?: string | null;
+  onDismissLongPress?: () => void;
+}
+
+export default function HomeView({ longPressDeviceId, onDismissLongPress }: HomeViewProps) {
   const visibleWidgets = useAppStore((s) => s.homeView.visibleWidgets);
   const homeScreenDevices = useAppStore((s) => s.homeView.homeScreenDevices ?? []);
   const markers = useAppStore((s) => s.devices.markers);
@@ -42,7 +46,6 @@ export default function HomeView() {
   const deviceStates = useAppStore((s) => s.devices.deviceStates);
   
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [longPressId, setLongPressId] = useState<string | null>(null);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useWeatherSync();
 
@@ -56,11 +59,9 @@ export default function HomeView() {
     return true;
   };
 
-
-
   const handlePointerDown = useCallback((id: string) => {
     longPressTimerRef.current = setTimeout(() => {
-      setLongPressId(id);
+      // Long press handled by persistent scene via onDeviceLongPress
     }, 500);
   }, []);
 
@@ -78,14 +79,10 @@ export default function HomeView() {
     }
   }, []);
 
-  const longPressMarker = longPressId ? markers.find((m) => m.id === longPressId) : null;
+  const longPressMarker = longPressDeviceId ? markers.find((m) => m.id === longPressDeviceId) : null;
 
   return (
-    <div className="fixed inset-0 bg-background">
-      <div className="absolute inset-0">
-        <Scene3D onDeviceLongPress={(id) => setLongPressId(id)} />
-      </div>
-
+    <div className="absolute inset-0 z-10 pointer-events-none">
       {/* Floating widgets based on config */}
       <div className="absolute top-5 left-5 right-5 z-10 flex items-start gap-4 flex-wrap pointer-events-auto">
         {visibleWidgets.clock && <ClockWidget />}
@@ -96,9 +93,9 @@ export default function HomeView() {
 
 
       {/* Long-press popup for device control */}
-      {longPressId && longPressMarker && (
+      {longPressDeviceId && longPressMarker && (
         <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-auto"
-          onClick={() => setLongPressId(null)}>
+          onClick={onDismissLongPress}>
           <div className="absolute inset-0 bg-background/40 backdrop-blur-sm" />
           <div className="relative glass-panel rounded-2xl p-5 w-72 shadow-xl space-y-4"
             onClick={(e) => e.stopPropagation()}>
@@ -110,7 +107,7 @@ export default function HomeView() {
                   <Wifi size={10} className="text-green-400 shrink-0" />
                 )}
               </div>
-              <button onClick={() => setLongPressId(null)} className="text-muted-foreground hover:text-foreground">
+              <button onClick={onDismissLongPress} className="text-muted-foreground hover:text-foreground">
                 <X size={16} />
               </button>
             </div>
@@ -141,7 +138,7 @@ export default function HomeView() {
                       clearTimeout(longPressTimerRef.current);
                       longPressTimerRef.current = null;
                     }
-                    if (!longPressId && canToggle && !isMediaOn) toggleDeviceState(m.id);
+                    if (!longPressDeviceId && canToggle && !isMediaOn) toggleDeviceState(m.id);
                   }}
                   onPointerDown={() => handlePointerDown(m.id)}
                   onPointerUp={handlePointerUp}
@@ -241,9 +238,11 @@ export default function HomeView() {
         );
       })()}
 
-      <CameraFab />
-      <RoomNavigator />
-      <HomeNav />
+      <div className="pointer-events-auto">
+        <CameraFab />
+        <RoomNavigator />
+        <HomeNav />
+      </div>
     </div>
   );
 }
