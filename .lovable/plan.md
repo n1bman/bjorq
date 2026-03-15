@@ -1,84 +1,68 @@
-# Arbetsplan: Persistent 3D Runtime & Optimering
 
-## Status: ✅ Implementerat (v1.6.0)
 
----
+# Plan: Floor-level fix, Toolbar interaction locks, labels & keyboard shortcuts
 
-## Fas 0 — Bygg-stabilisering ✅ DONE
-- Fixat import i Scene3D till `./build/KitchenFixture3D`
-- Raderat duplikat `KitchenFixtureObject3D.tsx`
+## Problem 1 — Floor/model level mismatch
 
-## Fas 1 — Buggar och regressioner ✅ DONE
+The floor mesh renders at `Y = elevation + 0.02` and the ground plane at `Y = -0.03`. Props with `placement: 'floor'` land at `Y = elevation` (0.0 for ground floor). This creates a visible gap where models sink into/float above the floor.
 
-### 1.1 Väggar: 90-gradersstöd vid ritning ✅
-- Axis-aligned snapping (±3° av 0/90/180/270°) i `BuildScene3D.tsx`
-- Visuell indikator: cyan linje + solid (ej dashed) + "90°"-label via `<Html>`
-- `cursorAxisAligned`-prop tillagd i `WallDrawing3D.tsx`
+**Fix:** Introduce a constant `FLOOR_VISUAL_OFFSET = 0.02` and use it consistently:
+- `Floors3D.tsx`: Already uses `elevation + 0.02` — keep as-is, this is the "visual floor surface"
+- `placementEngine.ts` (`findLandingPosition`): For `floor` placement, return `floorElevation + 0.02` instead of bare `floorElevation`
+- `GroundPlane.tsx`: Move from `Y = -0.03` to `Y = -0.01` (just below floor surface, prevents z-fighting)
+- `BuildInspector.tsx` (DeviceInspector height slider): Clamp minimum to `elevation + 0.02`
+- This ensures all floor-placed objects (vacuums, furniture, devices) sit flush with the visible floor surface
 
-### 1.3 Dörr-öppningsriktning ✅
-- `flipped` appliceras nu på dörrpanelens position och rotation i `wallGeometry.tsx`
-- Gångjärnspunkt beräknas baserat på `flipped`-flagga
+## Problem 2 — Interaction lock mode in toolbar
 
-### 1.4 Dörrens öppningsgrad ✅
-- `openAmount?: number` (0-1) tillagd på `WallOpening` i `types.ts`
-- Slider "Öppningsgrad" i OpeningInspector (dörrar + garageportar)
-- 3D: dörrblad roteras runt gångjärnspunkt baserat på `openAmount * π/2`
-- TODO: koppla till `haEntityId` för automatisk HA-sync
+Add a "lock" toggle group to the top toolbar that controls what can be interacted with in 3D. Four modes:
 
-### 1.5 Ljus går igenom väggar ✅ (pragmatisk lösning)
-- Alla ljustyper: minskad distance + decay=2
-- ceiling: 5m, strip: 6m, spot: 6m/π/7 angle, wall: 5m/π/4 angle
-- Dokumenterat: fullständig ljusblockering kräver baked lighting
+| Mode | Label | Allows interaction with |
+|------|-------|------------------------|
+| `all` | Allt | Everything (default) |
+| `walls` | Väggar | Only walls/openings |
+| `props` | Möbler | Only furniture/props |
+| `devices` | Enheter | Only device markers |
 
-## Fas 2 — UX-förbättringar ✅ DONE
+**Implementation:**
+- `types.ts`: Add `editLock: 'all' | 'walls' | 'props' | 'devices'` to `BuildState`
+- `useAppStore.ts`: Add `setEditLock` action, default to `'all'`
+- `BuildTopToolbar.tsx`: Add a segmented toggle group (4 buttons with icons + labels) between the view toggle and the spacer
+- `PersistentScene3D.tsx` (Props3D interactions): Check `editLock` — skip pointer events if lock is `walls` or `devices`
+- `InteractiveWalls3D.tsx`: Check `editLock` — skip if `props` or `devices`
+- `DeviceMarkers3D.tsx`: Check `editLock` — skip if `walls` or `props`
 
-### 2.1 Sliders med exakt värdeinmatning ✅
-- Ny `SliderWithInput`-komponent (`src/components/ui/SliderWithInput.tsx`)
-- Klickbart värde → number input med Enter/Escape/blur
-- Applicerad i OpeningInspector (bredd, höjd, bröstning, position, öppningsgrad)
+## Problem 2.1 — Labels under toolbar icons
 
-### 2.2 Möbelfliken stängd som standard ✅
-- Inredning startar med `select`-verktyg (inte `furnish`)
-- Katalogen visas bara när Möbler eller Wizard-verktyg är aktivt
+Currently the toolbar only shows icons with `title` tooltips. Add small text labels below each icon button.
 
-### 2.3 Måla-fliken flyttad till Inredning ✅
-- `paint`-verktyg borttaget från `planritningTools`
-- Tillagt i `inredningTools` som "Måla" med Paintbrush-ikon
-- SurfaceEditor visas under Inredning-fliken
+**Fix in `BuildTopToolbar.tsx`:**
+- Change button layout to `flex-col` with icon + `<span className="text-[8px]">` label
+- Labels: Hem, Panel, Ångra, Gör om, 2D, 3D, Isolera, ?, Optimera, Hela, Rum, Spöke, Projekt, Inställn., Våningar, Klar
 
-### 2.4 Väggar: bara färger (inga texturer) ✅
-- SurfaceEditor filtrerar vägg-material till enbart `paint`-kategorin
-- 15 nya väggfärger tillagda (mjuk rosa, oliv, skifferblå, etc.)
-- Golv behåller alla texturer som tidigare
+## Problem 2.2 — Keyboard shortcuts not working
 
-## Fas 3 — Dokumentation och mappstruktur ✅ DONE
-- `public/textures/guide/README.md` uppdaterad med korrekt mappstruktur
-- Borttagen felaktig referens till `public/textures/floor/`
-- Target-paths tillagda per preset
-- `public/textures/carpet/` skapad
+The shortcuts listed in the help dialog (W, S, D, G) are documented but never implemented. Only Escape and Ctrl+Z have handlers.
 
-## Fas 4 — Import/Export och long-press ✅ DONE
+**Fix:** Add a global `keydown` listener in `BuildTopToolbar.tsx` or `BuildModeV2.tsx`:
+- `W` → `setBuildTool('wall')`
+- `S` → `setBuildTool('select')`
+- `D` → `setBuildTool('door')`
+- `G` → `toggleGrid()`
+- `Delete/Backspace` → delete selected item
+- `Ctrl+Z` → `undo()`
+- `Ctrl+Shift+Z` → `redo()`
+- Guard: skip when an `<input>` or `<textarea>` is focused
 
-### 4.2 Exportera från Bibliotek ✅
-- "Exportera"-knapp tillagd i BibliotekWorkspace detaljpanel
-- Exporterar metadata som JSON-fil
+## Files changed
 
-### 4.3 Hold-long på enheter i hemmenyn ✅
-- 500ms long-press → popup med av/på + ljusstyrka-slider
-- Fungerar för alla enheter med extra kontroll för `light`
+1. `src/store/types.ts` — add `editLock` field to `BuildState`
+2. `src/store/useAppStore.ts` — add `setEditLock` action, default value, include in mode reset
+3. `src/lib/placementEngine.ts` — add `+0.02` offset for floor placement
+4. `src/components/build/GroundPlane.tsx` — change position Y from `-0.03` to `-0.01`
+5. `src/components/build/BuildTopToolbar.tsx` — add labels, lock toggle, keyboard shortcut listener
+6. `src/components/PersistentScene3D.tsx` — check `editLock` in prop/device/wall interactions
+7. `src/components/build/InteractiveWalls3D.tsx` — check `editLock`
+8. `src/components/devices/DeviceMarkers3D.tsx` — check `editLock`
+9. `src/components/build/BuildInspector.tsx` — clamp device height min to floor surface
 
-## Fas 5 — Troubleshooting-pass ✅ DONE
-- Raderat dead code: `PaintTool.tsx` (ersatt av inline SurfaceEditor)
-- KitchenFixtureObject3D redan borttagen
-- Inga oanvända importer kvar
-- Tester passerar
-
-## Fas 6 — Version 1.1.0 ✅ DONE
-- `package.json` bumpat till 1.1.0
-
-## Bevarat
-- Design / Planritning / Inredning / Bibliotek-struktur
-- Save/load kompatibilitet
-- HA-sync (ej ändrad)
-- Golv-texturer med ambientCG CDN-thumbnails
-- Vägg-mitering och hörn-geometri
