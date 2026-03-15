@@ -1,10 +1,15 @@
 import { useMemo } from 'react';
 import { useAppStore } from '../../../store/useAppStore';
-import { Gauge, Monitor, Sun, Sparkles, RefreshCw, Cpu, AlertTriangle, CheckCircle, Activity, Lightbulb, Eye, Contrast, RotateCcw, ChevronRight } from 'lucide-react';
+import { Gauge, Monitor, Sun, Sparkles, RefreshCw, Cpu, AlertTriangle, CheckCircle, Activity, Lightbulb, Eye, Contrast, RotateCcw, ChevronRight, BarChart3 } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../../ui/collapsible';
 import { Switch } from '../../ui/switch';
 import { Slider } from '../../ui/slider';
 import { Progress } from '../../ui/progress';
+import OptionButton from '../../ui/OptionButton';
+import { Button } from '../../ui/button';
+import { toast } from 'sonner';
+import type { QualityLevel } from '../../../store/types';
+import { getStats as getCacheStats } from '../../../lib/modelCache';
 import OptionButton from '../../ui/OptionButton';
 import { Button } from '../../ui/button';
 import { toast } from 'sonner';
