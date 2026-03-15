@@ -1,6 +1,5 @@
 import { useEffect, useCallback } from 'react';
 import { useAppStore } from '../../store/useAppStore';
-import Scene3D from '../Scene3D';
 import StandbyClock from './StandbyClock';
 import StandbyWeather from './StandbyWeather';
 import StandbyWidgets from './StandbyWidgets';
@@ -29,7 +28,7 @@ export default function StandbyMode() {
   if (phase === 'vio') {
     return (
       <div
-        className="fixed inset-0 bg-black flex items-center justify-center cursor-none animate-fade-in"
+        className="absolute inset-0 z-20 bg-black flex items-center justify-center cursor-none animate-fade-in"
         onClick={handleExit}
         onTouchStart={handleExit}
       >
@@ -43,14 +42,11 @@ export default function StandbyMode() {
   }
 
   return (
-    <div className="fixed inset-0 bg-background overflow-hidden animate-fade-in">
-      {/* Fullscreen 3D scene */}
-      <div className="absolute inset-0">
-        <Scene3D />
-      </div>
+    <div className="absolute inset-0 z-10 overflow-hidden animate-fade-in pointer-events-none">
+      {/* 3D scene is provided by the persistent Canvas behind this overlay */}
 
       {/* Floating overlay panel — right side */}
-      <div className="absolute right-0 top-0 bottom-0 w-[30%] min-w-[280px] flex flex-col justify-center items-center gap-10 px-6 bg-gradient-to-l from-background/80 via-background/50 to-transparent backdrop-blur-md animate-fade-in" style={{ animationDelay: '0.2s', animationFillMode: 'both' }}>
+      <div className="absolute right-0 top-0 bottom-0 w-[30%] min-w-[280px] flex flex-col justify-center items-center gap-10 px-6 bg-gradient-to-l from-background/80 via-background/50 to-transparent backdrop-blur-md animate-fade-in pointer-events-auto" style={{ animationDelay: '0.2s', animationFillMode: 'both' }}>
         <StandbyClock />
         <StandbyWeather />
         <StandbyWidgets />
