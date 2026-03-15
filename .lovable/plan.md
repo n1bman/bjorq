@@ -1,84 +1,60 @@
-# Arbetsplan: Persistent 3D Runtime & Optimering
 
-## Status: ✅ Implementerat (v1.6.0)
+Patchplan: återställ riktig 3D-skärm + gör Bibliotek-importen tydligt/verifierbart fungerande.
 
----
+1) Rotorsak 3D-skärm (hittad i kod)
+- I `PersistentScene3D.tsx` (3D-placering) görs:
+  `const kind = activeTool.replace('place-', '')`
+  vilket ger `media-screen` (fel) istället för `media_screen` (rätt).
+- Konsekvens:
+  - enheten sparas med fel kind
+  - `MediaScreenMarker` används inte
+  - inspector faller tillbaka till lamp-ikon
+  - “spotify/skärm”-visualisering försvinner.
 
-## Fas 0 — Bygg-stabilisering ✅ DONE
-- Fixat import i Scene3D till `./build/KitchenFixture3D`
-- Raderat duplikat `KitchenFixtureObject3D.tsx`
+2) Fix för 3D-skärm (stabil + bakåtkompatibel)
+- Inför en central normalisering (helper) för device-kind:
+  - `media-screen` -> `media_screen`
+  - används både vid placering och vid rendering/inspector.
+- Uppdatera 3D-placeringsflödet i `PersistentScene3D.tsx` att alltid använda normaliserad kind innan `addDevice`.
+- Lägg in migrering för redan felaktigt sparade enheter i store (`useAppStore.ts` migrate):
+  - konvertera alla `marker.kind === 'media-screen'` till `media_screen`
+  - uppdatera `deviceStates` till korrekt default för dessa.
+- Lägg defensiv fallback i visning:
+  - `BuildInspector.tsx` och `DeviceMarkers3D.tsx` hanterar legacy-kind under övergången, så gamla projekt inte ser trasiga ut innan migrering slagit in.
 
-## Fas 1 — Buggar och regressioner ✅ DONE
+3) Bibliotek-import: “tillagd men syns inte”
+- Nuvarande import skriver till catalog, men UX gör det otydligt var den hamnar.
+- Gör importflödet deterministiskt i `BuildModeV2.tsx` (BibliotekWorkspace):
+  - vänta in fil->base64 (Promise) innan dialog stängs
+  - spara item, därefter:
+    - rensa söktext
+    - sätt `sourceFilter = 'user'` (eller `all` + tydlig markering)
+    - sätt `filterCategory = importerad kategori`
+    - expandera den kategorisektionen
+    - auto-välj nyimporterad asset i högerpanelen.
+- Lägg tydligare success-toast:
+  - ex: “Tillagd i biblioteket under Soffor”.
+- Lägg skydd mot dubletter-ID (använd robust id, ej bara timestamp).
 
-### 1.1 Väggar: 90-gradersstöd vid ritning ✅
-- Axis-aligned snapping (±3° av 0/90/180/270°) i `BuildScene3D.tsx`
-- Visuell indikator: cyan linje + solid (ej dashed) + "90°"-label via `<Html>`
-- `cursorAxisAligned`-prop tillagd i `WallDrawing3D.tsx`
+4) Tekniska filer som ändras
+- `src/components/PersistentScene3D.tsx` (rätt kind-mappning vid 3D-placering)
+- `src/store/useAppStore.ts` (persist-migrering + state-normalisering)
+- `src/components/devices/DeviceMarkers3D.tsx` (legacy-kind fallback till MediaScreenMarker)
+- `src/components/build/BuildInspector.tsx` (legacy-kind ikon/inspector-fallback)
+- `src/components/build/BuildModeV2.tsx` (Bibliotek-import: säker commit + auto-fokus av ny asset)
 
-### 1.3 Dörr-öppningsriktning ✅
-- `flipped` appliceras nu på dörrpanelens position och rotation i `wallGeometry.tsx`
-- Gångjärnspunkt beräknas baserat på `flipped`-flagga
+5) Verifieringsplan (måste köras end-to-end)
+- 3D-skärm:
+  - placera “Skärm” i Inredning (3D) -> korrekt monitormodell visas direkt
+  - inspector visar skärm (inte lampa)
+  - koppla `media_player.*` -> standby/now-playing (Spotify/app-name/titel) renderas på skärmen.
+- Migrering:
+  - ladda gammalt projekt med `media-screen` -> enheter blir `media_screen` och renderas korrekt.
+- Bibliotek-import:
+  - importera GLB i Bibliotek, sista “Importera”:
+    - toast visas
+    - ny asset väljs automatiskt och syns direkt i lista + metadata-panel
+    - kvarstår efter reload (för <=4MB med fileData).
 
-### 1.4 Dörrens öppningsgrad ✅
-- `openAmount?: number` (0-1) tillagd på `WallOpening` i `types.ts`
-- Slider "Öppningsgrad" i OpeningInspector (dörrar + garageportar)
-- 3D: dörrblad roteras runt gångjärnspunkt baserat på `openAmount * π/2`
-- TODO: koppla till `haEntityId` för automatisk HA-sync
-
-### 1.5 Ljus går igenom väggar ✅ (pragmatisk lösning)
-- Alla ljustyper: minskad distance + decay=2
-- ceiling: 5m, strip: 6m, spot: 6m/π/7 angle, wall: 5m/π/4 angle
-- Dokumenterat: fullständig ljusblockering kräver baked lighting
-
-## Fas 2 — UX-förbättringar ✅ DONE
-
-### 2.1 Sliders med exakt värdeinmatning ✅
-- Ny `SliderWithInput`-komponent (`src/components/ui/SliderWithInput.tsx`)
-- Klickbart värde → number input med Enter/Escape/blur
-- Applicerad i OpeningInspector (bredd, höjd, bröstning, position, öppningsgrad)
-
-### 2.2 Möbelfliken stängd som standard ✅
-- Inredning startar med `select`-verktyg (inte `furnish`)
-- Katalogen visas bara när Möbler eller Wizard-verktyg är aktivt
-
-### 2.3 Måla-fliken flyttad till Inredning ✅
-- `paint`-verktyg borttaget från `planritningTools`
-- Tillagt i `inredningTools` som "Måla" med Paintbrush-ikon
-- SurfaceEditor visas under Inredning-fliken
-
-### 2.4 Väggar: bara färger (inga texturer) ✅
-- SurfaceEditor filtrerar vägg-material till enbart `paint`-kategorin
-- 15 nya väggfärger tillagda (mjuk rosa, oliv, skifferblå, etc.)
-- Golv behåller alla texturer som tidigare
-
-## Fas 3 — Dokumentation och mappstruktur ✅ DONE
-- `public/textures/guide/README.md` uppdaterad med korrekt mappstruktur
-- Borttagen felaktig referens till `public/textures/floor/`
-- Target-paths tillagda per preset
-- `public/textures/carpet/` skapad
-
-## Fas 4 — Import/Export och long-press ✅ DONE
-
-### 4.2 Exportera från Bibliotek ✅
-- "Exportera"-knapp tillagd i BibliotekWorkspace detaljpanel
-- Exporterar metadata som JSON-fil
-
-### 4.3 Hold-long på enheter i hemmenyn ✅
-- 500ms long-press → popup med av/på + ljusstyrka-slider
-- Fungerar för alla enheter med extra kontroll för `light`
-
-## Fas 5 — Troubleshooting-pass ✅ DONE
-- Raderat dead code: `PaintTool.tsx` (ersatt av inline SurfaceEditor)
-- KitchenFixtureObject3D redan borttagen
-- Inga oanvända importer kvar
-- Tester passerar
-
-## Fas 6 — Version 1.1.0 ✅ DONE
-- `package.json` bumpat till 1.1.0
-
-## Bevarat
-- Design / Planritning / Inredning / Bibliotek-struktur
-- Save/load kompatibilitet
-- HA-sync (ej ändrad)
-- Golv-texturer med ambientCG CDN-thumbnails
-- Vägg-mitering och hörn-geometri
+6) Release
+- Om du vill att jag tar den som ny patch efter detta: bump till `v1.7.2` i alla version-filer + changelog + HA add-on metadata i samma svep.
