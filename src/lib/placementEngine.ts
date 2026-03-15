@@ -92,7 +92,7 @@ export function findLandingPosition(
 
   const propItem = state.props.items.find(p => p.id === propId);
   if (!propItem) {
-    return { position: [dragXZ[0], Math.max(floorElevation, currentY), dragXZ[1]], snappedTo: 'free' };
+    return { position: [dragXZ[0], Math.max(floorElevation + FLOOR_VISUAL_OFFSET, currentY), dragXZ[1]], snappedTo: 'free' };
   }
 
   const catItem = state.props.catalog.find(c => c.id === propItem.catalogId);
