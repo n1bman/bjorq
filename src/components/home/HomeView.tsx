@@ -57,8 +57,6 @@ export default function HomeView() {
   };
 
 
-  const hiddenCount = hiddenMarkerIds.length;
-  const allHidden = markers.length > 0 && hiddenCount === markers.length;
 
   const handlePointerDown = useCallback((id: string) => {
     longPressTimerRef.current = setTimeout(() => {
@@ -160,75 +158,88 @@ export default function HomeView() {
       )}
 
       {/* Device visibility picker - top right */}
-      {markers.length > 0 && (
-        <div className="fixed top-5 right-5 z-50 pointer-events-auto">
-          <button
-            onClick={() => setPickerOpen(!pickerOpen)}
-            className={cn(
-              'glass-panel rounded-full w-10 h-10 flex items-center justify-center transition-colors relative',
-              allHidden ? 'text-muted-foreground' : 'text-foreground'
-            )}
-            title={pickerOpen ? 'Stäng' : 'Visa/dölj enheter'}
-          >
-            {allHidden ? <EyeOff size={16} /> : <Eye size={16} />}
-            {hiddenCount > 0 && !allHidden && (
-              <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
-                {hiddenCount}
-              </span>
-            )}
-          </button>
+      {markers.length > 0 && (() => {
+        // Only show devices with generic markers (helper spheres) — not those with 3D models
+        const KINDS_WITH_3D_MODELS = new Set<DeviceKind>([
+          'light-fixture', 'speaker', 'soundbar', 'smart-outlet', 'vacuum',
+          'light', 'switch', 'sensor', 'climate',
+        ]);
+        const toggleableMarkers = markers.filter((m) => !KINDS_WITH_3D_MODELS.has(m.kind));
+        const toggleableHiddenCount = toggleableMarkers.filter((m) => hiddenMarkerIds.includes(m.id)).length;
+        const allToggleableHidden = toggleableMarkers.length > 0 && toggleableHiddenCount === toggleableMarkers.length;
 
-          {/* Picker popup - opens downward */}
-          {pickerOpen && (
-            <div className="absolute top-12 right-0 glass-panel rounded-2xl p-3 w-72 max-h-80 overflow-y-auto space-y-2 shadow-xl">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-xs font-semibold text-foreground">Enhetsmarkörer</span>
-                <button onClick={() => setPickerOpen(false)} className="text-muted-foreground hover:text-foreground">
-                  <X size={14} />
-                </button>
-              </div>
+        if (toggleableMarkers.length === 0) return null;
 
-              {/* Bulk actions */}
-              <div className="flex gap-2 mb-2">
-                <button
-                  onClick={setAllMarkersVisible}
-                  className="flex-1 text-[11px] px-2 py-1.5 rounded-lg bg-secondary/40 text-foreground hover:bg-secondary/60 transition-colors"
-                >
-                  Visa alla
-                </button>
-                <button
-                  onClick={hideAllMarkers}
-                  className="flex-1 text-[11px] px-2 py-1.5 rounded-lg bg-secondary/40 text-muted-foreground hover:bg-secondary/60 transition-colors"
-                >
-                  Dölj alla
-                </button>
-              </div>
+        return (
+          <div className="fixed top-5 right-5 z-50 pointer-events-auto">
+            <button
+              onClick={() => setPickerOpen(!pickerOpen)}
+              className={cn(
+                'glass-panel rounded-full w-12 h-12 flex items-center justify-center transition-colors relative',
+                allToggleableHidden ? 'text-muted-foreground' : 'text-foreground'
+              )}
+              title={pickerOpen ? 'Stäng' : 'Visa/dölj enheter'}
+            >
+              {allToggleableHidden ? <EyeOff size={20} /> : <Eye size={20} />}
+              {toggleableHiddenCount > 0 && !allToggleableHidden && (
+                <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                  {toggleableHiddenCount}
+                </span>
+              )}
+            </button>
 
-              {/* Device list */}
-              {markers.map((m) => {
-                const isHidden = hiddenMarkerIds.includes(m.id);
-                const Icon = KIND_ICONS[m.kind] || Power;
-                return (
-                  <div
-                    key={m.id}
-                    className="flex items-center gap-3 px-2 py-1.5 rounded-lg hover:bg-secondary/20 transition-colors"
+            {/* Picker popup - opens downward */}
+            {pickerOpen && (
+              <div className="absolute top-14 right-0 glass-panel rounded-2xl p-3 w-72 max-h-80 overflow-y-auto space-y-2 shadow-xl">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-semibold text-foreground">Enhetsmarkörer</span>
+                  <button onClick={() => setPickerOpen(false)} className="text-muted-foreground hover:text-foreground">
+                    <X size={14} />
+                  </button>
+                </div>
+
+                {/* Bulk actions */}
+                <div className="flex gap-2 mb-2">
+                  <button
+                    onClick={setAllMarkersVisible}
+                    className="flex-1 text-[11px] px-2 py-1.5 rounded-lg bg-secondary/40 text-foreground hover:bg-secondary/60 transition-colors"
                   >
-                    <Icon size={14} className={cn('shrink-0', isHidden ? 'text-muted-foreground/50' : 'text-primary')} />
-                    <span className={cn('text-xs flex-1 truncate', isHidden && 'text-muted-foreground/50')}>
-                      {m.name || m.kind}
-                    </span>
-                    <Switch
-                      checked={!isHidden}
-                      onCheckedChange={() => toggleMarkerVisibility(m.id)}
-                      className="scale-75"
-                    />
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
+                    Visa alla
+                  </button>
+                  <button
+                    onClick={hideAllMarkers}
+                    className="flex-1 text-[11px] px-2 py-1.5 rounded-lg bg-secondary/40 text-muted-foreground hover:bg-secondary/60 transition-colors"
+                  >
+                    Dölj alla
+                  </button>
+                </div>
+
+                {/* Device list — only generic marker devices */}
+                {toggleableMarkers.map((m) => {
+                  const isHidden = hiddenMarkerIds.includes(m.id);
+                  const Icon = KIND_ICONS[m.kind] || Power;
+                  return (
+                    <div
+                      key={m.id}
+                      className="flex items-center gap-3 px-2 py-1.5 rounded-lg hover:bg-secondary/20 transition-colors"
+                    >
+                      <Icon size={14} className={cn('shrink-0', isHidden ? 'text-muted-foreground/50' : 'text-primary')} />
+                      <span className={cn('text-xs flex-1 truncate', isHidden && 'text-muted-foreground/50')}>
+                        {m.name || m.kind}
+                      </span>
+                      <Switch
+                        checked={!isHidden}
+                        onCheckedChange={() => toggleMarkerVisibility(m.id)}
+                        className="scale-75"
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       <CameraFab />
       <RoomNavigator />

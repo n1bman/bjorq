@@ -563,6 +563,13 @@ function SettingsCategory() {
 function GraphicsCategory() {
   return (
     <div className="settings-page">
+      {/* Live 3D preview so you can see changes in real-time */}
+      <section>
+        <h2>3D-förhandsvisning</h2>
+        <div className="glass-panel rounded-2xl overflow-hidden h-[250px]">
+          <Scene3D />
+        </div>
+      </section>
       <section>
         <h2>Renderingsinställningar</h2>
         <GraphicsSettings />

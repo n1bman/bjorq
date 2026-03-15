@@ -358,7 +358,7 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
     const tz = Math.round(cameraRef.target.z * 10) / 10;
     const existing = floorProps.filter((p: any) => p.catalogId === catalogId);
     const offset = existing.length * 0.5;
-    addProp({ id: generateId(), catalogId, floorId: activeFloorId, url, position: [tx + offset, 0, tz + offset], rotation: [0,0,0], scale: [1,1,1], freePlacement: placement === 'free' });
+    addProp({ id: generateId(), catalogId, floorId: activeFloorId, url, position: [tx + offset, 0, tz + offset], rotation: [0,0,0], scale: [1,1,1], freePlacement: true });
   }, [activeFloorId, addProp, floorProps, setPendingWallMount]);
 
   const handleImportConfirm = useCallback(async () => {

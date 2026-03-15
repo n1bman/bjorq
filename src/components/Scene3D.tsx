@@ -166,11 +166,11 @@ function InteractiveCameraController() {
 }
 
 // CameraController wrapper: chooses standby vs interactive
+// Preserves camera position when switching between build/home modes
 const CameraController = React.forwardRef(function CameraController(_props, _ref) {
   const appMode = useAppStore((s) => s.appMode);
   const prevModeRef = useRef(appMode);
 
-  // Reset camera state on mode transitions
   useEffect(() => {
     prevModeRef.current = appMode;
   }, [appMode]);
@@ -179,7 +179,7 @@ const CameraController = React.forwardRef(function CameraController(_props, _ref
     return <StandbyStaticCamera />;
   }
 
-  return <InteractiveCameraController />;
+  return <InteractiveCameraController key="interactive" />;
 });
 
 
@@ -218,12 +218,13 @@ function SceneContent({ onDeviceLongPress }: { onDeviceLongPress?: (id: string) 
         castShadow={enableShadows}
         shadow-mapSize-width={shadowMapSize}
         shadow-mapSize-height={shadowMapSize}
-        shadow-camera-far={50}
-        shadow-camera-left={-20}
-        shadow-camera-right={20}
-        shadow-camera-top={20}
-        shadow-camera-bottom={-20}
-        shadow-bias={profile.shadowSoftness > 0.3 ? -0.003 : -0.002}
+        shadow-camera-far={60}
+        shadow-camera-left={-25}
+        shadow-camera-right={25}
+        shadow-camera-top={25}
+        shadow-camera-bottom={-25}
+        shadow-bias={-0.001}
+        shadow-normalBias={0.02}
       />
 
       <hemisphereLight
