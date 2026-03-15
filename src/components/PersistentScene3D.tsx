@@ -891,7 +891,10 @@ function UnifiedSceneContent({ onDeviceLongPress, fpsActive, fpsSpawn, onFpsExit
 
 const MAX_RECOVERY = 3;
 
-export default function PersistentScene3D({ onDeviceLongPress }: { onDeviceLongPress?: (id: string) => void }) {
+export default function PersistentScene3D({ onDeviceLongPress, onFpsStateChange }: {
+  onDeviceLongPress?: (id: string) => void;
+  onFpsStateChange?: (active: boolean) => void;
+}) {
   const shadows = useAppStore((s) => s.performance.shadows);
   const quality = useAppStore((s) => s.performance.quality);
   const tabletMode = useAppStore((s) => s.performance.tabletMode);
