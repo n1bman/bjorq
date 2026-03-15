@@ -84,6 +84,32 @@ The frontend determines its operating mode in `src/lib/apiClient.ts`:
 
 In HOSTED mode, the frontend fetches all data from the server API. In DEV mode, it uses Zustand's `persist` middleware with localStorage.
 
+## 3D Architecture (v1.6.0+)
+
+### Persistent Canvas
+
+A single `<Canvas>` is mounted in `Index.tsx` via `PersistentScene3D`. It remains mounted across all mode switches. `UnifiedSceneContent` adapts lighting, camera controllers, and scene elements based on `appMode`:
+
+| Mode | Camera | Rendering | Interactivity |
+|------|--------|-----------|---------------|
+| Home | OrbitControls (free) | Full speed | Device long-press |
+| Dashboard | OrbitControls (free) | Full speed | Transparent overlay |
+| Build (3D) | OrbitControls (right-click rotate) | Full speed | Wall/prop drag |
+| Build (2D) | Hidden canvas | Canvas hidden | `BuildCanvas2D` |
+| Standby | Static lerp | ~10fps | Click to exit |
+| Vio | N/A | Paused | Click to exit |
+
+### Model Cache (`src/lib/modelCache.ts`)
+
+Singleton cache with reference counting. Key APIs:
+- `acquireModel(key, loader, propId)` — returns clone of cached "golden" scene
+- `releaseModel(key, propId)` — decrements ref count, disposes at 0
+- `acquireTexture(url)` / `releaseTexture(url)` — shared texture instances
+- `getStats()` — model count, total triangles, texture count
+- `clearAllCaches()` — full disposal on context loss
+
+LRU eviction: max 50 models / 2M triangles. Zero-ref entries evicted first.
+
 ## State Management
 
 The app uses a single Zustand store (`src/store/useAppStore.ts`) with the following top-level slices:
@@ -97,7 +123,7 @@ The app uses a single Zustand store (`src/store/useAppStore.ts`) with the follow
 - **homeAssistant** — HA connection status, entities, config
 - **performance** — Quality, shadows, postprocessing, tablet mode
 - **profile** — User name, theme, accent color
-- **standby** — Idle timeout, camera view
+- **standby** — Idle timeout, camera view, vio settings
 - **homeView** — Camera preset, visible widgets, home screen devices
 - **comfort** — Climate rules, comfort engine state, override timer
 - **vacuumDebug** — Debug overlay toggle and live telemetry data
