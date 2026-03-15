@@ -2592,7 +2592,7 @@ export default function BuildModeV2() {
             </div>
           )}
           {cameraMode === 'topdown' && (
-            <div className="pointer-events-auto">
+            <div className="absolute inset-0 pointer-events-auto">
               {showImportOverlay && (
                 <Suspense fallback={null}>
                   <ImportPreview3D />
