@@ -24,7 +24,7 @@ export default function DashboardShell() {
   }, [setDashCategory]);
 
   return (
-    <div className="fixed inset-0 bg-background flex">
+    <div className="fixed inset-0 flex">
       {/* ── Left Nav Rail ── */}
       <nav className="w-[140px] shrink-0 flex flex-col nav-rail-bg overflow-y-auto overflow-x-hidden">
         {/* Logo area */}
