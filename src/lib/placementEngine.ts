@@ -127,7 +127,7 @@ export function findLandingPosition(
     if (surfaceY !== null) {
       return { position: [finalX, surfaceY, finalZ], snappedTo: 'surface' };
     }
-    return { position: [finalX, floorElevation, finalZ], snappedTo: 'floor' };
+    return { position: [finalX, floorElevation + FLOOR_VISUAL_OFFSET, finalZ], snappedTo: 'floor' };
   }
 
   if (placement === 'wall' || placement === 'ceiling') {
