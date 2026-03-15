@@ -1476,7 +1476,7 @@ export default function DeviceMarkers3D({ buildMode, onLongPress }: DeviceMarker
         toggleDeviceState(id);
       }
     }
-  }, [buildMode, setSelection, markers, toggleableKinds, toggleDeviceState]);
+  }, [buildMode, setSelection, markers, toggleableKinds, toggleDeviceState, editLock]);
 
   const handleDragStart = useCallback((id: string, e: ThreeEvent<PointerEvent>) => {
     if (!buildMode) return;
