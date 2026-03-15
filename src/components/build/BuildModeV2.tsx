@@ -1885,7 +1885,7 @@ function BibliotekWorkspace() {
         if (r) toast.success('Importerad till katalogen');
       } else {
         const url = URL.createObjectURL(finalFile);
-        const catalogId = `user-${Date.now()}`;
+        const catalogId = `user-${generateId()}-${Date.now()}`;
         const item: any = {
           id: catalogId, name: bibImportName || bibImportFile.name, url, source: 'user',
           category: bibImportCat, subcategory: bibImportSub || undefined,
@@ -1893,18 +1893,37 @@ function BibliotekWorkspace() {
           dimensions: bibImportResult.dimensions, performance: finalStats,
           placement: 'floor', visibility: 'visible',
         };
-        // Store base64 for persistence if small enough
+        // Store base64 for persistence if small enough — await the result before continuing
         if (finalFile.size <= 4 * 1024 * 1024) {
-          const reader = new FileReader();
-          reader.onload = () => {
-            addToCatalog({ ...item, fileData: (reader.result as string).split(',')[1] });
-            toast.success('Tillagd i lokalt bibliotek');
-          };
-          reader.readAsDataURL(finalFile);
+          const base64 = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve((reader.result as string).split(',')[1]);
+            reader.onerror = reject;
+            reader.readAsDataURL(finalFile);
+          });
+          addToCatalog({ ...item, fileData: base64 });
         } else {
           addToCatalog(item);
-          toast.success('Tillagd i lokalt bibliotek (sessionsbaserad)');
         }
+        // Auto-focus the new asset in the library view
+        setSourceFilter('user');
+        setFilterCategory(bibImportCat);
+        setSearchQuery('');
+        setCollapsedSections((prev) => ({ ...prev, [bibImportCat]: false }));
+        // Find the newly added entry and select it after a tick
+        setTimeout(() => {
+          const catalog = useAppStore.getState().props.catalog;
+          const newEntry = catalog.find((c) => c.id === catalogId);
+          if (newEntry) {
+            setSelectedAsset({
+              id: newEntry.id, name: newEntry.name, thumbnail: newEntry.thumbnail,
+              category: newEntry.category || 'imported', source: 'user',
+              catalogItem: newEntry,
+            });
+          }
+        }, 50);
+        const catLabel = BIB_CAT_LABELS[bibImportCat] || bibImportCat;
+        toast.success(`Tillagd i biblioteket under ${catLabel}`);
       }
     } catch { toast.error('Import misslyckades'); }
     finally { setBibProcessing(false); setBibImportOpen(false); setBibImportFile(null); setBibImportResult(null); setBibOptimizedResult(null); }
