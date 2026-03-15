@@ -1,10 +1,11 @@
 import { useAppStore } from '../../store/useAppStore';
-import type { SnapMode, WeatherCondition } from '../../store/types';
+import type { SnapMode, WeatherCondition, EditLock } from '../../store/types';
 import {
   Undo2, Redo2, Eye, Box, Layers, Settings2,
   ArrowLeft, Ghost, Home, LayoutGrid,
   Grid3X3, XCircle, Sun, Check, HelpCircle, Sparkles, DoorOpen, Trash2, Edit3, Wrench,
   Save, Download, Upload, FolderOpen,
+  MousePointer, Columns, Sofa, Cpu, Lock,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Slider } from '../ui/slider';
@@ -12,7 +13,7 @@ import { Popover, PopoverTrigger, PopoverContent } from '../ui/popover';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../ui/alert-dialog';
 import FloorPicker from './FloorPicker';
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { detectRooms, healWalls, polygonArea } from '../../lib/roomDetection';
 import { exportBuildProject, importBuildProject, readProjectFile, extractBuildProject, calculateStats } from '../../lib/projectIO';
@@ -87,6 +88,9 @@ export default function BuildTopToolbar() {
   const cameraMode = useAppStore((s) => s.build.view.cameraMode);
   const setCameraMode = useAppStore((s) => s.setCameraMode);
   const showGhost = useAppStore((s) => s.build.view.showOtherFloorsGhost);
+  const editLock = useAppStore((s) => s.build.editLock ?? 'all');
+  const setEditLock = useAppStore((s) => s.setEditLock);
+  const setBuildTool = useAppStore((s) => s.setBuildTool);
   
   const setView = useAppStore((s) => s.setView);
   const clearAllFloors = useAppStore((s) => s.clearAllFloors);
@@ -98,6 +102,42 @@ export default function BuildTopToolbar() {
   const envSource = useAppStore((s) => s.environment.source);
   const setWeatherSource = useAppStore((s) => s.setWeatherSource);
   const importFileRef = useRef<HTMLInputElement>(null);
+
+  // ─── Keyboard shortcuts ───
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Skip if user is typing in an input
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      if ((e.target as HTMLElement)?.isContentEditable) return;
+
+      const appMode = useAppStore.getState().appMode;
+      if (appMode !== 'build') return;
+
+      if (e.key === 'w' || e.key === 'W') { e.preventDefault(); setBuildTool('wall'); return; }
+      if (e.key === 's' || e.key === 'S') { e.preventDefault(); setBuildTool('select'); return; }
+      if (e.key === 'd' || e.key === 'D') { e.preventDefault(); setBuildTool('door'); return; }
+      if (e.key === 'g' || e.key === 'G') { e.preventDefault(); toggleGrid(); return; }
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.preventDefault();
+        const s = useAppStore.getState();
+        const sel = s.build.selection;
+        if (sel.type === 'prop' && sel.id) { s.removeProp(sel.id); }
+        else if (sel.type === 'device' && sel.id) { s.removeDevice(sel.id); }
+        else if (sel.type === 'wall' && sel.id) {
+          s.pushUndo();
+          s.deleteWall(s.layout.activeFloorId!, sel.id);
+        }
+        s.setSelection({ type: null, id: null });
+        return;
+      }
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'z') { e.preventDefault(); redo(); return; }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); undo(); return; }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [setBuildTool, toggleGrid, undo, redo]);
 
   const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -119,34 +159,45 @@ export default function BuildTopToolbar() {
   };
 
 
+  const lockModes: { key: EditLock; label: string; icon: any }[] = [
+    { key: 'all', label: 'Allt', icon: MousePointer },
+    { key: 'walls', label: 'Väggar', icon: Columns },
+    { key: 'props', label: 'Möbler', icon: Sofa },
+    { key: 'devices', label: 'Enheter', icon: Cpu },
+  ];
+
   return (
-    <div className="relative z-50 flex items-center gap-1.5 px-2 py-1 border-b border-border bg-card/90 backdrop-blur-sm h-12">
+    <div className="relative z-50 flex items-center gap-1 px-2 py-1 border-b border-border bg-card/90 backdrop-blur-sm h-14">
       {/* Back to Home */}
       <button
         onClick={() => { toast.success('Sparad!'); setAppMode('home'); }}
         title="Hemvy"
-        className="p-2.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary/40 transition-all min-w-[44px] min-h-[44px] flex items-center justify-center"
+        className="p-1.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary/40 transition-all min-w-[40px] min-h-[40px] flex flex-col items-center justify-center gap-0.5"
       >
-        <Home size={18} />
+        <Home size={16} />
+        <span className="text-[7px] leading-none">Hem</span>
       </button>
 
       {/* Dashboard / Kontrollpanel */}
       <button
         onClick={() => { setAppMode('dashboard'); }}
         title="Kontrollpanel"
-        className="p-2.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary/40 transition-all min-w-[44px] min-h-[44px] flex items-center justify-center"
+        className="p-1.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary/40 transition-all min-w-[40px] min-h-[40px] flex flex-col items-center justify-center gap-0.5"
       >
-        <LayoutGrid size={18} />
+        <LayoutGrid size={16} />
+        <span className="text-[7px] leading-none">Panel</span>
       </button>
 
       {/* Undo / Redo */}
       <button onClick={undo} disabled={undoLen === 0} title="Ångra"
-        className="p-2.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary/40 disabled:opacity-30 transition-all min-w-[44px] min-h-[44px] flex items-center justify-center">
-        <Undo2 size={18} />
+        className="p-1.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary/40 disabled:opacity-30 transition-all min-w-[40px] min-h-[40px] flex flex-col items-center justify-center gap-0.5">
+        <Undo2 size={16} />
+        <span className="text-[7px] leading-none">Ångra</span>
       </button>
       <button onClick={redo} disabled={redoLen === 0} title="Gör om"
-        className="p-2.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary/40 disabled:opacity-30 transition-all min-w-[44px] min-h-[44px] flex items-center justify-center">
-        <Redo2 size={18} />
+        className="p-1.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary/40 disabled:opacity-30 transition-all min-w-[40px] min-h-[40px] flex flex-col items-center justify-center gap-0.5">
+        <Redo2 size={16} />
+        <span className="text-[7px] leading-none">Gör om</span>
       </button>
 
       <div className="w-px h-5 bg-border mx-0.5" />
@@ -171,11 +222,32 @@ export default function BuildTopToolbar() {
         ))}
       </div>
 
+      {/* Edit lock toggle */}
+      <div className="flex items-center bg-secondary/30 rounded-xl p-0.5">
+        {lockModes.map(({ key, label, icon: Icon }) => (
+          <button
+            key={key}
+            onClick={() => setEditLock(key)}
+            title={`Redigera: ${label}`}
+            className={cn(
+              'flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg text-[10px] transition-all min-h-[32px]',
+              editLock === key
+                ? 'bg-primary/20 text-primary font-medium'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+          >
+            <Icon size={14} />
+            <span className="text-[7px] leading-none">{label}</span>
+          </button>
+        ))}
+      </div>
+
       {/* Keyboard shortcuts */}
       <Dialog>
         <DialogTrigger asChild>
-          <button title="Tangentbordsgenvägar" className="p-2.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary/40 transition-all min-w-[44px] min-h-[44px] flex items-center justify-center">
+          <button title="Tangentbordsgenvägar" className="p-1.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary/40 transition-all min-w-[40px] min-h-[40px] flex flex-col items-center justify-center gap-0.5">
             <HelpCircle size={16} />
+            <span className="text-[7px] leading-none">?</span>
           </button>
         </DialogTrigger>
         <DialogContent className="max-w-sm">
@@ -260,9 +332,10 @@ export default function BuildTopToolbar() {
           toast.success(`Optimerat: ${parts.join(', ')}`);
         }}
         title="Optimera & synka rum"
-        className="p-2.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary/40 transition-all min-w-[44px] min-h-[44px] flex items-center justify-center"
+        className="p-1.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary/40 transition-all min-w-[40px] min-h-[40px] flex flex-col items-center justify-center gap-0.5"
       >
         <Sparkles size={16} />
+        <span className="text-[7px] leading-none">Optimera</span>
       </button>
 
       {/* Heal walls button */}
@@ -290,15 +363,17 @@ export default function BuildTopToolbar() {
           toast.success(`Helat ${count} noder, ${newRooms.length} rum detekterade`);
         }}
         title="Hela väggar — fixar små glipor"
-        className="p-2.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary/40 transition-all min-w-[44px] min-h-[44px] flex items-center justify-center"
+        className="p-1.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary/40 transition-all min-w-[40px] min-h-[40px] flex flex-col items-center justify-center gap-0.5"
       >
         <Wrench size={16} />
+        <span className="text-[7px] leading-none">Hela</span>
       </button>
       {/* Room manager popover */}
       <Popover>
         <PopoverTrigger asChild>
-          <button title="Hantera rum" className="p-2.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary/40 transition-all min-w-[44px] min-h-[44px] flex items-center justify-center">
+          <button title="Hantera rum" className="p-1.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary/40 transition-all min-w-[40px] min-h-[40px] flex flex-col items-center justify-center gap-0.5">
             <DoorOpen size={16} />
+            <span className="text-[7px] leading-none">Rum</span>
           </button>
         </PopoverTrigger>
         <PopoverContent side="bottom" align="start" className="w-72 p-3 bg-card border-border max-h-96 overflow-y-auto">
@@ -314,18 +389,20 @@ export default function BuildTopToolbar() {
         onClick={() => setView({ showOtherFloorsGhost: !showGhost })}
         title="Visa andra våningar"
         className={cn(
-          'p-2.5 rounded-xl transition-all min-w-[44px] min-h-[44px] flex items-center justify-center',
+          'p-1.5 rounded-xl transition-all min-w-[40px] min-h-[40px] flex flex-col items-center justify-center gap-0.5',
           showGhost ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-foreground hover:bg-secondary/40'
         )}
       >
         <Ghost size={16} />
+        <span className="text-[7px] leading-none">Spöke</span>
       </button>
 
       {/* Project menu popover */}
       <Popover>
         <PopoverTrigger asChild>
-          <button title="Projekthantering" className="p-2.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary/40 transition-all min-w-[44px] min-h-[44px] flex items-center justify-center">
+          <button title="Projekthantering" className="p-1.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary/40 transition-all min-w-[40px] min-h-[40px] flex flex-col items-center justify-center gap-0.5">
             <FolderOpen size={16} />
+            <span className="text-[7px] leading-none">Projekt</span>
           </button>
         </PopoverTrigger>
         <PopoverContent side="bottom" align="end" className="w-56 p-2 space-y-1 bg-card border-border">
@@ -371,8 +448,9 @@ export default function BuildTopToolbar() {
       {/* Settings popover */}
       <Popover>
         <PopoverTrigger asChild>
-          <button title="Inställningar" className="p-2.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary/40 transition-all min-w-[44px] min-h-[44px] flex items-center justify-center">
-            <Settings2 size={18} />
+          <button title="Inställningar" className="p-1.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary/40 transition-all min-w-[40px] min-h-[40px] flex flex-col items-center justify-center gap-0.5">
+            <Settings2 size={16} />
+            <span className="text-[7px] leading-none">Inställn.</span>
           </button>
         </PopoverTrigger>
         <PopoverContent side="bottom" align="end" className="w-64 p-3 space-y-4 bg-card border-border">

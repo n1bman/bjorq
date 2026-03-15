@@ -4,6 +4,12 @@ import type { PropItem, PropCatalogItem, WallSegment } from '../store/types';
 import { getGoldenSceneForProp } from './modelCache';
 
 /**
+ * Visual offset applied to floor meshes in Floors3D — ensures placed objects
+ * sit flush with the visible floor surface rather than floating or sinking.
+ */
+export const FLOOR_VISUAL_OFFSET = 0.02;
+
+/**
  * Categories whose props can act as support surfaces for "table" placement items.
  */
 const SUPPORT_CATEGORIES = new Set([
@@ -86,7 +92,7 @@ export function findLandingPosition(
 
   const propItem = state.props.items.find(p => p.id === propId);
   if (!propItem) {
-    return { position: [dragXZ[0], Math.max(floorElevation, currentY), dragXZ[1]], snappedTo: 'free' };
+    return { position: [dragXZ[0], Math.max(floorElevation + FLOOR_VISUAL_OFFSET, currentY), dragXZ[1]], snappedTo: 'free' };
   }
 
   const catItem = state.props.catalog.find(c => c.id === propItem.catalogId);
@@ -94,7 +100,7 @@ export function findLandingPosition(
 
   // If freePlacement is true, skip all collision checks and placement rules
   if (propItem.freePlacement) {
-    return { position: [dragXZ[0], Math.max(floorElevation, currentY), dragXZ[1]], snappedTo: 'free' };
+    return { position: [dragXZ[0], Math.max(floorElevation + FLOOR_VISUAL_OFFSET, currentY), dragXZ[1]], snappedTo: 'free' };
   }
 
   // C4: Wall collision check for non-wall-mounted props
@@ -113,7 +119,7 @@ export function findLandingPosition(
   }
 
   if (placement === 'floor') {
-    return { position: [finalX, floorElevation, finalZ], snappedTo: 'floor' };
+    return { position: [finalX, floorElevation + FLOOR_VISUAL_OFFSET, finalZ], snappedTo: 'floor' };
   }
 
   if (placement === 'table') {
@@ -121,19 +127,19 @@ export function findLandingPosition(
     if (surfaceY !== null) {
       return { position: [finalX, surfaceY, finalZ], snappedTo: 'surface' };
     }
-    return { position: [finalX, floorElevation, finalZ], snappedTo: 'floor' };
+    return { position: [finalX, floorElevation + FLOOR_VISUAL_OFFSET, finalZ], snappedTo: 'floor' };
   }
 
   if (placement === 'wall' || placement === 'ceiling') {
-    return { position: [finalX, Math.max(floorElevation, currentY), finalZ], snappedTo: 'free' };
+    return { position: [finalX, Math.max(floorElevation + FLOOR_VISUAL_OFFSET, currentY), finalZ], snappedTo: 'free' };
   }
 
   if (placement === 'free') {
-    return { position: [finalX, Math.max(floorElevation, currentY), finalZ], snappedTo: 'free' };
+    return { position: [finalX, Math.max(floorElevation + FLOOR_VISUAL_OFFSET, currentY), finalZ], snappedTo: 'free' };
   }
 
   // No placement metadata — free placement, but clamp to floor minimum
-  return { position: [finalX, Math.max(floorElevation, currentY), finalZ], snappedTo: 'free' };
+  return { position: [finalX, Math.max(floorElevation + FLOOR_VISUAL_OFFSET, currentY), finalZ], snappedTo: 'free' };
 }
 
 /**

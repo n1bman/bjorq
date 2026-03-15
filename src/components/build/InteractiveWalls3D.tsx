@@ -69,6 +69,8 @@ export default function InteractiveWalls3D() {
     return map;
   }, [rooms]);
 
+  const editLock = useAppStore((s) => s.build.editLock ?? 'all');
+
   const handleWallClick = useCallback((e: ThreeEvent<PointerEvent>, wallId: string) => {
     // ─── Phase C1: Wall-mount placement ───
     if (isWallMountMode && pendingWallMount) {
@@ -98,6 +100,7 @@ export default function InteractiveWalls3D() {
     }
 
     if (activeTool !== 'select' && activeTool !== 'paint') return;
+    if (editLock !== 'all' && editLock !== 'walls') return;
     e.stopPropagation();
 
     const wall = floors.find(f => f.id === activeFloorId)?.walls.find(w => w.id === wallId);
@@ -108,7 +111,7 @@ export default function InteractiveWalls3D() {
     const faceSide = detectClickedFace(wall, [point.x, point.y, point.z], elevation);
 
     setSelection({ type: 'wall', id: wallId, faceSide });
-  }, [activeTool, setSelection, floors, activeFloorId, elevation, isWallMountMode, pendingWallMount, addProp, setPendingWallMount]);
+  }, [activeTool, setSelection, floors, activeFloorId, elevation, isWallMountMode, pendingWallMount, addProp, setPendingWallMount, editLock]);
 
   const handleWallHover = useCallback((e: ThreeEvent<PointerEvent>, wallId: string) => {
     if (!isPaintMode && activeTool !== 'select' && !isWallMountMode) return;

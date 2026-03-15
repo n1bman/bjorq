@@ -1418,6 +1418,7 @@ export default function DeviceMarkers3D({ buildMode, onLongPress }: DeviceMarker
   const toggleDeviceState = useAppStore((s) => s.toggleDeviceState);
   const selectedId = useAppStore((s) => s.build.selection.id);
   const selectedType = useAppStore((s) => s.build.selection.type);
+  const editLock = useAppStore((s) => s.build.editLock ?? 'all');
   const { camera, raycaster, gl } = useThree();
 
   const dragPlane = useRef(new THREE.Plane(new THREE.Vector3(0, 1, 0), 0));
@@ -1461,6 +1462,7 @@ export default function DeviceMarkers3D({ buildMode, onLongPress }: DeviceMarker
       longPressTimer.current = null;
     }
     if (buildMode) {
+      if (editLock !== 'all' && editLock !== 'devices') return;
       setSelection({ type: 'device', id });
     } else {
       // If long-press was already triggered, don't toggle
@@ -1474,10 +1476,11 @@ export default function DeviceMarkers3D({ buildMode, onLongPress }: DeviceMarker
         toggleDeviceState(id);
       }
     }
-  }, [buildMode, setSelection, markers, toggleableKinds, toggleDeviceState]);
+  }, [buildMode, setSelection, markers, toggleableKinds, toggleDeviceState, editLock]);
 
   const handleDragStart = useCallback((id: string, e: ThreeEvent<PointerEvent>) => {
     if (!buildMode) return;
+    if (editLock !== 'all' && editLock !== 'devices') return;
     e.stopPropagation();
 
     const marker = markers.find((m) => m.id === id);

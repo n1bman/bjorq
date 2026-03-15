@@ -46,6 +46,7 @@ const initialBuild: BuildState = {
   grid: { enabled: true, sizeMeters: 0.1, snapMode: 'strict' },
   selection: { type: null, id: null },
   view: { cameraMode: 'topdown', showOtherFloorsGhost: false, floorFilter: 'all' },
+  editLock: 'all',
   wallDrawing: { isDrawing: false, nodes: [] },
   roomDrawing: { isDrawing: false, startPoint: null, endPoint: null },
   calibration: { isCalibrating: false, point1: null, point2: null, realMeters: null },
@@ -988,6 +989,9 @@ const storeCreator = (set: any, get: any): AppState => ({
 
   toggleGrid: () =>
     set((s: any) => ({ build: { ...s.build, grid: { ...s.build.grid, enabled: !s.build.grid.enabled } } })),
+
+  setEditLock: (lock) =>
+    set((s: any) => ({ build: { ...s.build, editLock: lock } })),
 
   setSelection: (sel) =>
     set((s: any) => ({ build: { ...s.build, selection: sel } })),
