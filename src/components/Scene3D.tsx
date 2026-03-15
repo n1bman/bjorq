@@ -166,11 +166,11 @@ function InteractiveCameraController() {
 }
 
 // CameraController wrapper: chooses standby vs interactive
+// Preserves camera position when switching between build/home modes
 const CameraController = React.forwardRef(function CameraController(_props, _ref) {
   const appMode = useAppStore((s) => s.appMode);
   const prevModeRef = useRef(appMode);
 
-  // Reset camera state on mode transitions
   useEffect(() => {
     prevModeRef.current = appMode;
   }, [appMode]);
@@ -179,7 +179,7 @@ const CameraController = React.forwardRef(function CameraController(_props, _ref
     return <StandbyStaticCamera />;
   }
 
-  return <InteractiveCameraController />;
+  return <InteractiveCameraController key="interactive" />;
 });
 
 

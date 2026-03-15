@@ -1415,30 +1415,23 @@ function DeviceInspector({ deviceId, close }: { deviceId: string; close: React.R
         );
       })()}
 
-      <div className="space-y-2">
-        <label className="text-muted-foreground text-[10px]">Yta</label>
-        <select
-          value={device.surface}
-          onChange={(e) => updateDevice(device.id, { surface: e.target.value as DeviceSurface })}
-          className="w-full h-8 rounded-md bg-secondary/30 text-foreground text-xs px-2 border-none outline-none"
-        >
-          <option value="floor">Golv</option>
-          <option value="wall">Vägg</option>
-          <option value="ceiling">Tak</option>
-          <option value="free">Fri</option>
-        </select>
-      </div>
-
-      {/* Category override */}
-      <div className="space-y-2">
-        <label className="text-muted-foreground text-[10px]">Kategori</label>
-        <Input
-          value={device.userCategory ?? ''}
-          onChange={(e) => updateDevice(device.id, { userCategory: e.target.value || undefined })}
-          placeholder="Auto (baserad på typ)"
-          className="h-8 text-xs bg-secondary/30"
-        />
-      </div>
+      {/* Duplicate button */}
+      <button
+        onClick={() => {
+          const newId = generateId();
+          const store = useAppStore.getState();
+          store.addDevice({
+            ...device,
+            id: newId,
+            name: device.name ? `${device.name} (kopia)` : '',
+            position: [device.position[0] + 0.5, device.position[1], device.position[2]],
+          });
+          setSelection({ type: 'device', id: newId });
+        }}
+        className="w-full py-2 rounded-lg bg-secondary/30 text-foreground text-xs font-medium hover:bg-secondary/50 transition-colors min-h-[44px] flex items-center justify-center gap-1"
+      >
+        <Plus size={14} /> Duplicera
+      </button>
 
       {/* Notify on home screen */}
       <div className="flex items-center justify-between">

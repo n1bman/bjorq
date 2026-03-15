@@ -503,7 +503,7 @@ function PropModel({ id, url: rawUrl, position, rotation, scale, colorOverride, 
             selectionBox.size[1] * scale[1],
             selectionBox.size[2] * scale[2],
           )]} />
-          <lineBasicMaterial color="#ffffff" transparent opacity={0.7} linewidth={1} />
+          <lineBasicMaterial color="#4a9eff" transparent opacity={0.9} linewidth={2} />
         </lineSegments>
       )}
 

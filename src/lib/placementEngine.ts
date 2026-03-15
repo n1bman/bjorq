@@ -90,10 +90,15 @@ export function findLandingPosition(
   const catItem = state.props.catalog.find(c => c.id === propItem.catalogId);
   const placement = catItem?.placement;
 
-  // C4: Wall collision check for non-wall-mounted, non-free-placement props
+  // If freePlacement is true, skip all collision checks and placement rules
+  if (propItem.freePlacement) {
+    return { position: [dragXZ[0], Math.max(floorElevation, currentY), dragXZ[1]], snappedTo: 'free' };
+  }
+
+  // C4: Wall collision check for non-wall-mounted props
   let finalX = dragXZ[0];
   let finalZ = dragXZ[1];
-  if (!propItem.freePlacement && !propItem.wallMountInfo && placement !== 'wall' && placement !== 'ceiling' && placement !== 'free') {
+  if (!propItem.wallMountInfo && placement !== 'wall' && placement !== 'ceiling' && placement !== 'free') {
     const floor = state.layout.floors.find(f => f.id === floorId);
     const walls = floor?.walls ?? [];
     if (walls.length > 0) {
