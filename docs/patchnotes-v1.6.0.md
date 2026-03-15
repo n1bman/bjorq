@@ -92,14 +92,14 @@ När du gör arkitekturella refaktoreringar av den här storleken:
 ## v1.6.2 — Patch (2026-03-15)
 
 ### Fixar
-- **Vägghörn hade kuber/glipor** — hörnblock använder nu paddade konvexa hull med `DoubleSide`-material och ökat polygon offset. Fallback-kuber har också padding.
-- **Solen för långt bort** — minskad distans från 20 till 12 enheter för mer dramatisk, spelliknande belysning. Minimihöjd på 1 enhet förhindrar underjordisk sol.
+- **Vägghörn hade kuber/glipor** — hörnblock använder nu paddade konvexa hull med `DoubleSide`-material och ökat polygon offset.
+- **Solen för långt bort** — minskad distans från 20 till 12 enheter.
 - **Grafikinställningar remountade inte Canvas** — Canvas-nyckeln inkluderar nu kvalitet, skuggor, AA och tone mapping.
 - **3D-vy för stor i Hem** — höjd minskad från 280px till 200px.
 
-### Verifierat
-- MediaScreenMarker renderar korrekt i alla kontexter
-- Bibliotek-import fungerar — fil, analys, optimering, kataloglagring
-- Sol/väder synkat mellan kontrollpanel och designläge via delat Zustand-state
-- HA-bryggan — alla 18 enhetsdomäner korrekt anslutna
-- Hela väggar-knappen fungerar korrekt
+## v1.6.3 — Patch (2026-03-15)
+
+### Fixar
+- **Vägghörnskuber borttagna** — `generateCornerBlocks` helt eliminerad; väggar överlappar nu lätt vid korsningar utan extra geometri.
+
+> **Fortsättning:** Se `docs/patchnotes-v1.7.0.md` för v1.7.x-serien.
