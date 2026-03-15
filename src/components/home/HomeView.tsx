@@ -57,8 +57,6 @@ export default function HomeView() {
   };
 
 
-  const hiddenCount = hiddenMarkerIds.length;
-  const allHidden = markers.length > 0 && hiddenCount === markers.length;
 
   const handlePointerDown = useCallback((id: string) => {
     longPressTimerRef.current = setTimeout(() => {
