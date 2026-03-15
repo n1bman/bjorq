@@ -139,7 +139,7 @@ export function findLandingPosition(
   }
 
   // No placement metadata — free placement, but clamp to floor minimum
-  return { position: [finalX, Math.max(floorElevation, currentY), finalZ], snappedTo: 'free' };
+  return { position: [finalX, Math.max(floorElevation + FLOOR_VISUAL_OFFSET, currentY), finalZ], snappedTo: 'free' };
 }
 
 /**

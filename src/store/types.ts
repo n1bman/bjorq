@@ -255,12 +255,15 @@ export interface ImportOverlaySync {
   offsetY: number;
 }
 
+export type EditLock = 'all' | 'walls' | 'props' | 'devices';
+
 export interface BuildState {
   tab: BuildTab;
   activeTool: BuildTool;
   grid: BuildGrid;
   selection: BuildSelection;
   view: BuildView;
+  editLock: EditLock;
   wallDrawing: {
     isDrawing: boolean;
     nodes: [number, number][];

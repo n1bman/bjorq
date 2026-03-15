@@ -26,7 +26,7 @@ export default function GroundPlane({ onPointerDown, onPointerMove }: GroundPlan
     <mesh
       ref={meshRef}
       rotation={[-Math.PI / 2, 0, 0]}
-      position={[0, -0.03, 0]}
+      position={[0, -0.01, 0]}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       receiveShadow

@@ -46,6 +46,7 @@ const initialBuild: BuildState = {
   grid: { enabled: true, sizeMeters: 0.1, snapMode: 'strict' },
   selection: { type: null, id: null },
   view: { cameraMode: 'topdown', showOtherFloorsGhost: false, floorFilter: 'all' },
+  editLock: 'all',
   wallDrawing: { isDrawing: false, nodes: [] },
   roomDrawing: { isDrawing: false, startPoint: null, endPoint: null },
   calibration: { isCalibrating: false, point1: null, point2: null, realMeters: null },
