@@ -231,7 +231,7 @@ export default function GraphicsSettings() {
               <div className="pl-6 space-y-1">
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-muted-foreground">Exponering</span>
-                  <span className="text-xs font-mono text-muted-foreground">{perf.exposure.toFixed(1)}</span>
+                  <span className="text-xs font-mono text-muted-foreground">{(perf.exposure ?? 1.0).toFixed(1)}</span>
                 </div>
                 <Slider
                   value={[perf.exposure]}
