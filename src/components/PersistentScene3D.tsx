@@ -855,6 +855,7 @@ function UnifiedSceneContent({ onDeviceLongPress }: { onDeviceLongPress?: (id: s
 
       <Environment preset="night" />
       <CameraController />
+      <FrameThrottle />
     </>
   );
 }
