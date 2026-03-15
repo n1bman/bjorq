@@ -100,6 +100,7 @@ export default function InteractiveWalls3D() {
     }
 
     if (activeTool !== 'select' && activeTool !== 'paint') return;
+    if (editLock !== 'all' && editLock !== 'walls') return;
     e.stopPropagation();
 
     const wall = floors.find(f => f.id === activeFloorId)?.walls.find(w => w.id === wallId);
