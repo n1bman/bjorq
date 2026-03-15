@@ -2554,7 +2554,7 @@ export default function BuildModeV2() {
           )}
           {/* Import tools (Planritning only) */}
           {showImportPanel && !showDevicePanel && !showCatalogPanel && !showSurfacePanel && (
-            <div className="absolute left-0 top-0 bottom-0 w-[220px] bg-card/95 backdrop-blur-sm border-r border-border z-20 overflow-y-auto py-3">
+            <div className="absolute left-0 top-0 bottom-0 w-[220px] bg-card/95 backdrop-blur-sm border-r border-border z-20 overflow-y-auto py-3 pointer-events-auto">
               <Suspense fallback={null}>
                 <ImportTools />
               </Suspense>
