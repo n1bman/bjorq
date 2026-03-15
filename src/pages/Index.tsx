@@ -19,6 +19,7 @@ import { useComfortEngine } from '../hooks/useComfortEngine';
 const IndexInner = () => {
   const appMode = useAppStore((s) => s.appMode);
   const [longPressDeviceId, setLongPressDeviceId] = useState<string | null>(null);
+  const [fpsActive, setFpsActive] = useState(false);
 
   useHomeAssistant();
   useHABridge();
@@ -35,10 +36,17 @@ const IndexInner = () => {
     setLongPressDeviceId(null);
   }, []);
 
+  const handleFpsStateChange = useCallback((active: boolean) => {
+    setFpsActive(active);
+  }, []);
+
   return (
     <div className="fixed inset-0 bg-background overflow-hidden">
       {/* Persistent 3D scene — always mounted, adapts to appMode */}
-      <PersistentScene3D onDeviceLongPress={handleDeviceLongPress} />
+      <PersistentScene3D
+        onDeviceLongPress={handleDeviceLongPress}
+        onFpsStateChange={handleFpsStateChange}
+      />
 
       {/* Mode-specific UI overlays */}
       {appMode === 'standby' && <StandbyMode />}
@@ -46,6 +54,7 @@ const IndexInner = () => {
         <HomeView
           longPressDeviceId={longPressDeviceId}
           onDismissLongPress={handleDismissLongPress}
+          fpsActive={fpsActive}
         />
       )}
       {appMode === 'dashboard' && <DashboardShell />}

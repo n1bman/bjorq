@@ -942,7 +942,7 @@ export default function PersistentScene3D({ onDeviceLongPress, onFpsStateChange 
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [appMode, fpsActive, markers, floors]);
+  }, [appMode, fpsActive, markers, floors, onFpsStateChange]);
 
   // Double-click to finish wall drawing (was on BuildScene3D wrapper div)
   const handleDoubleClick = useCallback(() => {
