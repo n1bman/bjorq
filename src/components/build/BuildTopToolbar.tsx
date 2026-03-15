@@ -363,15 +363,17 @@ export default function BuildTopToolbar() {
           toast.success(`Helat ${count} noder, ${newRooms.length} rum detekterade`);
         }}
         title="Hela väggar — fixar små glipor"
-        className="p-2.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary/40 transition-all min-w-[44px] min-h-[44px] flex items-center justify-center"
+        className="p-1.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary/40 transition-all min-w-[40px] min-h-[40px] flex flex-col items-center justify-center gap-0.5"
       >
         <Wrench size={16} />
+        <span className="text-[7px] leading-none">Hela</span>
       </button>
       {/* Room manager popover */}
       <Popover>
         <PopoverTrigger asChild>
-          <button title="Hantera rum" className="p-2.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary/40 transition-all min-w-[44px] min-h-[44px] flex items-center justify-center">
+          <button title="Hantera rum" className="p-1.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary/40 transition-all min-w-[40px] min-h-[40px] flex flex-col items-center justify-center gap-0.5">
             <DoorOpen size={16} />
+            <span className="text-[7px] leading-none">Rum</span>
           </button>
         </PopoverTrigger>
         <PopoverContent side="bottom" align="start" className="w-72 p-3 bg-card border-border max-h-96 overflow-y-auto">
@@ -387,18 +389,20 @@ export default function BuildTopToolbar() {
         onClick={() => setView({ showOtherFloorsGhost: !showGhost })}
         title="Visa andra våningar"
         className={cn(
-          'p-2.5 rounded-xl transition-all min-w-[44px] min-h-[44px] flex items-center justify-center',
+          'p-1.5 rounded-xl transition-all min-w-[40px] min-h-[40px] flex flex-col items-center justify-center gap-0.5',
           showGhost ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-foreground hover:bg-secondary/40'
         )}
       >
         <Ghost size={16} />
+        <span className="text-[7px] leading-none">Spöke</span>
       </button>
 
       {/* Project menu popover */}
       <Popover>
         <PopoverTrigger asChild>
-          <button title="Projekthantering" className="p-2.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary/40 transition-all min-w-[44px] min-h-[44px] flex items-center justify-center">
+          <button title="Projekthantering" className="p-1.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary/40 transition-all min-w-[40px] min-h-[40px] flex flex-col items-center justify-center gap-0.5">
             <FolderOpen size={16} />
+            <span className="text-[7px] leading-none">Projekt</span>
           </button>
         </PopoverTrigger>
         <PopoverContent side="bottom" align="end" className="w-56 p-2 space-y-1 bg-card border-border">
