@@ -4,6 +4,7 @@ import HomeView from '../components/home/HomeView';
 import DashboardShell from '../components/home/DashboardShell';
 import StandbyMode from '../components/standby/StandbyMode';
 import PerformanceHUD from '../components/home/PerformanceHUD';
+import LoadingScreen from '../components/LoadingScreen';
 import PersistentScene3D from '../components/PersistentScene3D';
 import { useAppStore, initHostedMode, autoDetectPerformance } from '../store/useAppStore';
 import { useHomeAssistant } from '../hooks/useHomeAssistant';
