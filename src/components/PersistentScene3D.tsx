@@ -907,6 +907,37 @@ export default function PersistentScene3D({ onDeviceLongPress }: { onDeviceLongP
   const addWall = useAppStore((s) => s.addWall);
   const setWallDrawing = useAppStore((s) => s.setWallDrawing);
   const pushUndo = useAppStore((s) => s.pushUndo);
+  const markers = useAppStore((s) => s.devices.markers);
+  const floors = useAppStore((s) => s.layout.floors);
+
+  // ─── Roberto FPS Mode (Easter egg) ───
+  const [fpsActive, setFpsActive] = useState(false);
+  const [fpsSpawn, setFpsSpawn] = useState<SpawnResult | null>(null);
+
+  const handleFpsExit = useCallback(() => {
+    setFpsActive(false);
+    setFpsSpawn(null);
+  }, []);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (appMode !== 'home') return;
+      const tag = (document.activeElement?.tagName ?? '').toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+
+      if (e.key.toLowerCase() === 'o' && !fpsActive) {
+        const spawn = findRobertoSpawn(markers, floors);
+        if (!spawn) {
+          toast({ title: 'Roberto saknas', description: "Placera en robot med namnet 'Roberto' för att aktivera FPS-läge" });
+          return;
+        }
+        setFpsSpawn(spawn);
+        setFpsActive(true);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [appMode, fpsActive, markers, floors]);
 
   // Double-click to finish wall drawing (was on BuildScene3D wrapper div)
   const handleDoubleClick = useCallback(() => {
