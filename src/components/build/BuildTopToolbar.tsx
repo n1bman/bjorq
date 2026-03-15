@@ -332,9 +332,10 @@ export default function BuildTopToolbar() {
           toast.success(`Optimerat: ${parts.join(', ')}`);
         }}
         title="Optimera & synka rum"
-        className="p-2.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary/40 transition-all min-w-[44px] min-h-[44px] flex items-center justify-center"
+        className="p-1.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary/40 transition-all min-w-[40px] min-h-[40px] flex flex-col items-center justify-center gap-0.5"
       >
         <Sparkles size={16} />
+        <span className="text-[7px] leading-none">Optimera</span>
       </button>
 
       {/* Heal walls button */}
