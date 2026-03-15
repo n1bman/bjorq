@@ -135,7 +135,7 @@ export default function FPSController({ spawnPosition, floorId, elevation, onExi
 
     const keys = keysRef.current;
     const forward = new THREE.Vector3(-Math.sin(yawRef.current), 0, -Math.cos(yawRef.current));
-    const right = new THREE.Vector3(forward.z, 0, -forward.x);
+    const right = new THREE.Vector3(-forward.z, 0, forward.x);
 
     const move = new THREE.Vector3();
     if (keys.has('w')) move.add(forward);
