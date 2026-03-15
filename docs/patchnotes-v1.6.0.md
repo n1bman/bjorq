@@ -80,3 +80,11 @@ När du gör arkitekturella refaktoreringar av den här storleken:
 | `src/components/home/DashboardGrid.tsx` | Uppdaterad | 644 |
 | `src/components/Scene3D.tsx` | **Raderad** | — |
 | `src/components/build/BuildScene3D.tsx` | **Raderad** | — |
+
+---
+
+## v1.6.1 — Hotfix (2026-03-15)
+
+### Fixar
+- **Sparad kameravy försvann vid omladdning** — preset-effekten i `InteractiveCameraController` skrev över `customStartPos` med standard-`angle`-preseten vid mount. Lagt till guard som hoppar över överskrivning.
+- **Dashboard sparade fel kamera** — `DashboardPreview3D` exponerar nu sin egen kameraposition via ref. Spara-knappen läser från widget-kameran istället för den dolda persistenta canvasens kamera.
