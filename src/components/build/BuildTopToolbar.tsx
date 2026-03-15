@@ -126,7 +126,7 @@ export default function BuildTopToolbar() {
         else if (sel.type === 'device' && sel.id) { s.removeDevice(sel.id); }
         else if (sel.type === 'wall' && sel.id) {
           s.pushUndo();
-          s.removeWall(s.layout.activeFloorId!, sel.id);
+          s.deleteWall(s.layout.activeFloorId!, sel.id);
         }
         s.setSelection({ type: null, id: null });
         return;
