@@ -567,8 +567,8 @@ function GraphicsCategory() {
       {/* Live 3D preview so you can see changes in real-time */}
       <section>
         <h2>3D-förhandsvisning</h2>
-        <div className="glass-panel rounded-2xl overflow-hidden h-[250px]">
-          <Scene3D />
+        <div className="glass-panel rounded-2xl overflow-hidden h-[250px] flex items-center justify-center text-muted-foreground text-xs">
+          <p>3D-vy (bakgrund)</p>
         </div>
       </section>
       <section>
