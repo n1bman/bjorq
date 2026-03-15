@@ -111,7 +111,7 @@ export default function InteractiveWalls3D() {
     const faceSide = detectClickedFace(wall, [point.x, point.y, point.z], elevation);
 
     setSelection({ type: 'wall', id: wallId, faceSide });
-  }, [activeTool, setSelection, floors, activeFloorId, elevation, isWallMountMode, pendingWallMount, addProp, setPendingWallMount]);
+  }, [activeTool, setSelection, floors, activeFloorId, elevation, isWallMountMode, pendingWallMount, addProp, setPendingWallMount, editLock]);
 
   const handleWallHover = useCallback((e: ThreeEvent<PointerEvent>, wallId: string) => {
     if (!isPaintMode && activeTool !== 'select' && !isWallMountMode) return;

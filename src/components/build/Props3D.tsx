@@ -224,7 +224,8 @@ function PropModel({ id, url: rawUrl, position, rotation, scale, colorOverride, 
     }
   }, [textureOverride]);
 
-  const canInteract = appMode === 'build' && (activeTool === 'select' || activeTool === 'furnish');
+  const editLock = useAppStore((s) => s.build.editLock ?? 'all');
+  const canInteract = appMode === 'build' && (activeTool === 'select' || activeTool === 'furnish') && (editLock === 'all' || editLock === 'props');
 
   const handleClick = (e: ThreeEvent<PointerEvent>) => {
     if (!canInteract) return;
