@@ -816,9 +816,36 @@ export default function PersistentScene3D({ onDeviceLongPress }: { onDeviceLongP
   const addWall = useAppStore((s) => s.addWall);
   const setWallDrawing = useAppStore((s) => s.setWallDrawing);
   const pushUndo = useAppStore((s) => s.pushUndo);
-  const exposure = useAppStore((s) => s.performance.exposure);
-  const appMode = useAppStore((s) => s.appMode);
-  const buildCameraMode = useAppStore((s) => s.build.view.cameraMode);
+
+  // Double-click to finish wall drawing (was on BuildScene3D wrapper div)
+  const handleDoubleClick = useCallback(() => {
+    if (appMode !== 'build') return;
+    if (activeTool === 'wall' && wallDrawing.isDrawing && activeFloorId) {
+      pushUndo();
+      const nodes = [...wallDrawing.nodes];
+      if (nodes.length >= 3) {
+        const first = nodes[0];
+        const last = nodes[nodes.length - 1];
+        if (Math.hypot(last[0] - first[0], last[1] - first[1]) < 0.3) {
+          nodes[nodes.length - 1] = first;
+        }
+      }
+      for (let i = 0; i < nodes.length - 1; i++) {
+        const len = Math.hypot(nodes[i+1][0] - nodes[i][0], nodes[i+1][1] - nodes[i][1]);
+        if (len < 0.05) continue;
+        const wall: WallSegment = {
+          id: generateId(),
+          from: nodes[i],
+          to: nodes[i + 1],
+          height: activeFloor?.heightMeters ?? 2.5,
+          thickness: 0.15,
+          openings: [],
+        };
+        addWall(activeFloorId, wall);
+      }
+      setWallDrawing({ isDrawing: false, nodes: [] });
+    }
+  }, [appMode, activeTool, wallDrawing, activeFloorId, activeFloor, pushUndo, addWall, setWallDrawing]);
 
   const dpr = tabletMode ? 0.75 : quality === 'low' ? 1 : quality === 'medium' ? 1.5 : undefined;
 
