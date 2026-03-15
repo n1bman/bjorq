@@ -2548,7 +2548,7 @@ export default function BuildModeV2() {
           )}
           {/* Surface Editor — paint tool active */}
           {showSurfacePanel && (
-            <div className="absolute left-0 top-0 bottom-0 w-[240px] bg-card/95 backdrop-blur-sm border-r border-border z-20 overflow-y-auto py-3 px-2">
+            <div className="absolute left-0 top-0 bottom-0 w-[240px] bg-card/95 backdrop-blur-sm border-r border-border z-20 overflow-y-auto py-3 px-2 pointer-events-auto">
               <SurfaceEditor />
             </div>
           )}
