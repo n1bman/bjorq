@@ -2530,11 +2530,11 @@ export default function BuildModeV2() {
   const catalogSourceFilter = activeTool === ('wizard' as any) ? 'wizard' as const : 'all' as const;
 
   return (
-    <div className="w-full h-full relative flex flex-col">
-      <BuildTopToolbar />
+    <div className="w-full h-full relative flex flex-col pointer-events-none">
+      <div className="pointer-events-auto"><BuildTopToolbar /></div>
       {isBibliotek ? (
         /* Bibliotek: dedicated workspace, no canvas */
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 overflow-hidden pointer-events-auto">
           <BibliotekWorkspace />
         </div>
       ) : (
@@ -2542,19 +2542,19 @@ export default function BuildModeV2() {
         <div className="flex-1 relative overflow-hidden">
           {/* Device placement tools (overlays catalog when active) */}
           {showDevicePanel && (
-            <div className="absolute left-0 top-0 bottom-0 w-[220px] bg-card/95 backdrop-blur-sm border-r border-border z-20 overflow-y-auto py-3">
+            <div className="absolute left-0 top-0 bottom-0 w-[220px] bg-card/95 backdrop-blur-sm border-r border-border z-20 overflow-y-auto py-3 pointer-events-auto">
               <InlinedDevicePlacementTools />
             </div>
           )}
           {/* Surface Editor — paint tool active */}
           {showSurfacePanel && (
-            <div className="absolute left-0 top-0 bottom-0 w-[240px] bg-card/95 backdrop-blur-sm border-r border-border z-20 overflow-y-auto py-3 px-2">
+            <div className="absolute left-0 top-0 bottom-0 w-[240px] bg-card/95 backdrop-blur-sm border-r border-border z-20 overflow-y-auto py-3 px-2 pointer-events-auto">
               <SurfaceEditor />
             </div>
           )}
           {/* Import tools (Planritning only) */}
           {showImportPanel && !showDevicePanel && !showCatalogPanel && !showSurfacePanel && (
-            <div className="absolute left-0 top-0 bottom-0 w-[220px] bg-card/95 backdrop-blur-sm border-r border-border z-20 overflow-y-auto py-3">
+            <div className="absolute left-0 top-0 bottom-0 w-[220px] bg-card/95 backdrop-blur-sm border-r border-border z-20 overflow-y-auto py-3 pointer-events-auto">
               <Suspense fallback={null}>
                 <ImportTools />
               </Suspense>
@@ -2563,7 +2563,7 @@ export default function BuildModeV2() {
           {/* Asset catalog — primary surface in Inredning */}
           {showCatalogPanel && (
             <div className={cn(
-              "absolute left-0 top-0 bottom-0 bg-card/95 backdrop-blur-sm border-r border-border z-20 overflow-y-auto flex flex-col",
+              "absolute left-0 top-0 bottom-0 bg-card/95 backdrop-blur-sm border-r border-border z-20 overflow-y-auto flex flex-col pointer-events-auto",
               isInredning ? "w-[300px]" : "w-[260px] py-3 px-2"
             )}>
               {/* Soft room context hint (Inredning only) */}
@@ -2592,21 +2592,21 @@ export default function BuildModeV2() {
             </div>
           )}
           {cameraMode === 'topdown' && (
-            <>
+            <div className="pointer-events-auto">
               {showImportOverlay && (
                 <Suspense fallback={null}>
                   <ImportPreview3D />
                 </Suspense>
               )}
               <BuildCanvas2D overlayMode={showImportOverlay} />
-            </>
+            </div>
           )}
           {/* 3D scene is provided by PersistentScene3D in Index.tsx */}
-          <BuildInspector />
+          <div className="pointer-events-auto"><BuildInspector /></div>
         </div>
       )}
-      {!isBibliotek && <BuildCatalogRow />}
-      <DesignTabBar />
+      {!isBibliotek && <div className="pointer-events-auto"><BuildCatalogRow /></div>}
+      <div className="pointer-events-auto"><DesignTabBar /></div>
     </div>
   );
 }

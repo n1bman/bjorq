@@ -1,109 +1,84 @@
+# Arbetsplan: Stabilisering, buggfixar och UX-förbättringar
 
-
-# Verification & Cleanup Report — Phase 1–3
-
-## Findings
-
-### 1. `BuildScene3D.tsx` — Dead Code
-Not imported anywhere. Pure dead code after the persistent scene migration. Safe to remove.
-
-### 2. `Scene3D.tsx` — Still Actively Used
-Imported by two dashboard components:
-- **`DashboardView.tsx`** (line 1, 17): Renders a full `<Scene3D />` as background when `dashboardBg === 'scene3d'` — creates a **second WebGL context** alongside the persistent canvas
-- **`DashboardGrid.tsx`** (line 2, 244): Renders a mini `<Scene3D />` preview widget inside a settings card — creates a **third WebGL context**
-
-This defeats the purpose of the persistent canvas. These should be removed or replaced with a view into the persistent scene.
-
-### 3. Design/Build Camera Regression — ROOT CAUSE FOUND
-
-**The BuildModeV2 overlay blocks all pointer events to the persistent Canvas.**
-
-```text
-Index.tsx layout:
-  ┌─ PersistentScene3D (z-0) ──────────────┐
-  │  <Canvas> with OrbitControls            │  ← receives NO events
-  └────────────────────────────────────────-─┘
-  ┌─ BuildModeV2 (z-auto, full-size div) ──┐
-  │  captures all pointer events            │  ← blocks canvas
-  │  toolbars, panels, inspector            │
-  └─────────────────────────────────────────┘
-```
-
-In the old architecture, `BuildScene3D` was rendered INSIDE `BuildModeV2`, so events flowed naturally. Now the canvas is behind the overlay, and the overlay's root `<div className="w-full h-full relative flex flex-col">` intercepts everything.
-
-**Fix:** Make BuildModeV2's root container `pointer-events-none`, then re-enable `pointer-events-auto` on its interactive children (toolbars, panels, inspector, tab bars).
-
-### 4. BuildCameraController — Missing `pendingFlyTo`
-
-The `BuildCameraController` (line 178-204) does NOT handle `pendingFlyTo`. Room navigation fly-to requests from the room list will silently fail in build mode. The old `BuildScene3D` had this handled via `controlsRef` inside `SceneContent`. Need to add flyTo lerp logic matching `InteractiveCameraController`.
-
-### 5. `HomeView.tsx` — Clean (no Scene3D import)
-
-Already converted to overlay-only. No regression.
-
-### 6. `StandbyMode.tsx` — Clean (no Scene3D import)
-
-Already converted. No regression.
-
-### 7. HA State Propagation
-
-The persistent `UnifiedSceneContent` reads from `useAppStore` reactively — environment, devices, rooms, weather all use store subscriptions. HA updates flow through the same store path. No regression expected here since nothing about the store subscription model changed.
+## Status: ✅ Implementerat (v1.1.0)
 
 ---
 
-## Plan — Cleanup & Camera Fix
+## Fas 0 — Bygg-stabilisering ✅ DONE
+- Fixat import i Scene3D till `./build/KitchenFixture3D`
+- Raderat duplikat `KitchenFixtureObject3D.tsx`
 
-### A. Fix Build Camera (Critical)
+## Fas 1 — Buggar och regressioner ✅ DONE
 
-**`BuildModeV2.tsx`** — Make root container pass-through:
-- Root div: add `pointer-events-none`
-- `BuildTopToolbar` wrapper: add `pointer-events-auto`
-- Left panels (device, surface, import, catalog): already have `absolute` + `z-20`, add `pointer-events-auto`
-- `BuildInspector`: add `pointer-events-auto`
-- `BuildCatalogRow` + `DesignTabBar`: add `pointer-events-auto`
-- `BuildCanvas2D` area: add `pointer-events-auto` (2D mode needs its own events)
+### 1.1 Väggar: 90-gradersstöd vid ritning ✅
+- Axis-aligned snapping (±3° av 0/90/180/270°) i `BuildScene3D.tsx`
+- Visuell indikator: cyan linje + solid (ej dashed) + "90°"-label via `<Html>`
+- `cursorAxisAligned`-prop tillagd i `WallDrawing3D.tsx`
 
-**`PersistentScene3D.tsx`** — Fix `BuildCameraController`:
-- Add `pendingFlyTo` handling (lerp logic) matching the pattern in `InteractiveCameraController`
-- Add `lerpingTo` ref for smooth camera transitions
+### 1.3 Dörr-öppningsriktning ✅
+- `flipped` appliceras nu på dörrpanelens position och rotation i `wallGeometry.tsx`
+- Gångjärnspunkt beräknas baserat på `flipped`-flagga
 
-### B. Remove Dashboard Double-Canvas
+### 1.4 Dörrens öppningsgrad ✅
+- `openAmount?: number` (0-1) tillagd på `WallOpening` i `types.ts`
+- Slider "Öppningsgrad" i OpeningInspector (dörrar + garageportar)
+- 3D: dörrblad roteras runt gångjärnspunkt baserat på `openAmount * π/2`
+- TODO: koppla till `haEntityId` för automatisk HA-sync
 
-**`DashboardView.tsx`**:
-- Remove `import Scene3D` and the inline `<Scene3D />` render
-- The persistent canvas is already visible behind the dashboard overlay — just make the dashboard background transparent where `dashboardBg === 'scene3d'`
+### 1.5 Ljus går igenom väggar ✅ (pragmatisk lösning)
+- Alla ljustyper: minskad distance + decay=2
+- ceiling: 5m, strip: 6m, spot: 6m/π/7 angle, wall: 5m/π/4 angle
+- Dokumenterat: fullständig ljusblockering kräver baked lighting
 
-**`DashboardGrid.tsx`**:
-- Remove `import Scene3D` and the mini `<Scene3D />` preview widget
-- Replace with a static placeholder or a `useCameraSnapshot` hook that captures a still from the persistent canvas
+## Fas 2 — UX-förbättringar ✅ DONE
 
-### C. Remove Dead Code
+### 2.1 Sliders med exakt värdeinmatning ✅
+- Ny `SliderWithInput`-komponent (`src/components/ui/SliderWithInput.tsx`)
+- Klickbart värde → number input med Enter/Escape/blur
+- Applicerad i OpeningInspector (bredd, höjd, bröstning, position, öppningsgrad)
 
-- **`BuildScene3D.tsx`**: Delete entirely (701 lines). Not imported anywhere.
-- **`Scene3D.tsx`**: After removing DashboardView/DashboardGrid references, verify no other imports remain. If clean, delete entirely.
+### 2.2 Möbelfliken stängd som standard ✅
+- Inredning startar med `select`-verktyg (inte `furnish`)
+- Katalogen visas bara när Möbler eller Wizard-verktyg är aktivt
 
-### D. Same-mode `HomeView` pointer-events check
+### 2.3 Måla-fliken flyttad till Inredning ✅
+- `paint`-verktyg borttaget från `planritningTools`
+- Tillagt i `inredningTools` som "Måla" med Paintbrush-ikon
+- SurfaceEditor visas under Inredning-fliken
 
-HomeView is also a full-screen overlay — verify it already uses `pointer-events-none` on non-interactive areas so the persistent canvas receives orbit/pan/zoom events correctly in home mode.
+### 2.4 Väggar: bara färger (inga texturer) ✅
+- SurfaceEditor filtrerar vägg-material till enbart `paint`-kategorin
+- 15 nya väggfärger tillagda (mjuk rosa, oliv, skifferblå, etc.)
+- Golv behåller alla texturer som tidigare
 
----
+## Fas 3 — Dokumentation och mappstruktur ✅ DONE
+- `public/textures/guide/README.md` uppdaterad med korrekt mappstruktur
+- Borttagen felaktig referens till `public/textures/floor/`
+- Target-paths tillagda per preset
+- `public/textures/carpet/` skapad
 
-## Files Changed
+## Fas 4 — Import/Export och long-press ✅ DONE
 
-| File | Change |
-|------|--------|
-| `src/components/build/BuildModeV2.tsx` | `pointer-events-none` on root, `pointer-events-auto` on interactive children |
-| `src/components/PersistentScene3D.tsx` | Add flyTo handling to `BuildCameraController` |
-| `src/components/home/DashboardView.tsx` | Remove Scene3D import/usage, transparent bg for persistent canvas |
-| `src/components/home/DashboardGrid.tsx` | Remove Scene3D mini-preview, replace with snapshot or placeholder |
-| `src/components/home/HomeView.tsx` | Verify pointer-events pass-through |
-| `src/components/build/BuildScene3D.tsx` | Delete (dead code) |
-| `src/components/Scene3D.tsx` | Delete after all references removed |
+### 4.2 Exportera från Bibliotek ✅
+- "Exportera"-knapp tillagd i BibliotekWorkspace detaljpanel
+- Exporterar metadata som JSON-fil
 
-## What Comes Next
+### 4.3 Hold-long på enheter i hemmenyn ✅
+- 500ms long-press → popup med av/på + ljusstyrka-slider
+- Fungerar för alla enheter med extra kontroll för `light`
 
-After this cleanup:
-1. Phase 3.5 (warm/idle rendering) — throttle render loop when standby/dashboard is active
-2. Phase 4 (loading screen) — first-load UX
-3. Phase 5 (cache HUD) — expose model cache stats in PerformanceHUD
+## Fas 5 — Troubleshooting-pass ✅ DONE
+- Raderat dead code: `PaintTool.tsx` (ersatt av inline SurfaceEditor)
+- KitchenFixtureObject3D redan borttagen
+- Inga oanvända importer kvar
+- Tester passerar
 
+## Fas 6 — Version 1.1.0 ✅ DONE
+- `package.json` bumpat till 1.1.0
+
+## Bevarat
+- Design / Planritning / Inredning / Bibliotek-struktur
+- Save/load kompatibilitet
+- HA-sync (ej ändrad)
+- Golv-texturer med ambientCG CDN-thumbnails
+- Vägg-mitering och hörn-geometri
