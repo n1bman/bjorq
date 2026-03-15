@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.1] - 2026-03-15
+
+### Fixed
+- **Device inspector icons** — each device type now shows its correct icon (speaker, fan, sensor, etc.) instead of defaulting to a lightbulb.
+- **Selection cleared on mode exit** — switching away from Design mode now deselects all rooms, walls, devices and props, preventing stale selection outlines in Home/Dashboard views.
+- **Bibliotek import** — clicking "Importera" in Library now directly opens the file picker instead of requiring an extra click inside the dialog.
+
 ## [1.7.0] - 2026-03-15
 
 ### Changed

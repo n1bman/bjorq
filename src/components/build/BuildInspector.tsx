@@ -1,6 +1,6 @@
 import { useAppStore } from '../../store/useAppStore';
 import { cn } from '../../lib/utils';
-import { X, Plus, DoorOpen, RotateCcw, Move, Trash2, Layers, Home, Lightbulb, ArrowRightLeft, Monitor, RectangleHorizontal, Warehouse, Upload, Paintbrush, Image, RotateCw } from 'lucide-react';
+import { X, Plus, DoorOpen, RotateCcw, Move, Trash2, Layers, Home, Lightbulb, ArrowRightLeft, Monitor, RectangleHorizontal, Warehouse, Upload, Paintbrush, Image, RotateCw, ToggleLeft, Activity, Thermometer, Camera, Bot, CookingPot, WashingMachine, Lock, Plug, Fan, ShieldAlert, Speaker, Music, Lamp, Droplets, Flame, Bell, Wifi } from 'lucide-react';
 import { Slider } from '../ui/slider';
 import { SliderWithInput } from '../ui/SliderWithInput';
 import { Input } from '../ui/input';
@@ -1125,6 +1125,31 @@ const kindLabels: Record<DeviceKind, string> = {
   'smart-outlet': 'Vägguttag',
 };
 
+const kindIcons: Partial<Record<DeviceKind, React.ReactNode>> = {
+  light: <Lightbulb size={14} />,
+  switch: <ToggleLeft size={14} />,
+  sensor: <Activity size={14} />,
+  climate: <Thermometer size={14} />,
+  vacuum: <Bot size={14} />,
+  camera: <Camera size={14} />,
+  fridge: <CookingPot size={14} />,
+  oven: <Flame size={14} />,
+  washer: <WashingMachine size={14} />,
+  'garage-door': <Warehouse size={14} />,
+  'door-lock': <Lock size={14} />,
+  'power-outlet': <Plug size={14} />,
+  media_screen: <Monitor size={14} />,
+  fan: <Fan size={14} />,
+  cover: <RectangleHorizontal size={14} />,
+  alarm: <ShieldAlert size={14} />,
+  speaker: <Speaker size={14} />,
+  soundbar: <Music size={14} />,
+  'light-fixture': <Lamp size={14} />,
+  'smart-outlet': <Plug size={14} />,
+  humidifier: <Droplets size={14} />,
+  siren: <Bell size={14} />,
+};
+
 function DeviceInspector({ deviceId, close }: { deviceId: string; close: React.ReactNode }) {
   const markers = useAppStore((s) => s.devices.markers);
   const updateDevice = useAppStore((s) => s.updateDevice);
@@ -1189,7 +1214,7 @@ function DeviceInspector({ deviceId, close }: { deviceId: string; close: React.R
     <div className="absolute top-14 right-3 bottom-3 w-60 overflow-y-auto glass-panel rounded-xl p-3 space-y-3 text-xs z-10">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-foreground font-display flex items-center gap-1">
-          {isScreen ? <Monitor size={14} /> : <Lightbulb size={14} />} {kindLabels[device.kind]}
+          {kindIcons[device.kind] ?? <Lightbulb size={14} />} {kindLabels[device.kind]}
         </h3>
         {close}
       </div>

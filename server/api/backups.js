@@ -5,7 +5,7 @@ import { readJSON, writeJSON, ensureDir } from '../storage/readWrite.js';
 
 const router = Router();
 
-const APP_VERSION = '1.7.0';
+const APP_VERSION = '1.7.1';
 
 router.post('/backup', async (_req, res) => {
   try {
