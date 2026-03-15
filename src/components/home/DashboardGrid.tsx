@@ -97,6 +97,7 @@ function HomeCategory() {
   const [editMode, setEditMode] = useState(false);
   const [draggingCatIndex, setDraggingCatIndex] = useState<number | null>(null);
   const [showSaveView, setShowSaveView] = useState(false);
+  const previewCamRef = useRef<PreviewCameraState>({ position: [10, 12, 10], target: [0, 0, 0] });
 
   // Build room name lookup from floors
   const roomNameMap = useMemo(() => {
