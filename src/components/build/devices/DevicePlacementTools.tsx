@@ -1,6 +1,6 @@
 import { useAppStore } from '../../../store/useAppStore';
 import type { DeviceKind, BuildTool, DeviceMarker } from '../../../store/types';
-import { Lightbulb, ToggleLeft, Activity, Thermometer, Trash2, Camera, Bot, CookingPot, WashingMachine, DoorOpen, Lock, Plug, Refrigerator, Monitor, ChevronDown, ChevronRight, Link2, Fan, PanelTop, Clapperboard, ShieldAlert, Droplets, Flame, Bell, Grip, Wifi, Trees, Speaker, Music } from 'lucide-react';
+import { Lightbulb, ToggleLeft, Activity, Thermometer, Trash2, Camera, Bot, CookingPot, WashingMachine, DoorOpen, Lock, Plug, Refrigerator, Monitor, ChevronDown, ChevronRight, Link2, Fan, PanelTop, Clapperboard, ShieldAlert, Droplets, Flame, Bell, Grip, Wifi, Trees, Speaker, Music, Egg } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import { useMemo, useState } from 'react';
 import { domainToKind } from '../../../lib/haDomainMapping';
