@@ -26,9 +26,10 @@ export default function Floors3D() {
   const handleRoomClick = useCallback((e: ThreeEvent<PointerEvent>, roomId: string) => {
     if (!isBuildMode) return;
     if (activeTool !== 'select' && activeTool !== 'paint') return;
+    if (editLock !== 'all' && editLock !== 'walls') return;
     e.stopPropagation();
     setSelection({ type: 'room', id: roomId });
-  }, [isBuildMode, activeTool, setSelection]);
+  }, [isBuildMode, activeTool, setSelection, editLock]);
 
   const roomMeshes = useMemo(() => {
     return rooms

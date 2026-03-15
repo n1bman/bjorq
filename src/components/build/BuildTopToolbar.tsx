@@ -161,7 +161,7 @@ export default function BuildTopToolbar() {
 
   const lockModes: { key: EditLock; label: string; icon: any }[] = [
     { key: 'all', label: 'Allt', icon: MousePointer },
-    { key: 'walls', label: 'Väggar', icon: Columns },
+    { key: 'walls', label: 'Struktur', icon: Columns },
     { key: 'props', label: 'Möbler', icon: Sofa },
     { key: 'devices', label: 'Enheter', icon: Cpu },
   ];
