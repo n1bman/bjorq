@@ -88,6 +88,9 @@ export default function BuildTopToolbar() {
   const cameraMode = useAppStore((s) => s.build.view.cameraMode);
   const setCameraMode = useAppStore((s) => s.setCameraMode);
   const showGhost = useAppStore((s) => s.build.view.showOtherFloorsGhost);
+  const editLock = useAppStore((s) => s.build.editLock ?? 'all');
+  const setEditLock = useAppStore((s) => s.setEditLock);
+  const setBuildTool = useAppStore((s) => s.setBuildTool);
   
   const setView = useAppStore((s) => s.setView);
   const clearAllFloors = useAppStore((s) => s.clearAllFloors);
@@ -99,6 +102,42 @@ export default function BuildTopToolbar() {
   const envSource = useAppStore((s) => s.environment.source);
   const setWeatherSource = useAppStore((s) => s.setWeatherSource);
   const importFileRef = useRef<HTMLInputElement>(null);
+
+  // ─── Keyboard shortcuts ───
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Skip if user is typing in an input
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      if ((e.target as HTMLElement)?.isContentEditable) return;
+
+      const appMode = useAppStore.getState().appMode;
+      if (appMode !== 'build') return;
+
+      if (e.key === 'w' || e.key === 'W') { e.preventDefault(); setBuildTool('wall'); return; }
+      if (e.key === 's' || e.key === 'S') { e.preventDefault(); setBuildTool('select'); return; }
+      if (e.key === 'd' || e.key === 'D') { e.preventDefault(); setBuildTool('door'); return; }
+      if (e.key === 'g' || e.key === 'G') { e.preventDefault(); toggleGrid(); return; }
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.preventDefault();
+        const s = useAppStore.getState();
+        const sel = s.build.selection;
+        if (sel.type === 'prop' && sel.id) { s.removeProp(sel.id); }
+        else if (sel.type === 'device' && sel.id) { s.removeDevice(sel.id); }
+        else if (sel.type === 'wall' && sel.id) {
+          s.pushUndo();
+          s.removeWall(s.layout.activeFloorId!, sel.id);
+        }
+        s.setSelection({ type: null, id: null });
+        return;
+      }
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'z') { e.preventDefault(); redo(); return; }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); undo(); return; }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [setBuildTool, toggleGrid, undo, redo]);
 
   const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
