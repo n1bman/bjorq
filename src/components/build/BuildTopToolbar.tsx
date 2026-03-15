@@ -1,10 +1,11 @@
 import { useAppStore } from '../../store/useAppStore';
-import type { SnapMode, WeatherCondition } from '../../store/types';
+import type { SnapMode, WeatherCondition, EditLock } from '../../store/types';
 import {
   Undo2, Redo2, Eye, Box, Layers, Settings2,
   ArrowLeft, Ghost, Home, LayoutGrid,
   Grid3X3, XCircle, Sun, Check, HelpCircle, Sparkles, DoorOpen, Trash2, Edit3, Wrench,
   Save, Download, Upload, FolderOpen,
+  MousePointer, Columns, Sofa, Cpu, Lock,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Slider } from '../ui/slider';
@@ -12,7 +13,7 @@ import { Popover, PopoverTrigger, PopoverContent } from '../ui/popover';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../ui/alert-dialog';
 import FloorPicker from './FloorPicker';
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { detectRooms, healWalls, polygonArea } from '../../lib/roomDetection';
 import { exportBuildProject, importBuildProject, readProjectFile, extractBuildProject, calculateStats } from '../../lib/projectIO';
