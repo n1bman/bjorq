@@ -1189,7 +1189,7 @@ function DeviceInspector({ deviceId, close }: { deviceId: string; close: React.R
     <div className="absolute top-14 right-3 bottom-3 w-60 overflow-y-auto glass-panel rounded-xl p-3 space-y-3 text-xs z-10">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-foreground font-display flex items-center gap-1">
-          {isScreen ? <Monitor size={14} /> : <Lightbulb size={14} />} {kindLabels[device.kind]}
+          {kindIcons[device.kind] ?? <Lightbulb size={14} />} {kindLabels[device.kind]}
         </h3>
         {close}
       </div>
