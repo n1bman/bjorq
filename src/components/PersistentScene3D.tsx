@@ -1047,7 +1047,12 @@ export default function PersistentScene3D({ onDeviceLongPress }: { onDeviceLongP
         onCreated={handleCreated}
       >
         <Suspense fallback={null}>
-          <UnifiedSceneContent onDeviceLongPress={onDeviceLongPress} />
+          <UnifiedSceneContent
+            onDeviceLongPress={onDeviceLongPress}
+            fpsActive={fpsActive}
+            fpsSpawn={fpsSpawn}
+            onFpsExit={handleFpsExit}
+          />
         </Suspense>
       </Canvas>
     </div>
