@@ -190,12 +190,14 @@ export default function BuildTopToolbar() {
 
       {/* Undo / Redo */}
       <button onClick={undo} disabled={undoLen === 0} title="Ångra"
-        className="p-2.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary/40 disabled:opacity-30 transition-all min-w-[44px] min-h-[44px] flex items-center justify-center">
-        <Undo2 size={18} />
+        className="p-1.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary/40 disabled:opacity-30 transition-all min-w-[40px] min-h-[40px] flex flex-col items-center justify-center gap-0.5">
+        <Undo2 size={16} />
+        <span className="text-[7px] leading-none">Ångra</span>
       </button>
       <button onClick={redo} disabled={redoLen === 0} title="Gör om"
-        className="p-2.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary/40 disabled:opacity-30 transition-all min-w-[44px] min-h-[44px] flex items-center justify-center">
-        <Redo2 size={18} />
+        className="p-1.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary/40 disabled:opacity-30 transition-all min-w-[40px] min-h-[40px] flex flex-col items-center justify-center gap-0.5">
+        <Redo2 size={16} />
+        <span className="text-[7px] leading-none">Gör om</span>
       </button>
 
       <div className="w-px h-5 bg-border mx-0.5" />
