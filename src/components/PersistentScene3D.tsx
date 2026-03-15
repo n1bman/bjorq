@@ -765,10 +765,10 @@ function UnifiedSceneContent({ onDeviceLongPress }: { onDeviceLongPress?: (id: s
   const sunPos = useMemo(() => {
     const azRad = (sunAzimuth * Math.PI) / 180;
     const elRad = (sunElevation * Math.PI) / 180;
-    const dist = 20;
+    const dist = 12; // Closer sun for more dramatic, game-like lighting
     return [
       dist * Math.cos(elRad) * Math.sin(azRad),
-      dist * Math.sin(elRad),
+      Math.max(dist * Math.sin(elRad), 1), // Keep sun at least 1 unit above horizon
       dist * Math.cos(elRad) * Math.cos(azRad),
     ] as [number, number, number];
   }, [sunAzimuth, sunElevation]);
