@@ -29,7 +29,7 @@ export default function FPSController({ spawnPosition, floorId, elevation, onExi
   const keysRef = useRef(new Set<string>());
   const yawRef = useRef(0);
   const pitchRef = useRef(0);
-  const savedCameraRef = useRef({ pos: new THREE.Vector3(), target: new THREE.Vector3() });
+  const savedCameraRef = useRef({ pos: new THREE.Vector3(), target: new THREE.Vector3(), fov: 75 });
   const mountedRef = useRef(true);
   const eyeHeight = elevation + 1.80;
 
@@ -43,6 +43,7 @@ export default function FPSController({ spawnPosition, floorId, elevation, onExi
   useEffect(() => {
     mountedRef.current = true;
     savedCameraRef.current.pos.copy(camera.position);
+    savedCameraRef.current.fov = (camera as THREE.PerspectiveCamera).fov;
     // Compute current look target
     const dir = new THREE.Vector3();
     camera.getWorldDirection(dir);
@@ -50,6 +51,10 @@ export default function FPSController({ spawnPosition, floorId, elevation, onExi
 
     // Set initial position
     camera.position.set(spawnPosition[0], spawnPosition[1], spawnPosition[2]);
+
+    // Set FPS FOV (wider = more natural scale feeling)
+    (camera as THREE.PerspectiveCamera).fov = 90;
+    (camera as THREE.PerspectiveCamera).updateProjectionMatrix();
 
     // Compute initial yaw from camera direction (face forward)
     yawRef.current = Math.atan2(
@@ -69,6 +74,9 @@ export default function FPSController({ spawnPosition, floorId, elevation, onExi
       // Restore camera
       camera.position.copy(savedCameraRef.current.pos);
       camera.lookAt(savedCameraRef.current.target);
+      // Restore FOV
+      (camera as THREE.PerspectiveCamera).fov = savedCameraRef.current.fov;
+      (camera as THREE.PerspectiveCamera).updateProjectionMatrix();
       // Release pointer lock
       if (document.pointerLockElement) {
         document.exitPointerLock?.();
@@ -135,7 +143,7 @@ export default function FPSController({ spawnPosition, floorId, elevation, onExi
 
     const keys = keysRef.current;
     const forward = new THREE.Vector3(-Math.sin(yawRef.current), 0, -Math.cos(yawRef.current));
-    const right = new THREE.Vector3(forward.z, 0, -forward.x);
+    const right = new THREE.Vector3(-forward.z, 0, forward.x);
 
     const move = new THREE.Vector3();
     if (keys.has('w')) move.add(forward);

@@ -1145,6 +1145,7 @@ const kindLabels: Record<DeviceKind, string> = {
   soundbar: 'Soundbar',
   'light-fixture': 'Ljusarmatur',
   'smart-outlet': 'Vägguttag',
+  egg: 'Egg',
 };
 
 const kindIcons: Partial<Record<DeviceKind, React.ReactNode>> = {

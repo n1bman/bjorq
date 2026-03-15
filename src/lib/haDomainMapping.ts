@@ -29,6 +29,7 @@ export const kindToDomains: Record<DeviceKind, string[] | null> = {
   soundbar: ['media_player'],
   'light-fixture': ['light'],
   'smart-outlet': ['switch'],
+  egg: null,
 };
 
 /** Infer DeviceKind from an HA domain */

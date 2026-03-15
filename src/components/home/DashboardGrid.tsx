@@ -79,6 +79,7 @@ const kindCategory: Record<DeviceKind, string> = {
   siren: 'Säkerhet', valve: 'Hem', remote: 'Media', 'lawn-mower': 'Hem',
   speaker: 'Media', soundbar: 'Media',
   'light-fixture': 'Ljus', 'smart-outlet': 'Ljus',
+  egg: 'Hem',
 };
 
 /** Light-type device kinds that should be grouped by room */

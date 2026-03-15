@@ -6,7 +6,7 @@ Roberto Mode is an isolated FPS walk mode Easter egg that lets users walk around
 
 ## Activation
 
-1. Place a **Robot/Vacuum** device in Build mode under **Devices > Robot**
+1. Place an **Egg** device in Build mode under **Devices > Robot > Egg**
 2. Name the device **"Roberto"** (case-insensitive)
 3. In **Home view**, press **`O`** to activate FPS mode
 4. The camera spawns at Roberto's position at 1.80m eye height

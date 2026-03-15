@@ -1,6 +1,6 @@
 import { useAppStore } from '../../../store/useAppStore';
 import type { DeviceKind, BuildTool, DeviceMarker } from '../../../store/types';
-import { Lightbulb, ToggleLeft, Activity, Thermometer, Trash2, Camera, Bot, CookingPot, WashingMachine, DoorOpen, Lock, Plug, Refrigerator, Monitor, ChevronDown, ChevronRight, Link2, Fan, PanelTop, Clapperboard, ShieldAlert, Droplets, Flame, Bell, Grip, Wifi, Trees, Speaker, Music } from 'lucide-react';
+import { Lightbulb, ToggleLeft, Activity, Thermometer, Trash2, Camera, Bot, CookingPot, WashingMachine, DoorOpen, Lock, Plug, Refrigerator, Monitor, ChevronDown, ChevronRight, Link2, Fan, PanelTop, Clapperboard, ShieldAlert, Droplets, Flame, Bell, Grip, Wifi, Trees, Speaker, Music, Egg } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import { useMemo, useState } from 'react';
 import { domainToKind } from '../../../lib/haDomainMapping';
@@ -46,6 +46,7 @@ const deviceTools: DeviceToolDef[] = [
   // Robot
   { key: 'place-vacuum', kind: 'vacuum', label: 'Dammsugare', icon: Bot, color: 'text-purple-400', category: 'Robot' },
   { key: 'place-lawn-mower', kind: 'lawn-mower', label: 'Gräsklippare', icon: Trees, color: 'text-green-500', category: 'Robot' },
+  { key: 'place-egg', kind: 'egg', label: 'Egg', icon: Egg, color: 'text-yellow-500', category: 'Robot' },
   // Vitvaror
   { key: 'place-fridge', kind: 'fridge', label: 'Kylskåp', icon: Refrigerator, color: 'text-slate-300', category: 'Vitvaror' },
   { key: 'place-oven', kind: 'oven', label: 'Ugn', icon: CookingPot, color: 'text-orange-400', category: 'Vitvaror' },
@@ -63,6 +64,7 @@ const kindLabels: Record<DeviceKind, string> = {
   humidifier: '💧 Luftfuktare', siren: '🔔 Siren', valve: '🔧 Ventil',
   remote: '📡 Fjärr', 'lawn-mower': '🌿 Gräsklippare', speaker: '🔊 Högtalare', soundbar: '🎵 Soundbar',
   'light-fixture': '💡 Ljusarmatur', 'smart-outlet': '🔌 Vägguttag',
+  egg: '🥚 Egg',
 };
 
 export default function DevicePlacementTools() {

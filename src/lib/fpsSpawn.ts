@@ -25,7 +25,7 @@ export function findRobertoSpawn(
   floors: Floor[],
 ): SpawnResult | null {
   const roberto = markers.find(
-    (m) => m.kind === 'vacuum' && m.name.toLowerCase().includes('roberto'),
+    (m) => m.kind === 'egg' && m.name.toLowerCase().includes('roberto'),
   );
   if (!roberto) return null;
 

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useAppStore } from '../../store/useAppStore';
 import { cn } from '../../lib/utils';
-import { Plus, Lightbulb, ToggleLeft, Thermometer, Wind, Bot, Trash2 } from 'lucide-react';
+import { Plus, Lightbulb, ToggleLeft, Thermometer, Wind, Bot, Trash2, Egg } from 'lucide-react';
 import type { DeviceKind } from '../../store/types';
 
 const deviceKinds: { kind: DeviceKind; label: string; icon: typeof Lightbulb }[] = [
@@ -10,6 +10,7 @@ const deviceKinds: { kind: DeviceKind; label: string; icon: typeof Lightbulb }[]
   { kind: 'sensor', label: 'Sensor', icon: Thermometer },
   { kind: 'climate', label: 'Klimat', icon: Wind },
   { kind: 'vacuum', label: 'Robotdammsugare', icon: Bot },
+  { kind: 'egg', label: 'Egg', icon: Egg },
 ];
 
 const generateId = () => Math.random().toString(36).slice(2, 10);
