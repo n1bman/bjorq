@@ -1,6 +1,6 @@
-# Arbetsplan: Stabilisering, buggfixar och UX-förbättringar
+# Arbetsplan: Persistent 3D Runtime & Optimering
 
-## Status: ✅ Implementerat (v1.1.0)
+## Status: ✅ Implementerat (v1.6.0)
 
 ---
 

@@ -43,7 +43,16 @@ Limits the number of active point lights rendered in the 3D scene (0–16). Lowe
 
 ### Performance HUD
 
-A floating overlay showing real-time FPS, quality level, and CPU core count. Toggle it on in **Inställningar → Prestanda**.
+A floating overlay showing real-time FPS, quality level, CPU core count, render mode (FULL/~10FPS/PAUSED/HIDDEN), and **model cache stats** (cached models, total triangles, textures). Toggle it on in **Inställningar → Prestanda**.
+
+### Persistent 3D Runtime (v1.6.0+)
+
+A single `<Canvas>` is mounted at the application root and persists across all mode switches (Home → Design → Standby → Dashboard). This prevents WebGL context destruction and GPU resource reloading during navigation. The system includes:
+
+- **Centralized Model Cache** — models are parsed once and cloned via reference counting (LRU eviction at 50 models / 2M triangles)
+- **Texture Cache** — shared `THREE.Texture` instances across all components
+- **Adaptive Frame Throttle** — Standby: ~10fps, Vio: rendering paused, Home/Build: full speed
+- **WebGL Context Recovery** — automatic recovery with exponential backoff on context loss
 
 ## Performance Score
 

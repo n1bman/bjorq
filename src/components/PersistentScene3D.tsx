@@ -942,8 +942,8 @@ export default function PersistentScene3D({ onDeviceLongPress }: { onDeviceLongP
     });
   }, []);
 
-  // Hide 3D canvas in dashboard mode or when build is in topdown 2D mode
-  const isHidden = appMode === 'dashboard' || (appMode === 'build' && buildCameraMode === 'topdown');
+  // Hide 3D canvas only when build is in topdown 2D mode (dashboard uses persistent canvas as background)
+  const isHidden = appMode === 'build' && buildCameraMode === 'topdown';
 
   if (failed) {
     return (

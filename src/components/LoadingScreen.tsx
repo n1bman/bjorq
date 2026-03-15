@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
+import bjorqLogo from '../assets/bjorq-logo.png';
 
 interface LoadingScreenProps {
   onComplete?: () => void;
 }
 
-/** Phase 4 — Branded loading screen with progress indication */
+/** Phase 4 — Branded loading screen with BjorQ logo */
 export default function LoadingScreen({ onComplete }: LoadingScreenProps) {
   const [progress, setProgress] = useState(0);
   const [phase, setPhase] = useState('Startar…');
@@ -35,16 +36,15 @@ export default function LoadingScreen({ onComplete }: LoadingScreenProps) {
 
   return (
     <div className="fixed inset-0 z-[100] bg-background flex flex-col items-center justify-center gap-8 animate-fade-in">
-      {/* Logo / brand */}
-      <div className="flex flex-col items-center gap-3">
-        <div className="w-16 h-16 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center">
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-primary">
-            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-            <polyline points="9 22 9 12 15 12 15 22" />
-          </svg>
-        </div>
-        <h1 className="text-lg font-semibold tracking-wide text-foreground">
-          HomeTwin
+      {/* Logo + brand */}
+      <div className="flex flex-col items-center gap-4">
+        <img
+          src={bjorqLogo}
+          alt="BjorQ"
+          className="w-20 h-20 object-contain"
+        />
+        <h1 className="text-xl font-bold tracking-widest text-primary uppercase">
+          BjorQ Dashboard
         </h1>
       </div>
 
