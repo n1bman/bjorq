@@ -448,8 +448,9 @@ export default function BuildTopToolbar() {
       {/* Settings popover */}
       <Popover>
         <PopoverTrigger asChild>
-          <button title="Inställningar" className="p-2.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary/40 transition-all min-w-[44px] min-h-[44px] flex items-center justify-center">
-            <Settings2 size={18} />
+          <button title="Inställningar" className="p-1.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary/40 transition-all min-w-[40px] min-h-[40px] flex flex-col items-center justify-center gap-0.5">
+            <Settings2 size={16} />
+            <span className="text-[7px] leading-none">Inställn.</span>
           </button>
         </PopoverTrigger>
         <PopoverContent side="bottom" align="end" className="w-64 p-3 space-y-4 bg-card border-border">
