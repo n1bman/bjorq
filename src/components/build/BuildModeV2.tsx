@@ -1147,6 +1147,7 @@ const kindLabelsMap: Record<string, string> = {
   humidifier: '💧 Luftfuktare', siren: '🔔 Siren', valve: '🔧 Ventil',
   remote: '📡 Fjärr', 'lawn-mower': '🌿 Gräsklippare', speaker: '🔊 Högtalare', soundbar: '🎵 Soundbar',
   'light-fixture': '💡 Ljusarmatur', 'smart-outlet': '🔌 Vägguttag',
+  egg: '🥚 Egg',
 };
 
 function InlinedDevicePlacementTools() {
