@@ -35,6 +35,7 @@ import AutomationsPanel from './cards/AutomationsPanel';
 import ScenesPanel from './cards/ScenesPanel';
 import ClimateTab from './cards/ClimateTab';
 import DashboardPreview3D from './DashboardPreview3D';
+import type { PreviewCameraState } from './DashboardPreview3D';
 import type { DeviceKind, DeviceMarker, StandbyCameraView } from '../../store/types';
 import { cameraRef } from '../../lib/cameraRef';
 
