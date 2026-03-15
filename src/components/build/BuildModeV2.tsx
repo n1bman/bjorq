@@ -2534,7 +2534,7 @@ export default function BuildModeV2() {
       <div className="pointer-events-auto"><BuildTopToolbar /></div>
       {isBibliotek ? (
         /* Bibliotek: dedicated workspace, no canvas */
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 overflow-hidden pointer-events-auto">
           <BibliotekWorkspace />
         </div>
       ) : (
