@@ -2563,7 +2563,7 @@ export default function BuildModeV2() {
           {/* Asset catalog — primary surface in Inredning */}
           {showCatalogPanel && (
             <div className={cn(
-              "absolute left-0 top-0 bottom-0 bg-card/95 backdrop-blur-sm border-r border-border z-20 overflow-y-auto flex flex-col",
+              "absolute left-0 top-0 bottom-0 bg-card/95 backdrop-blur-sm border-r border-border z-20 overflow-y-auto flex flex-col pointer-events-auto",
               isInredning ? "w-[300px]" : "w-[260px] py-3 px-2"
             )}>
               {/* Soft room context hint (Inredning only) */}
