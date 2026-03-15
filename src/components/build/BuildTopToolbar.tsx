@@ -222,11 +222,32 @@ export default function BuildTopToolbar() {
         ))}
       </div>
 
+      {/* Edit lock toggle */}
+      <div className="flex items-center bg-secondary/30 rounded-xl p-0.5">
+        {lockModes.map(({ key, label, icon: Icon }) => (
+          <button
+            key={key}
+            onClick={() => setEditLock(key)}
+            title={`Redigera: ${label}`}
+            className={cn(
+              'flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg text-[10px] transition-all min-h-[32px]',
+              editLock === key
+                ? 'bg-primary/20 text-primary font-medium'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+          >
+            <Icon size={14} />
+            <span className="text-[7px] leading-none">{label}</span>
+          </button>
+        ))}
+      </div>
+
       {/* Keyboard shortcuts */}
       <Dialog>
         <DialogTrigger asChild>
-          <button title="Tangentbordsgenvägar" className="p-2.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary/40 transition-all min-w-[44px] min-h-[44px] flex items-center justify-center">
+          <button title="Tangentbordsgenvägar" className="p-1.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary/40 transition-all min-w-[40px] min-h-[40px] flex flex-col items-center justify-center gap-0.5">
             <HelpCircle size={16} />
+            <span className="text-[7px] leading-none">?</span>
           </button>
         </DialogTrigger>
         <DialogContent className="max-w-sm">
