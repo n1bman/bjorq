@@ -881,7 +881,7 @@ function UnifiedSceneContent({ onDeviceLongPress, fpsActive, fpsSpawn, onFpsExit
       )}
 
       <Environment preset="night" />
-      <CameraController />
+      <CameraController fpsActive={fpsActive} fpsSpawn={fpsSpawn} onFpsExit={onFpsExit} />
       <FrameThrottle />
     </>
   );
