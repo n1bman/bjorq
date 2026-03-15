@@ -1,84 +1,125 @@
-# Arbetsplan: Stabilisering, buggfixar och UX-förbättringar
 
-## Status: ✅ Implementerat (v1.1.0)
 
----
+# Phase 1 — Model Cache + Texture Cache Implementation
 
-## Fas 0 — Bygg-stabilisering ✅ DONE
-- Fixat import i Scene3D till `./build/KitchenFixture3D`
-- Raderat duplikat `KitchenFixtureObject3D.tsx`
+## Scope
 
-## Fas 1 — Buggar och regressioner ✅ DONE
+This is **Phase 1 only** — the model cache, texture cache, and Props3D integration. No persistent Canvas changes yet.
 
-### 1.1 Väggar: 90-gradersstöd vid ritning ✅
-- Axis-aligned snapping (±3° av 0/90/180/270°) i `BuildScene3D.tsx`
-- Visuell indikator: cyan linje + solid (ej dashed) + "90°"-label via `<Html>`
-- `cursorAxisAligned`-prop tillagd i `WallDrawing3D.tsx`
+## Current State Summary
 
-### 1.3 Dörr-öppningsriktning ✅
-- `flipped` appliceras nu på dörrpanelens position och rotation i `wallGeometry.tsx`
-- Gångjärnspunkt beräknas baserat på `flipped`-flagga
+- `Props3D.tsx` (635 lines): Each `PropModel` independently loads GLB via `doLoad()`, stores scene in local `useState`, and disposes everything on unmount via `disposeScene()` which aggressively destroys geometry/materials/textures
+- Cache key candidates: `catalogId` (from `getFileDataForProp`) for catalog items, `propId` for unique uploads
+- `displayScene` useMemo (line 368-403) clones the entire scene and clones every material on each dependency change — including `isSelected`/`isHovered` which don't actually need material changes anymore (emissive was removed)
+- `new THREE.TextureLoader().load(textureOverride)` is called inside useMemo (line 390) — re-fires on every clone cycle
+- Module-level `sceneRefs` Map already exists (line 17) for placement engine — will be replaced by cache refs
+- `Scene3D.tsx` and `BuildScene3D.tsx` both mount their own `<Canvas>` — each mode switch destroys all GPU resources
 
-### 1.4 Dörrens öppningsgrad ✅
-- `openAmount?: number` (0-1) tillagd på `WallOpening` i `types.ts`
-- Slider "Öppningsgrad" i OpeningInspector (dörrar + garageportar)
-- 3D: dörrblad roteras runt gångjärnspunkt baserat på `openAmount * π/2`
-- TODO: koppla till `haEntityId` för automatisk HA-sync
+## New Files
 
-### 1.5 Ljus går igenom väggar ✅ (pragmatisk lösning)
-- Alla ljustyper: minskad distance + decay=2
-- ceiling: 5m, strip: 6m, spot: 6m/π/7 angle, wall: 5m/π/4 angle
-- Dokumenterat: fullständig ljusblockering kräver baked lighting
+### `src/lib/modelCache.ts`
 
-## Fas 2 — UX-förbättringar ✅ DONE
+```text
+interface CacheEntry {
+  scene: THREE.Group          // "golden" parsed original — never modified
+  refCount: number
+  stats: PropModelStats
+  lastUsed: number
+  triangles: number
+}
 
-### 2.1 Sliders med exakt värdeinmatning ✅
-- Ny `SliderWithInput`-komponent (`src/components/ui/SliderWithInput.tsx`)
-- Klickbart värde → number input med Enter/Escape/blur
-- Applicerad i OpeningInspector (bredd, höjd, bröstning, position, öppningsgrad)
+interface TextureCacheEntry {
+  texture: THREE.Texture
+  refCount: number
+  lastUsed: number
+}
 
-### 2.2 Möbelfliken stängd som standard ✅
-- Inredning startar med `select`-verktyg (inte `furnish`)
-- Katalogen visas bara när Möbler eller Wizard-verktyg är aktivt
+// Model cache
+acquire(cacheKey: string, loader: () => Promise<THREE.Group>): Promise<THREE.Group>
+  → if cached: refCount++, return scene.clone()
+  → if not: await loader(), store golden, refCount=1, return clone
 
-### 2.3 Måla-fliken flyttad till Inredning ✅
-- `paint`-verktyg borttaget från `planritningTools`
-- Tillagt i `inredningTools` som "Måla" med Paintbrush-ikon
-- SurfaceEditor visas under Inredning-fliken
+release(cacheKey: string): void
+  → refCount--; if 0: dispose golden scene, remove from map
 
-### 2.4 Väggar: bara färger (inga texturer) ✅
-- SurfaceEditor filtrerar vägg-material till enbart `paint`-kategorin
-- 15 nya väggfärger tillagda (mjuk rosa, oliv, skifferblå, etc.)
-- Golv behåller alla texturer som tidigare
+// Texture cache
+acquireTexture(url: string): THREE.Texture
+  → if cached: refCount++, return same texture ref
+  → if not: load, store, return
 
-## Fas 3 — Dokumentation och mappstruktur ✅ DONE
-- `public/textures/guide/README.md` uppdaterad med korrekt mappstruktur
-- Borttagen felaktig referens till `public/textures/floor/`
-- Target-paths tillagda per preset
-- `public/textures/carpet/` skapad
+releaseTexture(url: string): void
+  → refCount--; if 0: dispose, remove
 
-## Fas 4 — Import/Export och long-press ✅ DONE
+// Stats & safety
+getStats(): { modelCount, totalTriangles, textureCount }
+evictLRU(): void  // called when totalTriangles > 2M or entries > 50
 
-### 4.2 Exportera från Bibliotek ✅
-- "Exportera"-knapp tillagd i BibliotekWorkspace detaljpanel
-- Exporterar metadata som JSON-fil
+// For placement engine (replaces sceneRefs)
+getGoldenScene(cacheKey: string): THREE.Group | undefined
+```
 
-### 4.3 Hold-long på enheter i hemmenyn ✅
-- 500ms long-press → popup med av/på + ljusstyrka-slider
-- Fungerar för alla enheter med extra kontroll för `light`
+Key rules:
+- Golden scenes are NEVER modified — all customization happens on clones
+- `scene.clone()` shares geometry buffer references (memory efficient)
+- Material cloning happens in Props3D display logic, not in cache
+- Disposal only through cache eviction, never by individual prop components
 
-## Fas 5 — Troubleshooting-pass ✅ DONE
-- Raderat dead code: `PaintTool.tsx` (ersatt av inline SurfaceEditor)
-- KitchenFixtureObject3D redan borttagen
-- Inga oanvända importer kvar
-- Tester passerar
+### Cache key strategy
 
-## Fas 6 — Version 1.1.0 ✅ DONE
-- `package.json` bumpat till 1.1.0
+```text
+catalogId exists → key = `catalog:${catalogId}`     (shared across identical props)
+no catalogId    → key = `upload:${propId}`           (unique per user upload)
+```
 
-## Bevarat
-- Design / Planritning / Inredning / Bibliotek-struktur
-- Save/load kompatibilitet
-- HA-sync (ej ändrad)
-- Golv-texturer med ambientCG CDN-thumbnails
-- Vägg-mitering och hörn-geometri
+## Changes to `Props3D.tsx`
+
+1. **Remove** `disposeScene()` function — unsafe with shared cache
+2. **Remove** module-level `sceneRefs` Map — replaced by `modelCache.getGoldenScene()`
+3. **Replace** `doLoad()` with `modelCache.acquire(cacheKey, loaderFn)`
+4. **Replace** unmount cleanup with `modelCache.release(cacheKey)`
+5. **Fix `displayScene` useMemo dependencies**: Remove `isSelected` and `isHovered` from deps (they no longer affect materials)
+6. **Replace** inline `new THREE.TextureLoader().load(textureOverride)` with `modelCache.acquireTexture(textureOverride)` and release on change/unmount
+7. **`selectionBox` useMemo** (line 406-426): Currently clones scene AGAIN just for bbox, then disposes. Replace with `THREE.Box3().setFromObject(scene)` on the golden scene ref (read-only, no clone needed)
+
+### PropModel lifecycle change
+
+```text
+Before:
+  mount → doLoad() → parse GLB → useState(scene) → displayScene clones
+  unmount → disposeScene() destroys everything
+
+After:
+  mount → modelCache.acquire(key, loader) → useState(goldenClone)
+  unmount → modelCache.release(key) — cache decides if real disposal needed
+  texture change → releaseTexture(old), acquireTexture(new)
+```
+
+## Changes to `placementEngine.ts`
+
+- Import `getGoldenScene` from modelCache instead of `sceneRefs` from Props3D
+- Update lookups: `sceneRefs.get(propId)` → `getGoldenScene(cacheKey)`
+- Need to pass cacheKey or maintain a propId→cacheKey mapping
+
+## Files Changed
+
+| File | Change |
+|------|--------|
+| `src/lib/modelCache.ts` | **New** — cache singleton |
+| `src/components/build/Props3D.tsx` | Major refactor — use cache, fix displayScene deps, texture cache |
+| `src/lib/placementEngine.ts` | Update scene ref lookups |
+
+## What This Does NOT Change
+
+- No persistent Canvas yet (Phase 2/3)
+- No changes to Scene3D or BuildScene3D structure
+- No loading screen yet (Phase 4)
+- No version bump — stability validation first
+
+## Expected Impact
+
+- Same catalog model used by N props: parsed once instead of N times
+- Mode switch still destroys Canvas, but model re-parse on return is instant (cache hit)
+- Texture overrides shared across identical URLs
+- Memory bounded by LRU eviction at 2M triangles / 50 entries
+- `displayScene` reclones less often (removed stale deps)
+
