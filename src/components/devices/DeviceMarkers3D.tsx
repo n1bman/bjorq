@@ -1462,6 +1462,7 @@ export default function DeviceMarkers3D({ buildMode, onLongPress }: DeviceMarker
       longPressTimer.current = null;
     }
     if (buildMode) {
+      if (editLock !== 'all' && editLock !== 'devices') return;
       setSelection({ type: 'device', id });
     } else {
       // If long-press was already triggered, don't toggle
