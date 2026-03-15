@@ -990,6 +990,9 @@ const storeCreator = (set: any, get: any): AppState => ({
   toggleGrid: () =>
     set((s: any) => ({ build: { ...s.build, grid: { ...s.build.grid, enabled: !s.build.grid.enabled } } })),
 
+  setEditLock: (lock) =>
+    set((s: any) => ({ build: { ...s.build, editLock: lock } })),
+
   setSelection: (sel) =>
     set((s: any) => ({ build: { ...s.build, selection: sel } })),
 
