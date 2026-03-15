@@ -277,11 +277,23 @@ function BuildCameraController({ enableRotate }: { enableRotate: boolean }) {
 
 // ─── Camera controller wrapper ───
 
-function CameraController() {
+function CameraController({ fpsActive, fpsSpawn, onFpsExit }: {
+  fpsActive?: boolean;
+  fpsSpawn?: SpawnResult | null;
+  onFpsExit?: () => void;
+}) {
   const appMode = useAppStore((s) => s.appMode);
 
   if (appMode === 'standby') return <StandbyStaticCamera />;
   if (appMode === 'build') return <BuildCameraControllerWrapper />;
+  if (appMode === 'home' && fpsActive && fpsSpawn && onFpsExit) {
+    return <FPSController
+      spawnPosition={fpsSpawn.position}
+      floorId={fpsSpawn.floorId}
+      elevation={fpsSpawn.elevation}
+      onExit={onFpsExit}
+    />;
+  }
   return <InteractiveCameraController key="interactive" />;
 }
 
