@@ -5,6 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2026-03-15
+
+### Added — Persistent 3D Runtime (Phase 1–3)
+- **Centralized Model & Texture Cache** (`src/lib/modelCache.ts`) — singleton cache with reference counting and LRU eviction (max 50 models / 2M triangles). Repeated model instances no longer trigger repeated parsing/loading.
+- **Persistent 3D Canvas** (`src/components/PersistentScene3D.tsx`) — single `<Canvas>` mounted at root, survives mode switches (Home → Design → Standby) without destroying WebGL context or reloading GPU resources.
+- **Unified Scene Content** — dynamic lighting, environment, and camera systems adapt to `appMode` within the persistent canvas.
+- **WebGL Context Recovery** — automatic recovery with exponential backoff (max 3 retries) on context loss; model cache cleared on recovery.
+- **Build Camera FlyTo** — smooth lerp-based camera transitions for room navigation in Design mode.
+
+### Added — Rendering Optimization (Phase 3.5)
+- **Adaptive Frame Throttle** — `FrameThrottle` component inside Canvas reduces GPU load: ~10fps in Standby, fully paused in Vio mode, full speed in Home/Build.
+- **Render mode indicator in HUD** — shows FULL / ~10FPS / PAUSED / HIDDEN status.
+
+### Added — UX
+- **Branded Loading Screen** — BjorQ logo + progress bar with status messages ("Förbereder hemmet…") at app startup.
+- **Cache Stats in Performance HUD** — model count, triangle count, and texture count displayed in real-time.
+
+### Fixed
+- **Design mode camera locked** — BuildModeV2 overlay blocked pointer events to the persistent Canvas; fixed with `pointer-events-none` on root + `pointer-events-auto` on interactive children.
+- **Dashboard 3D view missing** — persistent canvas was incorrectly hidden in dashboard mode; now visible as background.
+- **2D map missing in Design mode** — BuildCanvas2D container lacked proper sizing (`absolute inset-0`); fixed.
+- **Redundant WebGL contexts** — removed Scene3D imports from DashboardView and DashboardGrid that created extra canvases.
+
+### Removed
+- **`Scene3D.tsx`** — consolidated into PersistentScene3D (~450 lines removed).
+- **`BuildScene3D.tsx`** — consolidated into PersistentScene3D (~700 lines removed).
+
+### Changed
+- Dashboard background is now transparent when `dashboardBg === 'scene3d'`, letting the persistent canvas show through.
+- Version bumped to 1.6.0.
+
+
 ## [1.5.3] - 2026-03-15
 
 ### Fixed
