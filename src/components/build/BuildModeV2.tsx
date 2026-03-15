@@ -4,7 +4,6 @@ import { cameraRef } from '../../lib/cameraRef';
 import BuildTopToolbar from './BuildTopToolbar';
 import BuildInspector from './BuildInspector';
 import BuildCanvas2D from './BuildCanvas2D';
-import BuildCanvas2D from './BuildCanvas2D';
 import type { BuildTool, BuildTab } from '../../store/types';
 import { openingPresets } from '../../lib/openingPresets';
 import { getAllMaterials, getMaterialById, wallSurfaceCategories, floorSurfaceCategories, surfaceCategoryLabels, floorCategoryLabels, getMaterialsByCategory } from '../../lib/materials';
