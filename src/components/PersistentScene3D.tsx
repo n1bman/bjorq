@@ -585,7 +585,9 @@ function BuildGroundInteractions() {
 
       if (activeTool.startsWith('place-') && activeFloorId) {
         e.stopPropagation();
-        const kind = activeTool.replace('place-', '') as DeviceKind;
+        // Normalize: tool key uses hyphens (place-media-screen) but DeviceKind uses underscores (media_screen)
+        const rawKind = activeTool.replace('place-', '');
+        const kind = (rawKind === 'media-screen' ? 'media_screen' : rawKind) as DeviceKind;
         const snapped = snapToGrid(point.x, point.z);
         const fl = floors.find((f) => f.id === activeFloorId);
         const elev = fl?.elevation ?? 0;

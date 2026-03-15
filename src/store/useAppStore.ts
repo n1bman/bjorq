@@ -1630,6 +1630,13 @@ export const useAppStore = create<AppState>()(
           }
         }
 
+        // Fix media-screen → media_screen kind migration
+        if (persisted?.devices?.markers) {
+          for (const m of persisted.devices.markers) {
+            if (m.kind === 'media-screen') m.kind = 'media_screen';
+          }
+        }
+
         // Legacy device state migration (kept from v15)
         if (persisted && persisted.devices?.deviceStates) {
           const oldStates = persisted.devices.deviceStates;

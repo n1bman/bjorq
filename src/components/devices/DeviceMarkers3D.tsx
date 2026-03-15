@@ -1561,8 +1561,8 @@ export default function DeviceMarkers3D({ buildMode, onLongPress }: DeviceMarker
           );
         }
 
-        // Use special renderer for media_screen
-        if (marker.kind === 'media_screen') {
+        // Use special renderer for media_screen (also handle legacy 'media-screen' kind)
+        if (marker.kind === 'media_screen' || (marker.kind as string) === 'media-screen') {
           return (
             <MediaScreenMarker
               key={marker.id}
