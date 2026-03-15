@@ -253,8 +253,8 @@ function HomeCategory() {
                   <Button size="sm" variant="outline" className="flex-1" onClick={() => setShowSaveView(false)}>Avbryt</Button>
                   <Button size="sm" className="flex-1 gap-1" onClick={() => {
                     saveHomeStartCamera(
-                      [cameraRef.position.x, cameraRef.position.y, cameraRef.position.z],
-                      [cameraRef.target.x, cameraRef.target.y, cameraRef.target.z],
+                      previewCamRef.current.position,
+                      previewCamRef.current.target,
                     );
                     setShowSaveView(false);
                   }}>
