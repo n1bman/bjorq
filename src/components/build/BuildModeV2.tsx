@@ -2530,8 +2530,8 @@ export default function BuildModeV2() {
   const catalogSourceFilter = activeTool === ('wizard' as any) ? 'wizard' as const : 'all' as const;
 
   return (
-    <div className="w-full h-full relative flex flex-col">
-      <BuildTopToolbar />
+    <div className="w-full h-full relative flex flex-col pointer-events-none">
+      <div className="pointer-events-auto"><BuildTopToolbar /></div>
       {isBibliotek ? (
         /* Bibliotek: dedicated workspace, no canvas */
         <div className="flex-1 overflow-hidden">
