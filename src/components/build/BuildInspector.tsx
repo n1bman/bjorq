@@ -1496,30 +1496,21 @@ function DeviceInspector({ deviceId, close }: { deviceId: string; close: React.R
       <div className="space-y-1.5">
         <div className="flex items-center gap-1 text-muted-foreground"><ArrowRightLeft size={12} /> Position</div>
         {(['X', 'Y', 'Z'] as const).map((axis, i) => (
-          <div key={axis} className="flex items-center gap-2">
-            <span className="text-[10px] text-muted-foreground w-3">{axis}</span>
-            <Slider min={-20} max={20} step={0.5} value={[device.position[i]]}
-              onValueChange={([v]) => {
-                const pos = [...device.position] as [number, number, number];
-                pos[i] = Math.round(v * 2) / 2;
-                updateDevice(device.id, { position: pos });
-              }}
-              className="flex-1"
-            />
-            <Input
-              type="number"
-              step={0.1}
-              value={device.position[i].toFixed(1)}
-              onChange={(e) => {
-                const val = parseFloat(e.target.value);
-                if (isNaN(val)) return;
-                const pos = [...device.position] as [number, number, number];
-                pos[i] = val;
-                updateDevice(device.id, { position: pos });
-              }}
-              className="w-14 h-6 text-[10px] text-center px-1 bg-secondary/30 border-none"
-            />
-          </div>
+          <SliderWithInput
+            key={axis}
+            label={axis}
+            min={-10}
+            max={10}
+            step={0.05}
+            decimals={2}
+            suffix=" m"
+            value={device.position[i]}
+            onValueChange={(v) => {
+              const pos = [...device.position] as [number, number, number];
+              pos[i] = v;
+              updateDevice(device.id, { position: pos });
+            }}
+          />
         ))}
       </div>
 
