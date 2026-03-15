@@ -82,6 +82,9 @@ export default function HomeView({ longPressDeviceId, onDismissLongPress, fpsAct
 
   const longPressMarker = longPressDeviceId ? markers.find((m) => m.id === longPressDeviceId) : null;
 
+  // Hide all overlays during FPS mode
+  if (fpsActive) return null;
+
   return (
     <div className="absolute inset-0 z-10 pointer-events-none">
       {/* Floating widgets based on config */}
