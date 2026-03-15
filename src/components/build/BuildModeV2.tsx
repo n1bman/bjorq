@@ -2592,17 +2592,17 @@ export default function BuildModeV2() {
             </div>
           )}
           {cameraMode === 'topdown' && (
-            <>
+            <div className="pointer-events-auto">
               {showImportOverlay && (
                 <Suspense fallback={null}>
                   <ImportPreview3D />
                 </Suspense>
               )}
               <BuildCanvas2D overlayMode={showImportOverlay} />
-            </>
+            </div>
           )}
           {/* 3D scene is provided by PersistentScene3D in Index.tsx */}
-          <BuildInspector />
+          <div className="pointer-events-auto"><BuildInspector /></div>
         </div>
       )}
       {!isBibliotek && <BuildCatalogRow />}
