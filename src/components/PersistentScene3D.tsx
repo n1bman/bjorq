@@ -981,7 +981,7 @@ export default function PersistentScene3D({ onDeviceLongPress }: { onDeviceLongP
         </div>
       )}
       <Canvas
-        key={`persistent-${recoveryCount}`}
+        key={`persistent-${recoveryCount}-${quality}-${shadows}-${antialiasing ? 'aa' : 'noaa'}-${toneMapping ? 'tm' : 'notm'}`}
         shadows={shadows}
         camera={{ position: [8, 7, 8], fov: 45, near: 0.1, far: 500 }}
         style={{ background: 'transparent' }}
