@@ -219,56 +219,8 @@ function InteractiveCameraController() {
       enableDamping
       dampingFactor={0.08}
       minDistance={3}
-      maxDistance={50}
+      maxDistance={25}
       maxPolarAngle={Math.PI / 2.1}
-    />
-  );
-}
-
-// ─── Build mode camera (right-click rotate) ───
-
-function BuildCameraController({ enableRotate }: { enableRotate: boolean }) {
-  const controlsRef = useRef<any>(null);
-  const lerpingTo = useRef<{ pos: THREE.Vector3; target: THREE.Vector3 } | null>(null);
-
-  useFrame(({ camera }, delta) => {
-    cameraRef.position.copy(camera.position);
-    if (controlsRef.current) {
-      cameraRef.target.copy(controlsRef.current.target);
-    }
-    // Handle flyTo requests (room navigation etc.)
-    if (pendingFlyTo) {
-      lerpingTo.current = { pos: pendingFlyTo.position, target: pendingFlyTo.target };
-      clearPendingFlyTo();
-    }
-    if (lerpingTo.current) {
-      const { pos: targetPos, target: targetTarget } = lerpingTo.current;
-      camera.position.lerp(targetPos, delta * 3);
-      if (controlsRef.current) {
-        controlsRef.current.target.lerp(targetTarget, delta * 3);
-        controlsRef.current.update();
-      }
-      if (camera.position.distanceTo(targetPos) < 0.05) {
-        lerpingTo.current = null;
-      }
-    }
-  });
-
-  return (
-    <OrbitControls
-      ref={controlsRef}
-      makeDefault
-      enableDamping
-      dampingFactor={0.08}
-      minDistance={3}
-      maxDistance={50}
-      maxPolarAngle={Math.PI / 2.1}
-      enableRotate={enableRotate}
-      mouseButtons={{
-        LEFT: undefined as any,
-        MIDDLE: THREE.MOUSE.PAN,
-        RIGHT: THREE.MOUSE.ROTATE,
-      }}
     />
   );
 }
