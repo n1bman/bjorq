@@ -280,6 +280,9 @@ export default function GraphicsSettings() {
         </CollapsibleContent>
       </Collapsible>
 
+      {/* Scene Load Metrics */}
+      <SceneLoadMetrics />
+
       {/* Performance HUD */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
