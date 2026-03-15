@@ -250,15 +250,44 @@ function drawWallPreview(
   worldToScreen: (wx: number, wz: number) => [number, number],
   floorWalls: WallSegment[], zoom: number,
 ) {
-  ctx.strokeStyle = '#4a9eff'; ctx.lineWidth = 2; ctx.setLineDash([6, 4]); ctx.beginPath();
   const [sx0, sy0] = worldToScreen(wallDrawing.nodes[0][0], wallDrawing.nodes[0][1]);
+
+  // Determine if cursor is axis-aligned with last node
+  let snappedCursor: [number, number] | null = null;
+  let isAxisAligned = false;
+  if (cursorWorld) {
+    snappedCursor = snapToGridFn(cursorWorld[0], cursorWorld[1]);
+    const nodeSnap = snapToNode(snappedCursor, floorWalls, 0.25);
+    snappedCursor = nodeSnap.snapped;
+
+    if (wallDrawing.nodes.length > 0) {
+      const lastNode = wallDrawing.nodes[wallDrawing.nodes.length - 1];
+      const dx = snappedCursor[0] - lastNode[0];
+      const dz = snappedCursor[1] - lastNode[1];
+      const dist = Math.hypot(dx, dz);
+      if (dist > 0.1) {
+        const angleDeg = (Math.atan2(dz, dx) * 180 / Math.PI + 360) % 360;
+        for (const target of [0, 90, 180, 270, 360]) {
+          if (Math.abs(angleDeg - target) < 3) {
+            isAxisAligned = true;
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  // Draw line: blue dashed normally, solid cyan when axis-aligned
+  ctx.strokeStyle = isAxisAligned ? '#38bdf8' : '#4a9eff';
+  ctx.lineWidth = isAxisAligned ? 3 : 2;
+  if (!isAxisAligned) ctx.setLineDash([6, 4]);
+  ctx.beginPath();
   ctx.moveTo(sx0, sy0);
   for (let i = 1; i < wallDrawing.nodes.length; i++) { const [sx2, sy2] = worldToScreen(wallDrawing.nodes[i][0], wallDrawing.nodes[i][1]); ctx.lineTo(sx2, sy2); }
-  if (cursorWorld) {
-    let snapped = snapToGridFn(cursorWorld[0], cursorWorld[1]);
-    const nodeSnap = snapToNode(snapped, floorWalls, 0.25);
-    snapped = nodeSnap.snapped;
-    const [cx, cy] = worldToScreen(snapped[0], snapped[1]);
+  if (snappedCursor) {
+    const nodeSnap = snapToNode(snappedCursor, floorWalls, 0.25);
+    snappedCursor = nodeSnap.snapped;
+    const [cx, cy] = worldToScreen(snappedCursor[0], snappedCursor[1]);
     ctx.lineTo(cx, cy);
     if (nodeSnap.isSnapped) {
       ctx.save(); ctx.setLineDash([]);
@@ -270,7 +299,7 @@ function drawWallPreview(
       ctx.restore();
     }
     const lastNode = wallDrawing.nodes[wallDrawing.nodes.length - 1];
-    const segLen = Math.sqrt((snapped[0] - lastNode[0]) ** 2 + (snapped[1] - lastNode[1]) ** 2);
+    const segLen = Math.sqrt((snappedCursor[0] - lastNode[0]) ** 2 + (snappedCursor[1] - lastNode[1]) ** 2);
     if (segLen > 0.1) {
       const midSx = (worldToScreen(lastNode[0], lastNode[1])[0] + cx) / 2;
       const midSy = (worldToScreen(lastNode[0], lastNode[1])[1] + cy) / 2;
@@ -278,12 +307,21 @@ function drawWallPreview(
       ctx.save(); ctx.setLineDash([]); ctx.font = 'bold 11px DM Sans, sans-serif';
       const tw = ctx.measureText(label).width;
       ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(midSx - tw / 2 - 3, midSy - 20, tw + 6, 16);
-      ctx.fillStyle = '#4a9eff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(label, midSx, midSy - 12);
+      ctx.fillStyle = isAxisAligned ? '#38bdf8' : '#4a9eff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(label, midSx, midSy - 12);
+
+      // 90° label when axis-aligned
+      if (isAxisAligned) {
+        const angLabel = '90°';
+        const atw = ctx.measureText(angLabel).width;
+        ctx.fillStyle = 'rgba(56, 189, 248, 0.9)'; ctx.fillRect(cx - atw / 2 - 4, cy - 32, atw + 8, 16);
+        ctx.fillStyle = '#fff'; ctx.fillText(angLabel, cx, cy - 24);
+      }
+
       ctx.restore();
     }
     if (wallDrawing.nodes.length >= 3) {
       const firstNode = wallDrawing.nodes[0];
-      const distToFirst = Math.sqrt((snapped[0] - firstNode[0]) ** 2 + (snapped[1] - firstNode[1]) ** 2);
+      const distToFirst = Math.sqrt((snappedCursor[0] - firstNode[0]) ** 2 + (snappedCursor[1] - firstNode[1]) ** 2);
       if (distToFirst < 0.3) {
         const [fx, fy] = worldToScreen(firstNode[0], firstNode[1]);
         ctx.save(); ctx.setLineDash([]); ctx.strokeStyle = '#4ade80'; ctx.lineWidth = 2;
@@ -292,7 +330,7 @@ function drawWallPreview(
     }
   }
   ctx.stroke(); ctx.setLineDash([]);
-  for (const node of wallDrawing.nodes) { const [nx2, ny2] = worldToScreen(node[0], node[1]); ctx.fillStyle = '#4a9eff'; ctx.beginPath(); ctx.arc(nx2, ny2, 4, 0, Math.PI * 2); ctx.fill(); }
+  for (const node of wallDrawing.nodes) { const [nx2, ny2] = worldToScreen(node[0], node[1]); ctx.fillStyle = isAxisAligned ? '#38bdf8' : '#4a9eff'; ctx.beginPath(); ctx.arc(nx2, ny2, 4, 0, Math.PI * 2); ctx.fill(); }
 }
 
 function drawRoomRectPreview(ctx: CanvasRenderingContext2D, start: [number, number], end: [number, number], worldToScreen: (wx: number, wz: number) => [number, number]) {

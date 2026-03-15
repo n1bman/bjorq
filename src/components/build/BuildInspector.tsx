@@ -1524,31 +1524,21 @@ function DeviceInspector({ deviceId, close }: { deviceId: string; close: React.R
           </button>
         </div>
         {(['X', 'Y', 'Z'] as const).map((axis, i) => (
-          <div key={axis} className="flex items-center gap-2">
-            <span className="text-[10px] text-muted-foreground w-3">{axis}</span>
-            <Slider min={-180} max={180} step={5}
-              value={[Math.round(device.rotation[i] * (180 / Math.PI))]}
-              onValueChange={([v]) => {
-                const rot = [...device.rotation] as [number, number, number];
-                rot[i] = v * (Math.PI / 180);
-                updateDevice(device.id, { rotation: rot });
-              }}
-              className="flex-1"
-            />
-            <Input
-              type="number"
-              step={1}
-              value={Math.round(device.rotation[i] * (180 / Math.PI))}
-              onChange={(e) => {
-                const val = parseInt(e.target.value);
-                if (isNaN(val)) return;
-                const rot = [...device.rotation] as [number, number, number];
-                rot[i] = val * (Math.PI / 180);
-                updateDevice(device.id, { rotation: rot });
-              }}
-              className="w-14 h-6 text-[10px] text-center px-1 bg-secondary/30 border-none"
-            />
-          </div>
+          <SliderWithInput
+            key={axis}
+            label={axis}
+            min={-180}
+            max={180}
+            step={1}
+            decimals={0}
+            suffix="°"
+            value={Math.round(device.rotation[i] * (180 / Math.PI))}
+            onValueChange={(v) => {
+              const rot = [...device.rotation] as [number, number, number];
+              rot[i] = v * (Math.PI / 180);
+              updateDevice(device.id, { rotation: rot });
+            }}
+          />
         ))}
       </div>
 
