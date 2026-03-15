@@ -5,7 +5,7 @@
 
 import { useMemo } from 'react';
 import { useAppStore } from '../../store/useAppStore';
-import { generateWallSegments, generateCornerBlocks } from '../../lib/wallGeometry';
+import { generateWallSegments } from '../../lib/wallGeometry';
 
 export default function Walls3D() {
   const floors = useAppStore((s) => s.layout.floors);
@@ -48,12 +48,5 @@ export default function Walls3D() {
       );
     }), [walls, elevation, wallRoomData]);
 
-  const cornerBlocks = useMemo(() =>
-    generateCornerBlocks(walls, elevation, {
-      polygonOffset: true,
-      fallbackMaterialMap: wallRoomData.matMap,
-    }),
-    [walls, elevation, wallRoomData]);
-
-  return <group renderOrder={1}>{wallMeshes}{cornerBlocks}</group>;
+  return <group renderOrder={1}>{wallMeshes}</group>;
 }

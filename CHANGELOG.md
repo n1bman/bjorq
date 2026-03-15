@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.3] - 2026-03-15
+
+### Fixed
+- **Wall corner cubes removed** — eliminated `generateCornerBlocks` entirely; walls now overlap slightly at junctions (trim factor 0.5 → 0.35) for seamless, invisible corners without extra geometry clipping through furniture.
+
 ## [1.6.2] - 2026-03-15
 
 ### Fixed

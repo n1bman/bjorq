@@ -82,8 +82,8 @@ export function computeWallMitering(wall: WallSegment, allWalls: WallSegment[]) 
 
   const fromConn = getConnectedThickness(allWalls, wall.id, wall.from);
   const toConn = getConnectedThickness(allWalls, wall.id, wall.to);
-  const trimFrom = fromConn > 0 ? Math.max(fromConn, wall.thickness) / 2 : 0;
-  const trimTo = toConn > 0 ? Math.max(toConn, wall.thickness) / 2 : 0;
+  const trimFrom = fromConn > 0 ? Math.max(fromConn, wall.thickness) * 0.35 : 0;
+  const trimTo = toConn > 0 ? Math.max(toConn, wall.thickness) * 0.35 : 0;
 
   if (trimFrom > 0 || trimTo > 0) {
     const totalTrim = trimFrom + trimTo;
