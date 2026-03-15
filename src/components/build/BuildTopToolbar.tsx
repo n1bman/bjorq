@@ -159,24 +159,33 @@ export default function BuildTopToolbar() {
   };
 
 
+  const lockModes: { key: EditLock; label: string; icon: any }[] = [
+    { key: 'all', label: 'Allt', icon: MousePointer },
+    { key: 'walls', label: 'Väggar', icon: Columns },
+    { key: 'props', label: 'Möbler', icon: Sofa },
+    { key: 'devices', label: 'Enheter', icon: Cpu },
+  ];
+
   return (
-    <div className="relative z-50 flex items-center gap-1.5 px-2 py-1 border-b border-border bg-card/90 backdrop-blur-sm h-12">
+    <div className="relative z-50 flex items-center gap-1 px-2 py-1 border-b border-border bg-card/90 backdrop-blur-sm h-14">
       {/* Back to Home */}
       <button
         onClick={() => { toast.success('Sparad!'); setAppMode('home'); }}
         title="Hemvy"
-        className="p-2.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary/40 transition-all min-w-[44px] min-h-[44px] flex items-center justify-center"
+        className="p-1.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary/40 transition-all min-w-[40px] min-h-[40px] flex flex-col items-center justify-center gap-0.5"
       >
-        <Home size={18} />
+        <Home size={16} />
+        <span className="text-[7px] leading-none">Hem</span>
       </button>
 
       {/* Dashboard / Kontrollpanel */}
       <button
         onClick={() => { setAppMode('dashboard'); }}
         title="Kontrollpanel"
-        className="p-2.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary/40 transition-all min-w-[44px] min-h-[44px] flex items-center justify-center"
+        className="p-1.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary/40 transition-all min-w-[40px] min-h-[40px] flex flex-col items-center justify-center gap-0.5"
       >
-        <LayoutGrid size={18} />
+        <LayoutGrid size={16} />
+        <span className="text-[7px] leading-none">Panel</span>
       </button>
 
       {/* Undo / Redo */}
