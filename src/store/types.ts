@@ -1168,6 +1168,7 @@ export interface AppState {
   setBuildTool: (tool: BuildTool) => void;
   setGrid: (grid: Partial<BuildGrid>) => void;
   toggleGrid: () => void;
+  setEditLock: (lock: EditLock) => void;
   setSelection: (sel: BuildSelection) => void;
   setCameraMode: (mode: CameraMode) => void;
   setView: (view: Partial<BuildView>) => void;
