@@ -7,7 +7,7 @@
 
 import { useMemo, useState, useCallback, useRef } from 'react';
 import { useAppStore } from '../../store/useAppStore';
-import { generateWallSegments, generateCornerBlocks, detectClickedFace } from '../../lib/wallGeometry';
+import { generateWallSegments, detectClickedFace } from '../../lib/wallGeometry';
 import { clickToWallMount, computeWallMountTransform } from '../../lib/wallMountPlacement';
 import { ThreeEvent, useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
