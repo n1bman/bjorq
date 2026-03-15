@@ -562,11 +562,11 @@ function SettingsCategory() {
 function GraphicsCategory() {
   return (
     <div className="settings-page">
-      {/* Live 3D preview so you can see changes in real-time */}
+      {/* Live 3D preview — persistent canvas visible through transparent window */}
       <section>
         <h2>3D-förhandsvisning</h2>
-        <div className="glass-panel rounded-2xl overflow-hidden h-[250px] flex items-center justify-center text-muted-foreground text-xs">
-          <p>3D-vy (bakgrund)</p>
+        <div className="rounded-2xl overflow-hidden h-[250px] border border-border/40 bg-transparent">
+          {/* Transparent — persistent 3D canvas is visible behind */}
         </div>
       </section>
       <section>
