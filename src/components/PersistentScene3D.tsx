@@ -68,6 +68,9 @@ import DeviceMarkers3D from './devices/DeviceMarkers3D';
 
 import type { CameraPreset, StandbyCameraView, WallSegment, DeviceKind } from '../store/types';
 import { clearAllCaches } from '../lib/modelCache';
+import FPSController from './home/FPSController';
+import { findRobertoSpawn, type SpawnResult } from '../lib/fpsSpawn';
+import { toast } from '../hooks/use-toast';
 
 // ─── Camera presets ───
 
@@ -274,11 +277,23 @@ function BuildCameraController({ enableRotate }: { enableRotate: boolean }) {
 
 // ─── Camera controller wrapper ───
 
-function CameraController() {
+function CameraController({ fpsActive, fpsSpawn, onFpsExit }: {
+  fpsActive?: boolean;
+  fpsSpawn?: SpawnResult | null;
+  onFpsExit?: () => void;
+}) {
   const appMode = useAppStore((s) => s.appMode);
 
   if (appMode === 'standby') return <StandbyStaticCamera />;
   if (appMode === 'build') return <BuildCameraControllerWrapper />;
+  if (appMode === 'home' && fpsActive && fpsSpawn && onFpsExit) {
+    return <FPSController
+      spawnPosition={fpsSpawn.position}
+      floorId={fpsSpawn.floorId}
+      elevation={fpsSpawn.elevation}
+      onExit={onFpsExit}
+    />;
+  }
   return <InteractiveCameraController key="interactive" />;
 }
 
@@ -756,7 +771,12 @@ function BuildGroundInteractions() {
 
 // ─── Unified scene content ───
 
-function UnifiedSceneContent({ onDeviceLongPress }: { onDeviceLongPress?: (id: string) => void }) {
+function UnifiedSceneContent({ onDeviceLongPress, fpsActive, fpsSpawn, onFpsExit }: {
+  onDeviceLongPress?: (id: string) => void;
+  fpsActive?: boolean;
+  fpsSpawn?: SpawnResult | null;
+  onFpsExit?: () => void;
+}) {
   const appMode = useAppStore((s) => s.appMode);
   const sunAzimuth = useAppStore((s) => s.environment.sunAzimuth);
   const sunElevation = useAppStore((s) => s.environment.sunElevation);
@@ -861,7 +881,7 @@ function UnifiedSceneContent({ onDeviceLongPress }: { onDeviceLongPress?: (id: s
       )}
 
       <Environment preset="night" />
-      <CameraController />
+      <CameraController fpsActive={fpsActive} fpsSpawn={fpsSpawn} onFpsExit={onFpsExit} />
       <FrameThrottle />
     </>
   );
@@ -871,7 +891,10 @@ function UnifiedSceneContent({ onDeviceLongPress }: { onDeviceLongPress?: (id: s
 
 const MAX_RECOVERY = 3;
 
-export default function PersistentScene3D({ onDeviceLongPress }: { onDeviceLongPress?: (id: string) => void }) {
+export default function PersistentScene3D({ onDeviceLongPress, onFpsStateChange }: {
+  onDeviceLongPress?: (id: string) => void;
+  onFpsStateChange?: (active: boolean) => void;
+}) {
   const shadows = useAppStore((s) => s.performance.shadows);
   const quality = useAppStore((s) => s.performance.quality);
   const tabletMode = useAppStore((s) => s.performance.tabletMode);
@@ -887,6 +910,39 @@ export default function PersistentScene3D({ onDeviceLongPress }: { onDeviceLongP
   const addWall = useAppStore((s) => s.addWall);
   const setWallDrawing = useAppStore((s) => s.setWallDrawing);
   const pushUndo = useAppStore((s) => s.pushUndo);
+  const markers = useAppStore((s) => s.devices.markers);
+  const floors = useAppStore((s) => s.layout.floors);
+
+  // ─── Roberto FPS Mode (Easter egg) ───
+  const [fpsActive, setFpsActive] = useState(false);
+  const [fpsSpawn, setFpsSpawn] = useState<SpawnResult | null>(null);
+
+  const handleFpsExit = useCallback(() => {
+    setFpsActive(false);
+    setFpsSpawn(null);
+    onFpsStateChange?.(false);
+  }, [onFpsStateChange]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (appMode !== 'home') return;
+      const tag = (document.activeElement?.tagName ?? '').toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+
+      if (e.key.toLowerCase() === 'o' && !fpsActive) {
+        const spawn = findRobertoSpawn(markers, floors);
+        if (!spawn) {
+          toast({ title: 'Roberto saknas', description: "Placera en robot med namnet 'Roberto' för att aktivera FPS-läge" });
+          return;
+        }
+        setFpsSpawn(spawn);
+        setFpsActive(true);
+        onFpsStateChange?.(true);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [appMode, fpsActive, markers, floors, onFpsStateChange]);
 
   // Double-click to finish wall drawing (was on BuildScene3D wrapper div)
   const handleDoubleClick = useCallback(() => {
@@ -996,7 +1052,12 @@ export default function PersistentScene3D({ onDeviceLongPress }: { onDeviceLongP
         onCreated={handleCreated}
       >
         <Suspense fallback={null}>
-          <UnifiedSceneContent onDeviceLongPress={onDeviceLongPress} />
+          <UnifiedSceneContent
+            onDeviceLongPress={onDeviceLongPress}
+            fpsActive={fpsActive}
+            fpsSpawn={fpsSpawn}
+            onFpsExit={handleFpsExit}
+          />
         </Suspense>
       </Canvas>
     </div>

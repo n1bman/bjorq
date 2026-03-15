@@ -32,9 +32,10 @@ const KIND_ICONS: Partial<Record<DeviceKind, typeof Lightbulb>> = {
 interface HomeViewProps {
   longPressDeviceId?: string | null;
   onDismissLongPress?: () => void;
+  fpsActive?: boolean;
 }
 
-export default function HomeView({ longPressDeviceId, onDismissLongPress }: HomeViewProps) {
+export default function HomeView({ longPressDeviceId, onDismissLongPress, fpsActive }: HomeViewProps) {
   const visibleWidgets = useAppStore((s) => s.homeView.visibleWidgets);
   const homeScreenDevices = useAppStore((s) => s.homeView.homeScreenDevices ?? []);
   const markers = useAppStore((s) => s.devices.markers);
@@ -80,6 +81,9 @@ export default function HomeView({ longPressDeviceId, onDismissLongPress }: Home
   }, []);
 
   const longPressMarker = longPressDeviceId ? markers.find((m) => m.id === longPressDeviceId) : null;
+
+  // Hide all overlays during FPS mode
+  if (fpsActive) return null;
 
   return (
     <div className="absolute inset-0 z-10 pointer-events-none">
