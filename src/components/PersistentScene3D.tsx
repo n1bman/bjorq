@@ -937,6 +937,7 @@ export default function PersistentScene3D({ onDeviceLongPress, onFpsStateChange 
         }
         setFpsSpawn(spawn);
         setFpsActive(true);
+        onFpsStateChange?.(true);
       }
     };
     window.addEventListener('keydown', onKey);
