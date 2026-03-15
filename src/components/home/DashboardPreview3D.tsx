@@ -60,7 +60,7 @@ function PreviewScene({ stateRef }: { stateRef: React.MutableRefObject<PreviewCa
         enableDamping
         dampingFactor={0.12}
         minDistance={2}
-        maxDistance={40}
+        maxDistance={20}
         maxPolarAngle={Math.PI / 2.1}
       />
     </>

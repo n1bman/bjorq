@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useAppStore } from '../../../store/useAppStore';
-import { Gauge, Monitor, Sun, Sparkles, RefreshCw, Cpu, AlertTriangle, CheckCircle, Activity, Lightbulb, Eye, Contrast, RotateCcw, ChevronRight } from 'lucide-react';
+import { Gauge, Monitor, Sun, Sparkles, RefreshCw, Cpu, AlertTriangle, CheckCircle, Activity, Lightbulb, Eye, Contrast, RotateCcw, ChevronRight, BarChart3 } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../../ui/collapsible';
 import { Switch } from '../../ui/switch';
 import { Slider } from '../../ui/slider';
@@ -9,6 +9,7 @@ import OptionButton from '../../ui/OptionButton';
 import { Button } from '../../ui/button';
 import { toast } from 'sonner';
 import type { QualityLevel } from '../../../store/types';
+import { getStats as getCacheStats } from '../../../lib/modelCache';
 
 const qualityOptions: { value: QualityLevel; label: string; desc: string }[] = [
   { value: 'low', label: 'Låg', desc: 'Minimal – bra för surfplatta/RPi' },
@@ -231,7 +232,7 @@ export default function GraphicsSettings() {
               <div className="pl-6 space-y-1">
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-muted-foreground">Exponering</span>
-                  <span className="text-xs font-mono text-muted-foreground">{perf.exposure.toFixed(1)}</span>
+                  <span className="text-xs font-mono text-muted-foreground">{(perf.exposure ?? 1.0).toFixed(1)}</span>
                 </div>
                 <Slider
                   value={[perf.exposure]}

@@ -219,7 +219,7 @@ function InteractiveCameraController() {
       enableDamping
       dampingFactor={0.08}
       minDistance={3}
-      maxDistance={50}
+      maxDistance={25}
       maxPolarAngle={Math.PI / 2.1}
     />
   );
@@ -236,7 +236,6 @@ function BuildCameraController({ enableRotate }: { enableRotate: boolean }) {
     if (controlsRef.current) {
       cameraRef.target.copy(controlsRef.current.target);
     }
-    // Handle flyTo requests (room navigation etc.)
     if (pendingFlyTo) {
       lerpingTo.current = { pos: pendingFlyTo.position, target: pendingFlyTo.target };
       clearPendingFlyTo();
@@ -261,7 +260,7 @@ function BuildCameraController({ enableRotate }: { enableRotate: boolean }) {
       enableDamping
       dampingFactor={0.08}
       minDistance={3}
-      maxDistance={50}
+      maxDistance={25}
       maxPolarAngle={Math.PI / 2.1}
       enableRotate={enableRotate}
       mouseButtons={{
