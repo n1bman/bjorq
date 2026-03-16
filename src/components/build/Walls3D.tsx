@@ -5,6 +5,7 @@
 
 import { useMemo } from 'react';
 import { useAppStore } from '../../store/useAppStore';
+import RoomWallSurfaces3D from './RoomWallSurfaces3D';
 import { generateWallSegments } from '../../lib/wallGeometry';
 
 export default function Walls3D() {
@@ -15,42 +16,18 @@ export default function Walls3D() {
   const rooms = floor?.rooms ?? [];
   const elevation = floor?.elevation ?? 0;
 
-  // Build wall-to-room material + texture params lookup
-  const wallRoomData = useMemo(() => {
-    const matMap: Record<string, string> = {};
-    const texMap: Record<string, { scale: number; rotation: number }> = {};
-    for (const room of rooms) {
-      if (room.wallMaterialId) {
-        for (const wid of room.wallIds) {
-          if (!matMap[wid]) matMap[wid] = room.wallMaterialId;
-        }
-      }
-      for (const wid of room.wallIds) {
-        if (!texMap[wid]) {
-          texMap[wid] = { scale: room.wallTextureScale ?? 1, rotation: room.wallTextureRotation ?? 0 };
-        }
-      }
-    }
-    return { matMap, texMap };
-  }, [rooms]);
 
   const wallMeshes = useMemo(() =>
-    walls.map((wall) => {
-      const texParams = wallRoomData.texMap[wall.id];
-      return (
-        <group key={wall.id}>
-          {generateWallSegments(wall, walls, elevation, {
-            fallbackMaterialId: wallRoomData.matMap[wall.id],
-            extraTextureScale: texParams?.scale,
-            textureRotationDeg: texParams?.rotation,
-          })}
-        </group>
-      );
-    }), [walls, elevation, wallRoomData]);
+    walls.map((wall) => (
+      <group key={wall.id}>
+        {generateWallSegments(wall, walls, elevation)}
+      </group>
+    )), [walls, elevation]);
 
   return (
     <group renderOrder={1}>
       {wallMeshes}
+      <RoomWallSurfaces3D rooms={rooms} walls={walls} elevation={elevation} />
     </group>
   );
 }

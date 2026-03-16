@@ -6,6 +6,7 @@
  */
 
 import { useMemo, useState, useCallback } from 'react';
+import RoomWallSurfaces3D from './RoomWallSurfaces3D';
 import { useAppStore } from '../../store/useAppStore';
 import { generateWallSegments, detectClickedFace } from '../../lib/wallGeometry';
 import { clickToWallMount, computeWallMountTransform } from '../../lib/wallMountPlacement';
@@ -41,33 +42,6 @@ export default function InteractiveWalls3D() {
   const isPaintMode = activeTool === 'paint';
   const isWallMountMode = !!pendingWallMount;
 
-  // Build wall-to-room material + texture params lookup
-  const wallRoomMaterial = useMemo(() => {
-    const map: Record<string, string> = {};
-    for (const room of rooms) {
-      if (room.wallMaterialId) {
-        for (const wid of room.wallIds) {
-          if (!map[wid]) map[wid] = room.wallMaterialId;
-        }
-      }
-    }
-    return map;
-  }, [rooms]);
-
-  const wallRoomTextureParams = useMemo(() => {
-    const map: Record<string, { scale: number; rotation: number }> = {};
-    for (const room of rooms) {
-      for (const wid of room.wallIds) {
-        if (!map[wid]) {
-          map[wid] = {
-            scale: room.wallTextureScale ?? 1,
-            rotation: room.wallTextureRotation ?? 0,
-          };
-        }
-      }
-    }
-    return map;
-  }, [rooms]);
 
   const editLock = useAppStore((s) => s.build.editLock ?? 'all');
 
@@ -157,9 +131,7 @@ export default function InteractiveWalls3D() {
       const emissive = isSelected ? '#1a3a6a' : isHovered && !isPaintMode && !isWallMountMode ? '#3a2a10' : '#000000';
       const emissiveIntensity = isSelected ? 0.08 : (isHovered && !isPaintMode && !isWallMountMode) ? 0.15 : 0;
 
-      const texParams = wallRoomTextureParams[wall.id];
       const segments = generateWallSegments(wall, walls, elevation, {
-        fallbackMaterialId: wallRoomMaterial[wall.id],
         // No highlightColor override — preserve real material like floors
         highlightColor: null,
         emissive,
@@ -167,8 +139,6 @@ export default function InteractiveWalls3D() {
         onOpeningClick: handleOpeningClick,
         selectedOpeningId,
         includeWindowReveal: true,
-        extraTextureScale: texParams?.scale,
-        textureRotationDeg: texParams?.rotation,
       });
 
       // Selection outline for walls (matching floor outline style)
@@ -285,11 +255,24 @@ export default function InteractiveWalls3D() {
         </group>
       );
     });
-  }, [walls, rooms, elevation, selectedWallId, selectedFaceSide, selectedOpeningId, hoveredWallId, hoveredFaceSide, activeTool, isPaintMode, isWallMountMode, handleWallClick, handleWallHover, handleWallHoverMove, handleOpeningClick, wallRoomMaterial, wallRoomTextureParams]);
+  }, [walls, rooms, elevation, selectedWallId, selectedFaceSide, selectedOpeningId, hoveredWallId, hoveredFaceSide, activeTool, isPaintMode, isWallMountMode, handleWallClick, handleWallHover, handleWallHoverMove, handleOpeningClick]);
+
+  const handleRoomSurfaceClick = useCallback((roomId: string) => {
+    if (isPaintMode) {
+      setSelection({ type: 'room', id: roomId });
+    }
+  }, [isPaintMode, setSelection]);
 
   return (
     <group renderOrder={1}>
       {wallMeshes}
+      <RoomWallSurfaces3D
+        rooms={rooms}
+        walls={walls}
+        elevation={elevation}
+        interactive={isPaintMode}
+        onRoomClick={handleRoomSurfaceClick}
+      />
       {/* Phase C1: Mount placement preview dot */}
       {isWallMountMode && mountPreviewPos && (
         <mesh position={mountPreviewPos} renderOrder={10}>
