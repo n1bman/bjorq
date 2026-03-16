@@ -1,84 +1,44 @@
-# Arbetsplan: Persistent 3D Runtime & Optimering
 
-## Status: ✅ Implementerat (v1.6.0)
+Målet här är att få väggsystemet att bli visuellt stabilt i alla hörn utan att “jaga” små artefakter per scenario.
 
----
+## Vad som sannolikt orsakar dina två sista fel
+Jag ser två konkreta riskpunkter i nuvarande geometri:
 
-## Fas 0 — Bygg-stabilisering ✅ DONE
-- Fixat import i Scene3D till `./build/KitchenFixture3D`
-- Raderat duplikat `KitchenFixtureObject3D.tsx`
+1) `computeMiterOffsets` lägger L-corner-padding på båda sidor av änden.  
+Det stänger glipor, men kan samtidigt skapa en liten spets på utsidan (convex sida) — exakt det du visar.
 
-## Fas 1 — Buggar och regressioner ✅ DONE
+2) Junction-bedömningen är känslig för “nästan samma nod”/små avvikelser.  
+När kandidater inte “agree” blir änden flat (legacy från tiden med corner blocks), vilket nu kan ge konstigt hörn eftersom corner blocks inte längre renderas.
 
-### 1.1 Väggar: 90-gradersstöd vid ritning ✅
-- Axis-aligned snapping (±3° av 0/90/180/270°) i `BuildScene3D.tsx`
-- Visuell indikator: cyan linje + solid (ej dashed) + "90°"-label via `<Html>`
-- `cursorAxisAligned`-prop tillagd i `WallDrawing3D.tsx`
+## Plan (nästa implementation)
+1. **Gör padding ensidig och riktad**
+   - Behåll padding endast vid L-hörn.
+   - Applicera padding bara på den **retraherade** sidan (inte den redan utstickande sidan).
+   - Effekt: glipa stängs, men utsidan får inte extra spets.
 
-### 1.3 Dörr-öppningsriktning ✅
-- `flipped` appliceras nu på dörrpanelens position och rotation i `wallGeometry.tsx`
-- Gångjärnspunkt beräknas baserat på `flipped`-flagga
+2. **Stabilisera junction-lösning vid “nästan T”**
+   - Behåll nuvarande “agree”-logik för rena fall.
+   - Vid små avvikelser (samma tecken, liten spridning): använd robust median/medel istället för att falla till flat direkt.
+   - Vid riktig konflikt (+-tecken / korsning): behåll flat.
+   - Effekt: färre “konstiga enstaka hörn”.
 
-### 1.4 Dörrens öppningsgrad ✅
-- `openAmount?: number` (0-1) tillagd på `WallOpening` i `types.ts`
-- Slider "Öppningsgrad" i OpeningInspector (dörrar + garageportar)
-- 3D: dörrblad roteras runt gångjärnspunkt baserat på `openAmount * π/2`
-- TODO: koppla till `haEntityId` för automatisk HA-sync
+3. **Tighta nodmatchning för miter-beräkning**
+   - Byt till konsekvent avståndskontroll (euclidean) och snävare tolerans för connected endpoint i miter.
+   - Effekt: färre falska kopplingar som ger skev miter.
 
-### 1.5 Ljus går igenom väggar ✅ (pragmatisk lösning)
-- Alla ljustyper: minskad distance + decay=2
-- ceiling: 5m, strip: 6m, spot: 6m/π/7 angle, wall: 5m/π/4 angle
-- Dokumenterat: fullständig ljusblockering kräver baked lighting
+4. **Säkerhetskoll för väggar med öppningar**
+   - Verifiera att yttersegment (första/sista strip) fortfarande följer miter-ändar.
+   - Om inte: applicera samma miter-offset på ändsegmenten.
+   - Effekt: inga specialfall där hörn blir annorlunda bara för att väggen har fönster/dörr.
 
-## Fas 2 — UX-förbättringar ✅ DONE
+5. **Verifiering (måste köras efter fix)**
+   - L-hörn åt båda håll (clockwise + counterclockwise)
+   - T-korsning (flush, ingen spets)
+   - Sned vinkel (inte bara 90°)
+   - Ett scenario med öppningar nära hörn
+   - Top-down + låg kameravinkel (som i dina bilder)
 
-### 2.1 Sliders med exakt värdeinmatning ✅
-- Ny `SliderWithInput`-komponent (`src/components/ui/SliderWithInput.tsx`)
-- Klickbart värde → number input med Enter/Escape/blur
-- Applicerad i OpeningInspector (bredd, höjd, bröstning, position, öppningsgrad)
-
-### 2.2 Möbelfliken stängd som standard ✅
-- Inredning startar med `select`-verktyg (inte `furnish`)
-- Katalogen visas bara när Möbler eller Wizard-verktyg är aktivt
-
-### 2.3 Måla-fliken flyttad till Inredning ✅
-- `paint`-verktyg borttaget från `planritningTools`
-- Tillagt i `inredningTools` som "Måla" med Paintbrush-ikon
-- SurfaceEditor visas under Inredning-fliken
-
-### 2.4 Väggar: bara färger (inga texturer) ✅
-- SurfaceEditor filtrerar vägg-material till enbart `paint`-kategorin
-- 15 nya väggfärger tillagda (mjuk rosa, oliv, skifferblå, etc.)
-- Golv behåller alla texturer som tidigare
-
-## Fas 3 — Dokumentation och mappstruktur ✅ DONE
-- `public/textures/guide/README.md` uppdaterad med korrekt mappstruktur
-- Borttagen felaktig referens till `public/textures/floor/`
-- Target-paths tillagda per preset
-- `public/textures/carpet/` skapad
-
-## Fas 4 — Import/Export och long-press ✅ DONE
-
-### 4.2 Exportera från Bibliotek ✅
-- "Exportera"-knapp tillagd i BibliotekWorkspace detaljpanel
-- Exporterar metadata som JSON-fil
-
-### 4.3 Hold-long på enheter i hemmenyn ✅
-- 500ms long-press → popup med av/på + ljusstyrka-slider
-- Fungerar för alla enheter med extra kontroll för `light`
-
-## Fas 5 — Troubleshooting-pass ✅ DONE
-- Raderat dead code: `PaintTool.tsx` (ersatt av inline SurfaceEditor)
-- KitchenFixtureObject3D redan borttagen
-- Inga oanvända importer kvar
-- Tester passerar
-
-## Fas 6 — Version 1.1.0 ✅ DONE
-- `package.json` bumpat till 1.1.0
-
-## Bevarat
-- Design / Planritning / Inredning / Bibliotek-struktur
-- Save/load kompatibilitet
-- HA-sync (ej ändrad)
-- Golv-texturer med ambientCG CDN-thumbnails
-- Vägg-mitering och hörn-geometri
+## Förväntat resultat
+- Utsidans hörn blir flush utan liten utstickare.
+- L-hörn förblir täta (ingen glipa).
+- Enstaka “konstigt hörn” försvinner genom robustare junction-val i stället för legacy-flat-fallback i borderline-fall.
