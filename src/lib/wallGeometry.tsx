@@ -1186,8 +1186,9 @@ export function generateCornerBlocks(
       const dt = Math.abs(wall.to[0] - pos[0]) + Math.abs(wall.to[1] - pos[1]);
       if (df < eps || dt < eps) connectionCount++;
     }
-    // Phase v1.3: Generate corner blocks for 2+ wall junctions (L-corners included)
-    if (connectionCount < 2) continue;
+    // Phase v1.7.3: Only generate corner fills for L-corners (exactly 2 walls).
+    // T-junctions (3+) already look correct because the through-wall covers the gap.
+    if (connectionCount !== 2) continue;
 
     const dominantColor = wallColors[0]?.exteriorColor ?? '#e0e0e0';
     const matProps: Record<string, any> = {
