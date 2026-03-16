@@ -16,24 +16,6 @@ export default function Walls3D() {
   const rooms = floor?.rooms ?? [];
   const elevation = floor?.elevation ?? 0;
 
-  // Build wall-to-room material + texture params lookup
-  const wallRoomData = useMemo(() => {
-    const matMap: Record<string, string> = {};
-    const texMap: Record<string, { scale: number; rotation: number }> = {};
-    for (const room of rooms) {
-      if (room.wallMaterialId) {
-        for (const wid of room.wallIds) {
-          if (!matMap[wid]) matMap[wid] = room.wallMaterialId;
-        }
-      }
-      for (const wid of room.wallIds) {
-        if (!texMap[wid]) {
-          texMap[wid] = { scale: room.wallTextureScale ?? 1, rotation: room.wallTextureRotation ?? 0 };
-        }
-      }
-    }
-    return { matMap, texMap };
-  }, [rooms]);
 
   const wallMeshes = useMemo(() =>
     walls.map((wall) => {
