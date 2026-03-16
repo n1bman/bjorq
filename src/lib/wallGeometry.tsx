@@ -213,15 +213,16 @@ export function computeMiterOffsets(wall: WallSegment, allWalls: WallSegment[], 
     }
   }
 
-  // Tiny padding only at L-corners; T-junctions already covered by through-wall
+  // Tiny padding only at L-corners, only on the RETRACTED side (positive offset
+  // means vertex pulled inward). Never pad the extending/protruding side.
   const pad = 0.005;
   if (fromIsL) {
-    if (result.fromLeft  !== 0) result.fromLeft  -= pad;
-    if (result.fromRight !== 0) result.fromRight -= pad;
+    if (result.fromLeft  > 0) result.fromLeft  -= pad;
+    if (result.fromRight > 0) result.fromRight -= pad;
   }
   if (toIsL) {
-    if (result.toLeft  !== 0) result.toLeft  += pad;
-    if (result.toRight !== 0) result.toRight += pad;
+    if (result.toLeft  < 0) result.toLeft  += pad;
+    if (result.toRight < 0) result.toRight += pad;
   }
 
   return result;
