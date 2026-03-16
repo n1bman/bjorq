@@ -1,84 +1,56 @@
-# Arbetsplan: Persistent 3D Runtime & Optimering
 
-## Status: ✅ Implementerat (v1.6.0)
 
----
+# Fix: Miter-padding har inverterade tecken — skapar glipor istället för att stänga dem
 
-## Fas 0 — Bygg-stabilisering ✅ DONE
-- Fixat import i Scene3D till `./build/KitchenFixture3D`
-- Raderat duplikat `KitchenFixtureObject3D.tsx`
+## Problemanalys
 
-## Fas 1 — Buggar och regressioner ✅ DONE
+Jag hittade buggen. I `computeMiterOffsets` (rad 202-207) appliceras padding som **förstärker** befintlig riktning:
 
-### 1.1 Väggar: 90-gradersstöd vid ritning ✅
-- Axis-aligned snapping (±3° av 0/90/180/270°) i `BuildScene3D.tsx`
-- Visuell indikator: cyan linje + solid (ej dashed) + "90°"-label via `<Html>`
-- `cursorAxisAligned`-prop tillagd i `WallDrawing3D.tsx`
+```typescript
+// NUVARANDE (FEL):
+result.fromLeft += (fromLeft > 0 ? pad : -pad);  // positiv → mer positiv
+result.fromRight += (fromRight > 0 ? pad : -pad); // negativ → mer negativ
+```
 
-### 1.3 Dörr-öppningsriktning ✅
-- `flipped` appliceras nu på dörrpanelens position och rotation i `wallGeometry.tsx`
-- Gångjärnspunkt beräknas baserat på `flipped`-flagga
+Men titta på hur vertex-positionerna beräknas i `createMiteredWallGeometry`:
 
-### 1.4 Dörrens öppningsgrad ✅
-- `openAmount?: number` (0-1) tillagd på `WallOpening` i `types.ts`
-- Slider "Öppningsgrad" i OpeningInspector (dörrar + garageportar)
-- 3D: dörrblad roteras runt gångjärnspunkt baserat på `openAmount * π/2`
-- TODO: koppla till `haEntityId` för automatisk HA-sync
+```text
+FLB: [-halfLength + miter.fromLeft, ...]   // 'from'-änden
+TLB: [+halfLength + miter.toLeft, ...]     // 'to'-änden
+```
 
-### 1.5 Ljus går igenom väggar ✅ (pragmatisk lösning)
-- Alla ljustyper: minskad distance + decay=2
-- ceiling: 5m, strip: 6m, spot: 6m/π/7 angle, wall: 5m/π/4 angle
-- Dokumenterat: fullständig ljusblockering kräver baked lighting
+- **'from'-änden** (`-hl + offset`): mer negativt offset = vertex längre ut = väggen längre
+- **'to'-änden** (`+hl + offset`): mer positivt offset = vertex längre ut = väggen längre
 
-## Fas 2 — UX-förbättringar ✅ DONE
+Den nuvarande paddingen gör att `fromLeft` (om positiv) blir **ännu mer positiv**, vilket drar vertexen **inåt** — gapet blir **större**. Samma inverterade effekt på alla fyra hörn.
 
-### 2.1 Sliders med exakt värdeinmatning ✅
-- Ny `SliderWithInput`-komponent (`src/components/ui/SliderWithInput.tsx`)
-- Klickbart värde → number input med Enter/Escape/blur
-- Applicerad i OpeningInspector (bredd, höjd, bröstning, position, öppningsgrad)
+```text
+   NUVARANDE:  Padding drar vertexar inåt → gap öppnas
+   ┌────┐  ┌────┐
+   │    ╲  ╱    │    ← glipa vid diagonalen
+   └─────╲╱────┘
 
-### 2.2 Möbelfliken stängd som standard ✅
-- Inredning startar med `select`-verktyg (inte `furnish`)
-- Katalogen visas bara när Möbler eller Wizard-verktyg är aktivt
+   FIXAD:  Padding trycker vertexar utåt → lätt överlapp
+   ┌─────╲╱─────┐
+   │     ╲╱     │    ← ingen glipa
+   └─────╱╲─────┘
+```
 
-### 2.3 Måla-fliken flyttad till Inredning ✅
-- `paint`-verktyg borttaget från `planritningTools`
-- Tillagt i `inredningTools` som "Måla" med Paintbrush-ikon
-- SurfaceEditor visas under Inredning-fliken
+## Ändring
 
-### 2.4 Väggar: bara färger (inga texturer) ✅
-- SurfaceEditor filtrerar vägg-material till enbart `paint`-kategorin
-- 15 nya väggfärger tillagda (mjuk rosa, oliv, skifferblå, etc.)
-- Golv behåller alla texturer som tidigare
+### `src/lib/wallGeometry.tsx` — rad 202-207
 
-## Fas 3 — Dokumentation och mappstruktur ✅ DONE
-- `public/textures/guide/README.md` uppdaterad med korrekt mappstruktur
-- Borttagen felaktig referens till `public/textures/floor/`
-- Target-paths tillagda per preset
-- `public/textures/carpet/` skapad
+Ändra padding-logiken så att vertexar alltid trycks **utåt** (gör väggen marginellt längre):
 
-## Fas 4 — Import/Export och long-press ✅ DONE
+```typescript
+const pad = 0.005;
+// 'from' vertices: subtract pad to push toward -x (outward)
+if (result.fromLeft  !== 0) result.fromLeft  -= pad;
+if (result.fromRight !== 0) result.fromRight -= pad;
+// 'to' vertices: add pad to push toward +x (outward)
+if (result.toLeft    !== 0) result.toLeft    += pad;
+if (result.toRight   !== 0) result.toRight   += pad;
+```
 
-### 4.2 Exportera från Bibliotek ✅
-- "Exportera"-knapp tillagd i BibliotekWorkspace detaljpanel
-- Exporterar metadata som JSON-fil
+En ändring, 6 rader, en fil. Alla L-hörn, sneda vinklar och hexagoner bör sluta visa glipor.
 
-### 4.3 Hold-long på enheter i hemmenyn ✅
-- 500ms long-press → popup med av/på + ljusstyrka-slider
-- Fungerar för alla enheter med extra kontroll för `light`
-
-## Fas 5 — Troubleshooting-pass ✅ DONE
-- Raderat dead code: `PaintTool.tsx` (ersatt av inline SurfaceEditor)
-- KitchenFixtureObject3D redan borttagen
-- Inga oanvända importer kvar
-- Tester passerar
-
-## Fas 6 — Version 1.1.0 ✅ DONE
-- `package.json` bumpat till 1.1.0
-
-## Bevarat
-- Design / Planritning / Inredning / Bibliotek-struktur
-- Save/load kompatibilitet
-- HA-sync (ej ändrad)
-- Golv-texturer med ambientCG CDN-thumbnails
-- Vägg-mitering och hörn-geometri
