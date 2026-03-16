@@ -199,12 +199,14 @@ export function computeMiterOffsets(wall: WallSegment, allWalls: WallSegment[], 
     }
   }
 
-  // Tiny padding to ensure walls overlap slightly at mitered corners (no micro-gaps)
+  // Tiny padding: push vertices outward so walls overlap at mitered corners
   const pad = 0.005;
-  result.fromLeft  += (result.fromLeft  !== 0 ? (result.fromLeft  > 0 ? pad : -pad) : 0);
-  result.fromRight += (result.fromRight !== 0 ? (result.fromRight > 0 ? pad : -pad) : 0);
-  result.toLeft    += (result.toLeft    !== 0 ? (result.toLeft    > 0 ? pad : -pad) : 0);
-  result.toRight   += (result.toRight   !== 0 ? (result.toRight   > 0 ? pad : -pad) : 0);
+  // 'from' vertices live at -halfLength, so subtract to push outward
+  if (result.fromLeft  !== 0) result.fromLeft  -= pad;
+  if (result.fromRight !== 0) result.fromRight -= pad;
+  // 'to' vertices live at +halfLength, so add to push outward
+  if (result.toLeft    !== 0) result.toLeft    += pad;
+  if (result.toRight   !== 0) result.toRight   += pad;
 
   return result;
 }
