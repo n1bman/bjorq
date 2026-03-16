@@ -18,18 +18,11 @@ export default function Walls3D() {
 
 
   const wallMeshes = useMemo(() =>
-    walls.map((wall) => {
-      const texParams = wallRoomData.texMap[wall.id];
-      return (
-        <group key={wall.id}>
-          {generateWallSegments(wall, walls, elevation, {
-            fallbackMaterialId: wallRoomData.matMap[wall.id],
-            extraTextureScale: texParams?.scale,
-            textureRotationDeg: texParams?.rotation,
-          })}
-        </group>
-      );
-    }), [walls, elevation, wallRoomData]);
+    walls.map((wall) => (
+      <group key={wall.id}>
+        {generateWallSegments(wall, walls, elevation)}
+      </group>
+    )), [walls, elevation]);
 
   return (
     <group renderOrder={1}>
