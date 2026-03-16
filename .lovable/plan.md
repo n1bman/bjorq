@@ -1,22 +1,84 @@
+# Arbetsplan: Persistent 3D Runtime & Optimering
 
+## Status: ✅ Implementerat (v1.6.0)
 
-# Fix: Färgläckage vid hörn/korsningar
+---
 
-## Problem
-Vid vissa kameravinklar syns färgen från ett intilliggande rum genom den lilla spalten där geringade väggar möts. Vägggeometrin i sig är korrekt — problemet är att de snedskurna ändarna inte ger 100% tätning vid alla betraktningsvinklar.
+## Fas 0 — Bygg-stabilisering ✅ DONE
+- Fixat import i Scene3D till `./build/KitchenFixture3D`
+- Raderat duplikat `KitchenFixtureObject3D.tsx`
 
-## Orsak
-I `generateCornerBlocks` (rad 1248) genereras hörn-fyllnadsblock **bara** för L-hörn (`connectionCount === 2`). T-korsningar hoppas över med antagandet att genomgående väggen täcker — men vid snäva vinklar kan ett litet glapp synas ändå.
+## Fas 1 — Buggar och regressioner ✅ DONE
 
-## Lösning — utan att ändra väggbygget
-Utöka corner-fill-blocken till att även genereras vid T-korsningar och korsningar (ta bort `connectionCount !== 2`-filtret, eller ändra till `connectionCount < 2`). Blocken är redan `DoubleSide`-renderade och använder dominant väggfärg, så de kommer täta mikroglappet utan att påverka utseendet i övrigt.
+### 1.1 Väggar: 90-gradersstöd vid ritning ✅
+- Axis-aligned snapping (±3° av 0/90/180/270°) i `BuildScene3D.tsx`
+- Visuell indikator: cyan linje + solid (ej dashed) + "90°"-label via `<Html>`
+- `cursorAxisAligned`-prop tillagd i `WallDrawing3D.tsx`
 
-### Ändring: `src/lib/wallGeometry.tsx`
-**Rad 1246-1248** — ändra filtret:
-```typescript
-// Before: if (connectionCount !== 2) continue;
-// After:  if (connectionCount < 2) continue;  // Generate fills for L, T, and + junctions
-```
+### 1.3 Dörr-öppningsriktning ✅
+- `flipped` appliceras nu på dörrpanelens position och rotation i `wallGeometry.tsx`
+- Gångjärnspunkt beräknas baserat på `flipped`-flagga
 
-En rad ändrad. Inga ändringar i vägggeometri, miter-logik eller materialhantering. Väggarna byggs exakt som nu — corner-fill-blocken tätar bara eventuella synliga spalter vid alla junction-typer.
+### 1.4 Dörrens öppningsgrad ✅
+- `openAmount?: number` (0-1) tillagd på `WallOpening` i `types.ts`
+- Slider "Öppningsgrad" i OpeningInspector (dörrar + garageportar)
+- 3D: dörrblad roteras runt gångjärnspunkt baserat på `openAmount * π/2`
+- TODO: koppla till `haEntityId` för automatisk HA-sync
 
+### 1.5 Ljus går igenom väggar ✅ (pragmatisk lösning)
+- Alla ljustyper: minskad distance + decay=2
+- ceiling: 5m, strip: 6m, spot: 6m/π/7 angle, wall: 5m/π/4 angle
+- Dokumenterat: fullständig ljusblockering kräver baked lighting
+
+## Fas 2 — UX-förbättringar ✅ DONE
+
+### 2.1 Sliders med exakt värdeinmatning ✅
+- Ny `SliderWithInput`-komponent (`src/components/ui/SliderWithInput.tsx`)
+- Klickbart värde → number input med Enter/Escape/blur
+- Applicerad i OpeningInspector (bredd, höjd, bröstning, position, öppningsgrad)
+
+### 2.2 Möbelfliken stängd som standard ✅
+- Inredning startar med `select`-verktyg (inte `furnish`)
+- Katalogen visas bara när Möbler eller Wizard-verktyg är aktivt
+
+### 2.3 Måla-fliken flyttad till Inredning ✅
+- `paint`-verktyg borttaget från `planritningTools`
+- Tillagt i `inredningTools` som "Måla" med Paintbrush-ikon
+- SurfaceEditor visas under Inredning-fliken
+
+### 2.4 Väggar: bara färger (inga texturer) ✅
+- SurfaceEditor filtrerar vägg-material till enbart `paint`-kategorin
+- 15 nya väggfärger tillagda (mjuk rosa, oliv, skifferblå, etc.)
+- Golv behåller alla texturer som tidigare
+
+## Fas 3 — Dokumentation och mappstruktur ✅ DONE
+- `public/textures/guide/README.md` uppdaterad med korrekt mappstruktur
+- Borttagen felaktig referens till `public/textures/floor/`
+- Target-paths tillagda per preset
+- `public/textures/carpet/` skapad
+
+## Fas 4 — Import/Export och long-press ✅ DONE
+
+### 4.2 Exportera från Bibliotek ✅
+- "Exportera"-knapp tillagd i BibliotekWorkspace detaljpanel
+- Exporterar metadata som JSON-fil
+
+### 4.3 Hold-long på enheter i hemmenyn ✅
+- 500ms long-press → popup med av/på + ljusstyrka-slider
+- Fungerar för alla enheter med extra kontroll för `light`
+
+## Fas 5 — Troubleshooting-pass ✅ DONE
+- Raderat dead code: `PaintTool.tsx` (ersatt av inline SurfaceEditor)
+- KitchenFixtureObject3D redan borttagen
+- Inga oanvända importer kvar
+- Tester passerar
+
+## Fas 6 — Version 1.1.0 ✅ DONE
+- `package.json` bumpat till 1.1.0
+
+## Bevarat
+- Design / Planritning / Inredning / Bibliotek-struktur
+- Save/load kompatibilitet
+- HA-sync (ej ändrad)
+- Golv-texturer med ambientCG CDN-thumbnails
+- Vägg-mitering och hörn-geometri
