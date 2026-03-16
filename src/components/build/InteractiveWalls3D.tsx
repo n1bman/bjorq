@@ -150,7 +150,6 @@ export default function InteractiveWalls3D() {
 
       const texParams = wallRoomTextureParams[wall.id];
       const segments = generateWallSegments(wall, walls, elevation, {
-        fallbackMaterialId: wallRoomMaterial[wall.id],
         // No highlightColor override — preserve real material like floors
         highlightColor: null,
         emissive,
