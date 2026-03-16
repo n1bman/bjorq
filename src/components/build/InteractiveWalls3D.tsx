@@ -255,7 +255,7 @@ export default function InteractiveWalls3D() {
         </group>
       );
     });
-  }, [walls, rooms, elevation, selectedWallId, selectedFaceSide, selectedOpeningId, hoveredWallId, hoveredFaceSide, activeTool, isPaintMode, isWallMountMode, handleWallClick, handleWallHover, handleWallHoverMove, handleOpeningClick, wallRoomMaterial, wallRoomTextureParams]);
+  }, [walls, rooms, elevation, selectedWallId, selectedFaceSide, selectedOpeningId, hoveredWallId, hoveredFaceSide, activeTool, isPaintMode, isWallMountMode, handleWallClick, handleWallHover, handleWallHoverMove, handleOpeningClick]);
 
   return (
     <group renderOrder={1}>
