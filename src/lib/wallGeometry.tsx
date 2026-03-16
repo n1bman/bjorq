@@ -133,6 +133,7 @@ export function computeMiterOffsets(wall: WallSegment, allWalls: WallSegment[], 
   const normX = -dirZ, normZ = dirX;
   const halfT = wall.thickness / 2;
   const result: MiterResult = { fromLeft: 0, fromRight: 0, toLeft: 0, toRight: 0 };
+  let fromIsL = false, toIsL = false;
 
   for (const end of ['from', 'to'] as const) {
     const point = wall[end];
@@ -190,23 +191,29 @@ export function computeMiterOffsets(wall: WallSegment, allWalls: WallSegment[], 
     // Convert t (along wallInDir) to local X offsets
     // At 'from' end: wallInDir = +localX → offset = t
     // At 'to' end: wallInDir = -localX → offset = -t
+    const isLCorner = candidates.length === 1;
+
     if (end === 'from') {
       result.fromLeft = useOffset;
       result.fromRight = -useOffset;
+      fromIsL = isLCorner;
     } else {
       result.toLeft = -useOffset;
       result.toRight = useOffset;
+      toIsL = isLCorner;
     }
   }
 
-  // Tiny padding: push vertices outward so walls overlap at mitered corners
+  // Tiny padding only at L-corners; T-junctions already covered by through-wall
   const pad = 0.005;
-  // 'from' vertices live at -halfLength, so subtract to push outward
-  if (result.fromLeft  !== 0) result.fromLeft  -= pad;
-  if (result.fromRight !== 0) result.fromRight -= pad;
-  // 'to' vertices live at +halfLength, so add to push outward
-  if (result.toLeft    !== 0) result.toLeft    += pad;
-  if (result.toRight   !== 0) result.toRight   += pad;
+  if (fromIsL) {
+    if (result.fromLeft  !== 0) result.fromLeft  -= pad;
+    if (result.fromRight !== 0) result.fromRight -= pad;
+  }
+  if (toIsL) {
+    if (result.toLeft  !== 0) result.toLeft  += pad;
+    if (result.toRight !== 0) result.toRight += pad;
+  }
 
   return result;
 }
