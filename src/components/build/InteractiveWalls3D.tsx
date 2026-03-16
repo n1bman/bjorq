@@ -5,7 +5,8 @@
  * Phase C1: Wall-mount placement — clicking a wall places a mounted object.
  */
 
-import { useMemo, useState, useCallback, useRef } from 'react';
+import { useMemo, useState, useCallback } from 'react';
+import RoomWallSurfaces3D from './RoomWallSurfaces3D';
 import { useAppStore } from '../../store/useAppStore';
 import { generateWallSegments, detectClickedFace } from '../../lib/wallGeometry';
 import { clickToWallMount, computeWallMountTransform } from '../../lib/wallMountPlacement';
@@ -287,9 +288,22 @@ export default function InteractiveWalls3D() {
     });
   }, [walls, rooms, elevation, selectedWallId, selectedFaceSide, selectedOpeningId, hoveredWallId, hoveredFaceSide, activeTool, isPaintMode, isWallMountMode, handleWallClick, handleWallHover, handleWallHoverMove, handleOpeningClick, wallRoomMaterial, wallRoomTextureParams]);
 
+  const handleRoomSurfaceClick = useCallback((roomId: string) => {
+    if (isPaintMode) {
+      setSelection({ type: 'room', id: roomId });
+    }
+  }, [isPaintMode, setSelection]);
+
   return (
     <group renderOrder={1}>
       {wallMeshes}
+      <RoomWallSurfaces3D
+        rooms={rooms}
+        walls={walls}
+        elevation={elevation}
+        interactive={isPaintMode}
+        onRoomClick={handleRoomSurfaceClick}
+      />
       {/* Phase C1: Mount placement preview dot */}
       {isWallMountMode && mountPreviewPos && (
         <mesh position={mountPreviewPos} renderOrder={10}>

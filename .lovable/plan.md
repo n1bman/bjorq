@@ -1,82 +1,84 @@
+# Arbetsplan: Persistent 3D Runtime & Optimering
 
+## Status: ✅ Implementerat (v1.6.0)
 
-# Plan: Per-rum inre ytlager (RoomWallSurfaces3D)
+---
 
-## Sammanfattning
-Ersätt nuvarande rum-väggmålning (som skriver `leftMaterialId`/`rightMaterialId` direkt på hela väggobjekt) med ett separat inre ytlager — tunna plan som renderas inuti varje rum, begränsade av rummets polygon och klippta vid öppningar.
+## Fas 0 — Bygg-stabilisering ✅ DONE
+- Fixat import i Scene3D till `./build/KitchenFixture3D`
+- Raderat duplikat `KitchenFixtureObject3D.tsx`
 
-## Steg
+## Fas 1 — Buggar och regressioner ✅ DONE
 
-### 1. Backup av befintlig logik
-Skapa `src/backup/setRoomMaterial-wall-backup.ts` med en kopia av den nuvarande `setRoomMaterial` wall-grenen (rad 724-782 i useAppStore.ts). Dokumentera vilka filer som berörs.
+### 1.1 Väggar: 90-gradersstöd vid ritning ✅
+- Axis-aligned snapping (±3° av 0/90/180/270°) i `BuildScene3D.tsx`
+- Visuell indikator: cyan linje + solid (ej dashed) + "90°"-label via `<Html>`
+- `cursorAxisAligned`-prop tillagd i `WallDrawing3D.tsx`
 
-### 2. Uppdatera `setRoomMaterial` (wall-grenen)
-**Fil: `src/store/useAppStore.ts` rad 709-782**
+### 1.3 Dörr-öppningsriktning ✅
+- `flipped` appliceras nu på dörrpanelens position och rotation i `wallGeometry.tsx`
+- Gångjärnspunkt beräknas baserat på `flipped`-flagga
 
-Ersätt wall-grenen: istället för att iterera `room.wallIds` och sätta `leftMaterialId`/`rightMaterialId` på varje vägg, sätt `room.wallMaterialId` på rum-objektet. En enkel property-uppdatering, samma mönster som `floorMaterialId`.
+### 1.4 Dörrens öppningsgrad ✅
+- `openAmount?: number` (0-1) tillagd på `WallOpening` i `types.ts`
+- Slider "Öppningsgrad" i OpeningInspector (dörrar + garageportar)
+- 3D: dörrblad roteras runt gångjärnspunkt baserat på `openAmount * π/2`
+- TODO: koppla till `haEntityId` för automatisk HA-sync
 
-```typescript
-// target === 'wall'
-return {
-  layout: { ...s.layout, floors: s.layout.floors.map(f =>
-    f.id === floorId
-      ? { ...f, rooms: f.rooms.map(r => r.id === roomId ? { ...r, wallMaterialId: materialId } : r) }
-      : f
-  )}
-};
-```
+### 1.5 Ljus går igenom väggar ✅ (pragmatisk lösning)
+- Alla ljustyper: minskad distance + decay=2
+- ceiling: 5m, strip: 6m, spot: 6m/π/7 angle, wall: 5m/π/4 angle
+- Dokumenterat: fullständig ljusblockering kräver baked lighting
 
-### 3. Ny komponent: `RoomWallSurfaces3D`
-**Ny fil: `src/components/build/RoomWallSurfaces3D.tsx`**
+## Fas 2 — UX-förbättringar ✅ DONE
 
-Renderar per-rum inre ytlager. Logik:
+### 2.1 Sliders med exakt värdeinmatning ✅
+- Ny `SliderWithInput`-komponent (`src/components/ui/SliderWithInput.tsx`)
+- Klickbart värde → number input med Enter/Escape/blur
+- Applicerad i OpeningInspector (bredd, höjd, bröstning, position, öppningsgrad)
 
-1. **Per rum**: iterera `room.wallIds`, hitta matchande vägg
-2. **Bestäm insida**: använd `getRoomFacingSide(wall, room.polygon)` — returnerar `'left'` eller `'right'`
-3. **Generera plan per vägg-segment**:
-   - Beräkna vägg-längd, position, rotation
-   - Offset `0.002m` inåt från väggytan (förhindrar z-fighting)
-   - **Klipp vid rummets polygon-gränser**: om väggen sträcker sig förbi T-junction, begränsa planet till den del som ligger inom rummets polygon. Projicera rummets polygon-kanter på vägg-axeln för att hitta start/slut.
-   - **Klipp vid öppningar**: använd `wall.openings` för att generera strips (samma logik som `generateWallSegments` — vertikala strips, headers, sills)
-4. **Material**: hämta från `room.wallMaterialId` via `getMaterialById`, skapa `MeshStandardMaterial` med `polygonOffset: true, polygonOffsetFactor: -2`
+### 2.2 Möbelfliken stängd som standard ✅
+- Inredning startar med `select`-verktyg (inte `furnish`)
+- Katalogen visas bara när Möbler eller Wizard-verktyg är aktivt
 
-Geometrin är enbart `PlaneGeometry` (inget miter-behov — planen sitter på insidan av den riktiga väggen).
+### 2.3 Måla-fliken flyttad till Inredning ✅
+- `paint`-verktyg borttaget från `planritningTools`
+- Tillagt i `inredningTools` som "Måla" med Paintbrush-ikon
+- SurfaceEditor visas under Inredning-fliken
 
-### 4. Klippning vid T-korsningar
-Nyckeln som löser läckageproblemet: för varje vägg i rummet, beräkna den del av väggen som faktiskt gränsar till rummet genom att projicera rummets polygon-kanter på vägg-axeln. Detta ger ett `[startOffset, endOffset]`-par längs väggen. Ytlagret renderas bara inom detta intervall.
+### 2.4 Väggar: bara färger (inga texturer) ✅
+- SurfaceEditor filtrerar vägg-material till enbart `paint`-kategorin
+- 15 nya väggfärger tillagda (mjuk rosa, oliv, skifferblå, etc.)
+- Golv behåller alla texturer som tidigare
 
-### 5. Klippning vid öppningar
-Inom det T-klippta intervallet, subtrahera öppningarnas rektanglar:
-- Vertikala strips mellan/utanför öppningar (full höjd)
-- Headers ovanför öppningar
-- Sills under fönster
-- Inga strips för passager/dörrar vid golvnivå
+## Fas 3 — Dokumentation och mappstruktur ✅ DONE
+- `public/textures/guide/README.md` uppdaterad med korrekt mappstruktur
+- Borttagen felaktig referens till `public/textures/floor/`
+- Target-paths tillagda per preset
+- `public/textures/carpet/` skapad
 
-### 6. Integration i renderers
-- **`Walls3D.tsx`**: Lägg till `<RoomWallSurfaces3D />` som syskon efter wall-meshar
-- **`InteractiveWalls3D.tsx`**: Samma, men med click-handler som selekterar rum (inte vägg)
+## Fas 4 — Import/Export och long-press ✅ DONE
 
-### 7. Interaktionslogik
-- Klick på rum-ytlagret → `setSelection({ type: 'room', id: roomId })`
-- Klick på riktig vägg (bakom ytlagret) → `setSelection({ type: 'wall', id: wallId, faceSide })`
-- Rum-ytlagret sätts med `pointerEvents` bara i paint-mode, annars genomskinligt för interaktion
+### 4.2 Exportera från Bibliotek ✅
+- "Exportera"-knapp tillagd i BibliotekWorkspace detaljpanel
+- Exporterar metadata som JSON-fil
 
-### 8. Rensa gammal logik
-Ta bort den gamla wall-grenen i `setRoomMaterial` som sätter `leftMaterialId`/`rightMaterialId` på väggar. Direkt väggmålning (klick på enskild vägg → set leftMaterialId/rightMaterialId) förblir oförändrad.
+### 4.3 Hold-long på enheter i hemmenyn ✅
+- 500ms long-press → popup med av/på + ljusstyrka-slider
+- Fungerar för alla enheter med extra kontroll för `light`
 
-## Filer som ändras
-| Fil | Ändring |
-|-----|---------|
-| `src/backup/setRoomMaterial-wall-backup.ts` | **Ny** — backup av gammal logik |
-| `src/store/useAppStore.ts` | Förenkla `setRoomMaterial` wall-gren |
-| `src/components/build/RoomWallSurfaces3D.tsx` | **Ny** — per-rum inre ytlager |
-| `src/components/build/Walls3D.tsx` | Inkludera `RoomWallSurfaces3D` |
-| `src/components/build/InteractiveWalls3D.tsx` | Inkludera `RoomWallSurfaces3D` |
+## Fas 5 — Troubleshooting-pass ✅ DONE
+- Raderat dead code: `PaintTool.tsx` (ersatt av inline SurfaceEditor)
+- KitchenFixtureObject3D redan borttagen
+- Inga oanvända importer kvar
+- Tester passerar
 
-## Separation: rum-målning vs vägg-målning
-- **Rummålning**: `setRoomMaterial(floorId, roomId, 'wall', matId)` → sätter `room.wallMaterialId` → renderas av `RoomWallSurfaces3D`
-- **Väggmålning**: `updateWall(wallId, { leftMaterialId/rightMaterialId })` → renderas av befintligt vägg-system → oförändrat
+## Fas 6 — Version 1.1.0 ✅ DONE
+- `package.json` bumpat till 1.1.0
 
-## Rollback
-Om lösningen inte fungerar: ta bort `RoomWallSurfaces3D.tsx`, återställ `setRoomMaterial` wall-grenen från backup-filen, ta bort `RoomWallSurfaces3D`-importer från Walls3D/InteractiveWalls3D.
-
+## Bevarat
+- Design / Planritning / Inredning / Bibliotek-struktur
+- Save/load kompatibilitet
+- HA-sync (ej ändrad)
+- Golv-texturer med ambientCG CDN-thumbnails
+- Vägg-mitering och hörn-geometri
