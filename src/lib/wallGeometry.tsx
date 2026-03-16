@@ -182,7 +182,16 @@ export function computeMiterOffsets(wall: WallSegment, allWalls: WallSegment[], 
     for (let i = 1; i < candidates.length; i++) {
       if (Math.abs(candidates[i] - useOffset) > 0.02) { agree = false; break; }
     }
-    if (!agree) continue; // Disagreement (+ junction) → flat end
+    if (!agree) {
+      // Check if all have same sign — near-agreement, use average
+      const allPos = candidates.every(c => c >= 0);
+      const allNeg = candidates.every(c => c <= 0);
+      if (allPos || allNeg) {
+        useOffset = candidates.reduce((a, b) => a + b, 0) / candidates.length;
+      } else {
+        continue; // True conflict (± signs) → flat end
+      }
+    }
 
     // Clamp to avoid extreme miters at very acute angles
     const maxOffset = len * 0.35;
