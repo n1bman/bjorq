@@ -48,9 +48,5 @@ export default function Walls3D() {
       );
     }), [walls, elevation, wallRoomData]);
 
-  const cornerBlocks = useMemo(() =>
-    generateCornerBlocks(walls, elevation, { fallbackMaterialMap: wallRoomData.matMap }),
-    [walls, elevation, wallRoomData]);
-
-  return <group renderOrder={1}>{wallMeshes}{cornerBlocks}</group>;
+  return <group renderOrder={1}>{wallMeshes}</group>;
 }

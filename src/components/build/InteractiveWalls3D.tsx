@@ -287,14 +287,9 @@ export default function InteractiveWalls3D() {
     });
   }, [walls, rooms, elevation, selectedWallId, selectedFaceSide, selectedOpeningId, hoveredWallId, hoveredFaceSide, activeTool, isPaintMode, isWallMountMode, handleWallClick, handleWallHover, handleWallHoverMove, handleOpeningClick, wallRoomMaterial, wallRoomTextureParams]);
 
-  const cornerBlocks = useMemo(() =>
-    generateCornerBlocks(walls, elevation, { fallbackMaterialMap: wallRoomMaterial }),
-    [walls, elevation, wallRoomMaterial]);
-
   return (
     <group renderOrder={1}>
       {wallMeshes}
-      {cornerBlocks}
       {/* Phase C1: Mount placement preview dot */}
       {isWallMountMode && mountPreviewPos && (
         <mesh position={mountPreviewPos} renderOrder={10}>
