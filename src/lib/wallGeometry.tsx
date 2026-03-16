@@ -1038,7 +1038,7 @@ export function generateWallSegments(
       return { left: localX - halfW, right: localX + halfW, bottom: opBottom, top: opBottom + op.height };
     }).sort((a, b) => a.left - b.left);
 
-    // Helper: create a positioned box section of the wall
+    // Helper: create a positioned box section of the wall (plain box, no miter)
     const wallSection = (key: string, localCenterX: number, centerY: number, w: number, h: number) => {
       const pos = new THREE.Vector3(localCenterX, 0, 0)
         .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
@@ -1050,19 +1050,50 @@ export function generateWallSegments(
       );
     };
 
+    // Helper: create a positioned mitered section of the wall
+    const wallSectionMitered = (key: string, localCenterX: number, centerY: number, w: number, h: number, stripMiter: MiterResult) => {
+      const sGeo = createMiteredWallGeometry(w, h, wall.thickness, stripMiter);
+      const pos = new THREE.Vector3(localCenterX, 0, 0)
+        .applyAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
+        .add(new THREE.Vector3(origCx, centerY, origCz));
+      return (
+        <mesh key={key} geometry={sGeo} material={mats} position={pos.toArray()} rotation={[0, -angle, 0]} castShadow receiveShadow />
+      );
+    };
+
     // 1. Vertical strips (full-height wall between/outside openings)
+    // Collect all strips first to know which is first/last
+    const strips: { left: number; right: number }[] = [];
     let cursor = -halfLen;
-    let stripIdx = 0;
     for (const r of opRanges) {
       if (r.left > cursor + 0.001) {
-        const w = r.left - cursor;
-        segments.push(wallSection(`${wall.id}-vs-${stripIdx++}`, (cursor + r.left) / 2, wallHeight / 2 + elevation, w, wallHeight));
+        strips.push({ left: cursor, right: r.left });
       }
       cursor = Math.max(cursor, r.right);
     }
     if (cursor < halfLen - 0.001) {
-      const w = halfLen - cursor;
-      segments.push(wallSection(`${wall.id}-vs-${stripIdx}`, (cursor + halfLen) / 2, wallHeight / 2 + elevation, w, wallHeight));
+      strips.push({ left: cursor, right: halfLen });
+    }
+
+    for (let si = 0; si < strips.length; si++) {
+      const s = strips[si];
+      const w = s.right - s.left;
+      const cx = (s.left + s.right) / 2;
+      const isFirst = Math.abs(s.left - (-halfLen)) < 0.001;
+      const isLast = Math.abs(s.right - halfLen) < 0.001;
+
+      if (isFirst || isLast) {
+        // Apply miter offsets on the outer end(s) of this strip
+        const stripMiter: MiterResult = {
+          fromLeft: isFirst ? miter.fromLeft : 0,
+          fromRight: isFirst ? miter.fromRight : 0,
+          toLeft: isLast ? miter.toLeft : 0,
+          toRight: isLast ? miter.toRight : 0,
+        };
+        segments.push(wallSectionMitered(`${wall.id}-vs-${si}`, cx, wallHeight / 2 + elevation, w, wallHeight, stripMiter));
+      } else {
+        segments.push(wallSection(`${wall.id}-vs-${si}`, cx, wallHeight / 2 + elevation, w, wallHeight));
+      }
     }
 
     // 2. Header strips (above each opening)
