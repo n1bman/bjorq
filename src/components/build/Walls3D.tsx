@@ -49,5 +49,10 @@ export default function Walls3D() {
       );
     }), [walls, elevation, wallRoomData]);
 
-  return <group renderOrder={1}>{wallMeshes}</group>;
+  return (
+    <group renderOrder={1}>
+      {wallMeshes}
+      <RoomWallSurfaces3D rooms={rooms} walls={walls} elevation={elevation} />
+    </group>
+  );
 }
