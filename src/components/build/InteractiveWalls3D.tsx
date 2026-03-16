@@ -290,7 +290,7 @@ export default function InteractiveWalls3D() {
         rooms={rooms}
         walls={walls}
         elevation={elevation}
-        interactive={isPaintMode}
+        interactive={isPaintMode && selection.type === 'room'}
         onRoomClick={handleRoomSurfaceClick}
       />
       {/* Phase C1: Mount placement preview dot */}
