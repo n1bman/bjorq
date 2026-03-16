@@ -5,7 +5,6 @@
 
 import { useMemo } from 'react';
 import { useAppStore } from '../../store/useAppStore';
-import RoomWallSurfaces3D from './RoomWallSurfaces3D';
 import { generateWallSegments } from '../../lib/wallGeometry';
 
 export default function Walls3D() {
@@ -52,7 +51,6 @@ export default function Walls3D() {
   return (
     <group renderOrder={1}>
       {wallMeshes}
-      <RoomWallSurfaces3D rooms={rooms} walls={walls} elevation={elevation} />
     </group>
   );
 }
