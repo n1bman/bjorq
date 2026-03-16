@@ -1,7 +1,6 @@
 /**
  * Walls3D.tsx — Home-view (non-interactive) wall renderer.
- * Delegates all geometry to shared wallGeometry.ts module.
- * Room finish layer handled by RoomWallSurfaces3D.
+ * Phase A1: Now delegates all geometry to shared wallGeometry.ts module.
  */
 
 import { useMemo } from 'react';
@@ -17,31 +16,38 @@ export default function Walls3D() {
   const rooms = floor?.rooms ?? [];
   const elevation = floor?.elevation ?? 0;
 
-  // Texture params lookup (for direct wall painting only — room material handled by RoomWallSurfaces3D)
-  const wallTexParams = useMemo(() => {
-    const map: Record<string, { scale: number; rotation: number }> = {};
+  // Build wall-to-room material + texture params lookup
+  const wallRoomData = useMemo(() => {
+    const matMap: Record<string, string> = {};
+    const texMap: Record<string, { scale: number; rotation: number }> = {};
     for (const room of rooms) {
+      if (room.wallMaterialId) {
+        for (const wid of room.wallIds) {
+          if (!matMap[wid]) matMap[wid] = room.wallMaterialId;
+        }
+      }
       for (const wid of room.wallIds) {
-        if (!map[wid]) {
-          map[wid] = { scale: room.wallTextureScale ?? 1, rotation: room.wallTextureRotation ?? 0 };
+        if (!texMap[wid]) {
+          texMap[wid] = { scale: room.wallTextureScale ?? 1, rotation: room.wallTextureRotation ?? 0 };
         }
       }
     }
-    return map;
+    return { matMap, texMap };
   }, [rooms]);
 
   const wallMeshes = useMemo(() =>
     walls.map((wall) => {
-      const texParams = wallTexParams[wall.id];
+      const texParams = wallRoomData.texMap[wall.id];
       return (
         <group key={wall.id}>
           {generateWallSegments(wall, walls, elevation, {
+            fallbackMaterialId: wallRoomData.matMap[wall.id],
             extraTextureScale: texParams?.scale,
             textureRotationDeg: texParams?.rotation,
           })}
         </group>
       );
-    }), [walls, elevation, wallTexParams]);
+    }), [walls, elevation, wallRoomData]);
 
   return (
     <group renderOrder={1}>

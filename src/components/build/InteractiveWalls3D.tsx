@@ -43,7 +43,17 @@ export default function InteractiveWalls3D() {
   const isWallMountMode = !!pendingWallMount;
 
   // Build wall-to-room material + texture params lookup
-  // Room material no longer applied to structural walls — handled by RoomWallSurfaces3D
+  const wallRoomMaterial = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const room of rooms) {
+      if (room.wallMaterialId) {
+        for (const wid of room.wallIds) {
+          if (!map[wid]) map[wid] = room.wallMaterialId;
+        }
+      }
+    }
+    return map;
+  }, [rooms]);
 
   const wallRoomTextureParams = useMemo(() => {
     const map: Record<string, { scale: number; rotation: number }> = {};
@@ -150,6 +160,7 @@ export default function InteractiveWalls3D() {
 
       const texParams = wallRoomTextureParams[wall.id];
       const segments = generateWallSegments(wall, walls, elevation, {
+        fallbackMaterialId: wallRoomMaterial[wall.id],
         // No highlightColor override — preserve real material like floors
         highlightColor: null,
         emissive,
@@ -275,7 +286,7 @@ export default function InteractiveWalls3D() {
         </group>
       );
     });
-  }, [walls, rooms, elevation, selectedWallId, selectedFaceSide, selectedOpeningId, hoveredWallId, hoveredFaceSide, activeTool, isPaintMode, isWallMountMode, handleWallClick, handleWallHover, handleWallHoverMove, handleOpeningClick, wallRoomTextureParams]);
+  }, [walls, rooms, elevation, selectedWallId, selectedFaceSide, selectedOpeningId, hoveredWallId, hoveredFaceSide, activeTool, isPaintMode, isWallMountMode, handleWallClick, handleWallHover, handleWallHoverMove, handleOpeningClick, wallRoomMaterial, wallRoomTextureParams]);
 
   const handleRoomSurfaceClick = useCallback((roomId: string) => {
     if (isPaintMode) {
@@ -290,7 +301,7 @@ export default function InteractiveWalls3D() {
         rooms={rooms}
         walls={walls}
         elevation={elevation}
-        interactive={isPaintMode && selection.type === 'room'}
+        interactive={isPaintMode}
         onRoomClick={handleRoomSurfaceClick}
       />
       {/* Phase C1: Mount placement preview dot */}
