@@ -257,9 +257,22 @@ export default function InteractiveWalls3D() {
     });
   }, [walls, rooms, elevation, selectedWallId, selectedFaceSide, selectedOpeningId, hoveredWallId, hoveredFaceSide, activeTool, isPaintMode, isWallMountMode, handleWallClick, handleWallHover, handleWallHoverMove, handleOpeningClick]);
 
+  const handleRoomSurfaceClick = useCallback((roomId: string) => {
+    if (isPaintMode) {
+      setSelection({ type: 'room', id: roomId });
+    }
+  }, [isPaintMode, setSelection]);
+
   return (
     <group renderOrder={1}>
       {wallMeshes}
+      <RoomWallSurfaces3D
+        rooms={rooms}
+        walls={walls}
+        elevation={elevation}
+        interactive={isPaintMode}
+        onRoomClick={handleRoomSurfaceClick}
+      />
       {/* Phase C1: Mount placement preview dot */}
       {isWallMountMode && mountPreviewPos && (
         <mesh position={mountPreviewPos} renderOrder={10}>
