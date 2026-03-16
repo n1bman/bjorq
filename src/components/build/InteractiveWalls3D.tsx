@@ -6,7 +6,6 @@
  */
 
 import { useMemo, useState, useCallback } from 'react';
-import RoomWallSurfaces3D from './RoomWallSurfaces3D';
 import { useAppStore } from '../../store/useAppStore';
 import { generateWallSegments, detectClickedFace } from '../../lib/wallGeometry';
 import { clickToWallMount, computeWallMountTransform } from '../../lib/wallMountPlacement';
