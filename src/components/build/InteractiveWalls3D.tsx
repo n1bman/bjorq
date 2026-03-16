@@ -131,9 +131,7 @@ export default function InteractiveWalls3D() {
       const emissive = isSelected ? '#1a3a6a' : isHovered && !isPaintMode && !isWallMountMode ? '#3a2a10' : '#000000';
       const emissiveIntensity = isSelected ? 0.08 : (isHovered && !isPaintMode && !isWallMountMode) ? 0.15 : 0;
 
-      const texParams = wallRoomTextureParams[wall.id];
       const segments = generateWallSegments(wall, walls, elevation, {
-        fallbackMaterialId: wallRoomMaterial[wall.id],
         // No highlightColor override — preserve real material like floors
         highlightColor: null,
         emissive,
@@ -141,8 +139,6 @@ export default function InteractiveWalls3D() {
         onOpeningClick: handleOpeningClick,
         selectedOpeningId,
         includeWindowReveal: true,
-        extraTextureScale: texParams?.scale,
-        textureRotationDeg: texParams?.rotation,
       });
 
       // Selection outline for walls (matching floor outline style)
