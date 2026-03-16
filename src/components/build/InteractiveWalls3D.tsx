@@ -43,17 +43,7 @@ export default function InteractiveWalls3D() {
   const isWallMountMode = !!pendingWallMount;
 
   // Build wall-to-room material + texture params lookup
-  const wallRoomMaterial = useMemo(() => {
-    const map: Record<string, string> = {};
-    for (const room of rooms) {
-      if (room.wallMaterialId) {
-        for (const wid of room.wallIds) {
-          if (!map[wid]) map[wid] = room.wallMaterialId;
-        }
-      }
-    }
-    return map;
-  }, [rooms]);
+  // Room material no longer applied to structural walls — handled by RoomWallSurfaces3D
 
   const wallRoomTextureParams = useMemo(() => {
     const map: Record<string, { scale: number; rotation: number }> = {};
