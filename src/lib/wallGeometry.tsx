@@ -133,6 +133,7 @@ export function computeMiterOffsets(wall: WallSegment, allWalls: WallSegment[], 
   const normX = -dirZ, normZ = dirX;
   const halfT = wall.thickness / 2;
   const result: MiterResult = { fromLeft: 0, fromRight: 0, toLeft: 0, toRight: 0 };
+  let fromIsL = false, toIsL = false;
 
   for (const end of ['from', 'to'] as const) {
     const point = wall[end];
