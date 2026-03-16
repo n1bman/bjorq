@@ -1,84 +1,44 @@
-# Arbetsplan: Persistent 3D Runtime & Optimering
 
-## Status: ✅ Implementerat (v1.6.0)
 
----
+# Fix: Padding only for L-corners, skip T-junctions
 
-## Fas 0 — Bygg-stabilisering ✅ DONE
-- Fixat import i Scene3D till `./build/KitchenFixture3D`
-- Raderat duplikat `KitchenFixtureObject3D.tsx`
+## Problem
+Images 1-2 show L-corners are nearly perfect now. Images 3-4 show the perpendicular wall at T-junctions sticking out slightly past the through-wall. This is because the `+0.005` padding is applied to ALL mitered endpoints, including T-junctions where the through-wall already provides full coverage — the extra padding pushes the perpendicular wall slightly beyond the through-wall surface.
 
-## Fas 1 — Buggar och regressioner ✅ DONE
+## Solution
+Track the number of candidates (connected walls) at each endpoint. Apply padding only when `candidates.length === 1` (L-corner). When `candidates.length >= 2` (T-junction or cross), skip padding — the through-wall already covers the seam.
 
-### 1.1 Väggar: 90-gradersstöd vid ritning ✅
-- Axis-aligned snapping (±3° av 0/90/180/270°) i `BuildScene3D.tsx`
-- Visuell indikator: cyan linje + solid (ej dashed) + "90°"-label via `<Html>`
-- `cursorAxisAligned`-prop tillagd i `WallDrawing3D.tsx`
+## Change
 
-### 1.3 Dörr-öppningsriktning ✅
-- `flipped` appliceras nu på dörrpanelens position och rotation i `wallGeometry.tsx`
-- Gångjärnspunkt beräknas baserat på `flipped`-flagga
+### `src/lib/wallGeometry.tsx` — `computeMiterOffsets` (lines 193-209)
 
-### 1.4 Dörrens öppningsgrad ✅
-- `openAmount?: number` (0-1) tillagd på `WallOpening` i `types.ts`
-- Slider "Öppningsgrad" i OpeningInspector (dörrar + garageportar)
-- 3D: dörrblad roteras runt gångjärnspunkt baserat på `openAmount * π/2`
-- TODO: koppla till `haEntityId` för automatisk HA-sync
+Store whether each end is an L-corner, then conditionally apply padding:
 
-### 1.5 Ljus går igenom väggar ✅ (pragmatisk lösning)
-- Alla ljustyper: minskad distance + decay=2
-- ceiling: 5m, strip: 6m, spot: 6m/π/7 angle, wall: 5m/π/4 angle
-- Dokumenterat: fullständig ljusblockering kräver baked lighting
+```typescript
+// After line 188 (useOffset clamping), before applying to result:
+const isLCorner = candidates.length === 1;
 
-## Fas 2 — UX-förbättringar ✅ DONE
+if (end === 'from') {
+  result.fromLeft = useOffset;
+  result.fromRight = -useOffset;
+  fromIsL = isLCorner;  // track for padding
+} else {
+  result.toLeft = -useOffset;
+  result.toRight = useOffset;
+  toIsL = isLCorner;
+}
 
-### 2.1 Sliders med exakt värdeinmatning ✅
-- Ny `SliderWithInput`-komponent (`src/components/ui/SliderWithInput.tsx`)
-- Klickbart värde → number input med Enter/Escape/blur
-- Applicerad i OpeningInspector (bredd, höjd, bröstning, position, öppningsgrad)
+// Then in padding section:
+const pad = 0.005;
+if (fromIsL) {
+  if (result.fromLeft  !== 0) result.fromLeft  -= pad;
+  if (result.fromRight !== 0) result.fromRight -= pad;
+}
+if (toIsL) {
+  if (result.toLeft  !== 0) result.toLeft  += pad;
+  if (result.toRight !== 0) result.toRight += pad;
+}
+```
 
-### 2.2 Möbelfliken stängd som standard ✅
-- Inredning startar med `select`-verktyg (inte `furnish`)
-- Katalogen visas bara när Möbler eller Wizard-verktyg är aktivt
+One file, ~8 lines changed. L-corners keep their overlap fix, T-junctions stay flush.
 
-### 2.3 Måla-fliken flyttad till Inredning ✅
-- `paint`-verktyg borttaget från `planritningTools`
-- Tillagt i `inredningTools` som "Måla" med Paintbrush-ikon
-- SurfaceEditor visas under Inredning-fliken
-
-### 2.4 Väggar: bara färger (inga texturer) ✅
-- SurfaceEditor filtrerar vägg-material till enbart `paint`-kategorin
-- 15 nya väggfärger tillagda (mjuk rosa, oliv, skifferblå, etc.)
-- Golv behåller alla texturer som tidigare
-
-## Fas 3 — Dokumentation och mappstruktur ✅ DONE
-- `public/textures/guide/README.md` uppdaterad med korrekt mappstruktur
-- Borttagen felaktig referens till `public/textures/floor/`
-- Target-paths tillagda per preset
-- `public/textures/carpet/` skapad
-
-## Fas 4 — Import/Export och long-press ✅ DONE
-
-### 4.2 Exportera från Bibliotek ✅
-- "Exportera"-knapp tillagd i BibliotekWorkspace detaljpanel
-- Exporterar metadata som JSON-fil
-
-### 4.3 Hold-long på enheter i hemmenyn ✅
-- 500ms long-press → popup med av/på + ljusstyrka-slider
-- Fungerar för alla enheter med extra kontroll för `light`
-
-## Fas 5 — Troubleshooting-pass ✅ DONE
-- Raderat dead code: `PaintTool.tsx` (ersatt av inline SurfaceEditor)
-- KitchenFixtureObject3D redan borttagen
-- Inga oanvända importer kvar
-- Tester passerar
-
-## Fas 6 — Version 1.1.0 ✅ DONE
-- `package.json` bumpat till 1.1.0
-
-## Bevarat
-- Design / Planritning / Inredning / Bibliotek-struktur
-- Save/load kompatibilitet
-- HA-sync (ej ändrad)
-- Golv-texturer med ambientCG CDN-thumbnails
-- Vägg-mitering och hörn-geometri
