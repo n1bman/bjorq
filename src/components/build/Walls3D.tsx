@@ -5,7 +5,6 @@
 
 import { useMemo } from 'react';
 import { useAppStore } from '../../store/useAppStore';
-import RoomWallSurfaces3D from './RoomWallSurfaces3D';
 import { generateWallSegments } from '../../lib/wallGeometry';
 
 export default function Walls3D() {
