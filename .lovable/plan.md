@@ -1,53 +1,36 @@
 
-Målet är att få GitHub Actions grönt igen och samtidigt behålla nya rummålningssystemet.
+Mål: få CI grönt genom att lösa den faktiska orsaken till `Could not resolve "./RoomWallSurfaces3D"`.
 
-1) Verifierad rotorsak (från run-annoteringar)
-- Nuvarande blockerare i CI är TypeScript-fel i:
-  - `src/components/build/RoomWallSurfaces3D.tsx` rad 73–74
-- Felet:
-  - `Property 'position' does not exist on type 'WallOpening'`
-- I `src/store/types.ts` har `WallOpening` fältet `offset` (inte `position`).
+1) Bekräftad rotorsak
+- `Walls3D.tsx` och `InteractiveWalls3D.tsx` importerar `./RoomWallSurfaces3D`.
+- På GitHub `main` svarar `raw.githubusercontent.com/.../src/components/build/RoomWallSurfaces3D.tsx` med **404 Not Found**.
+- Alltså: filen finns inte i den commit som Actions bygger, även om den finns i nuvarande Lovable-workspace.
 
-2) Kodändring (minimal och säker)
-- Fil: `src/components/build/RoomWallSurfaces3D.tsx`
-- I `generateClippedStrips(...)`, byt:
-  - `op.position * wallLen`
-  till
-  - `op.offset * wallLen`
-- Detta följer resten av kodbasen (`BuildCanvas2D`, `wallGeometry`, `wallFaces`, `buildUtils`) som redan använder `op.offset`.
+2) Implementationsplan (det som ska göras i repo)
+- Återskapa/commit:a `src/components/build/RoomWallSurfaces3D.tsx` i GitHub-repot (med den senaste implementationen för additive interior wall layer).
+- Säkerställ exakt filnamn/case:
+  - `RoomWallSurfaces3D.tsx` (stor R, W, S, D)
+  - imports kvar som `./RoomWallSurfaces3D`.
+- Behåll TypeScript-fix i komponenten:
+  - använd `op.offset` (med legacy-fallback via cast om ni vill stödja gamla exports).
+- Verifiera att inga referenser pekar på annan casing eller gammal sökväg.
 
-3) Robusthet för äldre projektdata (rekommenderad)
-- Lägg fallback i samma funktion så gamla exporter inte beter sig konstigt:
-```ts
-const normalizedOffset =
-  typeof (op as any).offset === 'number'
-    ? (op as any).offset
-    : typeof (op as any).position === 'number'
-      ? (op as any).position
-      : 0.5;
-const opT0 = normalizedOffset * wallLen - halfW;
-const opT1 = normalizedOffset * wallLen + halfW;
-```
-- Viktigt: fallbacken ska inte referera `op.position` utan cast, annars kommer TS-felet tillbaka.
-
-4) Kontrollera att tidigare “Could not resolve ./RoomWallSurfaces3D” inte återkommer
-- Säkerställ att filen faktiskt finns i repo med exakt namn:
-  - `src/components/build/RoomWallSurfaces3D.tsx`
-- Importerna i:
-  - `src/components/build/Walls3D.tsx`
-  - `src/components/build/InteractiveWalls3D.tsx`
-  ska fortsatt vara `./RoomWallSurfaces3D` (case-sensitive exakt).
-
-5) Verifiering innan push
-- Kör:
+3) Verifiering före/efter push
+- Kör lokalt:
   - `npm run build`
   - `npm run build:dev`
-- Bekräfta att inga nya TS-fel uppstår.
+- Kontrollera sedan GitHub direkt:
+  - öppna raw-URL för filen och säkerställ att den inte längre är 404.
+- Push ny commit och kör CI igen.
 
-6) Förväntat resultat
-- CI-jobben i länkarna slutar falla på `RoomWallSurfaces3D`.
-- Nya rummålningsflödet (inre ytlager) är kvar.
-- Direkt väggmålning fortsätter vara separerad från rummålning.
+4) Om CI fortfarande klagar på samma resolve-fel
+- Då är det inte kodinnehåll utan sync/commit-problem.
+- Skapa en ny “force” commit som explicit inkluderar filen + en liten ändring i `Walls3D.tsx` (t.ex. kommentar) för att garantera att både importör och importerad fil hamnar i samma commit.
 
-Teknisk not
-- Felet är inte i Vite/alias eller import-systemet i sig, utan en ren typinkonsistens i ny komponent mot etablerad `WallOpening`-modell.
+5) Fallback (endast om ni måste få pipeline grön direkt)
+- Temporärt ta bort import + usage av `RoomWallSurfaces3D` i `Walls3D.tsx` och `InteractiveWalls3D.tsx`.
+- Detta ger grön CI snabbt men stänger av rummålningens inre ytlager tills filen är korrekt återinförd.
+
+Teknisk detalj
+- Felet uppstår i Rollup-resolvern före typkontroll när importmålet saknas i arbetskopian på runnern.
+- Därför hjälper inte TS-fixar om själva filen inte finns i GitHub-committen som byggs.
