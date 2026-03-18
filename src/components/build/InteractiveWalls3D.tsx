@@ -3,10 +3,11 @@
  * Phase A1: Delegates geometry to shared wallGeometry.ts module.
  * Phase B2: Face-aware paint mode with visual face highlight.
  * Phase C1: Wall-mount placement — clicking a wall places a mounted object.
+ * CI sync marker: keep import and surface module in same SHA.
  */
 
 import { useMemo, useState, useCallback } from 'react';
-import RoomWallSurfaces3D from './RoomWallSurfaces3D';
+import { RoomWallSurfaces3D } from './Walls3D';
 import { useAppStore } from '../../store/useAppStore';
 import { generateWallSegments, detectClickedFace } from '../../lib/wallGeometry';
 import { clickToWallMount, computeWallMountTransform } from '../../lib/wallMountPlacement';
