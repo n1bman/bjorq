@@ -1,26 +1,53 @@
 
+Målet är att få GitHub Actions grönt igen och samtidigt behålla nya rummålningssystemet.
 
-# Fix: Build error — missing RoomWallSurfaces3D
+1) Verifierad rotorsak (från run-annoteringar)
+- Nuvarande blockerare i CI är TypeScript-fel i:
+  - `src/components/build/RoomWallSurfaces3D.tsx` rad 73–74
+- Felet:
+  - `Property 'position' does not exist on type 'WallOpening'`
+- I `src/store/types.ts` har `WallOpening` fältet `offset` (inte `position`).
 
-## Problem
-`RoomWallSurfaces3D.tsx` was deleted during a revert but both `Walls3D.tsx` (line 8, 30) and `InteractiveWalls3D.tsx` (line 9, plus usage) still import it.
+2) Kodändring (minimal och säker)
+- Fil: `src/components/build/RoomWallSurfaces3D.tsx`
+- I `generateClippedStrips(...)`, byt:
+  - `op.position * wallLen`
+  till
+  - `op.offset * wallLen`
+- Detta följer resten av kodbasen (`BuildCanvas2D`, `wallGeometry`, `wallFaces`, `buildUtils`) som redan använder `op.offset`.
 
-## Solution
-Two options — we need both the cleanup AND the re-creation since the plan is to use this component:
+3) Robusthet för äldre projektdata (rekommenderad)
+- Lägg fallback i samma funktion så gamla exporter inte beter sig konstigt:
+```ts
+const normalizedOffset =
+  typeof (op as any).offset === 'number'
+    ? (op as any).offset
+    : typeof (op as any).position === 'number'
+      ? (op as any).position
+      : 0.5;
+const opT0 = normalizedOffset * wallLen - halfW;
+const opT1 = normalizedOffset * wallLen + halfW;
+```
+- Viktigt: fallbacken ska inte referera `op.position` utan cast, annars kommer TS-felet tillbaka.
 
-**Re-create `src/components/build/RoomWallSurfaces3D.tsx`** with the full implementation from the approved plan (per-room interior wall-finish surfaces with T-junction clipping and opening subtraction).
+4) Kontrollera att tidigare “Could not resolve ./RoomWallSurfaces3D” inte återkommer
+- Säkerställ att filen faktiskt finns i repo med exakt namn:
+  - `src/components/build/RoomWallSurfaces3D.tsx`
+- Importerna i:
+  - `src/components/build/Walls3D.tsx`
+  - `src/components/build/InteractiveWalls3D.tsx`
+  ska fortsatt vara `./RoomWallSurfaces3D` (case-sensitive exakt).
 
-This was already implemented once but lost during the revert. The file needs to be recreated with:
-- `clipWallToRoom()` — projects room polygon onto wall axis to bound surfaces at T-junctions
-- `generateClippedStrips()` — subtracts openings (doors/windows/passages) from the surface
-- `getRoomFacingSide()` — determines which wall face is interior to the room
-- Material rendering from `room.wallMaterialId`
-- Props: `rooms`, `walls`, `elevation`, optional `interactive` and `onRoomClick`
+5) Verifiering innan push
+- Kör:
+  - `npm run build`
+  - `npm run build:dev`
+- Bekräfta att inga nya TS-fel uppstår.
 
-## Files
-| File | Change |
-|------|--------|
-| `src/components/build/RoomWallSurfaces3D.tsx` | **Create** — full implementation |
+6) Förväntat resultat
+- CI-jobben i länkarna slutar falla på `RoomWallSurfaces3D`.
+- Nya rummålningsflödet (inre ytlager) är kvar.
+- Direkt väggmålning fortsätter vara separerad från rummålning.
 
-No changes needed to `Walls3D.tsx` or `InteractiveWalls3D.tsx` — their imports are already correct.
-
+Teknisk not
+- Felet är inte i Vite/alias eller import-systemet i sig, utan en ren typinkonsistens i ny komponent mot etablerad `WallOpening`-modell.
