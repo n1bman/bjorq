@@ -2,6 +2,7 @@
  * Walls3D.tsx — Home-view (non-interactive) wall renderer.
  * Phase A1: Delegates all geometry to shared wallGeometry.ts module.
  * Room wall finish via RoomWallSurfaces3D additive layer.
+ * CI sync marker: keep import and surface module in same SHA.
  */
 
 import { useMemo } from 'react';
