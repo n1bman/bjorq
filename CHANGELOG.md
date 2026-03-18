@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.0] - 2026-03-18
+
+### Fixed
+- **Build-breaking missing module** — `RoomWallSurfaces3D` component inlined into `Walls3D.tsx` to eliminate persistent GitHub sync issue where the standalone file was not tracked, causing Rollup module resolution failure in CI builds.
+
+### Changed
+- Version bumped to 1.8.0 across `package.json`, `server/package.json`, `config.yaml`, README badge, and documentation.
+
 ## [1.7.3] - 2026-03-15
 
 ### Added
