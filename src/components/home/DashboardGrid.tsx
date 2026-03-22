@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef } from 'react';
 import SortableWidgetGrid from './SortableWidgetGrid';
 import type { SortableItem } from './SortableWidgetGrid';
-import { Home, Cloud, Cpu, Zap, Bell, Video, Settings, Pencil, X, CalendarDays, Bot, Moon, Save, Workflow, Palette, LayoutGrid, Thermometer, Trees } from 'lucide-react';
+import { Home, Cloud, Cpu, Zap, Bell, Video, Settings, Pencil, X, CalendarDays, Bot, Moon, Save, Workflow, Palette, LayoutGrid, Thermometer, Trees, User, Monitor, Database, Link2, Sparkles, Sun, SlidersHorizontal } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Button } from '../ui/button';
 import { useAppStore } from '../../store/useAppStore';
@@ -588,6 +588,251 @@ function GraphicsCategory() {
   );
 }
 
+function SettingsWorkspaceCategory() {
+  const settingsSections = [
+    { id: 'settings-profile', label: 'Profil', icon: User, description: 'Anvandare, adminlage och identitet' },
+    { id: 'settings-look', label: 'Utseende', icon: Palette, description: 'Tema och visuell profil' },
+    { id: 'settings-display', label: 'Skarm & Standby', icon: Monitor, description: 'Kiosk, fullscreen och standby' },
+    { id: 'settings-system', label: 'System', icon: Cpu, description: 'Driftlage, status och serverinfo' },
+    { id: 'settings-connection', label: 'Anslutning', icon: Link2, description: 'Home Assistant, Wizard och plats' },
+    { id: 'settings-data', label: 'Data', icon: Database, description: 'Projekt, backup och import' },
+  ] as const;
+
+  return (
+    <WorkspaceLayout
+      eyebrow="Installningar"
+      title="Kontrollcenter"
+      description="En tydligare arbetsyta for dagliga systemval, anslutningar och serververktyg."
+      sections={settingsSections}
+      asideChildren={
+        <div className="workspace-aside-stack">
+          <MiniWorkspaceCard
+            title="Struktur"
+            text="Varje block ar nu en egen modul, medan vansterpanelen fungerar som ett litet programnav for installningarna."
+          />
+          <MiniWorkspaceCard
+            title="Fokus"
+            text="Profil och anslutningar ligger som tyngre huvudytor. System och data ar sekundara verktyg i samma kontrollcenter."
+          />
+        </div>
+      }
+    >
+      <WorkspaceSection
+        id="settings-profile"
+        title="Profil"
+        description="Identitet, adminupplasning och kopplade konton samlat i en huvudmodul."
+      >
+        <div className="workspace-grid workspace-grid-single">
+          <ProfilePanel />
+        </div>
+      </WorkspaceSection>
+
+      <WorkspaceSection
+        id="settings-look"
+        title="Utseende"
+        description="Tema, accentfarg och de visuella val som styr hur dashboarden upplevs."
+      >
+        <div className="workspace-grid workspace-grid-single">
+          <ThemeCard />
+        </div>
+      </WorkspaceSection>
+
+      <WorkspaceSection
+        id="settings-display"
+        title="Skarm & Standby"
+        description="Kioskflode, browser-lage och hur dashboarden beter sig i vilolage."
+      >
+        <div className="workspace-grid">
+          <DisplaySettings />
+          <StandbySettingsPanel />
+        </div>
+      </WorkspaceSection>
+
+      <WorkspaceSection
+        id="settings-system"
+        title="System"
+        description="Runtime, persistens, hosted-status och serverkoppling i en kompakt driftmodul."
+      >
+        <div className="workspace-grid workspace-grid-single">
+          <SystemStatusCard />
+        </div>
+      </WorkspaceSection>
+
+      <WorkspaceSection
+        id="settings-connection"
+        title="Anslutning"
+        description="Integrationer och lokal konfiguration uppdelat som tydliga programmoduler i stallet for lang formularserie."
+      >
+        <div className="workspace-grid">
+          <HAConnectionPanel />
+          <WizardConnectionPanel />
+          <LocationSettings />
+          <WifiPanel />
+        </div>
+      </WorkspaceSection>
+
+      <WorkspaceSection
+        id="settings-data"
+        title="Data"
+        description="Projektfiler, backup och import ligger samlade i ett eget verktygsomrade."
+      >
+        <div className="workspace-grid">
+          <ProjectManagerPanel />
+          <DataBackupCard />
+        </div>
+      </WorkspaceSection>
+    </WorkspaceLayout>
+  );
+}
+
+function GraphicsWorkspaceCategory() {
+  const graphicsSections = [
+    { id: 'graphics-preview', label: 'Forhandsvisning', icon: Sparkles, description: 'Scenen som arbetscanvas' },
+    { id: 'graphics-rendering', label: 'Rendering', icon: SlidersHorizontal, description: 'Prestanda, skuggor och kvalitet' },
+    { id: 'graphics-sun', label: 'Sol & Vader', icon: Sun, description: 'Ljus, vader och kalibrering' },
+    { id: 'graphics-environment', label: 'Miljo', icon: Trees, description: 'Terrang, himmel och atmosfar' },
+  ] as const;
+
+  return (
+    <WorkspaceLayout
+      eyebrow="Grafik & Miljo"
+      title="Scenstudio"
+      description="En mer programlik arbetsyta dar 3D-forhandsvisningen ar scenen och verktygen ligger som kontrollpaneler runt den."
+      sections={graphicsSections}
+      asideChildren={
+        <div className="workspace-aside-stack">
+          <MiniWorkspaceCard
+            title="Studio"
+            text="Tanken ar mindre dokumentsida och mer ett litet kontrollrum for scenen, med forhandsvisning som huvudfokus."
+          />
+          <MiniWorkspaceCard
+            title="Flode"
+            text="Preview forst, sedan rendering, sol/vader och miljo som tydliga verktygssteg i samma arbetsyta."
+          />
+        </div>
+      }
+    >
+      <WorkspaceSection
+        id="graphics-preview"
+        title="3D-forhandsvisning"
+        description="Live-previewn ligger som scenfonster i stallet for ett vanligt kort, sa att grafikpanelen kanns som ett riktigt program."
+      >
+        <div className="workspace-preview-shell">
+          <div className="workspace-preview-stage">
+            <DashboardPreview3D />
+          </div>
+        </div>
+      </WorkspaceSection>
+
+      <WorkspaceSection
+        id="graphics-rendering"
+        title="Rendering"
+        description="Prestanda, kvalitet och avancerade 3D-reglage i ett samlat teknikblock."
+      >
+        <div className="workspace-grid workspace-grid-single">
+          <GraphicsSettings />
+        </div>
+      </WorkspaceSection>
+
+      <WorkspaceSection
+        id="graphics-sun"
+        title="Sol & Vader"
+        description="Ljusflode, vader och kalibrering samlade i en separat kontrollmodul."
+      >
+        <div className="workspace-grid workspace-grid-single">
+          <SunWeatherPanel />
+        </div>
+      </WorkspaceSection>
+
+      <WorkspaceSection
+        id="graphics-environment"
+        title="Miljo & Atmosfar"
+        description="Mark, himmel och scenens overgripande uttryck i en egen sektion."
+      >
+        <div className="workspace-grid workspace-grid-single">
+          <EnvironmentPanel />
+        </div>
+      </WorkspaceSection>
+    </WorkspaceLayout>
+  );
+}
+
+function WorkspaceLayout({
+  eyebrow,
+  title,
+  description,
+  sections,
+  children,
+  asideChildren,
+}: {
+  eyebrow: string;
+  title: string;
+  description: string;
+  sections: readonly { id: string; label: string; icon: typeof Home; description: string }[];
+  children: React.ReactNode;
+  asideChildren?: React.ReactNode;
+}) {
+  return (
+    <div className="workspace-shell">
+      <div className="workspace-header">
+        <div className="workspace-header-copy">
+          <span className="workspace-eyebrow">{eyebrow}</span>
+          <h2 className="workspace-title">{title}</h2>
+          <p className="workspace-description">{description}</p>
+        </div>
+        <div className="workspace-nav-panel">
+          <div className="workspace-nav-title">Snabblankar</div>
+          <nav className="workspace-nav-list">
+            {sections.map(({ id, label, icon: Icon }) => (
+              <a key={id} href={`#${id}`} className="workspace-nav-chip">
+                <Icon size={13} />
+                <span>{label}</span>
+              </a>
+            ))}
+          </nav>
+        </div>
+        {asideChildren && <div className="workspace-aside-stack workspace-inline-notes">{asideChildren}</div>}
+      </div>
+
+      <div className="workspace-content">{children}</div>
+    </div>
+  );
+}
+
+function WorkspaceSection({
+  id,
+  title,
+  description,
+  children,
+}: {
+  id: string;
+  title: string;
+  description: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section id={id} className="workspace-section scroll-mt-24">
+      <div className="workspace-section-head">
+        <div>
+          <span className="workspace-section-kicker">Sektion</span>
+          <h3 className="workspace-section-title">{title}</h3>
+        </div>
+        <p className="workspace-section-description">{description}</p>
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function MiniWorkspaceCard({ title, text }: { title: string; text: string }) {
+  return (
+    <div className="workspace-note-card">
+      <span className="workspace-note-kicker">{title}</span>
+      <p className="workspace-note-text">{text}</p>
+    </div>
+  );
+}
+
 export const categoryContent: Record<DashCategory, React.FC> = {
   home: HomeCategory,
   weather: WeatherCategory,
@@ -601,8 +846,8 @@ export const categoryContent: Record<DashCategory, React.FC> = {
   robot: RobotPanel,
   activity: ActivityFeed,
   widgets: WidgetsCategory,
-  graphics: GraphicsCategory,
-  settings: SettingsCategory,
+  graphics: GraphicsWorkspaceCategory,
+  settings: SettingsWorkspaceCategory,
 };
 
 export default function DashboardGrid() {

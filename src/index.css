@@ -198,4 +198,113 @@
     @apply text-sm font-semibold uppercase tracking-wider text-primary/80 pb-2 border-b border-border/30;
     font-family: 'Space Grotesk', system-ui, sans-serif;
   }
+
+  .workspace-shell {
+    @apply space-y-6;
+  }
+
+  .workspace-header {
+    @apply rounded-[28px] border border-border/40 bg-gradient-to-br from-card via-card/95 to-secondary/30 p-6;
+    box-shadow:
+      0 18px 40px hsl(220 20% 4% / 0.18),
+      inset 0 1px 0 hsl(0 0% 100% / 0.04);
+  }
+
+  .workspace-header-copy {
+    @apply max-w-3xl space-y-2;
+  }
+
+  .workspace-eyebrow {
+    @apply inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-primary;
+  }
+
+  .workspace-title {
+    @apply text-2xl font-semibold text-foreground;
+  }
+
+  .workspace-description {
+    @apply max-w-2xl text-sm leading-6 text-muted-foreground;
+  }
+
+  .workspace-nav-panel,
+  .workspace-note-card {
+    @apply rounded-[24px] border border-border/40 bg-card/80 p-4 backdrop-blur-sm;
+    box-shadow: 0 14px 32px hsl(220 20% 4% / 0.14);
+  }
+
+  .workspace-nav-title,
+  .workspace-note-kicker {
+    @apply text-[10px] font-semibold uppercase tracking-[0.2em] text-primary/80;
+  }
+
+  .workspace-nav-list {
+    @apply mt-3 flex flex-wrap gap-2;
+  }
+
+  .workspace-nav-chip {
+    @apply inline-flex items-center gap-2 rounded-2xl border border-border/50 px-3 py-2 text-xs font-medium text-foreground transition-colors;
+    background: linear-gradient(180deg, hsl(var(--secondary) / 0.26), hsl(var(--secondary) / 0.08));
+  }
+
+  .workspace-nav-chip:hover {
+    @apply border-primary/20;
+    background: linear-gradient(180deg, hsl(var(--primary) / 0.12), hsl(var(--secondary) / 0.12));
+  }
+
+  .workspace-note-text {
+    @apply mt-1 text-[11px] leading-5 text-muted-foreground;
+  }
+
+  .workspace-aside-stack {
+    @apply space-y-3;
+  }
+
+  .workspace-inline-notes {
+    @apply mt-4 grid gap-3 xl:grid-cols-2;
+  }
+
+  .workspace-content {
+    @apply space-y-5;
+  }
+
+  .workspace-section {
+    @apply rounded-[26px] border border-border/40 bg-gradient-to-b from-card/95 to-card/75 p-5;
+    box-shadow:
+      0 16px 36px hsl(220 20% 4% / 0.16),
+      inset 0 1px 0 hsl(0 0% 100% / 0.03);
+  }
+
+  .workspace-section-head {
+    @apply mb-5 flex flex-col gap-3 border-b border-border/40 pb-4 xl:flex-row xl:items-end xl:justify-between;
+  }
+
+  .workspace-section-kicker {
+    @apply text-[10px] font-semibold uppercase tracking-[0.2em] text-primary/70;
+  }
+
+  .workspace-section-title {
+    @apply mt-1 text-xl font-semibold text-foreground;
+  }
+
+  .workspace-section-description {
+    @apply max-w-xl text-sm leading-6 text-muted-foreground;
+  }
+
+  .workspace-grid {
+    @apply grid grid-cols-1 gap-5 2xl:grid-cols-2;
+  }
+
+  .workspace-grid-single {
+    @apply 2xl:grid-cols-1;
+  }
+
+  .workspace-preview-shell {
+    @apply rounded-[24px] border border-border/50 bg-background/45 p-3;
+  }
+
+  .workspace-preview-stage {
+    @apply h-[320px] overflow-hidden rounded-[20px] border border-border/50 bg-card;
+    box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.03);
+  }
+
 }
