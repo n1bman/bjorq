@@ -591,6 +591,7 @@ function VacuumMarker3D({ position, id, onSelect, onDragStart, selected }: Marke
   const status = vacData?.status ?? 'docked';
   const battery = vacData?.battery ?? 100;
   const currentRoom = vacData?.currentRoom;
+  const targetRoom = vacData?.targetRoom;
   const showDust = vacData?.showDustEffect !== false;
   const marker = useAppStore((s) => s.devices.markers.find((m) => m.id === id));
   const floorId = marker?.floorId;
@@ -627,21 +628,25 @@ function VacuumMarker3D({ position, id, onSelect, onDragStart, selected }: Marke
     return new THREE.Color('#ef4444');
   }, [battery]);
 
-  // Find the active zone for the current room
+  const effectiveRoom = status === 'cleaning'
+    ? (currentRoom ?? targetRoom ?? prevRoom.current)
+    : (currentRoom ?? prevRoom.current);
+
+  // Find the active zone for the current or targeted room
   const activeZone = useMemo((): VacuumZone | null => {
-    if (!currentRoom || !mapping?.zones) return null;
+    if (!effectiveRoom || !mapping?.zones) return null;
     // Match by room name (case-insensitive)
     const zone = mapping.zones.find((z) => {
       const room = rooms.find((r) => r.id === z.roomId);
-      return room?.name.toLowerCase() === currentRoom.toLowerCase() || z.roomId === currentRoom;
+      return room?.name.toLowerCase() === effectiveRoom.toLowerCase() || z.roomId === effectiveRoom;
     });
     return zone ?? null;
-  }, [currentRoom, mapping?.zones, rooms]);
+  }, [effectiveRoom, mapping?.zones, rooms]);
 
   // Detect room change — transition to new zone via straight line
   useEffect(() => {
-    if (currentRoom !== prevRoom.current) {
-      prevRoom.current = currentRoom;
+    if (effectiveRoom && effectiveRoom !== prevRoom.current) {
+      prevRoom.current = effectiveRoom;
       currentTarget.current = null;
       // When switching rooms, move straight to the new zone centroid
       if (activeZone && activeZone.polygon.length >= 3) {
@@ -651,7 +656,7 @@ function VacuumMarker3D({ position, id, onSelect, onDragStart, selected }: Marke
         transitionTarget.current = [cx, cz];
       }
     }
-  }, [currentRoom, activeZone]);
+  }, [effectiveRoom, activeZone]);
 
   // Clear transition immediately when status changes to non-cleaning states
   useEffect(() => {

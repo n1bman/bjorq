@@ -10,6 +10,22 @@ Detailed release notes for each shipped version should also be added as
 
 ## [Unreleased]
 
+## [1.8.8] - 2026-03-22
+
+### Changed
+- **Direktstyrning for robotpanelen** - sugkraft, start, paus, stopp, dockning, lokalisering och rumsstadning skickas nu direkt till Home Assistant i stallet for att enbart ga via lokal state och brygglogik.
+- **Battre 3D-fallback for robotrum** - robotens 3D-rorelse och minimap kan nu folja `targetRoom` och senast kanda rum medan Home Assistant fortfarande ar pa vag att rapportera tillbaka `currentRoom`.
+
+### Fixed
+- **Sugkraft som inte slog igenom** - fan-speed-reglaget och presetknapparna for vacuum skickar nu explicita HA-serviceanrop i hosted/add-on-laget.
+- **Robotknappar som kandes dodda** - de viktigaste vakuumkontrollerna ger nu riktig HA-styrning och visar tydligare fel om kommandot misslyckas.
+- **Stillastaende robot i 3D** - roboten kan nu borja rora sig mot valt rum direkt efter lyckad rumsstadning, i stallet for att sta still tills ett separat `currentRoom` hunnit synkas tillbaka.
+
+### Verified
+- `npm test`
+- `npm run lint`
+- `npm run build`
+
 ### Changed
 - **Kontrollpanelens informationsarkitektur** - `Profil` har blivit en egen huvudmeny, medan grafik-, preview- och miljöinställningar nu bor under `Inställningar`.
 - **Tydligare ansvar mellan ytor** - konto, kopplingar, projektdata och backup är nu samlade under `Profil`, medan tema, display, standby, systemstatus och 3D-scenkontroller ligger under `Inställningar`.

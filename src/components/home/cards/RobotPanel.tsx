@@ -14,6 +14,8 @@ import { cn } from '../../../lib/utils';
 import { useEffect, useRef } from 'react';
 import { getRobotEntityViews } from '../../../lib/haMenuSelectors';
 import { haServiceCaller } from '../../../hooks/useHomeAssistant';
+import { setFromHA } from '../../../hooks/useHABridge';
+import { callHAService, isHostedSync } from '../../../lib/apiClient';
 
 const statusLabels: Record<string, string> = {
   cleaning: 'Städar', docked: 'Dockad', returning: 'Återvänder',
@@ -45,10 +47,21 @@ function BatteryIndicator({ level }: { level: number }) {
   );
 }
 
-function FanSpeedSelector({ data, id, update }: { data: VacuumState; id: string; update: (id: string, p: Record<string, unknown>) => void }) {
+function FanSpeedSelector({
+  data,
+  onChange,
+}: {
+  data: VacuumState;
+  onChange: (presetName: string, speed: number) => void;
+}) {
   const presets = data.fanSpeedList ?? ['Silent', 'Standard', 'Medium', 'Turbo', 'Max'];
   const presetSpeeds: Record<string, number> = {};
   presets.forEach((p, i) => { presetSpeeds[p.toLowerCase()] = Math.round(((i + 1) / presets.length) * 100); });
+
+  const resolvePreset = (speed: number) => {
+    const idx = Math.round((speed / 100) * (presets.length - 1));
+    return presets[Math.max(0, Math.min(idx, presets.length - 1))];
+  };
 
   return (
     <div className="space-y-2">
@@ -60,7 +73,10 @@ function FanSpeedSelector({ data, id, update }: { data: VacuumState; id: string;
         value={[data.fanSpeed ?? 50]}
         max={100}
         step={5}
-        onValueChange={([v]) => update(id, { fanSpeed: v })}
+        onValueChange={([v]) => {
+          const preset = resolvePreset(v);
+          onChange(preset, v);
+        }}
       />
       <div className="flex gap-1 flex-wrap">
         {presets.map((p) => {
@@ -71,7 +87,7 @@ function FanSpeedSelector({ data, id, update }: { data: VacuumState; id: string;
           return (
             <Button key={p} size="sm" variant={active ? 'default' : 'outline'}
               className="h-8 text-[10px] px-2.5"
-              onClick={() => update(id, { fanSpeed: speed, fanSpeedPreset: p })}>
+              onClick={() => onChange(p, speed)}>
               {p}
             </Button>
           );
@@ -82,7 +98,15 @@ function FanSpeedSelector({ data, id, update }: { data: VacuumState; id: string;
 }
 
 /** Room zone cards for targeted cleaning */
-function RoomZoneCards({ marker, data, update }: { marker: DeviceMarker; data: VacuumState; update: (id: string, p: Record<string, unknown>) => void }) {
+function RoomZoneCards({
+  marker,
+  data,
+  onStartRoomCleaning,
+}: {
+  marker: DeviceMarker;
+  data: VacuumState;
+  onStartRoomCleaning: (roomName: string, segmentId: number, fanPreset?: string) => void;
+}) {
   const floors = useAppStore((s) => s.layout.floors);
   const floor = floors.find((f) => f.id === marker.floorId);
   const rooms = floor?.rooms ?? [];
@@ -114,16 +138,7 @@ function RoomZoneCards({ marker, data, update }: { marker: DeviceMarker; data: V
       });
       return;
     }
-    // Add cleaning log entry
-    const existing = (useAppStore.getState().devices.deviceStates[marker.id] as any)?.data?.cleaningLog ?? [];
-    const logEntry: CleaningLogEntry = { room: roomName, startedAt: new Date().toISOString(), fanPreset: (useAppStore.getState().devices.deviceStates[marker.id] as any)?.data?.fanSpeedPreset };
-    update(marker.id, {
-      on: true,
-      status: 'cleaning',
-      currentRoom: roomName,
-      targetRoom: roomName,
-      cleaningLog: [...existing, logEntry],
-    });
+    onStartRoomCleaning(roomName, segId, (useAppStore.getState().devices.deviceStates[marker.id] as any)?.data?.fanSpeedPreset);
   };
 
   const startAllRooms = () => {
@@ -197,6 +212,7 @@ function VacuumMiniMap({ marker, data }: { marker: DeviceMarker; data: VacuumSta
   const rooms = floor?.rooms ?? [];
   const mapping = floor?.vacuumMapping;
   const animRef = useRef<number>(0);
+  const displayRoom = data.currentRoom ?? (data.status === 'cleaning' ? data.targetRoom : undefined);
 
   useEffect(() => {
     const draw = () => {
@@ -333,11 +349,11 @@ function VacuumMiniMap({ marker, data }: { marker: DeviceMarker; data: VacuumSta
       }
 
       // Draw robot position (animated pulse)
-      if (data.currentRoom) {
+      if (displayRoom) {
         const zone = mapping?.zones?.find((z) => {
           const room = rooms.find((r) => r.id === z.roomId);
-          return room?.name.toLowerCase() === data.currentRoom!.toLowerCase()
-            || z.roomId.toLowerCase() === data.currentRoom!.toLowerCase();
+          return room?.name.toLowerCase() === displayRoom.toLowerCase()
+            || z.roomId.toLowerCase() === displayRoom.toLowerCase();
         });
         if (zone && zone.polygon.length > 0) {
           const cx = zone.polygon.reduce((a, p) => a + p[0], 0) / zone.polygon.length;
@@ -362,7 +378,7 @@ function VacuumMiniMap({ marker, data }: { marker: DeviceMarker; data: VacuumSta
 
     draw();
     return () => cancelAnimationFrame(animRef.current);
-  }, [rooms, mapping, data.currentRoom, data.status]);
+  }, [rooms, mapping, displayRoom, data.status]);
 
   return (
     <canvas
@@ -524,6 +540,66 @@ function VacuumCard({ marker, data, update }: { marker: DeviceMarker; data: Vacu
   const id = marker.id;
   const statusColor = statusColors[data.status] ?? 'text-muted-foreground';
   const statusLabel = statusLabels[data.status] ?? data.status;
+  const entityId = marker.ha?.entityId;
+
+  const applyOptimisticUpdate = (partial: Record<string, unknown>) => {
+    setFromHA(true);
+    update(id, partial);
+    queueMicrotask(() => setFromHA(false));
+  };
+
+  const sendRobotService = async (service: string, serviceData: Record<string, unknown>, successPatch?: Record<string, unknown>) => {
+    if (!entityId) {
+      toast({
+        title: 'Robot saknar Home Assistant-koppling',
+        description: 'Koppla robotmarkören till en vacuum-entitet i Design först.',
+        variant: 'destructive',
+      });
+      return false;
+    }
+    try {
+      if (isHostedSync()) {
+        await callHAService('vacuum', service, { entity_id: entityId, ...serviceData });
+      } else {
+        haServiceCaller.current?.('vacuum', service, { entity_id: entityId, ...serviceData });
+      }
+      if (successPatch) applyOptimisticUpdate(successPatch);
+      return true;
+    } catch (err: any) {
+      toast({
+        title: 'Robotkommando misslyckades',
+        description: err?.message || 'Home Assistant svarade inte på kommandot.',
+        variant: 'destructive',
+      });
+      return false;
+    }
+  };
+
+  const handleStartAll = () => void sendRobotService('start', {}, { on: true, status: 'cleaning', targetRoom: undefined });
+  const handlePause = () => void sendRobotService('pause', {}, { status: 'paused' });
+  const handleStop = () => void sendRobotService('stop', {}, { on: false, status: 'idle', targetRoom: undefined });
+  const handleDock = () => void sendRobotService('return_to_base', {}, { status: 'returning', targetRoom: undefined });
+  const handleLocate = () => void sendRobotService('locate', {});
+  const handleFanSpeed = (presetName: string, speed: number) => void sendRobotService(
+    'set_fan_speed',
+    { fan_speed: presetName },
+    { fanSpeed: speed, fanSpeedPreset: presetName }
+  );
+  const handleRoomCleaning = (roomName: string, segmentId: number, fanPreset?: string) => {
+    const existing = data.cleaningLog ?? [];
+    const logEntry: CleaningLogEntry = { room: roomName, startedAt: new Date().toISOString(), fanPreset };
+    void sendRobotService(
+      'send_command',
+      { command: 'app_segment_clean', params: [segmentId] },
+      {
+        on: true,
+        status: 'cleaning',
+        currentRoom: roomName,
+        targetRoom: roomName,
+        cleaningLog: [...existing, logEntry],
+      }
+    );
+  };
 
   return (
     <div className="glass-panel rounded-2xl p-5 space-y-5">
@@ -585,35 +661,35 @@ function VacuumCard({ marker, data, update }: { marker: DeviceMarker; data: Vacu
       <div className="flex gap-2">
         <Button size="sm" variant={data.status === 'cleaning' ? 'default' : 'outline'}
           className="flex-1 h-11 text-xs gap-1"
-          onClick={() => update(id, { on: true, status: 'cleaning', targetRoom: undefined })}>
+          onClick={handleStartAll}>
           <Play size={14} /> Städa allt
         </Button>
         <Button size="sm" variant={data.status === 'paused' ? 'default' : 'outline'}
           className="flex-1 h-11 text-xs gap-1"
-          onClick={() => update(id, { status: 'paused' })}>
+          onClick={handlePause}>
           <Pause size={14} /> Pausa
         </Button>
         <Button size="sm" variant="outline" className="flex-1 h-11 text-xs gap-1"
-          onClick={() => update(id, { on: false, status: 'idle', targetRoom: undefined })}>
+          onClick={handleStop}>
           <Square size={14} /> Stoppa
         </Button>
         <Button size="sm" variant="outline" className="h-11 text-xs gap-1"
-          onClick={() => update(id, { status: 'returning', targetRoom: undefined })}>
+          onClick={handleDock}>
           <HomeIcon size={14} />
         </Button>
       </div>
 
       {/* Room zone cards */}
-      <RoomZoneCards marker={marker} data={data} update={update} />
+      <RoomZoneCards marker={marker} data={data} onStartRoomCleaning={handleRoomCleaning} />
 
       {/* Locate */}
       <Button size="sm" variant="outline" className="w-full h-11 text-xs gap-1"
-        onClick={() => update(id, { _action: 'locate' })}>
+        onClick={handleLocate}>
         <MapPin size={14} /> Lokalisera (pip)
       </Button>
 
       {/* Fan speed */}
-      <FanSpeedSelector data={data} id={id} update={update} />
+      <FanSpeedSelector data={data} onChange={handleFanSpeed} />
 
       {/* Statistics */}
       {(data.cleaningArea !== undefined || data.cleaningTime !== undefined) && (
