@@ -12,6 +12,8 @@ import {
 import { toast } from '../../../hooks/use-toast';
 import { cn } from '../../../lib/utils';
 import { useEffect, useRef } from 'react';
+import { getRobotEntityViews } from '../../../lib/haMenuSelectors';
+import { haServiceCaller } from '../../../hooks/useHomeAssistant';
 
 const statusLabels: Record<string, string> = {
   cleaning: 'Städar', docked: 'Dockad', returning: 'Återvänder',
@@ -419,10 +421,14 @@ export default function RobotPanel() {
   const markers = useAppStore((s) => s.devices.markers);
   const deviceStates = useAppStore((s) => s.devices.deviceStates);
   const updateDeviceState = useAppStore((s) => s.updateDeviceState);
+  const { vacuums, lawnMowers } = useAppStore(getRobotEntityViews);
 
   const vacuumMarkers = markers.filter((m) => m.kind === 'vacuum');
+  const callService = (domain: string, service: string, entityId: string) => {
+    haServiceCaller.current?.(domain, service, { entity_id: entityId });
+  };
 
-  if (vacuumMarkers.length === 0) {
+  if (vacuumMarkers.length === 0 && vacuums.length === 0 && lawnMowers.length === 0) {
     return (
       <div className="text-center py-10">
         <p className="text-sm text-muted-foreground">Ingen robotdammsugare hittad</p>
@@ -433,6 +439,50 @@ export default function RobotPanel() {
 
   return (
     <div className="space-y-4">
+      {(vacuums.length > 0 || lawnMowers.length > 0) && (
+        <div className="glass-panel rounded-2xl p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-semibold text-foreground">Home Assistant-robotar</h3>
+              <p className="text-[10px] text-muted-foreground">Visar upptackta robotenheter aven innan de placeras i 3D.</p>
+            </div>
+            <span className="text-[10px] text-muted-foreground">{vacuums.length + lawnMowers.length} hittade</span>
+          </div>
+
+          {vacuums.map(({ entity, linked, marker }) => (
+            <div key={entity.entityId} className="rounded-xl border border-border/40 bg-secondary/20 p-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate text-xs font-medium text-foreground">{entity.friendlyName}</p>
+                  <p className="truncate text-[10px] text-muted-foreground">{entity.entityId}</p>
+                  <p className="mt-1 text-[10px] text-muted-foreground">{linked && marker ? `Lankad till ${marker.name}` : 'Ej placerad i design'} · Status: {entity.state}</p>
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="outline" className="h-7 text-[10px]" onClick={() => callService('vacuum', 'start', entity.entityId)}>Start</Button>
+                  <Button size="sm" variant="outline" className="h-7 text-[10px]" onClick={() => callService('vacuum', 'return_to_base', entity.entityId)}>Docka</Button>
+                </div>
+              </div>
+            </div>
+          ))}
+
+          {lawnMowers.map(({ entity, linked, marker }) => (
+            <div key={entity.entityId} className="rounded-xl border border-border/40 bg-secondary/20 p-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate text-xs font-medium text-foreground">{entity.friendlyName}</p>
+                  <p className="truncate text-[10px] text-muted-foreground">{entity.entityId}</p>
+                  <p className="mt-1 text-[10px] text-muted-foreground">{linked && marker ? `Lankad till ${marker.name}` : 'Ej placerad i design'} · Status: {entity.state}</p>
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="outline" className="h-7 text-[10px]" onClick={() => callService('lawn_mower', 'start_mowing', entity.entityId)}>Start</Button>
+                  <Button size="sm" variant="outline" className="h-7 text-[10px]" onClick={() => callService('lawn_mower', 'dock', entity.entityId)}>Docka</Button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {vacuumMarkers.map((marker) => {
         const state = deviceStates[marker.id];
         if (!state || state.kind !== 'vacuum') return null;

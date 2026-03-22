@@ -11,15 +11,19 @@ Detailed release notes for each shipped version should also be added as
 ## [Unreleased]
 
 ### Changed
-- **Scoped admin model** - hosted mode now separates everyday device control from administrative actions so normal dashboard use can stay smoother while settings, backups, project changes, raw HA proxy access, and security-sensitive HA domains remain protected.
-- **Profile access clarity** - Profile now explains which actions work without admin unlock and which still require admin.
-- **Hosted reconnect hardening** - hosted live sync now tracks degraded fallback mode, restores stream sync more deliberately after disconnects, and surfaces transport/sync status in system status.
-- **Backup safety hardening** - hosted backup restore now validates payload structure, creates a server-side safety snapshot before restore/reset, and `Rensa all data` now resets hosted server data through the API instead of only clearing the browser.
+
+## [1.8.3] - 2026-03-22
+
+### Changed
+- **Home Assistant menu coverage** - Energy, Climate, Automation, Scenes, Surveillance, and Robot now surface more relevant HA-backed entities directly in their menus, even before everything is fully placed in 3D.
+- **Energy linking depth** - Energy views now distinguish live power sensors and cumulative energy sensors so placed devices can be linked more precisely.
+- **Climate readiness** - Climate views now expose discovered HA climate devices, climate-adjacent entities, and sensor sources alongside the existing comfort-rule setup.
+- **Entity mapping relevance** - the HA entity picker now prioritizes better suggestions based on the current device name instead of relying only on broad domain filtering.
 
 ### Verified
-- **Phase 1 verification** - `npm test`, `npm run lint`, and `npm run build` were run successfully after the access model update.
-- **Phase 2 verification** - hosted reconnect changes were verified with `npm test`, `npm run lint`, and `npm run build`.
-- **Phase 3 verification** - backup/import hardening was verified with `npm test`, `npm run lint`, and `npm run build`.
+- `npm test`
+- `npm run lint`
+- `npm run build`
 
 ## [1.8.2] - 2026-03-22
 

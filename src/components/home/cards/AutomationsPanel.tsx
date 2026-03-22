@@ -1,20 +1,22 @@
 import { useState } from 'react';
+import { Bell, Clock, Monitor, Play, Plus, Trash2, Zap } from 'lucide-react';
 import { useAppStore } from '../../../store/useAppStore';
 import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
 import { Switch } from '../../ui/switch';
-import { Plus, Trash2, Zap, Clock, Monitor, Bell, Play } from 'lucide-react';
 import { cn } from '../../../lib/utils';
-import type { Automation, AutomationTrigger, AutomationAction } from '../../../store/types';
+import type { Automation, AutomationAction, AutomationTrigger } from '../../../store/types';
+import { getAutomationEntityViews } from '../../../lib/haMenuSelectors';
+import { haServiceCaller } from '../../../hooks/useHomeAssistant';
 
 const triggerTypes = [
   { value: 'time', label: 'Tid', icon: Clock },
-  { value: 'device_state', label: 'Enhetstillstånd', icon: Monitor },
-  { value: 'event', label: 'Händelse', icon: Bell },
+  { value: 'device_state', label: 'Enhetstillstand', icon: Monitor },
+  { value: 'event', label: 'Handelse', icon: Bell },
 ] as const;
 
 const actionTypes = [
-  { value: 'device_toggle', label: 'Växla enhet' },
+  { value: 'device_toggle', label: 'Vaxla enhet' },
   { value: 'scene_activate', label: 'Aktivera scen' },
   { value: 'notification', label: 'Skicka notis' },
 ] as const;
@@ -23,13 +25,13 @@ export default function AutomationsPanel() {
   const automations = useAppStore((s) => s.automations);
   const addAutomation = useAppStore((s) => s.addAutomation);
   const removeAutomation = useAppStore((s) => s.removeAutomation);
-  const updateAutomation = useAppStore((s) => s.updateAutomation);
   const toggleAutomation = useAppStore((s) => s.toggleAutomation);
   const markers = useAppStore((s) => s.devices.markers);
   const savedScenes = useAppStore((s) => s.savedScenes);
   const floors = useAppStore((s) => s.layout.floors);
+  const haAutomations = useAppStore(getAutomationEntityViews);
 
-  const allRooms = floors.flatMap((f) => f.rooms ?? []);
+  const allRooms = floors.flatMap((floor) => floor.rooms ?? []);
 
   const [showAdd, setShowAdd] = useState(false);
   const [newName, setNewName] = useState('');
@@ -78,162 +80,143 @@ export default function AutomationsPanel() {
     setShowAdd(false);
   };
 
-  const getTriggerLabel = (a: Automation) => {
-    if (a.trigger.type === 'time') return `⏰ ${a.trigger.config.time || '—'}`;
-    if (a.trigger.type === 'device_state') {
-      const dev = markers.find((m) => m.id === a.trigger.config.deviceId);
-      return `📟 ${dev?.name || 'Enhet'}`;
-    }
-    return '🔔 Händelse';
-  };
-
-  const getActionLabel = (action: AutomationAction) => {
-    if (action.type === 'device_toggle') {
-      const dev = markers.find((m) => m.id === action.config.deviceId);
-      return `Växla ${dev?.name || 'enhet'}`;
-    }
-    if (action.type === 'scene_activate') {
-      const scene = savedScenes.find((s) => s.id === action.config.sceneId);
-      return `Aktivera "${scene?.name || 'scen'}"`;
-    }
-    return `Notis: ${action.config.message || '—'}`;
+  const callService = (domain: string, service: string, data: Record<string, unknown>) => {
+    haServiceCaller.current?.(domain, service, data);
   };
 
   return (
     <div className="space-y-4">
       <div className="glass-panel rounded-2xl p-4">
-        <div className="flex items-center justify-between mb-3">
+        <div className="mb-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Zap size={16} className="text-primary" />
-            <h4 className="text-sm font-semibold text-foreground">Automationer</h4>
+            <h4 className="text-sm font-semibold text-foreground">HA-automationer</h4>
+            <span className="text-[10px] text-muted-foreground">({haAutomations.length})</span>
+          </div>
+        </div>
+        {haAutomations.length === 0 ? (
+          <p className="text-[11px] text-muted-foreground/70">Inga automation.* hittades i Home Assistant ännu.</p>
+        ) : (
+          <div className="space-y-2">
+            {haAutomations.map(({ entity, linked, marker }) => (
+              <div key={entity.entityId} className="rounded-xl border border-border/40 bg-secondary/20 p-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-xs font-medium text-foreground">{entity.friendlyName}</p>
+                    <p className="truncate text-[10px] text-muted-foreground">{entity.entityId}</p>
+                    <p className="mt-1 text-[10px] text-muted-foreground">
+                      Status: {entity.state} {linked && marker ? `· Lankad till ${marker.name}` : '· Ej länkad i design'}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Switch checked={entity.state === 'on'} onCheckedChange={(enabled) => callService('automation', enabled ? 'turn_on' : 'turn_off', { entity_id: entity.entityId })} />
+                    <Button size="sm" variant="outline" className="h-7 gap-1 text-[10px]" onClick={() => callService('automation', 'trigger', { entity_id: entity.entityId })}>
+                      <Play size={10} /> Kor
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="glass-panel rounded-2xl p-4">
+        <div className="mb-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Zap size={16} className="text-primary" />
+            <h4 className="text-sm font-semibold text-foreground">BjorQ-automationer</h4>
             <span className="text-[10px] text-muted-foreground">({automations.length})</span>
           </div>
-          <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => setShowAdd(!showAdd)}>
+          <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => setShowAdd((v) => !v)}>
             <Plus size={14} />
           </Button>
         </div>
 
         {showAdd && (
-          <div className="mb-4 p-3 rounded-lg bg-secondary/30 space-y-3">
-            <Input
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              placeholder="Automationsnamn..."
-              className="h-7 text-xs"
-            />
+          <div className="mb-4 space-y-3 rounded-lg bg-secondary/30 p-3">
+            <Input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Automationsnamn..." className="h-7 text-xs" />
 
-            {/* Trigger */}
             <div className="space-y-1">
-              <p className="text-[10px] text-muted-foreground font-medium">Trigger</p>
+              <p className="text-[10px] font-medium text-muted-foreground">Trigger</p>
               <div className="flex gap-1">
-                {triggerTypes.map((t) => (
-                  <Button
-                    key={t.value}
-                    size="sm"
-                    variant={newTriggerType === t.value ? 'default' : 'outline'}
-                    className="h-6 text-[10px] gap-1"
-                    onClick={() => setNewTriggerType(t.value)}
-                  >
-                    <t.icon size={10} />
-                    {t.label}
+                {triggerTypes.map((triggerType) => (
+                  <Button key={triggerType.value} size="sm" variant={newTriggerType === triggerType.value ? 'default' : 'outline'} className="h-6 gap-1 text-[10px]" onClick={() => setNewTriggerType(triggerType.value)}>
+                    <triggerType.icon size={10} />
+                    {triggerType.label}
                   </Button>
                 ))}
               </div>
-              {newTriggerType === 'time' && (
-                <Input type="time" value={newTriggerTime} onChange={(e) => setNewTriggerTime(e.target.value)} className="h-7 text-xs w-32" />
-              )}
+              {newTriggerType === 'time' && <Input type="time" value={newTriggerTime} onChange={(e) => setNewTriggerTime(e.target.value)} className="h-7 w-32 text-xs" />}
               {newTriggerType === 'device_state' && (
-                <select value={newTriggerDevice} onChange={(e) => setNewTriggerDevice(e.target.value)}
-                  className="w-full h-7 text-xs bg-secondary text-foreground rounded-md px-2 border border-border">
-                  <option value="">Välj enhet...</option>
-                  {markers.map((m) => <option key={m.id} value={m.id}>{m.name || m.kind}</option>)}
+                <select value={newTriggerDevice} onChange={(e) => setNewTriggerDevice(e.target.value)} className="h-7 w-full rounded-md border border-border bg-secondary px-2 text-xs text-foreground">
+                  <option value="">Valj enhet...</option>
+                  {markers.map((marker) => <option key={marker.id} value={marker.id}>{marker.name || marker.kind}</option>)}
                 </select>
               )}
             </div>
 
-            {/* Action */}
             <div className="space-y-1">
-              <p className="text-[10px] text-muted-foreground font-medium">Åtgärd</p>
+              <p className="text-[10px] font-medium text-muted-foreground">Atgard</p>
               <div className="flex gap-1">
-                {actionTypes.map((a) => (
-                  <Button
-                    key={a.value}
-                    size="sm"
-                    variant={newActionType === a.value ? 'default' : 'outline'}
-                    className="h-6 text-[10px]"
-                    onClick={() => setNewActionType(a.value)}
-                  >
-                    {a.label}
+                {actionTypes.map((actionType) => (
+                  <Button key={actionType.value} size="sm" variant={newActionType === actionType.value ? 'default' : 'outline'} className="h-6 text-[10px]" onClick={() => setNewActionType(actionType.value)}>
+                    {actionType.label}
                   </Button>
                 ))}
               </div>
               {newActionType === 'device_toggle' && (
-                <select value={newActionDevice} onChange={(e) => setNewActionDevice(e.target.value)}
-                  className="w-full h-7 text-xs bg-secondary text-foreground rounded-md px-2 border border-border">
-                  <option value="">Välj enhet...</option>
-                  {markers.map((m) => <option key={m.id} value={m.id}>{m.name || m.kind}</option>)}
+                <select value={newActionDevice} onChange={(e) => setNewActionDevice(e.target.value)} className="h-7 w-full rounded-md border border-border bg-secondary px-2 text-xs text-foreground">
+                  <option value="">Valj enhet...</option>
+                  {markers.map((marker) => <option key={marker.id} value={marker.id}>{marker.name || marker.kind}</option>)}
                 </select>
               )}
               {newActionType === 'scene_activate' && (
-                <select value={newActionScene} onChange={(e) => setNewActionScene(e.target.value)}
-                  className="w-full h-7 text-xs bg-secondary text-foreground rounded-md px-2 border border-border">
-                  <option value="">Välj scen...</option>
-                  {savedScenes.map((s) => <option key={s.id} value={s.id}>{s.icon} {s.name}</option>)}
+                <select value={newActionScene} onChange={(e) => setNewActionScene(e.target.value)} className="h-7 w-full rounded-md border border-border bg-secondary px-2 text-xs text-foreground">
+                  <option value="">Valj scen...</option>
+                  {savedScenes.map((scene) => <option key={scene.id} value={scene.id}>{scene.icon} {scene.name}</option>)}
                 </select>
               )}
-              {newActionType === 'notification' && (
-                <Input value={newActionMessage} onChange={(e) => setNewActionMessage(e.target.value)} placeholder="Notismeddelande..." className="h-7 text-xs" />
-              )}
+              {newActionType === 'notification' && <Input value={newActionMessage} onChange={(e) => setNewActionMessage(e.target.value)} placeholder="Notismeddelande..." className="h-7 text-xs" />}
             </div>
 
-            {/* Room linking */}
             {allRooms.length > 0 && (
               <div className="space-y-1">
-                <p className="text-[10px] text-muted-foreground font-medium">Länka till rum (valfritt)</p>
-                <div className="max-h-24 overflow-y-auto space-y-1">
-                  {allRooms.map((r) => (
-                    <label key={r.id} className="flex items-center gap-2 cursor-pointer">
+                <p className="text-[10px] font-medium text-muted-foreground">Lanka till rum (valfritt)</p>
+                <div className="max-h-24 space-y-1 overflow-y-auto">
+                  {allRooms.map((room) => (
+                    <label key={room.id} className="flex cursor-pointer items-center gap-2">
                       <input
                         type="checkbox"
-                        checked={newLinkedRooms.includes(r.id)}
-                        onChange={() => setNewLinkedRooms((prev) => prev.includes(r.id) ? prev.filter((id) => id !== r.id) : [...prev, r.id])}
+                        checked={newLinkedRooms.includes(room.id)}
+                        onChange={() => setNewLinkedRooms((prev) => prev.includes(room.id) ? prev.filter((id) => id !== room.id) : [...prev, room.id])}
                         className="rounded border-border"
                       />
-                      <span className="text-[10px] text-foreground">{r.name}</span>
+                      <span className="text-[10px] text-foreground">{room.name}</span>
                     </label>
                   ))}
                 </div>
               </div>
             )}
 
-            <Button size="sm" className="w-full h-7 text-[10px]" onClick={handleAdd} disabled={!newName.trim()}>
+            <Button size="sm" className="h-7 w-full text-[10px]" onClick={handleAdd} disabled={!newName.trim()}>
               Skapa automation
             </Button>
           </div>
         )}
 
         {automations.length === 0 ? (
-          <p className="text-[10px] text-muted-foreground/60 text-center py-4">
-            Inga automationer ännu. Klicka + för att skapa.
-          </p>
+          <p className="py-4 text-center text-[10px] text-muted-foreground/60">Inga BjorQ-automationer ännu. Klicka + for att skapa.</p>
         ) : (
           <div className="space-y-2">
-            {automations.map((a) => (
-              <div key={a.id} className={cn(
-                'flex items-center gap-3 p-2.5 rounded-lg border transition-all',
-                a.enabled ? 'border-border/50 bg-secondary/20' : 'border-border/20 bg-muted/20 opacity-60'
-              )}>
-                <Switch checked={a.enabled} onCheckedChange={() => toggleAutomation(a.id)} />
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium text-foreground truncate">{a.name}</p>
-                  <p className="text-[9px] text-muted-foreground">
-                    {getTriggerLabel(a)} → {a.actions.map(getActionLabel).join(', ')}
-                    {a.linkedRoomIds && a.linkedRoomIds.length > 0 && (
-                      <> · {a.linkedRoomIds.map((rid) => allRooms.find((r) => r.id === rid)?.name).filter(Boolean).join(', ')}</>
-                    )}
-                  </p>
+            {automations.map((automation) => (
+              <div key={automation.id} className={cn('flex items-center gap-3 rounded-lg border p-2.5 transition-all', automation.enabled ? 'border-border/50 bg-secondary/20' : 'border-border/20 bg-muted/20 opacity-60')}>
+                <Switch checked={automation.enabled} onCheckedChange={() => toggleAutomation(automation.id)} />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-xs font-medium text-foreground">{automation.name}</p>
+                  <p className="text-[9px] text-muted-foreground">{automation.trigger.type} → {automation.actions.map((action) => action.type).join(', ')}</p>
                 </div>
-                <button onClick={() => removeAutomation(a.id)} className="p-1 rounded hover:bg-destructive/20 text-muted-foreground shrink-0">
+                <button onClick={() => removeAutomation(automation.id)} className="shrink-0 rounded p-1 text-muted-foreground hover:bg-destructive/20">
                   <Trash2 size={12} />
                 </button>
               </div>

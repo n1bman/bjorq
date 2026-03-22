@@ -1,22 +1,17 @@
 # Technical Phases
 
-This document defines the current technical rollout for BJORQ after the hosted/add-on hardening work in `v1.8.1` and the settings cleanup in `v1.8.2`.
+This document tracks the current technical rollout for BJORQ after the hosted/add-on hardening in `v1.8.1` and the settings cleanup in `v1.8.2`.
 
-The goal is to keep Home Assistant add-on as the primary test environment while preserving feature parity across Windows and Linux hosted builds.
+The main rule is still add-on first for validation, while Windows and Linux hosted builds should end up with the same feature set.
 
 ## Phase 1 - Security and Access Model
 
-Status: In progress
+Status: Completed
 
 Primary focus:
 - Keep the hosted/add-on admin PIN model stable and predictable.
-- Decide exactly which actions require admin unlock and which should remain available in normal dashboard use.
-- Make the same rules apply across add-on, Windows, and Linux hosted mode.
-
-Scope:
-- Protect sensitive settings and server-side actions.
-- Keep recovery simple by clearing the stored PIN hash in persistent server data.
-- Avoid turning everyday dashboard use into a heavy login flow.
+- Separate normal dashboard use from administrative actions.
+- Apply the same protection rules across add-on, Windows, and Linux hosted mode.
 
 Definition of done:
 - Sensitive routes are consistently guarded.
@@ -25,17 +20,11 @@ Definition of done:
 
 ## Phase 2 - Hosted Live Sync and Reconnect
 
-Status: In progress
+Status: Completed
 
 Primary focus:
-- Harden the new server-side Home Assistant live hub.
+- Harden the server-side Home Assistant live hub.
 - Verify reconnect and multi-client behavior in real Home Assistant usage.
-
-Scope:
-- Initial snapshot and incremental state updates.
-- Fallback polling only when the live path is degraded.
-- Reconnect after Home Assistant restart or temporary network loss.
-- Consistent behavior across add-on, Windows, and Linux hosted mode.
 
 Definition of done:
 - State updates arrive live without constant full polling.
@@ -44,55 +33,64 @@ Definition of done:
 
 ## Phase 3 - Backup, Restore, and Data Integrity
 
-Status: Next
+Status: Completed
 
 Primary focus:
 - Make backup and import reliable enough for real migration and recovery.
-
-Scope:
-- Define exactly what a full hosted backup contains.
-- Validate import payloads before writing to disk.
-- Ensure restore survives server/add-on restart.
-- Reduce edge cases around project, profile, and asset persistence.
 
 Definition of done:
 - Export/import works for real project data.
 - Restored data survives restart.
 - Error states are clear when backup content is incomplete or invalid.
 
-## Phase 4 - Settings and Graphics Structure
+## Phase 4 - HA Menu Coverage and Entity Matching
 
-Status: Next
+Status: In progress
+
+Primary focus:
+- Make the HA-driven menus useful even when a home does not yet have every device category installed.
+
+Scope:
+- Centralize HA selectors so Energy, Climate, Automations, Scenes, Surveillance, and Robot use the same discovery rules.
+- Surface HA entities even before they are fully placed in 3D.
+- Improve design-time HA entity matching so suggested links feel more relevant than raw domain filtering.
+- Keep existing 3D preview and standby camera workflows intact while menu coverage expands.
+
+Definition of done:
+- HA menus can represent both linked and future/unplaced entities more clearly.
+- Entity matching in design mode feels more relevant than raw domain-only filtering.
+- Missing climate, energy, surveillance, and robot hardware no longer makes those menus feel empty or unfinished.
+
+## Phase 5 - Settings and Graphics Structure
+
+Status: Deferred
 
 Primary focus:
 - Remove remaining duplication and overlap in `Inställningar` and `Grafik & Miljö` without changing the product's visual identity.
-
-Scope:
-- Clarify responsibility between sections like system, connection, data, graphics, and standby.
-- Keep all existing camera and preview workflows intact.
-- Improve navigation and grouping without introducing explanatory filler copy.
 
 Definition of done:
 - Fewer duplicated controls or repeated concepts.
 - Important 3D preview and standby camera actions remain obvious.
 - The pages feel more like a coherent app workspace than a long settings document.
 
-## Phase 5 - Tests, CI, and Release Confidence
+## Phase 6 - Tests, CI, and Release Confidence
 
 Status: Ongoing
 
 Primary focus:
-- Make releases safer by expanding automated coverage around hosted logic.
+- Make releases safer by expanding automated coverage around hosted logic and HA menu behavior.
 
 Scope:
 - Auth tests.
 - Live sync and reconnect tests.
 - Backup and restore tests.
 - Storage and route protection tests.
+- HA selector and HA menu coverage tests.
 - CI parity for lint, test, and build.
 
 Definition of done:
 - Core hosted flows are covered by repeatable tests.
+- HA menu selectors and entity matching rules have targeted tests.
 - CI reflects the actual minimum quality bar before release.
 
 ## Working Rules
