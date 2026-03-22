@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import { configPath } from '../storage/paths.js';
 import { readJSON, writeJSON } from '../storage/readWrite.js';
+import { getAccessPolicySummary } from './accessPolicy.js';
 
 const COOKIE_NAME = 'bjorq_admin';
 const PIN_MIN_LENGTH = 4;
@@ -143,10 +144,17 @@ export async function getAuthStatusFromRequest(req) {
   return getAuthStatus(req, config);
 }
 
+export function buildAuthPayload(req, config) {
+  return {
+    ...getAuthStatus(req, config),
+    policy: getAccessPolicySummary(),
+  };
+}
+
 export async function requireAdmin(req, res, next) {
   try {
     const config = await getConfigWithSecurity();
-    const auth = getAuthStatus(req, config);
+    const auth = buildAuthPayload(req, config);
     if (!auth.unlocked) {
       return res.status(401).json({ error: 'Admin unlock required', auth });
     }

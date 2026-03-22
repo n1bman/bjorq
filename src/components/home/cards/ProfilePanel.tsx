@@ -114,6 +114,36 @@ export default function ProfilePanel() {
           />
         </div>
 
+        {hosted && status.policy && (
+          <div className="rounded-xl border border-border/50 bg-secondary/20 p-3 space-y-2">
+            <div className="text-[11px] font-medium text-foreground">Atkomstnivaer</div>
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="space-y-1.5">
+                <div className="text-[10px] font-semibold uppercase tracking-wide text-primary">Fungerar utan admin</div>
+                <ul className="space-y-1 text-[10px] text-muted-foreground">
+                  {status.policy.everydayControlSummary.map((item) => (
+                    <li key={item} className="flex gap-1.5">
+                      <span className="mt-[2px] text-primary">•</span>
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="space-y-1.5">
+                <div className="text-[10px] font-semibold uppercase tracking-wide text-amber-500">Kräver admin</div>
+                <ul className="space-y-1 text-[10px] text-muted-foreground">
+                  {status.policy.adminRequiredSummary.map((item) => (
+                    <li key={item} className="flex gap-1.5">
+                      <span className="mt-[2px] text-amber-500">•</span>
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+        )}
+
         {!hosted ? (
           <div className="rounded-xl border border-border/50 bg-secondary/20 px-3 py-2 text-[10px] text-muted-foreground">
             Inloggning anvands bara i hosted- och add-on-laget. I lokal utveckling ar adminskydd avstangt.

@@ -26,10 +26,10 @@ async function parseJsonSafe(res: Response) {
 async function requestJson(input: RequestInfo | URL, init?: RequestInit) {
   const res = await fetch(input, init);
   if (!res.ok) {
-    if (res.status === 401) {
-      notifyAuthRequired();
-    }
     const data = await parseJsonSafe(res);
+    if (res.status === 401) {
+      notifyAuthRequired(data?.error || 'Lås upp adminläge för att fortsätta.');
+    }
     throw Object.assign(new Error(data?.error || `Request failed (${res.status})`), { status: res.status, data });
   }
   return res.json();
@@ -79,6 +79,11 @@ export function getMode(): AppMode | null { return _mode; }
 export interface AuthStatus {
   configured: boolean;
   unlocked: boolean;
+  policy?: {
+    routineControlDomains: string[];
+    everydayControlSummary: string[];
+    adminRequiredSummary: string[];
+  };
 }
 
 export async function fetchBootstrap(): Promise<{

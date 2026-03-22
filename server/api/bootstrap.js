@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { profilesPath, projectsDir, projectFilePath } from '../storage/paths.js';
 import { readJSON, listDirs } from '../storage/readWrite.js';
-import { getAuthStatus, getConfigWithSecurity, maskSecurity } from '../security/auth.js';
+import { buildAuthPayload, getConfigWithSecurity, maskSecurity } from '../security/auth.js';
 
 const router = Router();
 
@@ -25,7 +25,7 @@ router.get('/bootstrap', async (req, res) => {
       profiles,
       projects,
       activeProjectId,
-      auth: getAuthStatus(req, rawConfig),
+      auth: buildAuthPayload(req, rawConfig),
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

@@ -1,8 +1,8 @@
 import { Router } from 'express';
 import {
+  buildAuthPayload,
   buildClearedSessionCookie,
   buildSessionCookie,
-  getAuthStatusFromRequest,
   getConfigWithSecurity,
   issueSession,
   setupPin,
@@ -14,7 +14,8 @@ const router = Router();
 
 router.get('/auth/status', async (req, res) => {
   try {
-    res.json(await getAuthStatusFromRequest(req));
+    const config = await getConfigWithSecurity();
+    res.json(buildAuthPayload(req, config));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -25,7 +26,7 @@ router.post('/auth/setup', async (req, res) => {
     const config = await setupPin(req.body?.pin || '');
     const token = issueSession(config);
     res.setHeader('Set-Cookie', buildSessionCookie(req, token));
-    res.status(201).json({ configured: true, unlocked: true });
+    res.status(201).json(buildAuthPayload(req, config));
   } catch (err) {
     res.status(err.statusCode || 500).json({ error: err.message });
   }
@@ -42,15 +43,16 @@ router.post('/auth/login', async (req, res) => {
     }
     const token = issueSession(result.config);
     res.setHeader('Set-Cookie', buildSessionCookie(req, token));
-    res.json({ configured: true, unlocked: true });
+    res.json(buildAuthPayload(req, result.config));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
 router.post('/auth/logout', async (req, res) => {
+  const config = await getConfigWithSecurity();
   res.setHeader('Set-Cookie', buildClearedSessionCookie(req));
-  res.json({ configured: true, unlocked: false });
+  res.json({ ...buildAuthPayload(req, config), unlocked: false });
 });
 
 router.post('/auth/change-pin', async (req, res) => {
@@ -58,7 +60,7 @@ router.post('/auth/change-pin', async (req, res) => {
     const config = await updatePin(req.body?.currentPin || '', req.body?.nextPin || '');
     const token = issueSession(config);
     res.setHeader('Set-Cookie', buildSessionCookie(req, token));
-    res.json({ configured: true, unlocked: true });
+    res.json(buildAuthPayload(req, config));
   } catch (err) {
     res.status(err.statusCode || 500).json({ error: err.message });
   }

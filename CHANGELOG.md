@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Detailed release notes for each shipped version should also be added as
 `docs/patchnotes-vX.Y.Z.md`. See `docs/10-release-and-patchnotes.md`.
 
+## [Unreleased]
+
+### Changed
+- **Scoped admin model** - hosted mode now separates everyday device control from administrative actions so normal dashboard use can stay smoother while settings, backups, project changes, raw HA proxy access, and security-sensitive HA domains remain protected.
+- **Profile access clarity** - Profile now explains which actions work without admin unlock and which still require admin.
+
+### Verified
+- **Phase 1 verification** - `npm test`, `npm run lint`, and `npm run build` were run successfully after the access model update.
+
 ## [1.8.2] - 2026-03-22
 
 ### Changed

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { haLiveHub } from '../ha/liveHub.js';
-import { requireAdmin } from '../security/auth.js';
+import { getAuthStatusFromRequest } from '../security/auth.js';
+import { getServiceAccessPolicy } from '../security/accessPolicy.js';
 
 const router = Router();
 
@@ -25,11 +26,18 @@ router.get('/live/events', async (req, res) => {
   });
 });
 
-router.post('/live/service', requireAdmin, async (req, res) => {
+router.post('/live/service', async (req, res) => {
   try {
     const { domain, service, data } = req.body || {};
     if (!domain || !service) {
       return res.status(400).json({ error: 'domain and service are required' });
+    }
+    const access = getServiceAccessPolicy(domain);
+    if (access.requiresAdmin) {
+      const auth = await getAuthStatusFromRequest(req);
+      if (!auth.unlocked) {
+        return res.status(401).json({ error: access.reason, auth });
+      }
     }
     const result = await haLiveHub.callService(domain, service, data || {});
     res.json({ ok: true, result });
