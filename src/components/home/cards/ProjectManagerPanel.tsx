@@ -99,11 +99,22 @@ export default function ProjectManagerPanel() {
     }
   };
 
-  const confirmImport = () => {
+  const confirmImport = async () => {
     if (!importPreview) return;
 
     const result = importBuildProject(importPreview.data, 'replace');
     if (result.success) {
+      if (isHostedSync()) {
+        try {
+          await persistHostedProjectNow();
+        } catch (err: any) {
+          toast.error('Projekt importerat lokalt men kunde inte sparas till servern', {
+            description: err?.data?.error || err?.message || 'Serverlagring misslyckades',
+          });
+          setImportPreview(null);
+          return;
+        }
+      }
       toast.success('Projekt importerat ✅', {
         description: `${result.stats.floors} våningar, ${result.stats.rooms} rum, ${result.stats.devices} enheter`,
       });

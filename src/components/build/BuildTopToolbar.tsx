@@ -149,6 +149,17 @@ export default function BuildTopToolbar() {
       if (!valid) { toast.error(`Ogiltig fil: ${errors.join(', ')}`); return; }
       const result = importBuildProject(data, 'replace');
       if (result.success) {
+        if (isHostedSync()) {
+          const { persistHostedProjectNow } = await import('../../store/useAppStore');
+          try {
+            await persistHostedProjectNow();
+          } catch (err: any) {
+            toast.error('Projekt importerat lokalt men kunde inte sparas till servern', {
+              description: err?.data?.error || err?.message || 'Serverlagring misslyckades',
+            });
+            return;
+          }
+        }
         toast.success('Projekt importerat ✅', { description: `${result.stats.floors} våningar, ${result.stats.rooms} rum, ${result.stats.devices} enheter` });
       } else {
         toast.error(`Import misslyckades: ${result.error}`);

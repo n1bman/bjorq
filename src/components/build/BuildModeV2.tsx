@@ -976,11 +976,24 @@ function ImportCatalog() {
       return;
     }
     const reader = new FileReader();
-    reader.onload = () => {
+    reader.onload = async () => {
       const dataUrl = reader.result as string;
       const store = useAppStore.getState();
       const floorId = store.layout.activeFloorId;
-      if (floorId && store.setReferenceDrawing) store.setReferenceDrawing(floorId, { url: dataUrl, opacity: 0.5, scale: 100, offsetX: 0, offsetY: 0, rotation: 0, locked: false });
+      if (floorId && store.setReferenceDrawing) {
+        store.setReferenceDrawing(floorId, { url: dataUrl, opacity: 0.5, scale: 100, offsetX: 0, offsetY: 0, rotation: 0, locked: false });
+        if ((await import('../../lib/apiClient')).isHostedSync()) {
+          try {
+            const { persistHostedProjectNow } = await import('../../store/useAppStore');
+            await persistHostedProjectNow();
+          } catch (err: any) {
+            toast.error('Planritningen lades in men kunde inte sparas till servern', {
+              description: err?.data?.error || err?.message || 'Serverlagring misslyckades',
+            });
+            return;
+          }
+        }
+      }
       toast.success('Planritning importerad');
     };
     reader.readAsDataURL(file);
@@ -998,6 +1011,8 @@ function ImportCatalog() {
         const serverUrl = `/projects/home/assets/building/${result.assetId}/files/balanced.glb`;
         setImportedModel({ url: serverUrl, fileData: undefined });
         setHomeGeometrySource('imported');
+        const { persistHostedProjectNow } = await import('../../store/useAppStore');
+        await persistHostedProjectNow();
       } catch (err) {
         console.error('[Import] Server upload failed, falling back to blob:', err);
         const url = URL.createObjectURL(file);
