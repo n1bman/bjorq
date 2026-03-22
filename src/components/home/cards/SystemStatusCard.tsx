@@ -1,14 +1,17 @@
 import { Info } from 'lucide-react';
 import { getMode } from '../../../lib/apiClient';
+import { useAdminAuth } from '../../../hooks/useAdminAuth';
 
 export default function SystemStatusCard() {
   const mode = getMode();
   const hosted = mode === 'HOSTED';
+  const { status } = useAdminAuth();
 
   const rows = [
     { label: 'Läge', value: mode },
     { label: 'Persistens', value: hosted ? 'Disk (data/)' : 'LocalStorage' },
-    { label: 'HA-anslutning', value: hosted ? 'Server Proxy' : 'Direkt WebSocket' },
+    { label: 'HA-anslutning', value: hosted ? 'Server live-hub' : 'Direkt WebSocket' },
+    ...(hosted ? [{ label: 'Adminskydd', value: !status.configured ? 'Av' : status.unlocked ? 'Upplåst' : 'Låst' }] : []),
     ...(hosted ? [{ label: 'Server', value: window.location.origin }] : []),
   ];
 

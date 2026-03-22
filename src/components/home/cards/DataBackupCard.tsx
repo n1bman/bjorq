@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { useAppStore, getDefaultState } from '../../../store/useAppStore';
 import { Button } from '../../ui/button';
 import { Download, Upload, Trash2, Save, Play, XCircle, Database } from 'lucide-react';
-import { isHostedSync, getMode } from '../../../lib/apiClient';
+import { exportHostedBackup, getMode, isHostedSync, restoreHostedBackup } from '../../../lib/apiClient';
 import { createDemoLayout, createDemoDevices } from '../../../lib/demoData';
 import { toast } from 'sonner';
 import {
@@ -30,6 +30,21 @@ export default function DataBackupCard() {
   ) && devices.markers.length > 0;
 
   const handleExport = () => {
+    if (isHostedSync()) {
+      exportHostedBackup().then((data) => {
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `bjorq-backup-${new Date().toISOString().slice(0, 10)}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }).catch((err) => {
+        toast.error(err.message || 'Kunde inte exportera backup');
+      });
+      return;
+    }
+
     const state = useAppStore.getState();
     const data: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(state)) {
@@ -63,9 +78,14 @@ export default function DataBackupCard() {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = (ev) => {
+    reader.onload = async (ev) => {
       try {
         const data = JSON.parse(ev.target?.result as string);
+        if (isHostedSync()) {
+          await restoreHostedBackup(data);
+          window.location.reload();
+          return;
+        }
         useAppStore.setState(data);
       } catch {
         alert('Kunde inte läsa backup-filen.');

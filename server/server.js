@@ -1,23 +1,27 @@
 import express from 'express';
 import path from 'path';
-import { dataDir, configPath, profilesPath, projectsDir, distDir } from './storage/paths.js';
+import { configPath, dataDir, distDir, profilesPath, projectsDir } from './storage/paths.js';
 import { ensureDir, readJSON, writeJSON } from './storage/readWrite.js';
+import bootstrapRouter from './api/bootstrap.js';
+import authRouter from './api/auth.js';
+import liveRouter from './api/live.js';
 import configRouter from './api/config.js';
 import profilesRouter from './api/profiles.js';
-import projectsRouter from './api/projects.js';
 import assetsRouter from './api/assets.js';
+import projectsRouter from './api/projects.js';
 import haProxyRouter from './api/haProxy.js';
-import bootstrapRouter from './api/bootstrap.js';
 import backupsRouter from './api/backups.js';
+import { ensureSecurityDefaults } from './security/auth.js';
+import { haLiveHub } from './ha/liveHub.js';
 
 const app = express();
 const PORT = parseInt(process.env.PORT || '3000', 10);
 
-// Middleware
 app.use(express.json({ limit: '50mb' }));
 
-// API routes
 app.use('/api', bootstrapRouter);
+app.use('/api', authRouter);
+app.use('/api', liveRouter);
 app.use('/api', configRouter);
 app.use('/api', profilesRouter);
 app.use('/api', assetsRouter);
@@ -25,34 +29,31 @@ app.use('/api', projectsRouter);
 app.use('/api', haProxyRouter);
 app.use('/api', backupsRouter);
 
-// Serve GLB assets from data/projects/
 app.use('/projects', express.static(path.join(dataDir(), 'projects')));
 
-// Serve frontend build
 const dist = distDir();
 app.use(express.static(dist));
 
-// SPA fallback
 app.get('*', (_req, res) => {
   res.sendFile(path.join(dist, 'index.html'));
 });
 
-// Bootstrap data directory
 async function bootstrap() {
   await ensureDir(dataDir());
   await ensureDir(projectsDir());
 
-  // Create default config if missing
-  if (!(await readJSON(configPath()))) {
-    await writeJSON(configPath(), {
+  const existingConfig = await readJSON(configPath());
+  if (!existingConfig) {
+    await writeJSON(configPath(), ensureSecurityDefaults({
       ha: { baseUrl: '', token: '' },
       ui: { defaultProjectId: 'home', defaultProfile: 'balanced' },
       network: { port: PORT },
-    });
+    }));
     console.log('[Boot] Created default config.json');
+  } else {
+    await writeJSON(configPath(), ensureSecurityDefaults(existingConfig));
   }
 
-  // Create default profiles if missing
   if (!(await readJSON(profilesPath()))) {
     await writeJSON(profilesPath(), {
       profile: { name: '', theme: 'dark', accentColor: '#f59e0b', dashboardBg: 'scene3d' },
@@ -69,10 +70,11 @@ async function bootstrap() {
   }
 }
 
-bootstrap().then(() => {
+bootstrap().then(async () => {
+  await haLiveHub.connect().catch((err) => console.warn('[Boot] Failed to connect HA live hub:', err.message));
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`\n  bjorQ Dashboard Server`);
-    console.log(`  ─────────────────────`);
+    console.log(`  ---------------------`);
     console.log(`  Local:   http://localhost:${PORT}`);
     console.log(`  Network: http://0.0.0.0:${PORT}`);
     console.log(`  Data:    ${dataDir()}\n`);

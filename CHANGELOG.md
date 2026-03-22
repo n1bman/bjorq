@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.1] - 2026-03-22
+
+### Added
+- **Hosted admin protection** - optional admin-PIN with hashed storage, session-based unlock, profile-integrated login flow, and recovery by clearing the stored PIN hash from persistent config.
+- **Hosted live sync hub** - server-side Home Assistant live snapshot and event streaming for add-on and hosted deployments, with fallback recovery instead of constant full polling.
+
+### Changed
+- **Settings clarity** - admin login and access status are now surfaced under Profile in Settings so hosted and add-on setup is easier to understand during release testing.
+- **Release documentation** - repository docs and add-on docs now reflect hosted live sync, protected settings, and current versioning.
+
+### Fixed
+- **Hosted backup restore** - full backup import now restores through the server data layer instead of only replacing in-browser state.
+- **Server path safety** - project and asset file paths are validated against allowed storage roots before read, write, upload, or delete operations.
+- **Quality gate parity** - lint configuration and CI steps now match the real repo workflow by running lint, tests, and build.
+
 ## [1.8.0] - 2026-03-18
 
 ### Fixed

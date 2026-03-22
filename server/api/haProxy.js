@@ -1,10 +1,11 @@
 import { Router } from 'express';
 import { configPath } from '../storage/paths.js';
 import { readJSON } from '../storage/readWrite.js';
+import { requireAdmin } from '../security/auth.js';
 
 const router = Router();
 
-router.all('/ha/*', async (req, res) => {
+router.all('/ha/*', requireAdmin, async (req, res) => {
   try {
     const config = await readJSON(configPath());
     const baseUrl = config?.ha?.baseUrl;

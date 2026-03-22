@@ -6,6 +6,8 @@ import { spawn } from 'child_process';
 import { fileURLToPath } from 'url';
 import { projectDir, assetsDir, assetFilesDir } from '../storage/paths.js';
 import { readJSON, writeJSON, ensureDir, listDirs } from '../storage/readWrite.js';
+import { requireAdmin } from '../security/auth.js';
+import { assertSafeFilename, assertSafeSegment, resolveInside, safeProjectId, safeProjectPath } from '../storage/safePaths.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const CATALOG_DIR = path.resolve(__dirname, '../../public/catalog');
@@ -63,53 +65,59 @@ async function findCatalogAssetDir(assetId) {
 
 router.get('/projects/:id/assets', async (req, res) => {
   try {
+    const projectId = safeProjectId(req.params.id);
     const typeFilter = req.query.type;
-    const assetsBase = path.join(projectDir(req.params.id), 'assets');
-    const types = typeFilter ? [typeFilter] : await listDirs(assetsBase);
+    const assetsBase = safeProjectPath(projectId, 'assets');
+    const types = typeFilter ? [assertSafeSegment(String(typeFilter), 'asset type')] : await listDirs(assetsBase);
     const assets = [];
     for (const type of types) {
-      const typeDir = path.join(assetsBase, type);
+      const typeDir = resolveInside(assetsBase, assertSafeSegment(type, 'asset type'));
       const assetIds = await listDirs(typeDir);
       for (const assetId of assetIds) {
-        const meta = await readJSON(path.join(typeDir, assetId, 'asset.json'));
+        const meta = await readJSON(resolveInside(typeDir, assertSafeSegment(assetId, 'asset id'), 'asset.json'));
         if (meta) assets.push({ ...meta, type, assetId });
       }
     }
     res.json(assets);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.statusCode || 500).json({ error: err.message });
   }
 });
 
 router.get('/projects/:id/assets/:assetId', async (req, res) => {
   try {
-    const assetsBase = path.join(projectDir(req.params.id), 'assets');
+    const projectId = safeProjectId(req.params.id);
+    const assetId = assertSafeSegment(req.params.assetId, 'asset id');
+    const assetsBase = safeProjectPath(projectId, 'assets');
     const types = await listDirs(assetsBase);
     for (const type of types) {
-      const meta = await readJSON(path.join(assetsBase, type, req.params.assetId, 'asset.json'));
-      if (meta) return res.json({ ...meta, type, assetId: req.params.assetId });
+      const meta = await readJSON(resolveInside(assetsBase, assertSafeSegment(type, 'asset type'), assetId, 'asset.json'));
+      if (meta) return res.json({ ...meta, type, assetId });
     }
     res.status(404).json({ error: 'Asset not found' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.statusCode || 500).json({ error: err.message });
   }
 });
 
-router.post('/projects/:id/assets/upload', upload.single('file'), async (req, res) => {
+router.post('/projects/:id/assets/upload', requireAdmin, upload.single('file'), async (req, res) => {
   try {
+    const projectId = safeProjectId(req.params.id);
     const { type = 'building', name = 'Unnamed', variant = 'balanced' } = req.body;
-    const assetId = req.body.assetId || Math.random().toString(36).slice(2, 10);
-    const filesDir = assetFilesDir(req.params.id, type, assetId);
+    const safeType = assertSafeSegment(type, 'asset type');
+    const safeVariant = assertSafeFilename(`${variant}.glb`, 'asset variant');
+    const assetId = assertSafeSegment(req.body.assetId || Math.random().toString(36).slice(2, 10), 'asset id');
+    const filesDir = assetFilesDir(projectId, safeType, assetId);
     await ensureDir(filesDir);
 
-    const destPath = path.join(filesDir, `${variant}.glb`);
+    const destPath = path.join(filesDir, safeVariant);
     await fs.rename(req.file.path, destPath);
 
-    const metaPath = path.join(assetsDir(req.params.id, type, assetId), 'asset.json');
-    const existing = (await readJSON(metaPath)) || { name, type, assetId, variants: {} };
+    const metaPath = path.join(assetsDir(projectId, safeType, assetId), 'asset.json');
+    const existing = (await readJSON(metaPath)) || { name, type: safeType, assetId, variants: {} };
     existing.name = name;
     existing.variants = existing.variants || {};
-    existing.variants[variant] = { file: `${variant}.glb`, size: req.file.size };
+    existing.variants[variant] = { file: safeVariant, size: req.file.size };
     existing.updatedAt = new Date().toISOString();
     await writeJSON(metaPath, existing);
 
@@ -126,15 +134,16 @@ const propUpload = multer({ dest: '/tmp/bjorq-uploads' }).fields([
   { name: 'thumbnail', maxCount: 1 },
 ]);
 
-router.post('/projects/:id/assets/props/upload', propUpload, async (req, res) => {
+router.post('/projects/:id/assets/props/upload', requireAdmin, propUpload, async (req, res) => {
   try {
     const files = req.files;
     const modelFile = files?.model?.[0];
     if (!modelFile) return res.status(400).json({ error: 'No model file provided' });
 
-    const assetId = req.body.assetId || Math.random().toString(36).slice(2, 10);
+    const projectId = safeProjectId(req.params.id);
+    const assetId = assertSafeSegment(req.body.assetId || Math.random().toString(36).slice(2, 10), 'asset id');
     const category = req.body.category || 'imported';
-    const assetDir = path.join(projectDir(req.params.id), 'assets', 'props', assetId);
+    const assetDir = safeProjectPath(projectId, 'assets', 'props', assetId);
     const filesPath = path.join(assetDir, 'files');
     await ensureDir(filesPath);
 
@@ -172,13 +181,13 @@ router.post('/projects/:id/assets/props/upload', propUpload, async (req, res) =>
 
     res.status(201).json({
       ...meta,
-      modelUrl: `/projects/${req.params.id}/assets/props/${assetId}/files/model.glb`,
+      modelUrl: `/projects/${projectId}/assets/props/${assetId}/files/model.glb`,
       thumbnailUrl: thumbnailPath
-        ? `/projects/${req.params.id}/assets/props/${assetId}/files/${thumbnailPath}`
+        ? `/projects/${projectId}/assets/props/${assetId}/files/${thumbnailPath}`
         : undefined,
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.statusCode || 500).json({ error: err.message });
   }
 });
 
@@ -189,7 +198,7 @@ const catalogUpload = multer({ dest: '/tmp/bjorq-uploads' }).fields([
   { name: 'thumbnail', maxCount: 1 },
 ]);
 
-router.post('/catalog/ingest', catalogUpload, async (req, res) => {
+router.post('/catalog/ingest', requireAdmin, catalogUpload, async (req, res) => {
   try {
     const files = req.files;
     const modelFile = files?.model?.[0];
@@ -282,7 +291,7 @@ router.post('/catalog/ingest', catalogUpload, async (req, res) => {
 
 // ── Catalog reindex ──
 
-router.post('/catalog/reindex', async (_req, res) => {
+router.post('/catalog/reindex', requireAdmin, async (_req, res) => {
   try {
     await regenerateCatalogIndex();
     const index = await readJSON(path.join(CATALOG_DIR, 'index.json'));
@@ -295,7 +304,7 @@ router.post('/catalog/reindex', async (_req, res) => {
 // ── Catalog management endpoints (hosted mode) ──
 
 // Update metadata for a curated asset
-router.put('/catalog/:assetId/meta', async (req, res) => {
+router.put('/catalog/:assetId/meta', requireAdmin, async (req, res) => {
   try {
     const assetDir = await findCatalogAssetDir(req.params.assetId);
     if (!assetDir) return res.status(404).json({ error: 'Curated asset not found' });
@@ -322,7 +331,7 @@ router.put('/catalog/:assetId/meta', async (req, res) => {
 
 // Replace thumbnail for a curated asset
 const thumbUpload = multer({ dest: '/tmp/bjorq-uploads' }).single('thumbnail');
-router.put('/catalog/:assetId/thumbnail', thumbUpload, async (req, res) => {
+router.put('/catalog/:assetId/thumbnail', requireAdmin, thumbUpload, async (req, res) => {
   try {
     const assetDir = await findCatalogAssetDir(req.params.assetId);
     if (!assetDir) return res.status(404).json({ error: 'Curated asset not found' });
@@ -345,7 +354,7 @@ router.put('/catalog/:assetId/thumbnail', thumbUpload, async (req, res) => {
 });
 
 // Delete a curated asset
-router.delete('/catalog/:assetId', async (req, res) => {
+router.delete('/catalog/:assetId', requireAdmin, async (req, res) => {
   try {
     const assetDir = await findCatalogAssetDir(req.params.assetId);
     if (!assetDir) return res.status(404).json({ error: 'Curated asset not found' });
@@ -363,26 +372,34 @@ router.delete('/catalog/:assetId', async (req, res) => {
 
 router.get('/projects/:id/assets/:type/:assetId/files/:filename', async (req, res) => {
   try {
-    const filePath = path.join(
-      projectDir(req.params.id), 'assets',
-      req.params.type, req.params.assetId, 'files',
-      req.params.filename
+    const filePath = safeProjectPath(
+      safeProjectId(req.params.id),
+      'assets',
+      assertSafeSegment(req.params.type, 'asset type'),
+      assertSafeSegment(req.params.assetId, 'asset id'),
+      'files',
+      assertSafeFilename(req.params.filename)
     );
     await fs.access(filePath);
     res.sendFile(filePath);
-  } catch {
-    res.status(404).json({ error: 'File not found' });
+  } catch (err) {
+    res.status(err?.statusCode || 404).json({ error: 'File not found' });
   }
 });
 
 // Delete a prop asset
-router.delete('/projects/:id/assets/props/:assetId', async (req, res) => {
+router.delete('/projects/:id/assets/props/:assetId', requireAdmin, async (req, res) => {
   try {
-    const assetDir = path.join(projectDir(req.params.id), 'assets', 'props', req.params.assetId);
+    const assetDir = safeProjectPath(
+      safeProjectId(req.params.id),
+      'assets',
+      'props',
+      assertSafeSegment(req.params.assetId, 'asset id')
+    );
     await fs.rm(assetDir, { recursive: true, force: true });
     res.json({ ok: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.statusCode || 500).json({ error: err.message });
   }
 });
 

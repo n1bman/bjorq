@@ -125,7 +125,7 @@ Go to **Inställningar → Data & Backup** and tap **Spara & Backup**. This does
 
 ### Restoring a Backup
 
-Use the **Importera backup** function in Data & Backup to load a previously exported JSON file. This replaces all current settings and project data.
+Use the **Importera backup** function in Data & Backup to load a previously exported JSON file. In HOSTED mode the restore is written back through the server data layer, so settings and project data remain after restart.
 
 > **Note:** Full app backups include profile, HA connection, and all settings. For project-only portability, use **Exportera projekt** instead.
 

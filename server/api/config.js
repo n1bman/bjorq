@@ -1,44 +1,40 @@
 import { Router } from 'express';
 import { configPath } from '../storage/paths.js';
-import { readJSON, writeJSON } from '../storage/readWrite.js';
+import { writeJSON } from '../storage/readWrite.js';
+import { getAuthStatus, getConfigWithSecurity, maskSecurity, requireAdmin } from '../security/auth.js';
+import { haLiveHub } from '../ha/liveHub.js';
 
 const router = Router();
 
-const DEFAULT_CONFIG = {
-  ha: { baseUrl: '', token: '' },
-  ui: { defaultProjectId: 'home', defaultProfile: 'balanced' },
-  network: { port: 3000 },
-};
-
 async function getConfig() {
-  return (await readJSON(configPath())) || { ...DEFAULT_CONFIG };
+  return getConfigWithSecurity();
 }
 
-router.get('/config', async (_req, res) => {
+router.get('/config', async (req, res) => {
   try {
     const cfg = await getConfig();
-    // Mask token for frontend
-    const masked = { ...cfg, ha: { ...cfg.ha, token: cfg.ha?.token ? '***' : '' } };
-    res.json(masked);
+    res.json({ ...maskSecurity(cfg), auth: getAuthStatus(req, cfg) });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// NOTE: ws-token endpoint removed — token must never be sent to the browser.
-// All HA communication goes through /api/ha/* proxy.
-
-router.put('/config', async (req, res) => {
+router.put('/config', requireAdmin, async (req, res) => {
   try {
     const existing = await getConfig();
-    const merged = { ...existing, ...req.body };
-    // Deep merge ha
-    if (req.body.ha) merged.ha = { ...existing.ha, ...req.body.ha };
-    if (req.body.ui) merged.ui = { ...existing.ui, ...req.body.ui };
-    if (req.body.network) merged.network = { ...existing.network, ...req.body.network };
+    const body = { ...req.body };
+    delete body.security;
+
+    const merged = { ...existing, ...body };
+    if (body.ha) merged.ha = { ...existing.ha, ...body.ha };
+    if (body.ui) merged.ui = { ...existing.ui, ...body.ui };
+    if (body.network) merged.network = { ...existing.network, ...body.network };
+    merged.security = existing.security;
+
     await writeJSON(configPath(), merged);
-    const masked = { ...merged, ha: { ...merged.ha, token: merged.ha?.token ? '***' : '' } };
-    res.json(masked);
+    await haLiveHub.reconnect();
+
+    res.json({ ...maskSecurity(merged), auth: getAuthStatus(req, merged) });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
