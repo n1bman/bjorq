@@ -17,6 +17,22 @@ Detailed release notes for each shipped version should also be added as
 ### Fixed
 - **Migrering från äldre menyval** - sparade profiler som fortfarande pekar på gamla `graphics` mappas nu om till `settings` vid bootstrap så äldre hosted-data inte öppnar en tom kontrollpanel.
 
+## [1.8.6] - 2026-03-22
+
+### Changed
+- **Renare hemvy** - rutnatet i hemvyns 3D-scen ar borttaget for en lugnare presentationsyta.
+- **Synkad 3D-preview** - kontrollpanelens 3D-previewkort laser nu samma miljo-, ljus-, dim-, terrang- och prestandainstallningar som hemvy och designlage.
+- **Tydligare datalogik under Profil** - projektfil och hel installationsbackup ar nu tydligare separerade sa det framgar vad som sparar ett enskilt hem respektive hela installationen.
+- **Lokala golvtexturer** - golvmaterial kan nu prioritera lokala texturer fran `public/textures` nar matchande filer finns i repot.
+
+### Fixed
+- **Hosted backup/export snapshot** - hel backup i hosted-laget forsoker nu forst persistera aktuellt projekt till servern innan backup eller export skapas.
+
+### Verified
+- `npm test`
+- `npm run lint`
+- `npm run build`
+
 ## [1.8.5] - 2026-03-22
 
 ### Changed

@@ -1,6 +1,6 @@
 name: BJORQ Dashboard
 slug: bjorq_dashboard
-version: "1.8.5"
+version: "1.8.6"
 description: "3D smart home dashboard for Home Assistant (tablet/kiosk ready)."
 url: "https://github.com/n1bman/bjorq"
 startup: services

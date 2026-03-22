@@ -2,7 +2,7 @@
 
 A 3D smart home dashboard for wall-mounted tablets and kiosks.
 
-![Version](https://img.shields.io/badge/version-1.8.5-blue)
+![Version](https://img.shields.io/badge/version-1.8.6-blue)
 
 ## Features
 
@@ -34,8 +34,8 @@ Point any tablet or kiosk browser to `http://<HA-IP>:3000` in fullscreen mode.
 
 ### Quick Setup
 
-1. Go to **Inställningar -> Profil** and create an admin PIN if you want protected hosted settings
-2. Go to **Inställningar -> Home Assistant** and enter your HA URL + access token
+1. Go to **Profil** and create an admin PIN if you want protected hosted settings
+2. Go to **Profil** and enter your Home Assistant URL + access token
 3. Switch to **Build Mode** to import a 3D model or draw your layout
 4. Place devices and link them to HA entities
 5. Switch back to **Home View** to control your smart home
@@ -61,7 +61,7 @@ All data (config, projects, profiles, backups) is stored in `/data` and persists
 | [Installation](../../docs/02-installation.md) | Setup for all platforms |
 | [Using the Dashboard](../../docs/03-using-the-dashboard.md) | Features and settings |
 | [Troubleshooting](../../docs/07-troubleshooting.md) | Common issues and fixes |
-| [Patchnotes 1.8.5](../../docs/patchnotes-v1.8.5.md) | Kontrollpanelens informationsarkitektur med ny Profil-yta och flyttade grafikinställningar |
+| [Patchnotes 1.8.6](../../docs/patchnotes-v1.8.6.md) | Samma 3D-miljo i previewkort, renare hemvy och tydligare skillnad mellan projektfil och hel backup |
 
 ## Support
 

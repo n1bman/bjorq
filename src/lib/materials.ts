@@ -1,6 +1,47 @@
 import type { Material, SurfaceSizeMode } from '../store/types';
 
-export const presetMaterials: Material[] = [
+const localTextureAssets = import.meta.glob('../../public/textures/**/*.{jpg,jpeg,png,webp}', {
+  eager: true,
+  import: 'default',
+}) as Record<string, string>;
+
+const floorTextureLocalPaths: Record<string, string> = {
+  WoodFloor051: '/textures/wood/oak_diff.jpg',
+  WoodFloor040: '/textures/wood/walnut_diff.jpg',
+  WoodFloor044: '/textures/wood/pine_diff.jpg',
+  WoodFloor043: '/textures/wood/herringbone_diff.jpg',
+  Tiles074: '/textures/tile/white_tile_diff.jpg',
+  Tiles093: '/textures/tile/marble_diff.jpg',
+  Tiles082: '/textures/tile/dark_tile_diff.jpg',
+  Concrete034: '/textures/stone/polished_concrete_diff.jpg',
+  Concrete032: '/textures/stone/concrete_diff.jpg',
+  Marble006: '/textures/tile/marble_diff.jpg',
+  Rock030: '/textures/stone/slate_diff.jpg',
+  Concrete040: '/textures/texture/microcement_diff.jpg',
+  PaintedPlaster017: '/textures/texture/limewash_diff.jpg',
+  PaintedPlaster020: '/textures/texture/stucco_diff.jpg',
+};
+
+function resolveLocalTexture(preferredPath: string | undefined, fallback?: string) {
+  if (!preferredPath) return fallback;
+  const assetKey = `../../public${preferredPath}`;
+  return localTextureAssets[assetKey] ?? fallback ?? preferredPath;
+}
+
+function applyLocalTextureOverrides(materials: Material[]): Material[] {
+  return materials.map((material) => {
+    const localMapPath = material.ambientCGId ? floorTextureLocalPaths[material.ambientCGId] : undefined;
+    if (!localMapPath) return material;
+
+    return {
+      ...material,
+      mapPath: resolveLocalTexture(localMapPath, material.mapPath),
+      thumbnailUrl: resolveLocalTexture(localMapPath, material.thumbnailUrl ?? material.mapPath),
+    };
+  });
+}
+
+const rawPresetMaterials: Material[] = [
   // ─── Paint (expanded palette) ───
   { id: 'mat-white-paint', name: 'Vit färg', type: 'paint', color: '#f2f0eb', roughness: 0.92, surfaceCategory: 'paint' },
   { id: 'mat-grey-paint', name: 'Grå färg', type: 'paint', color: '#8e8c88', roughness: 0.88, surfaceCategory: 'paint' },
@@ -285,6 +326,8 @@ export const presetMaterials: Material[] = [
     thumbnailUrl: 'https://acg-media.struffelproductions.com/file/ambientCG-Web/media/thumbnail/256-JPG-FFFFFF/Fabric036.jpg',
     mapPath: 'https://acg-media.struffelproductions.com/file/ambientCG-Web/media/thumbnail/2048-JPG-FFFFFF/Fabric036.jpg' },
 ];
+
+export const presetMaterials: Material[] = applyLocalTextureOverrides(rawPresetMaterials);
 
 // In-memory custom materials (runtime only)
 const customMaterials: Material[] = [];

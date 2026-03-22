@@ -1,19 +1,7 @@
 # Patchnotes Draft
 
-Detta dokument samlar pågående ändringar som ännu inte har fått en släppt versionsfil.
+Detta dokument samlar pagande andringar som annu inte har fatt en slappt versionsfil.
 
-## Nu pågår
+## Nu pagar
 
-### Kontrollpanel
-- `Profil` är nu en egen huvudmeny i dashboardens kontrollpanel.
-- `Grafik & Miljö` har vikts in under `Inställningar` i stället för att ligga som separat toppnivå.
-- `Inställningar` fokuserar nu på tema, display, standby, systemstatus och scen-/miljöjusteringar.
-- `Profil` samlar konto, adminskydd, kopplingar, projektdata och backup.
-
-### Kompatibilitet
-- Äldre sparade dashboard-profiler som använde `graphics` som aktiv kategori migreras nu till `settings` vid bootstrap i hosted/add-on-läget.
-
-### Verifierat
-- `npm test`
-- `npm run lint`
-- `npm run build`
+- Inga oslappta patchnotes finns just nu. Nasta arbete dokumenteras har innan nasta release skapas.

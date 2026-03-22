@@ -857,19 +857,6 @@ function UnifiedSceneContent({ onDeviceLongPress, fpsActive, fpsSpawn, onFpsExit
           <Walls3D />
           <SceneKitchenFixtures />
 
-          {appMode === 'home' && (
-            <Grid
-              args={[100, 100]}
-              cellSize={0.5}
-              cellThickness={0.5}
-              cellColor="#2a2d35"
-              sectionSize={5}
-              sectionThickness={1}
-              sectionColor="#3a3d45"
-              fadeDistance={30}
-              position={[0, 0, 0]}
-            />
-          )}
         </>
       )}
 

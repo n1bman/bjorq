@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+﻿import { useRef, useState } from 'react';
 import { useAppStore, persistHostedProjectNow, getActiveHostedProjectId } from '../../../store/useAppStore';
 import { Button } from '../../ui/button';
 import {
@@ -33,7 +33,6 @@ export default function ProjectManagerPanel() {
     name: string;
   } | null>(null);
 
-  // Subscribe to store to re-render when project changes
   const _floors = useAppStore((s) => s.layout.floors);
   const currentProject = extractBuildProject();
   const currentStats = calculateStats(currentProject);
@@ -42,7 +41,7 @@ export default function ProjectManagerPanel() {
     if (isHostedSync()) {
       try {
         await persistHostedProjectNow();
-        toast.success('Projekt sparat ✅', {
+        toast.success('Projekt sparat', {
           description: `Serverprojekt: ${getActiveHostedProjectId()}`,
         });
       } catch (err: any) {
@@ -53,12 +52,12 @@ export default function ProjectManagerPanel() {
       return;
     }
 
-    toast.success('Projekt sparat ✅');
+    toast.success('Projekt sparat');
   };
 
   const handleExport = () => {
     exportBuildProject();
-    toast.success('Projekt exporterat ✅');
+    toast.success('Projektfil exporterad');
   };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -75,7 +74,6 @@ export default function ProjectManagerPanel() {
         return;
       }
 
-      // Extract preview stats
       const tempProject = {
         meta: data.meta ?? { schemaVersion: 1, id: 'preview', name: file.name, createdAt: '', updatedAt: '', appVersion: '' },
         layout: data.layout ?? { floors: [], activeFloorId: null, scaleCalibrated: false },
@@ -95,7 +93,7 @@ export default function ProjectManagerPanel() {
         name: data.meta?.name || file.name.replace(/\.json$/, ''),
       });
     } catch (err: any) {
-      toast.error(err.message || 'Kunde inte läsa projektfilen');
+      toast.error(err.message || 'Kunde inte lasa projektfilen');
     }
   };
 
@@ -115,8 +113,8 @@ export default function ProjectManagerPanel() {
           return;
         }
       }
-      toast.success('Projekt importerat ✅', {
-        description: `${result.stats.floors} våningar, ${result.stats.rooms} rum, ${result.stats.devices} enheter`,
+      toast.success('Projekt importerat', {
+        description: `${result.stats.floors} vaningar, ${result.stats.rooms} rum, ${result.stats.devices} enheter`,
       });
       if (result.warnings.length > 0) {
         result.warnings.forEach((w) => toast.warning(w));
@@ -129,55 +127,58 @@ export default function ProjectManagerPanel() {
 
   return (
     <div className="glass-panel rounded-2xl p-[var(--space-panel)] space-y-4">
-      <div className="flex items-center gap-2">
-        <FolderOpen size={14} className="text-muted-foreground" />
-        <span className="text-xs font-semibold text-foreground">Projekthantering</span>
+      <div className="flex items-start gap-2">
+        <FolderOpen size={14} className="mt-0.5 text-muted-foreground" />
+        <div>
+          <span className="text-xs font-semibold text-foreground">Projektfil</span>
+          <p className="text-[10px] text-muted-foreground">
+            Ritning, 3D-modell, material, props och enheter for det aktuella hemmet.
+          </p>
+        </div>
       </div>
 
-      {/* Current project overview */}
       <div className="rounded-lg bg-secondary/30 border border-border/50 p-3 space-y-2">
         <div className="flex items-center gap-2">
           <FileText size={12} className="text-primary" />
           <span className="text-xs font-medium text-foreground">Aktuellt projekt</span>
         </div>
         <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[10px] text-muted-foreground">
-          <span>Våningar: <strong className="text-foreground">{currentStats.floors}</strong></span>
+          <span>Vaningar: <strong className="text-foreground">{currentStats.floors}</strong></span>
           <span>Rum: <strong className="text-foreground">{currentStats.rooms}</strong></span>
-          <span>Väggar: <strong className="text-foreground">{currentStats.walls}</strong></span>
-          <span>Öppningar: <strong className="text-foreground">{currentStats.openings}</strong></span>
+          <span>Vaggar: <strong className="text-foreground">{currentStats.walls}</strong></span>
+          <span>Oppningar: <strong className="text-foreground">{currentStats.openings}</strong></span>
           <span>Enheter: <strong className="text-foreground">{currentStats.devices}</strong></span>
-          <span>Möbler: <strong className="text-foreground">{currentStats.props}</strong></span>
+          <span>Mobler: <strong className="text-foreground">{currentStats.props}</strong></span>
           <span>Trappor: <strong className="text-foreground">{currentStats.stairs}</strong></span>
         </div>
       </div>
 
-      {/* Actions */}
       <div className="space-y-2">
         <Button size="sm" variant="default" className="w-full h-9 text-xs gap-2" onClick={handleManualSave}>
-          <Save size={14} /> Spara projekt
+          <Save size={14} /> Spara aktuellt projekt
         </Button>
 
         <Button size="sm" variant="outline" className="w-full h-8 text-xs gap-2" onClick={handleExport}>
-          <Download size={14} /> Exportera projekt (.json)
+          <Download size={14} /> Exportera projektfil (.json)
         </Button>
 
         <Button size="sm" variant="outline" className="w-full h-8 text-xs gap-2" onClick={() => fileInputRef.current?.click()}>
-          <Upload size={14} /> Importera projekt
+          <Upload size={14} /> Importera projektfil
         </Button>
         <input ref={fileInputRef} type="file" accept=".json" className="hidden" onChange={handleFileSelect} />
       </div>
 
       <p className="text-[10px] text-muted-foreground text-center">
-        Export innehåller layout, enheter, material och metadata — redo att flytta till en annan installation.
+        Projektfilen innehaller layout, 3D-geometri, material, props, enheter och projektmetadata. Profil, tema, standby,
+        konton och hel backup foljer inte med.
       </p>
 
-      {/* Import preview dialog */}
       <Dialog open={!!importPreview} onOpenChange={(open) => !open && setImportPreview(null)}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Importera projekt</DialogTitle>
+            <DialogTitle>Importera projektfil</DialogTitle>
             <DialogDescription>
-              Projektet &quot;{importPreview?.name}&quot; kommer att ersätta aktuellt projekt.
+              Projektet &quot;{importPreview?.name}&quot; kommer att ersatta aktuellt projekt.
             </DialogDescription>
           </DialogHeader>
 
@@ -185,12 +186,12 @@ export default function ProjectManagerPanel() {
             <div className="space-y-3">
               <div className="rounded-lg bg-secondary/30 border border-border/50 p-3">
                 <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[10px] text-muted-foreground">
-                  <span>Våningar: <strong className="text-foreground">{importPreview.stats.floors}</strong></span>
+                  <span>Vaningar: <strong className="text-foreground">{importPreview.stats.floors}</strong></span>
                   <span>Rum: <strong className="text-foreground">{importPreview.stats.rooms}</strong></span>
-                  <span>Väggar: <strong className="text-foreground">{importPreview.stats.walls}</strong></span>
-                  <span>Öppningar: <strong className="text-foreground">{importPreview.stats.openings}</strong></span>
+                  <span>Vaggar: <strong className="text-foreground">{importPreview.stats.walls}</strong></span>
+                  <span>Oppningar: <strong className="text-foreground">{importPreview.stats.openings}</strong></span>
                   <span>Enheter: <strong className="text-foreground">{importPreview.stats.devices}</strong></span>
-                  <span>Möbler: <strong className="text-foreground">{importPreview.stats.props}</strong></span>
+                  <span>Mobler: <strong className="text-foreground">{importPreview.stats.props}</strong></span>
                 </div>
               </div>
 
