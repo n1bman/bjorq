@@ -127,6 +127,11 @@ Go to **Inställningar → Data & Backup** and tap **Spara & Backup**. This does
 
 Use the **Importera backup** function in Data & Backup to load a previously exported JSON file. In HOSTED mode the restore is written back through the server data layer, so settings and project data remain after restart.
 
+Hosted restore now also:
+- validates the backup envelope before writing anything to disk
+- rejects duplicate or invalid project IDs
+- creates a server-side safety snapshot before replacing current data
+
 > **Note:** Full app backups include profile, HA connection, and all settings. For project-only portability, use **Exportera projekt** instead.
 
 ### Manual Backup
@@ -140,8 +145,10 @@ cp -r data/ data-backup-$(date +%Y%m%d)/
 ## Clearing Data
 
 The **Rensa all data** button in Data & Backup resets everything:
-- In HOSTED mode: clears server-side data files
+- In HOSTED mode: resets server-side project/profile data through the API and creates a safety snapshot first
 - In DEV mode: clears localStorage
+
+In HOSTED mode, admin security remains in place after reset so the protection layer is not silently removed.
 
 ⚠️ This action cannot be undone. Create a backup first.
 

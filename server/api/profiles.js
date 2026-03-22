@@ -5,7 +5,7 @@ import { requireAdmin } from '../security/auth.js';
 
 const router = Router();
 
-const DEFAULT_PROFILES = {
+export const DEFAULT_PROFILES = {
   profile: { name: '', theme: 'dark', accentColor: '#f59e0b', dashboardBg: 'scene3d' },
   performance: { quality: 'high', shadows: true, postprocessing: false, tabletMode: false },
   standby: { enabled: false, idleMinutes: 2, cameraView: 'standard' },

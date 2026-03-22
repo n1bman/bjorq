@@ -3,10 +3,12 @@ import path from 'path';
 import { configPath, dataDir, profilesPath, projectFilePath, projectsDir } from '../storage/paths.js';
 import { ensureDir, listDirs, readJSON, writeJSON } from '../storage/readWrite.js';
 import { requireAdmin } from '../security/auth.js';
+import { DEFAULT_PROFILES } from './profiles.js';
 import { safeProjectDir, safeProjectId, safeProjectPath } from '../storage/safePaths.js';
+import { BACKUP_SCHEMA_VERSION, normalizeBackupEnvelope } from '../storage/backupEnvelope.js';
 
 const router = Router();
-const APP_VERSION = '1.8.0';
+const APP_VERSION = process.env.npm_package_version || '1.8.2';
 
 async function buildBackupEnvelope() {
   const profiles = (await readJSON(profilesPath())) || {};
@@ -20,7 +22,7 @@ async function buildBackupEnvelope() {
   }
 
   return {
-    _meta: { version: APP_VERSION, createdAt: new Date().toISOString() },
+    _meta: { schemaVersion: BACKUP_SCHEMA_VERSION, version: APP_VERSION, createdAt: new Date().toISOString() },
     config: {
       ui: config.ui || {},
       network: config.network || {},
@@ -35,6 +37,18 @@ async function buildBackupEnvelope() {
   };
 }
 
+async function createServerBackupSnapshot(prefix = 'bjorq-backup') {
+  const backupsDir = path.join(dataDir(), 'backups');
+  await ensureDir(backupsDir);
+
+  const envelope = await buildBackupEnvelope();
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+  const filename = `${prefix}-${timestamp}.json`;
+
+  await writeJSON(path.join(backupsDir, filename), envelope);
+  return filename;
+}
+
 router.get('/backup/export', requireAdmin, async (_req, res) => {
   try {
     res.json(await buildBackupEnvelope());
@@ -45,14 +59,7 @@ router.get('/backup/export', requireAdmin, async (_req, res) => {
 
 router.post('/backup', requireAdmin, async (_req, res) => {
   try {
-    const backupsDir = path.join(dataDir(), 'backups');
-    await ensureDir(backupsDir);
-
-    const envelope = await buildBackupEnvelope();
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-    const filename = `bjorq-backup-${timestamp}.json`;
-
-    await writeJSON(path.join(backupsDir, filename), envelope);
+    const filename = await createServerBackupSnapshot('bjorq-backup');
     res.json({ ok: true, filename });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -61,12 +68,13 @@ router.post('/backup', requireAdmin, async (_req, res) => {
 
 router.post('/backup/restore', requireAdmin, async (req, res) => {
   try {
-    const payload = req.body || {};
+    const payload = normalizeBackupEnvelope(req.body || {});
     const profiles = payload.profiles || {};
-    const projects = Array.isArray(payload.projects) ? payload.projects : [];
+    const projects = payload.projects;
     const activeProjectId = safeProjectId(payload.activeProjectId || projects[0]?.id || 'home');
     const existingConfig = (await readJSON(configPath())) || {};
     const fs = await import('fs/promises');
+    const snapshotFilename = await createServerBackupSnapshot('pre-restore-backup');
 
     await writeJSON(profilesPath(), profiles);
 
@@ -102,7 +110,34 @@ router.post('/backup/restore', requireAdmin, async (req, res) => {
     };
 
     await writeJSON(configPath(), restoredConfig);
-    res.json({ ok: true, activeProjectId, restoredProjects: projects.length });
+    res.json({ ok: true, activeProjectId, restoredProjects: projects.length, snapshotFilename });
+  } catch (err) {
+    res.status(err.statusCode || 500).json({ error: err.message });
+  }
+});
+
+router.post('/backup/reset', requireAdmin, async (_req, res) => {
+  try {
+    const existingConfig = (await readJSON(configPath())) || {};
+    const existingProjectIds = await listDirs(projectsDir());
+    const fs = await import('fs/promises');
+    const snapshotFilename = await createServerBackupSnapshot('pre-reset-backup');
+
+    await writeJSON(profilesPath(), DEFAULT_PROFILES);
+
+    for (const projectId of existingProjectIds) {
+      await fs.rm(safeProjectDir(projectId), { recursive: true, force: true });
+    }
+
+    await writeJSON(configPath(), {
+      ...existingConfig,
+      ha: { baseUrl: '', token: '' },
+      ui: { ...(existingConfig.ui || {}), defaultProjectId: 'home', defaultProfile: 'balanced' },
+      network: existingConfig.network || {},
+      security: existingConfig.security,
+    });
+
+    res.json({ ok: true, snapshotFilename });
   } catch (err) {
     res.status(err.statusCode || 500).json({ error: err.message });
   }

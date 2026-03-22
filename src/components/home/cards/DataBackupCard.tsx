@@ -1,10 +1,17 @@
-import { useState, useRef } from 'react';
+import { useRef, useState } from 'react';
+import { toast } from 'sonner';
+import { Database, Download, Play, Save, Trash2, Upload, XCircle } from 'lucide-react';
 import { useAppStore, getDefaultState } from '../../../store/useAppStore';
 import { Button } from '../../ui/button';
-import { Download, Upload, Trash2, Save, Play, XCircle, Database } from 'lucide-react';
-import { exportHostedBackup, getMode, isHostedSync, restoreHostedBackup } from '../../../lib/apiClient';
-import { createDemoLayout, createDemoDevices } from '../../../lib/demoData';
-import { toast } from 'sonner';
+import {
+  createHostedBackup,
+  exportHostedBackup,
+  getMode,
+  isHostedSync,
+  resetHostedData,
+  restoreHostedBackup,
+} from '../../../lib/apiClient';
+import { createDemoDevices, createDemoLayout } from '../../../lib/demoData';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,41 +29,42 @@ export default function DataBackupCard() {
   const [confirmClear, setConfirmClear] = useState(false);
   const [deletingDemo, setDeletingDemo] = useState(false);
 
-  // Check if current project looks like a demo (has demo-like rooms)
   const layout = useAppStore((s) => s.layout);
   const devices = useAppStore((s) => s.devices);
-  const isDemoLoaded = layout.floors.some((f) =>
-    f.rooms.some((r) => ['Vardagsrum', 'Kök', 'Sovrum'].includes(r.name))
+  const isDemoLoaded = layout.floors.some((floor) =>
+    floor.rooms.some((room) => ['Vardagsrum', 'Kök', 'Sovrum'].includes(room.name))
   ) && devices.markers.length > 0;
 
   const handleExport = () => {
     if (isHostedSync()) {
-      exportHostedBackup().then((data) => {
-        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `bjorq-backup-${new Date().toISOString().slice(0, 10)}.json`;
-        a.click();
-        URL.revokeObjectURL(url);
-      }).catch((err) => {
-        toast.error(err.message || 'Kunde inte exportera backup');
-      });
+      exportHostedBackup()
+        .then((data) => {
+          const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `bjorq-backup-${new Date().toISOString().slice(0, 10)}.json`;
+          link.click();
+          URL.revokeObjectURL(url);
+        })
+        .catch((err: any) => {
+          toast.error(err?.message || 'Kunde inte exportera backup.');
+        });
       return;
     }
 
     const state = useAppStore.getState();
     const data: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(state)) {
-      if (typeof v !== 'function') data[k] = v;
+    for (const [key, value] of Object.entries(state)) {
+      if (typeof value !== 'function') data[key] = value;
     }
-    const json = JSON.stringify(data, null, 2);
-    const blob = new Blob([json], { type: 'application/json' });
+
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `bjorq-backup-${new Date().toISOString().slice(0, 10)}.json`;
-    a.click();
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `bjorq-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    link.click();
     URL.revokeObjectURL(url);
   };
 
@@ -64,33 +72,43 @@ export default function DataBackupCard() {
     handleExport();
     if (isHostedSync()) {
       try {
-        await fetch('/api/backup', { method: 'POST' });
-        toast.success('Backup sparad på servern ✅');
-      } catch {
-        toast.error('Kunde inte spara backup på servern.');
+        const result = await createHostedBackup();
+        toast.success('Backup sparad på servern', {
+          description: result?.filename ? `Fil: ${result.filename}` : undefined,
+        });
+      } catch (err: any) {
+        toast.error(err?.message || 'Kunde inte spara backup på servern.');
       }
-    } else {
-      toast.success('Backup exporterad ✅');
+      return;
     }
+
+    toast.success('Backup exporterad');
   };
 
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
     const reader = new FileReader();
     reader.onload = async (ev) => {
       try {
         const data = JSON.parse(ev.target?.result as string);
         if (isHostedSync()) {
-          await restoreHostedBackup(data);
+          const result = await restoreHostedBackup(data);
+          toast.success('Backup återställd', {
+            description: result?.snapshotFilename ? `Säkerhetskopia skapad: ${result.snapshotFilename}` : undefined,
+          });
           window.location.reload();
           return;
         }
+
         useAppStore.setState(data);
-      } catch {
-        alert('Kunde inte läsa backup-filen.');
+        toast.success('Backup importerad');
+      } catch (err: any) {
+        toast.error(err?.message || 'Kunde inte läsa backup-filen.');
       }
     };
+
     reader.readAsText(file);
     e.target.value = '';
   };
@@ -100,29 +118,48 @@ export default function DataBackupCard() {
       setConfirmClear(true);
       return;
     }
+
+    if (isHostedSync()) {
+      resetHostedData()
+        .then((result) => {
+          toast.success('Serverdata rensad', {
+            description: result?.snapshotFilename ? `Säkerhetskopia skapad: ${result.snapshotFilename}` : undefined,
+          });
+          window.location.reload();
+        })
+        .catch((err: any) => {
+          toast.error(err?.message || 'Kunde inte rensa serverdata.');
+        });
+      return;
+    }
+
     localStorage.clear();
     window.location.reload();
   };
 
   const handleLoadDemo = () => {
-    const layout = createDemoLayout();
+    const demoLayout = createDemoLayout();
     const demoDevices = createDemoDevices();
-    const deviceStates: Record<string, any> = {};
-    demoDevices.markers.forEach((m) => {
-      deviceStates[m.id] = getDefaultState(m.kind);
+    const deviceStates: Record<string, unknown> = {};
+
+    demoDevices.markers.forEach((marker) => {
+      deviceStates[marker.id] = getDefaultState(marker.kind);
     });
+
     useAppStore.setState({
-      layout,
+      layout: demoLayout,
       devices: { markers: demoDevices.markers, deviceStates, vacuumDebug: {} },
       homeGeometry: { ...useAppStore.getState().homeGeometry, source: 'procedural' },
     });
-    toast.success('Demo-projekt laddat ✅', { description: '3 rum, 4 enheter — redo att utforska.' });
+
+    toast.success('Demo-projekt laddat', {
+      description: '3 rum och 4 enheter är redo att utforska.',
+    });
   };
 
   const handleDeleteDemo = async () => {
     setDeletingDemo(true);
     try {
-      // Reset layout to empty initial state
       useAppStore.setState({
         layout: {
           floors: [
@@ -158,17 +195,16 @@ export default function DataBackupCard() {
         activityLog: [],
       });
 
-      // In hosted mode, also notify server
       if (isHostedSync()) {
         try {
           await fetch('/api/projects/demo', { method: 'DELETE' });
         } catch {
-          // Non-critical — local state is already cleared
+          // Local state is already cleared; this is non-critical.
         }
       }
 
-      toast.success('Demo-projekt borttaget ✅', {
-        description: 'Layout, enheter och markörer har rensats. Dina inställningar och profil bevarades.',
+      toast.success('Demo-projekt borttaget', {
+        description: 'Layout, enheter och markörer har rensats. Inställningar och profil bevarades.',
       });
     } finally {
       setDeletingDemo(false);
@@ -184,36 +220,33 @@ export default function DataBackupCard() {
         <span className="text-xs font-semibold text-foreground">Data & Backup</span>
       </div>
 
-      {/* Storage Mode indicator */}
-      <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-secondary/50 border border-border/50">
+      <div className="flex items-center gap-2 rounded-lg border border-border/50 bg-secondary/50 px-2 py-1.5">
         <Database size={12} className="text-muted-foreground" />
         <span className="text-[10px] text-muted-foreground">Lagringsläge:</span>
         <span className={`text-[10px] font-semibold ${storageMode === 'HOSTED' ? 'text-primary' : 'text-amber-500'}`}>
-          {storageMode === 'HOSTED' ? '🖥️ Server (HOSTED)' : '💾 Lokal (DEV)'}
+          {storageMode === 'HOSTED' ? 'Server (HOSTED)' : 'Lokal (DEV)'}
         </span>
       </div>
 
-      {isHostedSync() && (
+      {isHostedSync() ? (
         <p className="text-[10px] text-muted-foreground">
-          Data sparas på serverns disk (data/-mapp). Exportera/importera för backup.
+          Data sparas på serverns disk. Restore och reset skapar nu också en serverbackup innan något skrivs över.
         </p>
-      )}
-
-      {!isHostedSync() && (
+      ) : (
         <p className="text-[10px] text-muted-foreground">
           Data sparas i webbläsarens localStorage. Exportera backup regelbundet.
         </p>
       )}
 
-      <Button size="sm" variant="default" className="w-full h-9 text-xs gap-2" onClick={handleSaveAndBackup}>
+      <Button size="sm" variant="default" className="h-9 w-full gap-2 text-xs" onClick={handleSaveAndBackup}>
         <Save size={14} /> Spara & Backup
       </Button>
 
-      <Button size="sm" variant="outline" className="w-full h-8 text-xs gap-2" onClick={handleExport}>
+      <Button size="sm" variant="outline" className="h-8 w-full gap-2 text-xs" onClick={handleExport}>
         <Download size={14} /> Exportera backup
       </Button>
 
-      <Button size="sm" variant="outline" className="w-full h-8 text-xs gap-2" onClick={() => fileInputRef.current?.click()}>
+      <Button size="sm" variant="outline" className="h-8 w-full gap-2 text-xs" onClick={() => fileInputRef.current?.click()}>
         <Upload size={14} /> Importera backup
       </Button>
       <input ref={fileInputRef} type="file" accept=".json" className="hidden" onChange={handleImport} />
@@ -221,29 +254,33 @@ export default function DataBackupCard() {
       <Button
         size="sm"
         variant={confirmClear ? 'destructive' : 'outline'}
-        className="w-full h-8 text-xs gap-2"
+        className="h-8 w-full gap-2 text-xs"
         onClick={handleClear}
       >
         <Trash2 size={14} /> {confirmClear ? 'Bekräfta: Rensa ALLT' : 'Rensa all data'}
       </Button>
       {confirmClear && (
-        <p className="text-[10px] text-destructive text-center">
-          Klicka igen för att radera alla inställningar och enheter permanent.
+        <p className="text-center text-[10px] text-destructive">
+          Klicka igen för att radera all lagrad data. I hosted-läge skapas först en säkerhetskopia på servern.
         </p>
       )}
 
-      <div className="border-t border-border/50 pt-3 mt-1 space-y-2">
-        <Button size="sm" variant="outline" className="w-full h-8 text-xs gap-2" onClick={handleLoadDemo}>
+      <div className="mt-1 space-y-2 border-t border-border/50 pt-3">
+        <Button size="sm" variant="outline" className="h-8 w-full gap-2 text-xs" onClick={handleLoadDemo}>
           <Play size={14} /> Ladda demo-projekt
         </Button>
-        <p className="text-[10px] text-muted-foreground text-center">
+        <p className="text-center text-[10px] text-muted-foreground">
           Laddar ett exempelhus med rum och enheter att utforska.
         </p>
 
         {isDemoLoaded && (
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button size="sm" variant="outline" className="w-full h-8 text-xs gap-2 border-destructive/30 text-destructive hover:bg-destructive/10">
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 w-full gap-2 border-destructive/30 text-destructive hover:bg-destructive/10 text-xs"
+              >
                 <XCircle size={14} /> Ta bort demo-projekt
               </Button>
             </AlertDialogTrigger>
@@ -252,7 +289,7 @@ export default function DataBackupCard() {
                 <AlertDialogTitle>Ta bort demo-projekt?</AlertDialogTitle>
                 <AlertDialogDescription className="space-y-2">
                   <span className="block">Detta kommer att:</span>
-                  <span className="block">• Radera alla väggar och rum (layout)</span>
+                  <span className="block">• Radera alla väggar och rum</span>
                   <span className="block">• Radera alla enhetsmarkörer och deras tillstånd</span>
                   <span className="block">• Återställa 3D-geometrin</span>
                   <span className="block">• Rensa alla props och aktivitetsloggen</span>

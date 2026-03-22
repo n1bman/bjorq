@@ -211,6 +211,14 @@ export async function restoreHostedBackup(payload: Record<string, unknown>) {
   });
 }
 
+export async function createHostedBackup() {
+  return requestJson('/api/backup', { method: 'POST' });
+}
+
+export async function resetHostedData() {
+  return requestJson('/api/backup/reset', { method: 'POST' });
+}
+
 export async function uploadPropAsset(
   projectId: string, file: File,
   metadata: {
