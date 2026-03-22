@@ -1,6 +1,6 @@
 # Technical Phases
 
-This document tracks the current technical rollout for BJORQ after the hosted/add-on hardening in `v1.8.1` and the settings cleanup in `v1.8.2`.
+This document tracks the current technical rollout for BJORQ after the hosted/add-on hardening in `v1.8.x`.
 
 The main rule is still add-on first for validation, while Windows and Linux hosted builds should end up with the same feature set.
 
@@ -61,19 +61,44 @@ Definition of done:
 - Entity matching in design mode feels more relevant than raw domain-only filtering.
 - Missing climate, energy, surveillance, and robot hardware no longer makes those menus feel empty or unfinished.
 
-## Phase 5 - Settings and Graphics Structure
+## Phase 5 - Unified Project Persistence
 
-Status: Deferred
+Status: In progress
 
 Primary focus:
-- Remove remaining duplication and overlap in `Inställningar` and `Grafik & Miljö` without changing the product's visual identity.
+- Make hosted project persistence behave the same across Home view, Control Panel, and Design mode.
+
+Scope:
+- Explicit hosted save for manual `Spara projekt`.
+- Explicit hosted persistence after project import.
+- Explicit hosted persistence after floor plan and 3D building import.
+- Remove menu-specific save behavior where one path only updates local store and another persists to server.
 
 Definition of done:
-- Fewer duplicated controls or repeated concepts.
-- Important 3D preview and standby camera actions remain obvious.
-- The pages feel more like a coherent app workspace than a long settings document.
+- A change survives reload no matter which UI surface created it.
+- Import and save behavior are consistent across the main product surfaces.
+- Hosted add-on behavior no longer depends on fragile timing between local state changes and autosave.
 
-## Phase 6 - Tests, CI, and Release Confidence
+## Phase 6 - Control Panel Architecture
+
+Status: Planned
+
+Primary focus:
+- Restructure the dashboard so `Profil` and `Inställningar` map to real product responsibilities.
+
+Scope:
+- Add `Profil` as a top-level destination.
+- Move `Grafik & Miljö` under `Inställningar`.
+- Keep Home Assistant optional during first launch.
+- Separate identity, security, integrations, and data from visual/system behavior.
+
+Definition of done:
+- The navigation feels product-logical instead of technically grouped.
+- `Profil` owns account, security, integrations, and data tools.
+- `Inställningar` owns graphics, display, performance, and system behavior.
+- Existing functions survive the move before visual polish starts.
+
+## Phase 7 - Tests, CI, and Release Confidence
 
 Status: Ongoing
 
@@ -86,11 +111,13 @@ Scope:
 - Backup and restore tests.
 - Storage and route protection tests.
 - HA selector and HA menu coverage tests.
+- Persistence tests for Home view, Control Panel, and Design mode.
 - CI parity for lint, test, and build.
 
 Definition of done:
 - Core hosted flows are covered by repeatable tests.
 - HA menu selectors and entity matching rules have targeted tests.
+- Save/import behavior is covered for the major product surfaces.
 - CI reflects the actual minimum quality bar before release.
 
 ## Working Rules
