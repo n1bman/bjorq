@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { useAppStore } from '../../../store/useAppStore';
+import { useAppStore, persistHostedProjectNow, getActiveHostedProjectId } from '../../../store/useAppStore';
 import { Button } from '../../ui/button';
 import {
   Save, Download, Upload, FolderOpen, FileText, AlertTriangle, Check, X,
@@ -38,11 +38,21 @@ export default function ProjectManagerPanel() {
   const currentProject = extractBuildProject();
   const currentStats = calculateStats(currentProject);
 
-  const handleManualSave = () => {
-    // Trigger store change to force sync subscriber
+  const handleManualSave = async () => {
     if (isHostedSync()) {
-      useAppStore.setState((s: any) => ({ activityLog: [...s.activityLog] }));
+      try {
+        await persistHostedProjectNow();
+        toast.success('Projekt sparat ✅', {
+          description: `Serverprojekt: ${getActiveHostedProjectId()}`,
+        });
+      } catch (err: any) {
+        toast.error('Kunde inte spara projektet', {
+          description: err?.data?.error || err?.message || 'Serverlagring misslyckades',
+        });
+      }
+      return;
     }
+
     toast.success('Projekt sparat ✅');
   };
 

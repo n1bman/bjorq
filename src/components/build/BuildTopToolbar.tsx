@@ -407,7 +407,23 @@ export default function BuildTopToolbar() {
         </PopoverTrigger>
         <PopoverContent side="bottom" align="end" className="w-56 p-2 space-y-1 bg-card border-border">
           <button
-            onClick={() => { useAppStore.setState((s: any) => ({ activityLog: [...s.activityLog] })); toast.success('Projekt sparat ✅'); }}
+            onClick={async () => {
+              if (isHostedSync()) {
+                const { persistHostedProjectNow, getActiveHostedProjectId } = await import('../../store/useAppStore');
+                try {
+                  await persistHostedProjectNow();
+                  toast.success('Projekt sparat ✅', {
+                    description: `Serverprojekt: ${getActiveHostedProjectId()}`,
+                  });
+                } catch (err: any) {
+                  toast.error('Kunde inte spara projektet', {
+                    description: err?.data?.error || err?.message || 'Serverlagring misslyckades',
+                  });
+                }
+                return;
+              }
+              toast.success('Projekt sparat ✅');
+            }}
             className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-xs text-foreground hover:bg-secondary/40 transition-colors"
           >
             <Save size={14} /> Spara projekt

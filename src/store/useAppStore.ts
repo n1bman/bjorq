@@ -6,6 +6,7 @@ import { setFromHA } from '../hooks/useHABridge';
 import { isHostedSync, debouncedSync, debouncedProjectSync, saveProfiles, saveProject, fetchBootstrap } from '../lib/apiClient';
 import { flyTo, cameraForPolygon } from '../lib/cameraRef';
 import { DEFAULT_ENVIRONMENT_PROFILE, computeEnvironmentProfile } from '../lib/environmentEngine';
+import { toast } from 'sonner';
 
 export function getDefaultState(kind: DeviceKind): DeviceState {
   switch (kind) {
@@ -103,20 +104,36 @@ function syncProjectToServer() {
   if (!isHostedSync()) return;
   const s = useAppStore.getState();
   debouncedProjectSync(() => {
-    const homeGeo = { ...s.homeGeometry };
-    // Strip large fileData from sync payload (not needed if URL is a server path)
-    if (homeGeo.imported?.fileData && !homeGeo.imported?.url?.startsWith('/projects/')) {
-      homeGeo.imported = { ...homeGeo.imported, fileData: undefined };
-    }
-    saveProject(_activeProjectId, {
-      layout: s.layout,
-      devices: s.devices,
-      homeGeometry: homeGeo,
-      props: s.props,
-      terrain: s.terrain,
-      activityLog: s.activityLog,
-    }).catch((err) => console.warn('[Sync] Failed to save project:', err));
+    persistHostedProjectNow().catch((err) => {
+      console.warn('[Sync] Failed to save project:', err);
+    });
   });
+}
+
+function buildHostedProjectPayload() {
+  const s = useAppStore.getState();
+  const homeGeo = { ...s.homeGeometry };
+  if (homeGeo.imported?.fileData && !homeGeo.imported?.url?.startsWith('/projects/')) {
+    homeGeo.imported = { ...homeGeo.imported, fileData: undefined };
+  }
+  return {
+    layout: s.layout,
+    devices: s.devices,
+    homeGeometry: homeGeo,
+    props: s.props,
+    terrain: s.terrain,
+    activityLog: s.activityLog,
+  };
+}
+
+export async function persistHostedProjectNow() {
+  if (!isHostedSync()) return false;
+  await saveProject(_activeProjectId, buildHostedProjectPayload());
+  return true;
+}
+
+export function getActiveHostedProjectId() {
+  return _activeProjectId;
 }
 
 /** Recompute environment profile from current state and store it. */
