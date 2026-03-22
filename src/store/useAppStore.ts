@@ -417,6 +417,8 @@ const storeCreator = (set: any, get: any): AppState => ({
     status: 'disconnected',
     wsUrl: '',
     token: '',
+    transport: 'direct-websocket',
+    lastSyncAt: undefined,
     entities: [],
     liveStates: {},
     vacuumSegmentMap: {},
@@ -1510,6 +1512,18 @@ const storeCreator = (set: any, get: any): AppState => ({
     homeAssistant: { ...s.homeAssistant, wsUrl, token },
   })),
 
+  setHATransport: (transport) => set((s: any) => ({
+    homeAssistant: { ...s.homeAssistant, transport },
+  })),
+
+  markHASync: (transport) => set((s: any) => ({
+    homeAssistant: {
+      ...s.homeAssistant,
+      ...(transport ? { transport } : {}),
+      lastSyncAt: new Date().toISOString(),
+    },
+  })),
+
   setVacuumSegmentMap: (map) => set((s: any) => ({
     homeAssistant: { ...s.homeAssistant, vacuumSegmentMap: map },
   })),
@@ -1730,6 +1744,7 @@ export async function initHostedMode() {
       stateUpdate.homeAssistant = {
         ...useAppStore.getState().homeAssistant,
         wsUrl: cfg.ha.baseUrl,
+        transport: hosted ? 'live-stream' : 'direct-websocket',
         // Token stays empty — all HA calls go through /api/ha/* proxy
       };
     }

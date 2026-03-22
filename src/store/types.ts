@@ -772,7 +772,7 @@ export interface EnvironmentState {
 }
 
 // ─── Home Assistant Layer ───
-export type HAConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
+export type HAConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'degraded' | 'error';
 
 export interface HAEntity {
   entityId: string;
@@ -786,6 +786,8 @@ export interface HomeAssistantState {
   status: HAConnectionStatus;
   wsUrl: string;
   token: string;
+  transport?: 'direct-websocket' | 'live-stream' | 'fallback-poll';
+  lastSyncAt?: string;
   entities: HAEntity[];
   liveStates: Record<string, { state: string; attributes: Record<string, unknown> }>;
   vacuumSegmentMap: Record<string, number>;
@@ -1256,6 +1258,8 @@ export interface AppState {
   updateHALiveState: (entityId: string, state: string, attributes: Record<string, unknown>) => void;
   setHAStatus: (status: HAConnectionStatus) => void;
   setHAConnection: (wsUrl: string, token: string) => void;
+  setHATransport: (transport: HomeAssistantState['transport']) => void;
+  markHASync: (transport?: HomeAssistantState['transport']) => void;
   setVacuumSegmentMap: (map: Record<string, number>) => void;
 
   // Reference drawing actions

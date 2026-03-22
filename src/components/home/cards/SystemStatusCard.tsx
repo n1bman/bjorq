@@ -1,16 +1,28 @@
 import { Info } from 'lucide-react';
 import { getMode } from '../../../lib/apiClient';
 import { useAdminAuth } from '../../../hooks/useAdminAuth';
+import { useAppStore } from '../../../store/useAppStore';
 
 export default function SystemStatusCard() {
   const mode = getMode();
   const hosted = mode === 'HOSTED';
   const { status } = useAdminAuth();
+  const ha = useAppStore((s) => s.homeAssistant);
+
+  const haTransportLabel = !hosted
+    ? 'Direkt WebSocket'
+    : ha.transport === 'fallback-poll'
+      ? 'Fallback polling'
+      : ha.transport === 'live-stream'
+        ? 'Server live-hub'
+        : 'Direkt WebSocket';
 
   const rows = [
     { label: 'Läge', value: mode },
     { label: 'Persistens', value: hosted ? 'Disk (data/)' : 'LocalStorage' },
-    { label: 'HA-anslutning', value: hosted ? 'Server live-hub' : 'Direkt WebSocket' },
+    { label: 'HA-anslutning', value: haTransportLabel },
+    ...(hosted ? [{ label: 'HA-status', value: ha.status }] : []),
+    ...(hosted && ha.lastSyncAt ? [{ label: 'Senaste sync', value: new Date(ha.lastSyncAt).toLocaleTimeString() }] : []),
     ...(hosted ? [{ label: 'Adminskydd', value: !status.configured ? 'Av' : status.unlocked ? 'Upplåst' : 'Låst' }] : []),
     ...(hosted ? [{ label: 'Server', value: window.location.origin }] : []),
   ];

@@ -2,7 +2,7 @@ import { setTimeout as delay } from 'timers/promises';
 import { WebSocket } from 'ws';
 import { getConfigWithSecurity } from '../security/auth.js';
 
-function buildWsUrl(baseUrl) {
+export function buildWsUrl(baseUrl) {
   let finalUrl = (baseUrl || '').trim();
   if (!finalUrl) return '';
   if (finalUrl.startsWith('https://')) finalUrl = finalUrl.replace('https://', 'wss://');
@@ -24,7 +24,7 @@ function mapEntity(entity) {
   };
 }
 
-function parseVacuumSegmentMap(payload) {
+export function parseVacuumSegmentMap(payload) {
   const response = payload?.response ?? payload;
   const maps = response?.maps ?? response;
   const firstMap = Array.isArray(maps) ? maps[0] : maps;
@@ -60,6 +60,8 @@ class HALiveHub {
     this.entities = [];
     this.liveStates = {};
     this.vacuumSegmentMap = {};
+    this.lastEventAt = null;
+    this.lastSnapshotAt = null;
     this.clients = new Set();
     this.ws = null;
     this.manualDisconnect = false;
@@ -77,6 +79,9 @@ class HALiveHub {
   getSnapshot() {
     return {
       status: this.status,
+      reconnectAttempt: this.reconnectAttempt,
+      lastEventAt: this.lastEventAt,
+      lastSnapshotAt: this.lastSnapshotAt,
       entities: this.entities,
       liveStates: this.liveStates,
       vacuumSegmentMap: this.vacuumSegmentMap,
@@ -108,10 +113,16 @@ class HALiveHub {
 
   setStatus(status) {
     this.status = status;
-    this.broadcast('ha-status', { status });
+    this.broadcast('ha-status', {
+      status,
+      reconnectAttempt: this.reconnectAttempt,
+      lastEventAt: this.lastEventAt,
+      lastSnapshotAt: this.lastSnapshotAt,
+    });
   }
 
   applyFullState(states) {
+    this.lastSnapshotAt = new Date().toISOString();
     this.entities = states.map(mapEntity);
     this.liveStates = Object.fromEntries(
       states.map((entity) => [entity.entity_id, { state: entity.state, attributes: entity.attributes || {} }])
@@ -120,6 +131,7 @@ class HALiveHub {
   }
 
   applyEntityUpdate(entityId, state, attributes = {}) {
+    this.lastEventAt = new Date().toISOString();
     this.liveStates[entityId] = { state, attributes };
     const mapped = mapEntity({ entity_id: entityId, state, attributes });
     const existingIndex = this.entities.findIndex((entity) => entity.entityId === entityId);

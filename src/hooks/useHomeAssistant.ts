@@ -25,10 +25,12 @@ function applyHostedSnapshot(snapshot: {
   entities: HAEntity[];
   liveStates: Record<string, { state: string; attributes: Record<string, unknown> }>;
   vacuumSegmentMap?: Record<string, number>;
+  transport?: 'live-stream' | 'fallback-poll';
 }) {
   const s = useAppStore.getState();
   s.setHAStatus(snapshot.status as any);
   s.setHAEntities(snapshot.entities || []);
+  s.markHASync(snapshot.transport || 'live-stream');
   if (snapshot.vacuumSegmentMap) {
     s.setVacuumSegmentMap(snapshot.vacuumSegmentMap);
   }
@@ -69,6 +71,7 @@ function connect(url: string, token: string) {
   const store = useAppStore.getState();
   store.setHAConnection(finalUrl, token);
   store.setHAStatus('connecting');
+  store.setHATransport('direct-websocket');
 
   try {
     const socket = new WebSocket(finalUrl);
@@ -86,6 +89,7 @@ function connect(url: string, token: string) {
           break;
         case 'auth_ok':
           s.setHAStatus('connected');
+          s.markHASync('direct-websocket');
           haServiceCaller.current = createThrottledCaller(callService);
           socket.send(JSON.stringify({ type: 'get_states', id: nextId() }));
           socket.send(JSON.stringify({ type: 'subscribe_events', event_type: 'state_changed', id: nextId() }));
@@ -108,6 +112,7 @@ function connect(url: string, token: string) {
               attributes: e.attributes || {},
             }));
             s.setHAEntities(entities);
+            s.markHASync('direct-websocket');
             for (const e of msg.result) {
               s.updateHALiveState(e.entity_id, e.state, e.attributes || {});
             }
@@ -119,6 +124,7 @@ function connect(url: string, token: string) {
             if (newState?.entity_id) {
               const entityId = newState.entity_id;
               if (isSuppressed(entityId)) break;
+              s.markHASync('direct-websocket');
               s.updateHALiveState(entityId, newState.state, newState.attributes || {});
             }
           }
@@ -175,6 +181,24 @@ export function useHomeAssistant() {
 
     let source: EventSource | null = null;
     let fallbackActive = false;
+    let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
+    let heartbeatInterval: ReturnType<typeof setInterval> | null = null;
+    let lastStreamMessageAt = 0;
+
+    const clearReconnectTimeout = () => {
+      if (reconnectTimeout) clearTimeout(reconnectTimeout);
+      reconnectTimeout = null;
+    };
+
+    const stopHeartbeatWatch = () => {
+      if (heartbeatInterval) clearInterval(heartbeatInterval);
+      heartbeatInterval = null;
+    };
+
+    const noteStreamActivity = () => {
+      lastStreamMessageAt = Date.now();
+      useAppStore.getState().markHASync('live-stream');
+    };
 
     const fetchSnapshot = async () => {
       try {
@@ -186,10 +210,10 @@ export function useHomeAssistant() {
           state: entity.state,
           attributes: entity.attributes || {},
         }));
-        applyHostedSnapshot({ ...snapshot, entities });
+        applyHostedSnapshot({ ...snapshot, entities, transport: fallbackActive ? 'fallback-poll' : 'live-stream' });
       } catch (err) {
         const store = useAppStore.getState();
-        if (store.homeAssistant.status === 'connected') {
+        if (store.homeAssistant.status === 'connected' || store.homeAssistant.status === 'degraded') {
           store.setHAStatus('connecting');
         }
       }
@@ -198,16 +222,32 @@ export function useHomeAssistant() {
     const startFallback = () => {
       if (fallbackActive) return;
       fallbackActive = true;
+      const store = useAppStore.getState();
+      if (store.homeAssistant.status !== 'error' && store.homeAssistant.status !== 'disconnected') {
+        store.setHAStatus('degraded');
+      }
+      store.setHATransport('fallback-poll');
+      fetchSnapshot().catch(() => {});
       hostedFallbackTimer = setInterval(fetchSnapshot, 10000);
     };
 
     const stopFallback = () => {
       fallbackActive = false;
       if (hostedFallbackTimer) clearInterval(hostedFallbackTimer);
+      hostedFallbackTimer = undefined;
+    };
+
+    const scheduleStreamReconnect = () => {
+      clearReconnectTimeout();
+      reconnectTimeout = setTimeout(() => {
+        connectHostedStream();
+      }, 3000);
     };
 
     const connectHostedStream = () => {
+      source?.close();
       source = new EventSource('/api/live/events');
+      lastStreamMessageAt = Date.now();
       source.addEventListener('snapshot', (event) => {
         const snapshot = JSON.parse((event as MessageEvent).data);
         const entities: HAEntity[] = (snapshot.entities || []).map((entity: any) => ({
@@ -217,27 +257,46 @@ export function useHomeAssistant() {
           state: entity.state,
           attributes: entity.attributes || {},
         }));
-        applyHostedSnapshot({ ...snapshot, entities });
+        noteStreamActivity();
+        applyHostedSnapshot({ ...snapshot, entities, transport: 'live-stream' });
       });
       source.addEventListener('entity-update', (event) => {
         const payload = JSON.parse((event as MessageEvent).data);
+        noteStreamActivity();
         if (!isSuppressed(payload.entityId)) {
           useAppStore.getState().updateHALiveState(payload.entityId, payload.state, payload.attributes || {});
         }
       });
       source.addEventListener('ha-status', (event) => {
         const payload = JSON.parse((event as MessageEvent).data);
+        noteStreamActivity();
         useAppStore.getState().setHAStatus(payload.status);
       });
       source.addEventListener('segment-map', (event) => {
         const payload = JSON.parse((event as MessageEvent).data);
+        noteStreamActivity();
         useAppStore.getState().setVacuumSegmentMap(payload.vacuumSegmentMap || {});
       });
+      source.addEventListener('ping', () => {
+        noteStreamActivity();
+      });
       source.onopen = () => {
+        clearReconnectTimeout();
         stopFallback();
+        useAppStore.getState().setHATransport('live-stream');
+        fetchSnapshot().catch(() => {});
+        stopHeartbeatWatch();
+        heartbeatInterval = setInterval(() => {
+          if (Date.now() - lastStreamMessageAt > 45000) {
+            source?.close();
+            startFallback();
+            scheduleStreamReconnect();
+          }
+        }, 10000);
       };
       source.onerror = () => {
         startFallback();
+        scheduleStreamReconnect();
       };
     };
 
@@ -245,6 +304,8 @@ export function useHomeAssistant() {
 
     return () => {
       stopFallback();
+      stopHeartbeatWatch();
+      clearReconnectTimeout();
       source?.close();
       pollStarted.current = false;
       haServiceCaller.current = null;

@@ -13,9 +13,11 @@ Detailed release notes for each shipped version should also be added as
 ### Changed
 - **Scoped admin model** - hosted mode now separates everyday device control from administrative actions so normal dashboard use can stay smoother while settings, backups, project changes, raw HA proxy access, and security-sensitive HA domains remain protected.
 - **Profile access clarity** - Profile now explains which actions work without admin unlock and which still require admin.
+- **Hosted reconnect hardening** - hosted live sync now tracks degraded fallback mode, restores stream sync more deliberately after disconnects, and surfaces transport/sync status in system status.
 
 ### Verified
 - **Phase 1 verification** - `npm test`, `npm run lint`, and `npm run build` were run successfully after the access model update.
+- **Phase 2 verification** - hosted reconnect changes were verified with `npm test`, `npm run lint`, and `npm run build`.
 
 ## [1.8.2] - 2026-03-22
 
