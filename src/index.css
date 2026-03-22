@@ -226,14 +226,12 @@
     @apply max-w-2xl text-sm leading-6 text-muted-foreground;
   }
 
-  .workspace-nav-panel,
-  .workspace-note-card {
+  .workspace-nav-panel {
     @apply rounded-[24px] border border-border/40 bg-card/80 p-4 backdrop-blur-sm;
     box-shadow: 0 14px 32px hsl(220 20% 4% / 0.14);
   }
 
-  .workspace-nav-title,
-  .workspace-note-kicker {
+  .workspace-nav-title {
     @apply text-[10px] font-semibold uppercase tracking-[0.2em] text-primary/80;
   }
 
@@ -251,18 +249,6 @@
     background: linear-gradient(180deg, hsl(var(--primary) / 0.12), hsl(var(--secondary) / 0.12));
   }
 
-  .workspace-note-text {
-    @apply mt-1 text-[11px] leading-5 text-muted-foreground;
-  }
-
-  .workspace-aside-stack {
-    @apply space-y-3;
-  }
-
-  .workspace-inline-notes {
-    @apply mt-4 grid gap-3 xl:grid-cols-2;
-  }
-
   .workspace-content {
     @apply space-y-5;
   }
@@ -275,7 +261,7 @@
   }
 
   .workspace-section-head {
-    @apply mb-5 flex flex-col gap-3 border-b border-border/40 pb-4 xl:flex-row xl:items-end xl:justify-between;
+    @apply mb-5 border-b border-border/40 pb-4;
   }
 
   .workspace-section-kicker {
@@ -284,10 +270,6 @@
 
   .workspace-section-title {
     @apply mt-1 text-xl font-semibold text-foreground;
-  }
-
-  .workspace-section-description {
-    @apply max-w-xl text-sm leading-6 text-muted-foreground;
   }
 
   .workspace-grid {

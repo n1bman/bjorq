@@ -602,25 +602,11 @@ function SettingsWorkspaceCategory() {
     <WorkspaceLayout
       eyebrow="Installningar"
       title="Kontrollcenter"
-      description="En tydligare arbetsyta for dagliga systemval, anslutningar och serververktyg."
       sections={settingsSections}
-      asideChildren={
-        <div className="workspace-aside-stack">
-          <MiniWorkspaceCard
-            title="Struktur"
-            text="Varje block ar nu en egen modul, medan vansterpanelen fungerar som ett litet programnav for installningarna."
-          />
-          <MiniWorkspaceCard
-            title="Fokus"
-            text="Profil och anslutningar ligger som tyngre huvudytor. System och data ar sekundara verktyg i samma kontrollcenter."
-          />
-        </div>
-      }
     >
       <WorkspaceSection
         id="settings-profile"
         title="Profil"
-        description="Identitet, adminupplasning och kopplade konton samlat i en huvudmodul."
       >
         <div className="workspace-grid workspace-grid-single">
           <ProfilePanel />
@@ -630,7 +616,6 @@ function SettingsWorkspaceCategory() {
       <WorkspaceSection
         id="settings-look"
         title="Utseende"
-        description="Tema, accentfarg och de visuella val som styr hur dashboarden upplevs."
       >
         <div className="workspace-grid workspace-grid-single">
           <ThemeCard />
@@ -640,7 +625,6 @@ function SettingsWorkspaceCategory() {
       <WorkspaceSection
         id="settings-display"
         title="Skarm & Standby"
-        description="Kioskflode, browser-lage och hur dashboarden beter sig i vilolage."
       >
         <div className="workspace-grid">
           <DisplaySettings />
@@ -651,7 +635,6 @@ function SettingsWorkspaceCategory() {
       <WorkspaceSection
         id="settings-system"
         title="System"
-        description="Runtime, persistens, hosted-status och serverkoppling i en kompakt driftmodul."
       >
         <div className="workspace-grid workspace-grid-single">
           <SystemStatusCard />
@@ -661,7 +644,6 @@ function SettingsWorkspaceCategory() {
       <WorkspaceSection
         id="settings-connection"
         title="Anslutning"
-        description="Integrationer och lokal konfiguration uppdelat som tydliga programmoduler i stallet for lang formularserie."
       >
         <div className="workspace-grid">
           <HAConnectionPanel />
@@ -674,7 +656,6 @@ function SettingsWorkspaceCategory() {
       <WorkspaceSection
         id="settings-data"
         title="Data"
-        description="Projektfiler, backup och import ligger samlade i ett eget verktygsomrade."
       >
         <div className="workspace-grid">
           <ProjectManagerPanel />
@@ -697,25 +678,11 @@ function GraphicsWorkspaceCategory() {
     <WorkspaceLayout
       eyebrow="Grafik & Miljo"
       title="Scenstudio"
-      description="En mer programlik arbetsyta dar 3D-forhandsvisningen ar scenen och verktygen ligger som kontrollpaneler runt den."
       sections={graphicsSections}
-      asideChildren={
-        <div className="workspace-aside-stack">
-          <MiniWorkspaceCard
-            title="Studio"
-            text="Tanken ar mindre dokumentsida och mer ett litet kontrollrum for scenen, med forhandsvisning som huvudfokus."
-          />
-          <MiniWorkspaceCard
-            title="Flode"
-            text="Preview forst, sedan rendering, sol/vader och miljo som tydliga verktygssteg i samma arbetsyta."
-          />
-        </div>
-      }
     >
       <WorkspaceSection
         id="graphics-preview"
         title="3D-forhandsvisning"
-        description="Live-previewn ligger som scenfonster i stallet for ett vanligt kort, sa att grafikpanelen kanns som ett riktigt program."
       >
         <div className="workspace-preview-shell">
           <div className="workspace-preview-stage">
@@ -727,7 +694,6 @@ function GraphicsWorkspaceCategory() {
       <WorkspaceSection
         id="graphics-rendering"
         title="Rendering"
-        description="Prestanda, kvalitet och avancerade 3D-reglage i ett samlat teknikblock."
       >
         <div className="workspace-grid workspace-grid-single">
           <GraphicsSettings />
@@ -737,7 +703,6 @@ function GraphicsWorkspaceCategory() {
       <WorkspaceSection
         id="graphics-sun"
         title="Sol & Vader"
-        description="Ljusflode, vader och kalibrering samlade i en separat kontrollmodul."
       >
         <div className="workspace-grid workspace-grid-single">
           <SunWeatherPanel />
@@ -747,7 +712,6 @@ function GraphicsWorkspaceCategory() {
       <WorkspaceSection
         id="graphics-environment"
         title="Miljo & Atmosfar"
-        description="Mark, himmel och scenens overgripande uttryck i en egen sektion."
       >
         <div className="workspace-grid workspace-grid-single">
           <EnvironmentPanel />
@@ -760,17 +724,13 @@ function GraphicsWorkspaceCategory() {
 function WorkspaceLayout({
   eyebrow,
   title,
-  description,
   sections,
   children,
-  asideChildren,
 }: {
   eyebrow: string;
   title: string;
-  description: string;
   sections: readonly { id: string; label: string; icon: typeof Home; description: string }[];
   children: React.ReactNode;
-  asideChildren?: React.ReactNode;
 }) {
   return (
     <div className="workspace-shell">
@@ -778,7 +738,6 @@ function WorkspaceLayout({
         <div className="workspace-header-copy">
           <span className="workspace-eyebrow">{eyebrow}</span>
           <h2 className="workspace-title">{title}</h2>
-          <p className="workspace-description">{description}</p>
         </div>
         <div className="workspace-nav-panel">
           <div className="workspace-nav-title">Snabblankar</div>
@@ -791,7 +750,6 @@ function WorkspaceLayout({
             ))}
           </nav>
         </div>
-        {asideChildren && <div className="workspace-aside-stack workspace-inline-notes">{asideChildren}</div>}
       </div>
 
       <div className="workspace-content">{children}</div>
@@ -802,12 +760,10 @@ function WorkspaceLayout({
 function WorkspaceSection({
   id,
   title,
-  description,
   children,
 }: {
   id: string;
   title: string;
-  description: string;
   children: React.ReactNode;
 }) {
   return (
@@ -817,19 +773,9 @@ function WorkspaceSection({
           <span className="workspace-section-kicker">Sektion</span>
           <h3 className="workspace-section-title">{title}</h3>
         </div>
-        <p className="workspace-section-description">{description}</p>
       </div>
       {children}
     </section>
-  );
-}
-
-function MiniWorkspaceCard({ title, text }: { title: string; text: string }) {
-  return (
-    <div className="workspace-note-card">
-      <span className="workspace-note-kicker">{title}</span>
-      <p className="workspace-note-text">{text}</p>
-    </div>
   );
 }
 
