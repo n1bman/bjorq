@@ -11,6 +11,25 @@ Detailed release notes for each shipped version should also be added as
 ## [Unreleased]
 
 ### Changed
+- **Kontrollpanelens informationsarkitektur** - `Profil` har blivit en egen huvudmeny, medan grafik-, preview- och miljöinställningar nu bor under `Inställningar`.
+- **Tydligare ansvar mellan ytor** - konto, kopplingar, projektdata och backup är nu samlade under `Profil`, medan tema, display, standby, systemstatus och 3D-scenkontroller ligger under `Inställningar`.
+
+### Fixed
+- **Migrering från äldre menyval** - sparade profiler som fortfarande pekar på gamla `graphics` mappas nu om till `settings` vid bootstrap så äldre hosted-data inte öppnar en tom kontrollpanel.
+
+## [1.8.5] - 2026-03-22
+
+### Changed
+- **Kontrollpanelens informationsarkitektur** - `Profil` är nu en egen huvudmeny och `Grafik & Miljö` har flyttats in under `Inställningar`.
+- **Tydligare ytfördelning** - konto, adminskydd, kopplingar, projektdata och backup ligger nu under `Profil`, medan tema, display, standby, 3D-preview, grafik, miljö och systemstatus ligger under `Inställningar`.
+
+### Fixed
+- **Kompatibilitet med äldre profiler** - sparade dashboard-profiler som tidigare använde `graphics` mappas nu automatiskt till `settings` i hosted/add-on-läget.
+
+### Verified
+- `npm test`
+- `npm run lint`
+- `npm run build`
 
 ## [1.8.4] - 2026-03-22
 

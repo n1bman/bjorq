@@ -17,7 +17,7 @@ export default function DashboardShell() {
   const setAppMode = useAppStore((s) => s.setAppMode);
   const unreadCount = useAppStore((s) => s.activityLog.filter((e) => !e.read).length);
 
-  const Content = categoryContent[activeCategory];
+  const Content = categoryContent[activeCategory] ?? categoryContent.settings;
 
   const handleCategoryClick = useCallback((key: DashCategory) => {
     setDashCategory(key);

@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef } from 'react';
 import SortableWidgetGrid from './SortableWidgetGrid';
 import type { SortableItem } from './SortableWidgetGrid';
-import { Home, Cloud, Cpu, Zap, Bell, Video, Settings, Pencil, X, CalendarDays, Bot, Moon, Save, Workflow, Palette, LayoutGrid, Thermometer, Trees, User, Monitor, Database, Link2, Sparkles, Sun, SlidersHorizontal } from 'lucide-react';
+import { Home, Cloud, Cpu, Zap, Bell, Video, Settings, Pencil, X, CalendarDays, Bot, Moon, Save, Workflow, Palette, LayoutGrid, Thermometer, Trees, User, Monitor, Database, Link2, Sparkles } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Button } from '../ui/button';
 import { useAppStore } from '../../store/useAppStore';
@@ -54,8 +54,8 @@ export const categories: { key: DashCategory; label: string; icon: typeof Home }
   { key: 'robot', label: 'Robot', icon: Bot },
   { key: 'activity', label: 'Aktivitet', icon: Bell },
   { key: 'widgets', label: 'Widgets', icon: LayoutGrid },
-  { key: 'graphics', label: 'Grafik & Miljö', icon: Trees },
   { key: 'settings', label: 'Inställningar', icon: Settings },
+  { key: 'profile', label: 'Profil', icon: User },
 ];
 
 const deviceFilters: { key: DeviceKind | 'all'; label: string; emoji: string }[] = [
@@ -509,93 +509,13 @@ function WidgetsCategory() {
   return <HomeWidgetConfig />;
 }
 
-function SettingsCategory() {
-  return (
-    <div className="settings-page">
-      <section>
-        <h2>Profil</h2>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
-          <ProfilePanel />
-        </div>
-      </section>
-
-      <section>
-        <h2>Utseende</h2>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
-          <ThemeCard />
-        </div>
-      </section>
-
-      <section>
-        <h2>Skärm & Standby</h2>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
-          <DisplaySettings />
-          <StandbySettingsPanel />
-        </div>
-      </section>
-
-      <section>
-        <h2>System</h2>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
-          <SystemStatusCard />
-        </div>
-      </section>
-
-      <section>
-        <h2>Anslutning</h2>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
-          <HAConnectionPanel />
-          <WizardConnectionPanel />
-          <LocationSettings />
-          <WifiPanel />
-        </div>
-      </section>
-
-      <section>
-        <h2>Data</h2>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
-          <ProjectManagerPanel />
-          <DataBackupCard />
-        </div>
-      </section>
-    </div>
-  );
-}
-
-function GraphicsCategory() {
-  return (
-    <div className="settings-page">
-      {/* Live 3D preview — persistent canvas visible through transparent window */}
-      <section>
-        <h2>3D-förhandsvisning</h2>
-        <div className="rounded-2xl overflow-hidden h-[250px] border border-border/40 bg-card">
-          <DashboardPreview3D />
-        </div>
-      </section>
-      <section>
-        <h2>Renderingsinställningar</h2>
-        <GraphicsSettings />
-      </section>
-      <section>
-        <h2>Sol & Väder</h2>
-        <SunWeatherPanel />
-      </section>
-      <section>
-        <h2>Miljö & Atmosfär</h2>
-        <EnvironmentPanel />
-      </section>
-    </div>
-  );
-}
-
 function SettingsWorkspaceCategory() {
   const settingsSections = [
-    { id: 'settings-profile', label: 'Profil', icon: User, description: 'Anvandare, adminlage och identitet' },
     { id: 'settings-look', label: 'Utseende', icon: Palette, description: 'Tema och visuell profil' },
     { id: 'settings-display', label: 'Skarm & Standby', icon: Monitor, description: 'Kiosk, fullscreen och standby' },
+    { id: 'settings-graphics', label: 'Grafik & Preview', icon: Sparkles, description: '3D-preview, rendering och kvalitet' },
+    { id: 'settings-environment', label: 'Miljo & Vader', icon: Trees, description: 'Sol, vader, terrang och atmosfar' },
     { id: 'settings-system', label: 'System', icon: Cpu, description: 'Driftlage, status och serverinfo' },
-    { id: 'settings-connection', label: 'Anslutning', icon: Link2, description: 'Home Assistant, Wizard och plats' },
-    { id: 'settings-data', label: 'Data', icon: Database, description: 'Projekt, backup och import' },
   ] as const;
 
   return (
@@ -604,15 +524,6 @@ function SettingsWorkspaceCategory() {
       title="Kontrollcenter"
       sections={settingsSections}
     >
-      <WorkspaceSection
-        id="settings-profile"
-        title="Profil"
-      >
-        <div className="workspace-grid workspace-grid-single">
-          <ProfilePanel />
-        </div>
-      </WorkspaceSection>
-
       <WorkspaceSection
         id="settings-look"
         title="Utseende"
@@ -633,6 +544,30 @@ function SettingsWorkspaceCategory() {
       </WorkspaceSection>
 
       <WorkspaceSection
+        id="settings-graphics"
+        title="Grafik & 3D-preview"
+      >
+        <div className="workspace-grid">
+          <div className="workspace-preview-shell">
+            <div className="workspace-preview-stage">
+              <DashboardPreview3D />
+            </div>
+          </div>
+          <GraphicsSettings />
+        </div>
+      </WorkspaceSection>
+
+      <WorkspaceSection
+        id="settings-environment"
+        title="Miljo & Vader"
+      >
+        <div className="workspace-grid">
+          <SunWeatherPanel />
+          <EnvironmentPanel />
+        </div>
+      </WorkspaceSection>
+
+      <WorkspaceSection
         id="settings-system"
         title="System"
       >
@@ -640,10 +575,35 @@ function SettingsWorkspaceCategory() {
           <SystemStatusCard />
         </div>
       </WorkspaceSection>
+    </WorkspaceLayout>
+  );
+}
+
+function ProfileWorkspaceCategory() {
+  const profileSections = [
+    { id: 'profile-account', label: 'Konto', icon: User, description: 'Profil, adminlage och identitet' },
+    { id: 'profile-connections', label: 'Kopplingar', icon: Link2, description: 'Synk, integrationer och natverk' },
+    { id: 'profile-data', label: 'Data', icon: Database, description: 'Projekt, backup, export och import' },
+  ] as const;
+
+  return (
+    <WorkspaceLayout
+      eyebrow="Profil"
+      title="Konto & synk"
+      sections={profileSections}
+    >
+      <WorkspaceSection
+        id="profile-account"
+        title="Konto & sakerhet"
+      >
+        <div className="workspace-grid workspace-grid-single">
+          <ProfilePanel />
+        </div>
+      </WorkspaceSection>
 
       <WorkspaceSection
-        id="settings-connection"
-        title="Anslutning"
+        id="profile-connections"
+        title="Kopplingar & synk"
       >
         <div className="workspace-grid">
           <HAConnectionPanel />
@@ -654,67 +614,12 @@ function SettingsWorkspaceCategory() {
       </WorkspaceSection>
 
       <WorkspaceSection
-        id="settings-data"
-        title="Data"
+        id="profile-data"
+        title="Data & backup"
       >
         <div className="workspace-grid">
           <ProjectManagerPanel />
           <DataBackupCard />
-        </div>
-      </WorkspaceSection>
-    </WorkspaceLayout>
-  );
-}
-
-function GraphicsWorkspaceCategory() {
-  const graphicsSections = [
-    { id: 'graphics-preview', label: 'Forhandsvisning', icon: Sparkles, description: 'Scenen som arbetscanvas' },
-    { id: 'graphics-rendering', label: 'Rendering', icon: SlidersHorizontal, description: 'Prestanda, skuggor och kvalitet' },
-    { id: 'graphics-sun', label: 'Sol & Vader', icon: Sun, description: 'Ljus, vader och kalibrering' },
-    { id: 'graphics-environment', label: 'Miljo', icon: Trees, description: 'Terrang, himmel och atmosfar' },
-  ] as const;
-
-  return (
-    <WorkspaceLayout
-      eyebrow="Grafik & Miljo"
-      title="Scenstudio"
-      sections={graphicsSections}
-    >
-      <WorkspaceSection
-        id="graphics-preview"
-        title="3D-forhandsvisning"
-      >
-        <div className="workspace-preview-shell">
-          <div className="workspace-preview-stage">
-            <DashboardPreview3D />
-          </div>
-        </div>
-      </WorkspaceSection>
-
-      <WorkspaceSection
-        id="graphics-rendering"
-        title="Rendering"
-      >
-        <div className="workspace-grid workspace-grid-single">
-          <GraphicsSettings />
-        </div>
-      </WorkspaceSection>
-
-      <WorkspaceSection
-        id="graphics-sun"
-        title="Sol & Vader"
-      >
-        <div className="workspace-grid workspace-grid-single">
-          <SunWeatherPanel />
-        </div>
-      </WorkspaceSection>
-
-      <WorkspaceSection
-        id="graphics-environment"
-        title="Miljo & Atmosfar"
-      >
-        <div className="workspace-grid workspace-grid-single">
-          <EnvironmentPanel />
         </div>
       </WorkspaceSection>
     </WorkspaceLayout>
@@ -792,8 +697,8 @@ export const categoryContent: Record<DashCategory, React.FC> = {
   robot: RobotPanel,
   activity: ActivityFeed,
   widgets: WidgetsCategory,
-  graphics: GraphicsWorkspaceCategory,
   settings: SettingsWorkspaceCategory,
+  profile: ProfileWorkspaceCategory,
 };
 
 export default function DashboardGrid() {

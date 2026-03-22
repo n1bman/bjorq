@@ -110,6 +110,44 @@ function syncProjectToServer() {
   });
 }
 
+function normalizeDashCategory(cat: unknown): 'home' | 'weather' | 'calendar' | 'devices' | 'energy' | 'climate' | 'automations' | 'scenes' | 'surveillance' | 'robot' | 'activity' | 'widgets' | 'settings' | 'profile' {
+  if (cat === 'graphics') return 'settings';
+  if (
+    cat === 'home' ||
+    cat === 'weather' ||
+    cat === 'calendar' ||
+    cat === 'devices' ||
+    cat === 'energy' ||
+    cat === 'climate' ||
+    cat === 'automations' ||
+    cat === 'scenes' ||
+    cat === 'surveillance' ||
+    cat === 'robot' ||
+    cat === 'activity' ||
+    cat === 'widgets' ||
+    cat === 'settings' ||
+    cat === 'profile'
+  ) {
+    return cat;
+  }
+  return 'home';
+}
+
+function normalizeDashboardState(dashboard: any) {
+  if (!dashboard) return undefined;
+  const categoryLayouts = dashboard.categoryLayouts && typeof dashboard.categoryLayouts === 'object'
+    ? Object.fromEntries(
+      Object.entries(dashboard.categoryLayouts).map(([key, value]) => [normalizeDashCategory(key), value])
+    )
+    : {};
+
+  return {
+    ...dashboard,
+    activeCategory: normalizeDashCategory(dashboard.activeCategory),
+    categoryLayouts,
+  };
+}
+
 function buildHostedProjectPayload() {
   const s = useAppStore.getState();
   const homeGeo = { ...s.homeGeometry };
@@ -1744,6 +1782,7 @@ export async function initHostedMode() {
       if (p.automations) stateUpdate.automations = p.automations;
       if (p.savedScenes) stateUpdate.savedScenes = p.savedScenes;
       if (p.wizard) stateUpdate.wizard = p.wizard;
+      if (p.dashboard) stateUpdate.dashboard = normalizeDashboardState(p.dashboard);
     }
 
     // Apply project data

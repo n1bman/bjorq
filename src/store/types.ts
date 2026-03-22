@@ -1006,7 +1006,7 @@ export interface BuildProject {
 export type AppMode = 'home' | 'dashboard' | 'build' | 'standby';
 
 // ─── Dashboard Categories & Widget Layouts ───
-export type DashCategory = 'home' | 'weather' | 'calendar' | 'devices' | 'energy' | 'climate' | 'automations' | 'scenes' | 'surveillance' | 'robot' | 'activity' | 'widgets' | 'graphics' | 'settings';
+export type DashCategory = 'home' | 'weather' | 'calendar' | 'devices' | 'energy' | 'climate' | 'automations' | 'scenes' | 'surveillance' | 'robot' | 'activity' | 'widgets' | 'settings' | 'profile';
 
 export interface WidgetPlacement {
   widgetId: string;
