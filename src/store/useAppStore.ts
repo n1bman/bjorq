@@ -1686,6 +1686,7 @@ export async function initHostedMode() {
   const { resolveMode } = await import('../lib/apiClient');
   const mode = await resolveMode();
   if (mode !== 'HOSTED') return false;
+  _hostedSyncReady = false;
 
   // A2: Hard cleanup — remove any stale localStorage keys in hosted mode
   try {
@@ -1744,16 +1745,20 @@ export async function initHostedMode() {
       stateUpdate.homeAssistant = {
         ...useAppStore.getState().homeAssistant,
         wsUrl: cfg.ha.baseUrl,
-        transport: hosted ? 'live-stream' : 'direct-websocket',
+        transport: 'live-stream',
         // Token stays empty — all HA calls go through /api/ha/* proxy
       };
     }
 
     useAppStore.setState(stateUpdate as any);
+    queueMicrotask(() => {
+      _hostedSyncReady = true;
+    });
     console.log('[Hosted] Loaded bootstrap data (config + profiles + project:', _activeProjectId, ')');
     return true;
   } catch (err) {
     console.warn('[Hosted] Failed to load from server:', err);
+    _hostedSyncReady = true;
     return false;
   }
 }
@@ -1776,10 +1781,10 @@ export function autoDetectPerformance() {
 }
 
 // ── Auto-sync project data to server on changes ──
-// Subscribe to layout/devices/homeGeometry/props changes
-let _initDone = false;
+// Sync is held while hosted bootstrap is applying server state, then enabled immediately.
+let _hostedSyncReady = false;
 useAppStore.subscribe((state, prev) => {
-  if (!_initDone) return; // Skip initial hydration
+  if (!_hostedSyncReady) return;
   if (!isHostedSync()) return;
   if (
     state.layout !== prev.layout ||
@@ -1791,8 +1796,6 @@ useAppStore.subscribe((state, prev) => {
     syncProjectToServer();
   }
 });
-// Mark init done after first bootstrap
-setTimeout(() => { _initDone = true; }, 3000);
 
 // ── Live room detection: auto-detect rooms when walls change ──
 let _roomDetectTimer: ReturnType<typeof setTimeout> | null = null;
