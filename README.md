@@ -47,6 +47,8 @@ Full handbook available in [`/docs`](./docs/):
 | [Kiosk & Display](docs/06-kiosk-and-display-modes.md) | App mode, kiosk setup |
 | [Troubleshooting](docs/07-troubleshooting.md) | Common issues and fixes |
 | [Developer Notes](docs/08-developer-notes.md) | API, state, build system |
+| [Technical Phases](docs/09-technical-phases.md) | Current implementation order and hardening phases |
+| [Release & Patchnotes](docs/10-release-and-patchnotes.md) | How versions, changelog, and patchnotes should be written |
 
 ## Development
 
