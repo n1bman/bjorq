@@ -147,8 +147,7 @@ class HALiveHub {
     try {
       const response = await this.callService('roborock', 'get_maps', {
         entity_id: vacuumEntityId,
-        return_response: true,
-      });
+      }, { returnResponse: true });
       const payload = response?.response ?? response;
       this.vacuumSegmentMap = parseVacuumSegmentMap(payload);
       this.broadcast('segment-map', { vacuumSegmentMap: this.vacuumSegmentMap });
@@ -260,7 +259,7 @@ class HALiveHub {
     await this.connect();
   }
 
-  async callService(domain, service, serviceData = {}) {
+  async callService(domain, service, serviceData = {}, options = {}) {
     const config = await getConfigWithSecurity();
     const baseUrl = config?.ha?.baseUrl;
     const token = config?.ha?.token;
@@ -269,7 +268,8 @@ class HALiveHub {
       err.statusCode = 400;
       throw err;
     }
-    const response = await fetch(`${baseUrl.replace(/\/$/, '')}/api/services/${domain}/${service}`, {
+    const endpoint = `${baseUrl.replace(/\/$/, '')}/api/services/${domain}/${service}${options.returnResponse ? '?return_response' : ''}`;
+    const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,

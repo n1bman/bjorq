@@ -17,6 +17,21 @@ Detailed release notes for each shipped version should also be added as
 ### Fixed
 - **Migrering från äldre menyval** - sparade profiler som fortfarande pekar på gamla `graphics` mappas nu om till `settings` vid bootstrap så äldre hosted-data inte öppnar en tom kontrollpanel.
 
+## [1.8.7] - 2026-03-22
+
+### Changed
+- **Importerad modellcache** - importerade husmodeller ateranvander nu en cachad template-scen i stallet for att lasas om fullt mellan varje vy och previewyta.
+- **Rensad dod kod** - bekräftat oanvanda filer i runtime-tradet har tagits bort for att minska forvirring vid fortsatt refaktorering.
+
+### Fixed
+- **Vacuum map i hosted-lage** - HA-serviceanropet for kartsegment begar nu `return_response` pa ratt satt.
+- **Onodig modellastning i previewfloden** - importerade modeller klonas nu fran cache i stallet for att hamtas om pa nytt for varje kontrollpanel-canvas.
+
+### Verified
+- `npm test`
+- `npm run lint`
+- `npm run build`
+
 ## [1.8.6] - 2026-03-22
 
 ### Changed
