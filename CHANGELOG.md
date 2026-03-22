@@ -12,6 +12,17 @@ Detailed release notes for each shipped version should also be added as
 
 ### Changed
 
+## [1.8.4] - 2026-03-22
+
+### Fixed
+- **Hosted autosave timing** - hosted project sync is now re-enabled immediately after bootstrap state is applied instead of being blocked by a coarse startup delay.
+- **Explicit project save** - both `Spara projekt` entry points now perform a real server-side project write in hosted/add-on mode instead of relying on an indirect state nudge.
+- **Persistence feedback** - hosted save failures now surface as visible error toasts so project persistence issues are easier to detect during testing.
+
+### Verified
+- `npm test`
+- `npm run lint`
+
 ## [1.8.3] - 2026-03-22
 
 ### Changed

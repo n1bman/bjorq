@@ -2,7 +2,7 @@
 
 A 3D smart home dashboard for wall-mounted tablets and kiosks.
 
-![Version](https://img.shields.io/badge/version-1.8.3-blue)
+![Version](https://img.shields.io/badge/version-1.8.4-blue)
 
 ## Features
 
@@ -61,7 +61,7 @@ All data (config, projects, profiles, backups) is stored in `/data` and persists
 | [Installation](../../docs/02-installation.md) | Setup for all platforms |
 | [Using the Dashboard](../../docs/03-using-the-dashboard.md) | Features and settings |
 | [Troubleshooting](../../docs/07-troubleshooting.md) | Common issues and fixes |
-| [Patchnotes 1.8.3](../../docs/patchnotes-v1.8.3.md) | Home Assistant menu coverage and entity matching |
+| [Patchnotes 1.8.4](../../docs/patchnotes-v1.8.4.md) | Hosted project persistence and autosave fixes |
 
 ## Support
 
