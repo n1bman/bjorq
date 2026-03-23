@@ -2,7 +2,7 @@
 
 A 3D smart home dashboard for wall-mounted tablets and kiosks.
 
-![Version](https://img.shields.io/badge/version-1.9.0-blue)
+![Version](https://img.shields.io/badge/version-1.9.1-blue)
 
 ## Features
 
@@ -61,7 +61,7 @@ All data (config, projects, profiles, backups) is stored in `/data` and persists
 | [Installation](../../docs/02-installation.md) | Setup for all platforms |
 | [Using the Dashboard](../../docs/03-using-the-dashboard.md) | Features and settings |
 | [Troubleshooting](../../docs/07-troubleshooting.md) | Common issues and fixes |
-| [Patchnotes 1.9.0](../../docs/patchnotes-v1.9.0.md) | Legacy-bundle for aldre iPad/Safari och lugnare startfallback vid langsam forstaladdning |
+| [Patchnotes 1.9.1](../../docs/patchnotes-v1.9.1.md) | Robust Wizard-thumbnailflode med direkt endpoint, retry/fallback och lokal persistens efter import |
 
 ## Support
 

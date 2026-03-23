@@ -35,12 +35,133 @@ import { Label } from '../ui/label';
 import { Badge } from '../ui/badge';
 import type { CatalogAssetMeta, PropCatalogItem, AssetCategory } from '../../store/types';
 import type { PipelineResult } from '../../lib/assetPipeline';
+import {
+  downloadWizardModel,
+  downloadWizardThumbnail,
+  fetchWizardCatalog,
+  getWizardAssetThumbnail,
+  getWizardThumbnailFallbackUrl,
+} from '../../lib/wizardClient';
+import type { WizardAsset } from '../../lib/wizardClient';
 
 const ImportPreview3D = lazy(() => import('./ImportPreview3D'));
 const ImportTools = lazy(() => import('./import/ImportTools'));
 // BibliotekWorkspace is inlined below to avoid Vite/Rollup dynamic import issues
 
 const generateId = () => Math.random().toString(36).slice(2, 10);
+
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(reader.error ?? new Error('Failed to read blob'));
+    reader.readAsDataURL(blob);
+  });
+}
+
+function isPersistentLocalThumbnail(url?: string): boolean {
+  if (!url) return false;
+  return url.startsWith('data:') || url.startsWith('/api/') || url.startsWith('/catalog/');
+}
+
+function getWizardEntryThumbnail(asset: WizardAsset): string | undefined {
+  return getWizardAssetThumbnail(asset) ?? getWizardThumbnailFallbackUrl(asset.id);
+}
+
+function getCatalogEntryThumbnail(item: PropCatalogItem): string | undefined {
+  if (!item.wizardAssetId) return item.thumbnail;
+  if (isPersistentLocalThumbnail(item.thumbnail)) return item.thumbnail;
+  return getWizardThumbnailFallbackUrl(item.wizardAssetId) ?? item.thumbnail;
+}
+
+function useWizardThumbnailBackfill(catalog: PropCatalogItem[]) {
+  const wizardStatus = useAppStore((s) => s.wizard.status);
+  const updateCatalogItem = useAppStore((s) => s.updateCatalogItem);
+  const inFlightRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (wizardStatus !== 'connected') return;
+
+    const needsBackfill = catalog.filter((item) =>
+      item.wizardAssetId &&
+      !isPersistentLocalThumbnail(item.thumbnail)
+    );
+
+    needsBackfill.forEach((item) => {
+      const assetId = item.wizardAssetId;
+      if (!assetId || inFlightRef.current.has(item.id)) return;
+
+      inFlightRef.current.add(item.id);
+      downloadWizardThumbnail(assetId)
+        .then(async (blob) => {
+          if (!blob) return;
+          const dataUrl = await blobToDataUrl(blob);
+          updateCatalogItem(item.id, {
+            thumbnail: dataUrl,
+            wizardBaseUrl: useAppStore.getState().wizard.url.replace(/\/+$/, '') || undefined,
+          });
+        })
+        .catch((err) => {
+          console.warn(`[Wizard] Thumbnail backfill failed for ${assetId}:`, err);
+        })
+        .finally(() => {
+          inFlightRef.current.delete(item.id);
+        });
+    });
+  }, [catalog, updateCatalogItem, wizardStatus]);
+}
+
+function AssetThumbnail({
+  src,
+  alt,
+  category,
+  wizardAssetId,
+  className,
+  placeholderClassName,
+  iconClassName,
+}: {
+  src?: string;
+  alt: string;
+  category: string;
+  wizardAssetId?: string;
+  className: string;
+  placeholderClassName: string;
+  iconClassName: string;
+}) {
+  const fallbackSrc = wizardAssetId ? getWizardThumbnailFallbackUrl(wizardAssetId) : undefined;
+  const initialSrc = src || fallbackSrc;
+  const [currentSrc, setCurrentSrc] = useState<string | undefined>(initialSrc);
+  const [triedFallback, setTriedFallback] = useState(initialSrc === fallbackSrc && !!fallbackSrc);
+  const [failed, setFailed] = useState(!initialSrc);
+
+  useEffect(() => {
+    const nextSrc = src || fallbackSrc;
+    setCurrentSrc(nextSrc);
+    setTriedFallback(nextSrc === fallbackSrc && !!fallbackSrc);
+    setFailed(!nextSrc);
+  }, [src, fallbackSrc]);
+
+  const handleError = useCallback(() => {
+    if (!triedFallback && fallbackSrc && currentSrc !== fallbackSrc) {
+      setCurrentSrc(fallbackSrc);
+      setTriedFallback(true);
+      return;
+    }
+    setFailed(true);
+  }, [currentSrc, fallbackSrc, triedFallback]);
+
+  const Icon = AC_CATEGORY_ICONS[category] || Box;
+
+  if (!currentSrc || failed) {
+    return (
+      <div className={placeholderClassName}>
+        <Icon className={iconClassName} strokeWidth={1.5} />
+      </div>
+    );
+  }
+
+  return <img src={currentSrc} alt={alt} className={className} loading="lazy" onError={handleError} />;
+}
 
 /* ═══════════════════════════════════════════════
    BuildCatalogRow — inlined to avoid Vite cache issues
@@ -148,7 +269,7 @@ interface ACEntry {
   dimensions?: { width: number; depth: number; height: number };
   performance?: { vertices?: number; triangles?: number; textureBytes?: number };
   subcategory?: string;
-  wizardMeta?: import('../../lib/wizardClient').WizardAsset;
+  wizardMeta?: WizardAsset;
   wizardMode?: 'synced' | 'imported';
   staleSync?: boolean; // true if wizardMode=synced (deprecated, needs re-import)
 }
@@ -202,7 +323,7 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
 
   // Wizard import state (import-only, no sync mode)
   const [wizardImportingId, setWizardImportingId] = useState<string | null>(null);
-  const [wizardSourceMeta, setWizardSourceMeta] = useState<import('../../lib/wizardClient').WizardAsset | null>(null);
+  const [wizardSourceMeta, setWizardSourceMeta] = useState<WizardAsset | null>(null);
   const [wizardLoading, setWizardLoading] = useState(false);
   const [wizardError, setWizardError] = useState<string | null>(null);
 
@@ -210,7 +331,7 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
 
   // Wizard assets
   const wizardStatus = useAppStore((s) => s.wizard.status);
-  const [wizardAssets, setWizardAssets] = useState<import('../../lib/wizardClient').WizardAsset[]>([]);
+  const [wizardAssets, setWizardAssets] = useState<WizardAsset[]>([]);
   const fetchWizardAssets = useCallback(() => {
     if (wizardStatus !== 'connected') { setWizardAssets([]); setWizardError(null); return; }
     setWizardLoading(true); setWizardError(null);
@@ -221,6 +342,7 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
     });
   }, [wizardStatus]);
   useEffect(() => { fetchWizardAssets(); }, [fetchWizardAssets]);
+  useWizardThumbnailBackfill(catalog);
 
   // Track which wizard asset IDs have been imported locally
   const importedWizardIds = useMemo(() => new Set(
@@ -243,14 +365,8 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
     ...catalog.map((c): ACEntry => {
       // Stale synced entries get marked for re-import
       const isStaleSync = c.wizardMode === 'synced';
-      // For stale synced items with expired blob thumbnails, try wizard API fallback
-      let thumb = c.thumbnail;
-      if (isStaleSync && c.wizardAssetId && (!thumb || thumb.startsWith('blob:'))) {
-        const base = useAppStore.getState().wizard.url.replace(/\/+$/, '');
-        if (base) thumb = `${base}/assets/${encodeURIComponent(c.wizardAssetId)}/thumbnail`;
-      }
       return {
-        id: c.id, name: c.name, thumbnail: thumb, category: c.category || 'imported',
+        id: c.id, name: c.name, thumbnail: getCatalogEntryThumbnail(c), category: c.category || 'imported',
         source: isStaleSync ? 'wizard' as const : c.source as any, catalogItem: c,
         dimensions: c.dimensions, performance: c.performance as any, subcategory: c.subcategory,
         wizardMode: c.wizardMode,
@@ -261,18 +377,8 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
     ...wizardAssets.filter(w => !importedWizardIds.has(w.id)).map((w): ACEntry => {
       const bb = w.boundingBox;
       const dims = bb ? { width: +(bb.max[0] - bb.min[0]).toFixed(2), depth: +(bb.max[2] - bb.min[2]).toFixed(2), height: +(bb.max[1] - bb.min[1]).toFixed(2) } : undefined;
-      let thumb: string | undefined;
-      if (w.thumbnail) {
-        const base = useAppStore.getState().wizard.url.replace(/\/+$/, '');
-        thumb = w.thumbnail.startsWith('http') ? w.thumbnail : `${base}${w.thumbnail.startsWith('/') ? w.thumbnail : '/' + w.thumbnail}`;
-      }
-      // Always fall back to the direct thumbnail endpoint
-      if (!thumb) {
-        const base = useAppStore.getState().wizard.url.replace(/\/+$/, '');
-        thumb = `${base}/assets/${encodeURIComponent(w.id)}/thumbnail`;
-      }
       return {
-        id: `wizard-${w.id}`, name: w.name, thumbnail: thumb,
+        id: `wizard-${w.id}`, name: w.name, thumbnail: getWizardEntryThumbnail(w),
         category: w.category || 'imported', source: 'wizard', subcategory: w.subcategory,
         dimensions: dims,
         performance: w.triangleCount ? { triangles: w.triangleCount } : undefined,
@@ -416,24 +522,17 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
     setWizardImportingId(wm.id);
     toast.info(`Importerar ${entry.name}...`);
     try {
-      const { downloadWizardModel, downloadWizardThumbnail } = await import('../../lib/wizardClient');
       const [modelBlob, thumbBlob] = await Promise.all([
         downloadWizardModel(wm.id),
         downloadWizardThumbnail(wm.id),
       ]);
       const catalogId = `wizard-imp-${wm.id}`;
       let modelUrl: string;
-      let thumbnailUrl: string | undefined = entry.thumbnail;
+      let thumbnailUrl: string | undefined = getWizardThumbnailFallbackUrl(wm.id) || entry.thumbnail;
 
-      // Convert thumbnail to base64 data URL for persistence
       if (thumbBlob) {
         try {
-          const thumbReader = new FileReader();
-          thumbnailUrl = await new Promise<string>((resolve) => {
-            thumbReader.onload = () => resolve(thumbReader.result as string);
-            thumbReader.onerror = () => resolve(entry.thumbnail || '');
-            thumbReader.readAsDataURL(thumbBlob);
-          });
+          thumbnailUrl = await blobToDataUrl(thumbBlob);
         } catch { /* keep original URL */ }
       }
 
@@ -693,13 +792,15 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
                 {isImporting && <Loader2 size={12} className="animate-spin shrink-0" />}
                 {entry.staleSync && <span className="shrink-0" title="Kräver re-import"><AlertTriangle size={12} className="text-destructive" /></span>}
                 {entry.wizardMode === 'imported' && !entry.staleSync && <span className="shrink-0" title="Från Wizard"><Wand2 size={10} className="text-orange-400" /></span>}
-                {entry.thumbnail ? (
-                  <img src={entry.thumbnail} alt={entry.name} className="w-8 h-8 object-contain rounded shrink-0" loading="lazy"
-                    onError={(e) => { e.currentTarget.style.display = 'none'; const p = e.currentTarget.nextElementSibling; if (p) (p as HTMLElement).style.display = 'flex'; }} />
-                ) : null}
-                <div className="w-8 h-8 bg-muted/30 rounded items-center justify-center text-muted-foreground shrink-0" style={{ display: entry.thumbnail ? 'none' : 'flex' }}>
-                  {(() => { const I = AC_CATEGORY_ICONS[entry.category] || Box; return <I size={14} strokeWidth={1.5} />; })()}
-                </div>
+                <AssetThumbnail
+                  src={entry.thumbnail}
+                  alt={entry.name}
+                  category={entry.category}
+                  wizardAssetId={entry.wizardMeta?.id ?? entry.catalogItem?.wizardAssetId}
+                  className="w-8 h-8 object-contain rounded shrink-0"
+                  placeholderClassName="w-8 h-8 bg-muted/30 rounded flex items-center justify-center text-muted-foreground shrink-0"
+                  iconClassName="w-[14px] h-[14px]"
+                />
                 <div className="flex-1 min-w-0 text-left">
                   <span className="text-[11px] text-foreground truncate block">{entry.name}</span>
                   <div className="flex items-center gap-1">
@@ -720,13 +821,15 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
               {entry.staleSync && <div className="absolute top-1 right-1 z-20" title="Kräver re-import"><AlertTriangle size={10} className="text-destructive" /></div>}
               {entry.wizardMode === 'imported' && !entry.staleSync && <div className="absolute top-1 right-1 z-20" title="Från Wizard"><Wand2 size={10} className="text-orange-400" /></div>}
               {instanceCounts[entry.id] > 0 && <div className="absolute top-1 left-1 bg-primary text-primary-foreground text-[8px] font-bold rounded-full w-4 h-4 flex items-center justify-center z-20">×{instanceCounts[entry.id]}</div>}
-              {entry.thumbnail ? (
-                <img src={entry.thumbnail} alt={entry.name} className="w-full h-20 object-contain rounded p-1" loading="lazy"
-                  onError={(e) => { e.currentTarget.style.display = 'none'; const p = e.currentTarget.nextElementSibling; if (p) (p as HTMLElement).style.display = 'flex'; }} />
-              ) : null}
-              <div className="w-full h-20 bg-muted/30 rounded items-center justify-center text-muted-foreground" style={{ display: entry.thumbnail ? 'none' : 'flex' }}>
-                {(() => { const I = AC_CATEGORY_ICONS[entry.category] || Box; return <I size={20} strokeWidth={1.5} />; })()}
-              </div>
+              <AssetThumbnail
+                src={entry.thumbnail}
+                alt={entry.name}
+                category={entry.category}
+                wizardAssetId={entry.wizardMeta?.id ?? entry.catalogItem?.wizardAssetId}
+                className="w-full h-20 object-contain rounded p-1"
+                placeholderClassName="w-full h-20 bg-muted/30 rounded flex items-center justify-center text-muted-foreground"
+                iconClassName="w-5 h-5"
+              />
               <span className="text-[11px] text-foreground truncate w-full text-center">{entry.name}</span>
               <div className="flex items-center gap-1 w-full justify-center flex-wrap">
                 {entry.dimensions && <span className="text-[8px] text-muted-foreground">{entry.dimensions.width}×{entry.dimensions.depth}×{entry.dimensions.height}m</span>}
@@ -1699,6 +1802,7 @@ interface BibAssetEntry {
   source: 'curated' | 'user' | 'builtin' | 'wizard';
   catalogItem?: import('../../store/types').PropCatalogItem;
   curatedMeta?: CatalogAssetMeta;
+  wizardAssetId?: string;
   dimensions?: { width: number; depth: number; height: number };
   performance?: { vertices?: number; triangles?: number; textureBytes?: number };
   tags?: string[];
@@ -1774,16 +1878,15 @@ function BibliotekWorkspace() {
   const bibFileRef = useRef<HTMLInputElement>(null);
 
   const wizardStatus = useAppStore((s) => s.wizard.status);
-  const [wizardAssets, setWizardAssets] = useState<import('../../lib/wizardClient').WizardAsset[]>([]);
+  const [wizardAssets, setWizardAssets] = useState<WizardAsset[]>([]);
 
   useEffect(() => { loadCuratedCatalog().then(setCuratedAssets); }, []);
 
   useEffect(() => {
     if (wizardStatus !== 'connected') { setWizardAssets([]); return; }
-    import('../../lib/wizardClient').then(({ fetchWizardCatalog }) => {
-      fetchWizardCatalog(true).then(setWizardAssets).catch(() => setWizardAssets([]));
-    });
+    fetchWizardCatalog(true).then(setWizardAssets).catch(() => setWizardAssets([]));
   }, [wizardStatus]);
+  useWizardThumbnailBackfill(catalog);
 
   // Sync edit state when selection changes
   useEffect(() => {
@@ -1810,8 +1913,9 @@ function BibliotekWorkspace() {
     }
     for (const item of catalog) {
       result.push({
-        id: item.id, name: item.name, thumbnail: item.thumbnail,
+        id: item.id, name: item.name, thumbnail: getCatalogEntryThumbnail(item),
         category: item.category || 'imported', subcategory: item.subcategory, source: 'user',
+        wizardAssetId: item.wizardAssetId,
         catalogItem: item, tags: item.tags, visibility: item.visibility,
         placement: item.placement,
         dimensions: item.dimensions as any, performance: item.performance as any,
@@ -1822,16 +1926,7 @@ function BibliotekWorkspace() {
       if (!alreadyImported) {
         const bb = wa.boundingBox;
         const dims = bb ? { width: +(bb.max[0] - bb.min[0]).toFixed(2), depth: +(bb.max[2] - bb.min[2]).toFixed(2), height: +(bb.max[1] - bb.min[1]).toFixed(2) } : undefined;
-        let thumb: string | undefined;
-        if (wa.thumbnail) {
-          const base = useAppStore.getState().wizard.url.replace(/\/+$/, '');
-          thumb = wa.thumbnail.startsWith('http') ? wa.thumbnail : `${base}${wa.thumbnail.startsWith('/') ? wa.thumbnail : '/' + wa.thumbnail}`;
-        }
-        if (!thumb) {
-          const base = useAppStore.getState().wizard.url.replace(/\/+$/, '');
-          thumb = `${base}/assets/${encodeURIComponent(wa.id)}/thumbnail`;
-        }
-        result.push({ id: `wizard-${wa.id}`, name: wa.name, thumbnail: thumb, category: wa.category || 'imported', source: 'wizard', dimensions: dims });
+        result.push({ id: `wizard-${wa.id}`, name: wa.name, thumbnail: getWizardEntryThumbnail(wa), category: wa.category || 'imported', source: 'wizard', wizardAssetId: wa.id, dimensions: dims });
       }
     }
     return result;
@@ -2066,7 +2161,15 @@ function BibliotekWorkspace() {
                               isHidden && 'opacity-40')}>
                             {isFav && <span className="absolute top-1 right-1 text-[10px]">⭐</span>}
                             <div className="w-full aspect-square rounded bg-muted/50 flex items-center justify-center overflow-hidden">
-                              {entry.thumbnail ? <img src={entry.thumbnail} alt={entry.name} className="w-full h-full object-contain" loading="lazy" /> : <Box className="w-6 h-6 text-muted-foreground/40" />}
+                              <AssetThumbnail
+                                src={entry.thumbnail}
+                                alt={entry.name}
+                                category={entry.category}
+                                wizardAssetId={entry.wizardAssetId}
+                                className="w-full h-full object-contain"
+                                placeholderClassName="w-full h-full flex items-center justify-center text-muted-foreground/40"
+                                iconClassName="w-6 h-6"
+                              />
                             </div>
                             <span className="text-[10px] text-foreground leading-tight line-clamp-2">{entry.name}</span>
                             <div className="flex items-center gap-1">
@@ -2088,7 +2191,15 @@ function BibliotekWorkspace() {
                               selectedAsset?.id === entry.id ? 'bg-primary/10 text-primary' : 'hover:bg-muted/50 text-foreground',
                               isHidden && 'opacity-40')}>
                             <div className="w-8 h-8 rounded bg-muted/50 flex items-center justify-center shrink-0 overflow-hidden">
-                              {entry.thumbnail ? <img src={entry.thumbnail} alt={entry.name} className="w-full h-full object-contain" loading="lazy" /> : <Box className="w-4 h-4 text-muted-foreground/40" />}
+                              <AssetThumbnail
+                                src={entry.thumbnail}
+                                alt={entry.name}
+                                category={entry.category}
+                                wizardAssetId={entry.wizardAssetId}
+                                className="w-full h-full object-contain"
+                                placeholderClassName="w-full h-full flex items-center justify-center text-muted-foreground/40"
+                                iconClassName="w-4 h-4"
+                              />
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className="text-xs font-medium truncate">{isFav ? '⭐ ' : ''}{entry.name}</p>
@@ -2125,10 +2236,15 @@ function BibliotekWorkspace() {
             {/* Preview area */}
             <div className="p-4 border-b border-border">
               <div className="aspect-[4/3] rounded-xl bg-muted/30 border border-border flex items-center justify-center overflow-hidden">
-                {selectedAsset.thumbnail
-                  ? <img src={selectedAsset.thumbnail} alt={selectedAsset.name} className="w-full h-full object-contain" />
-                  : <Box className="w-16 h-16 text-muted-foreground/30" />
-                }
+                <AssetThumbnail
+                  src={selectedAsset.thumbnail}
+                  alt={selectedAsset.name}
+                  category={selectedAsset.category}
+                  wizardAssetId={selectedAsset.wizardAssetId ?? selectedAsset.catalogItem?.wizardAssetId}
+                  className="w-full h-full object-contain"
+                  placeholderClassName="w-full h-full flex items-center justify-center text-muted-foreground/30"
+                  iconClassName="w-16 h-16"
+                />
               </div>
             </div>
 

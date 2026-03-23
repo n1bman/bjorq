@@ -10,6 +10,21 @@ Detailed release notes for each shipped version should also be added as
 
 ## [Unreleased]
 
+## [1.9.1] - 2026-03-23
+
+### Changed
+- **Stabilare Wizard-thumbnails i Dashboarden** - Wizard-assets normaliseras nu mot den direkta thumbnail-endpointen i stallet for att lita pa varierande metadata-URL:er.
+- **Robustare bildfallback i biblioteket** - assetkort retry:ar nu en gang mot Wizard-endpointen och faller sedan rent tillbaka till placeholder utan trasig ikon.
+
+### Fixed
+- **Trasiga bildikoner for Wizard-assets** - Wizard-fliken och biblioteksvyerna visar nu riktiga thumbnails nar Wizard v2.9.6 exponerar dem korrekt.
+- **Remote-beroende efter import** - importerade Wizard-assets sparar nu thumbnail lokalt/persistent sa de inte behover fortsatt bero pa en extern thumbnail-URL.
+- **Gamla lokala Wizard-poster med trasiga thumbnails** - befintliga katalogposter kan nu backfillas fran Wizard `/assets/:id/thumbnail` nar Wizard ar ansluten.
+
+### Verified
+- `npm run lint`
+- `npm run build`
+
 ## [1.9.0] - 2026-03-23
 
 ### Changed

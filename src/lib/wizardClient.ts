@@ -116,10 +116,34 @@ export function getWizardThumbnailUrl(assetId: string): string {
 }
 
 export function getWizardAssetThumbnail(asset: WizardAsset): string | undefined {
-  if (!asset.thumbnail) return undefined;
-  const base = getBaseUrl();
-  if (asset.thumbnail.startsWith('http')) return asset.thumbnail;
-  return `${base}${asset.thumbnail.startsWith('/') ? asset.thumbnail : '/' + asset.thumbnail}`;
+  if (!asset.id) return undefined;
+  try {
+    return getWizardThumbnailUrl(asset.id);
+  } catch {
+    if (!asset.thumbnail) return undefined;
+    const base = getBaseUrl();
+    if (asset.thumbnail.startsWith('http')) return asset.thumbnail;
+    return `${base}${asset.thumbnail.startsWith('/') ? asset.thumbnail : '/' + asset.thumbnail}`;
+  }
+}
+
+export function getWizardThumbnailFallbackUrl(assetId?: string | null): string | undefined {
+  if (!assetId) return undefined;
+  try {
+    return getWizardThumbnailUrl(assetId);
+  } catch {
+    return undefined;
+  }
+}
+
+export function looksLikeWizardThumbnailUrl(url?: string | null): boolean {
+  if (!url) return false;
+  try {
+    const base = getBaseUrl();
+    return url.startsWith(`${base}/assets/`) || url.startsWith('/assets/');
+  } catch {
+    return url.startsWith('/assets/');
+  }
 }
 
 export async function downloadWizardModel(assetId: string): Promise<Blob> {
