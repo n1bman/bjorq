@@ -1,5 +1,6 @@
 // Force Vite restart v5
 import { defineConfig } from "vite";
+import legacy from "@vitejs/plugin-legacy";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
@@ -17,6 +18,10 @@ export default defineConfig(({ mode }) => ({
   },
   plugins: [
     react(),
+    legacy({
+      targets: ["defaults", "iOS >= 11", "Safari >= 11"],
+      modernPolyfills: true,
+    }),
     mode === 'development' && componentTagger(),
   ].filter(Boolean),
   resolve: {

@@ -5,6 +5,7 @@ import "./index.css";
 
 console.log('[App] main.tsx loaded');
 try {
+  (window as any).__BJORQ_APP_BOOTED__ = true;
   createRoot(document.getElementById("root")!).render(<App />);
 } catch (err) {
   console.error('[App] Failed to render:', err);

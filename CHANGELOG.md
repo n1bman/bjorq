@@ -10,6 +10,18 @@ Detailed release notes for each shipped version should also be added as
 
 ## [Unreleased]
 
+## [1.9.0] - 2026-03-23
+
+### Changed
+- **Aldre iPad-stod i webblaget** - produktionen bygger nu bade modern och legacy bundle sa aldre Safari/iPad far en kompatibel fallback utan att moderna klienter tappar sin nuvarande bundle.
+- **Snallare uppstartsfeedback** - startsidan markerar nu app-boot separat och visar en mjukare laddtext efter 15 sekunder i stallet for ett hart 5-sekundersfel.
+
+### Fixed
+- **"JS bundle did not load after 5s" pa gamla iPads** - aldre iPad-modeller som tidigare fastnade innan appen mountade far nu polyfills och legacy-transpilering i builden.
+
+### Verified
+- `npm run build`
+
 ## [1.8.8] - 2026-03-22
 
 ### Changed
