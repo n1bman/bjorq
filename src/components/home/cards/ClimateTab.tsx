@@ -277,13 +277,28 @@ function RuleCard({ rule }: { rule: ComfortRule }) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Thermometer size={14} className={rule.lastState === 'active' ? 'text-primary' : 'text-muted-foreground'} />
-          <span className="text-sm font-medium text-foreground">{rule.name}</span>
+          <div>
+            <span className="text-sm font-medium text-foreground">{rule.name}</span>
+            {rule.lastState === 'active' && (
+              <p className="text-[8px] text-primary/70">Aktiv nu</p>
+            )}
+          </div>
         </div>
         <Switch checked={rule.enabled} onCheckedChange={() => toggleRule(rule.id)} />
       </div>
       <div className="text-xs text-muted-foreground">
         Om temp {rule.condition === 'above' ? '>' : '<'} {rule.threshold}°C (±{rule.hysteresis}) → <span className="text-foreground">{targetDevice?.name || rule.targetDeviceId.slice(0, 8)}</span>
       </div>
+      {/* Live sensor value */}
+      {liveValue !== undefined && (
+        <div className="flex items-center gap-2 text-[10px]">
+          <span className="text-muted-foreground">Sensor:</span>
+          <span className={cn('font-medium', liveValue > rule.threshold ? 'text-orange-400' : 'text-foreground')}>
+            {liveValue.toFixed(1)}°C
+          </span>
+          <span className="text-muted-foreground/50">/ tröskel {rule.threshold}°C</span>
+        </div>
+      )}
       <div className="flex gap-1">
         <Button size="sm" variant="outline" onClick={() => setEditing(true)} className="h-7 flex-1 text-[10px]">Redigera</Button>
         <Button size="sm" variant="outline" onClick={() => removeRule(rule.id)} className="h-7 text-[10px] text-destructive hover:text-destructive">
