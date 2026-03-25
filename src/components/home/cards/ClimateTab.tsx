@@ -265,8 +265,11 @@ function RuleCard({ rule }: { rule: ComfortRule }) {
   const removeRule = useAppStore((s) => s.removeComfortRule);
   const updateRule = useAppStore((s) => s.updateComfortRule);
   const markers = useAppStore((s) => s.devices.markers);
+  const liveStates = useAppStore((s) => s.homeAssistant.liveStates);
   const [editing, setEditing] = useState(false);
   const targetDevice = markers.find((marker) => marker.id === rule.targetDeviceId);
+  const liveValue = rule.sensorEntityId ? parseFloat(liveStates[rule.sensorEntityId]?.state ?? '') : undefined;
+  const liveNum = Number.isFinite(liveValue) ? liveValue : undefined;
 
   if (editing) {
     return <RuleEditor rule={rule} onSave={(nextRule) => { updateRule(nextRule.id, nextRule); setEditing(false); }} onCancel={() => setEditing(false)} />;
