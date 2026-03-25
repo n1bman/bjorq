@@ -331,6 +331,7 @@ function HomeCategory() {
         <div className="col-span-1">
           <ActiveRoomWidget
             selectedRoomId={selectedRoomId}
+            setSelectedRoomId={setSelectedRoomId}
             rooms={allRooms}
             markers={markers}
           />
