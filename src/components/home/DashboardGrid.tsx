@@ -290,7 +290,7 @@ function HomeCategory() {
       {showManager && <CategoryManager />}
 
       {/* ── FREE GRID — everything lives here ── */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-5">
         {/* Row 1: Info cards */}
         <InfoCard label="TID" value={timeStr} detail={dateStr} />
         <InfoCard label="UTE" value={`${Math.round(weather.temperature)}°`} detail={weather.condition || 'Klart'} />
@@ -298,9 +298,9 @@ function HomeCategory() {
         <InfoCard label="KOMFORT" value="21.5°" detail="Optimal" />
 
         {/* Row 2: 3D hero + Aktivt rum */}
-        <div className="col-span-3">
+        <div className="col-span-2 md:col-span-3">
           <div
-            className="nn-widget rounded-[28px] overflow-hidden h-[300px] relative cursor-pointer"
+            className="nn-widget rounded-[24px] overflow-hidden h-[240px] md:h-[300px] relative cursor-pointer"
             onDoubleClick={() => setShowSaveView(true)}
           >
             <DashboardPreview3D className="absolute inset-0" cameraStateRef={previewCamRef} />
@@ -328,7 +328,7 @@ function HomeCategory() {
         </div>
 
         {/* Aktivt rum widget */}
-        <div className="col-span-1">
+        <div className="col-span-2 md:col-span-1">
           <ActiveRoomWidget
             selectedRoomId={selectedRoomId}
             setSelectedRoomId={setSelectedRoomId}
@@ -338,16 +338,16 @@ function HomeCategory() {
         </div>
 
         {/* Filter tabs — full width */}
-        <div className="col-span-4 flex items-center gap-1.5 overflow-x-auto pb-1">
+        <div className="col-span-2 md:col-span-4 flex items-center gap-2 overflow-x-auto pb-1">
           {deviceFilters.map(({ key, label }) => (
             <button
               key={key}
               onClick={() => setKindFilter(key === 'all' ? null : key as DeviceKind)}
               className={cn(
-                'px-3.5 py-1.5 rounded-full text-[11px] font-medium transition-all shrink-0 border',
+                'px-4 py-2 rounded-full text-[12px] font-medium transition-all shrink-0 border',
                 (key === 'all' && !kindFilter) || kindFilter === key
-                  ? 'bg-foreground/10 text-foreground border-[hsl(var(--border)/0.3)]'
-                  : 'text-muted-foreground/60 hover:text-foreground border-transparent hover:border-[hsl(var(--border)/0.15)]'
+                  ? 'bg-foreground/8 text-foreground border-[hsl(var(--border)/0.25)]'
+                  : 'text-muted-foreground/50 hover:text-foreground border-transparent hover:border-[hsl(var(--border)/0.12)]'
               )}
             >
               {label}
@@ -357,7 +357,7 @@ function HomeCategory() {
 
         {/* Room/category cards — span 2 cols each */}
         {filteredEntries.map((entry, index) => (
-          <div key={entry.key} className="col-span-2" onClick={() => {
+          <div key={entry.key} className="col-span-1 md:col-span-2" onClick={() => {
             // If entry devices have a roomId, select that room
             const roomId = entry.devices[0]?.roomId;
             if (roomId) setSelectedRoomId(roomId);

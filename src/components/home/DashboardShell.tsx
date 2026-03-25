@@ -273,7 +273,7 @@ export default function DashboardShell() {
       {/* ── Main Content ── */}
       <div className="flex-1 min-w-0 flex flex-col overflow-hidden bg-background">
         <div className="flex-1 min-h-0 overflow-y-auto">
-          <div className="p-8 pb-12 max-w-[1400px]">
+          <div className="p-6 md:p-8 lg:p-10 pb-12 max-w-[1400px]">
             <Content />
           </div>
         </div>
