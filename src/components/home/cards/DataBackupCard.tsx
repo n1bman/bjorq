@@ -2,6 +2,7 @@
 import { toast } from 'sonner';
 import { Database, Download, Play, Save, Trash2, Upload, XCircle } from 'lucide-react';
 import { useAppStore, getDefaultState, persistHostedProjectNow } from '../../../store/useAppStore';
+import type { DeviceState } from '../../../store/types';
 import { Button } from '../../ui/button';
 import {
   createHostedBackup,
@@ -143,7 +144,7 @@ export default function DataBackupCard() {
   const handleLoadDemo = () => {
     const demoLayout = createDemoLayout();
     const demoDevices = createDemoDevices();
-    const deviceStates: Record<string, unknown> = {};
+    const deviceStates: Record<string, DeviceState> = {};
 
     demoDevices.markers.forEach((marker) => {
       deviceStates[marker.id] = getDefaultState(marker.kind);

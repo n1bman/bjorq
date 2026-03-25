@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+// @ts-ignore — server JS module without type declarations
 import { normalizeBackupEnvelope } from '../../server/storage/backupEnvelope.js';
 
 describe('backup envelope', () => {

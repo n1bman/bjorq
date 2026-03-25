@@ -18,6 +18,7 @@ import { toast } from 'sonner';
 import { detectRooms, healWalls, polygonArea } from '../../lib/roomDetection';
 import { exportBuildProject, importBuildProject, readProjectFile, extractBuildProject, calculateStats } from '../../lib/projectIO';
 import { validateProjectSchema } from '../../lib/projectMigrations';
+import { isHostedSync } from '../../lib/apiClient';
 
 /* ═══════════════════════════════════════════════
    RoomManager — inlined to avoid Vite resolve issues

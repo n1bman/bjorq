@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
+// @ts-ignore — server JS module without type declarations
 import { buildSessionCookie, ensureSecurityDefaults, getAuthStatus, issueSession } from '../../server/security/auth.js';
+// @ts-ignore — server JS module without type declarations
 import { getServiceAccessPolicy } from '../../server/security/accessPolicy.js';
 
 describe('auth helpers', () => {

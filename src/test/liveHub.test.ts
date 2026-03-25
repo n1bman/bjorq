@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+// @ts-ignore — server JS module without type declarations
 import { buildWsUrl, parseVacuumSegmentMap } from '../../server/ha/liveHub.js';
 
 describe('liveHub helpers', () => {
