@@ -61,9 +61,7 @@ export default function HomeView({ longPressDeviceId, onDismissLongPress, fpsAct
   };
 
   const handlePointerDown = useCallback((id: string) => {
-    longPressTimerRef.current = setTimeout(() => {
-      // Long press handled by persistent scene via onDeviceLongPress
-    }, 500);
+    longPressTimerRef.current = setTimeout(() => {}, 500);
   }, []);
 
   const handlePointerUp = useCallback(() => {
@@ -82,60 +80,61 @@ export default function HomeView({ longPressDeviceId, onDismissLongPress, fpsAct
 
   const longPressMarker = longPressDeviceId ? markers.find((m) => m.id === longPressDeviceId) : null;
 
-  // Hide all overlays during FPS mode
   if (fpsActive) return null;
 
   return (
     <div className="absolute inset-0 z-10 pointer-events-none">
-      {/* Floating widgets based on config */}
-      <div className="absolute top-5 left-5 right-5 z-10 flex items-start gap-4 flex-wrap pointer-events-auto">
+      {/* ── Top overlay widgets — minimal, typographic ── */}
+      <div className="absolute top-5 left-5 z-10 flex items-start gap-3 pointer-events-auto">
         {visibleWidgets.clock && <ClockWidget />}
         {visibleWidgets.weather && <WeatherWidget />}
+      </div>
+
+      <div className="absolute top-5 right-20 z-10 flex items-start gap-3 pointer-events-auto">
         {visibleWidgets.temperature && <TemperatureWidget />}
         {visibleWidgets.energy && <EnergyWidget />}
       </div>
 
-
-      {/* Long-press popup for device control */}
+      {/* ── Long-press popup for device control ── */}
       {longPressDeviceId && longPressMarker && (
         <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-auto"
           onClick={onDismissLongPress}>
-          <div className="absolute inset-0 bg-background/40 backdrop-blur-sm" />
-          <div className="relative glass-panel rounded-2xl p-5 w-72 shadow-xl space-y-4"
+          <div className="absolute inset-0 bg-background/50 backdrop-blur-md" />
+          <div className="relative nn-widget p-5 w-72 shadow-2xl space-y-4"
             onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                {(() => { const Icon = KIND_ICONS[longPressMarker.kind] || Power; return <Icon size={18} className="text-primary" />; })()}
+                {(() => { const Icon = KIND_ICONS[longPressMarker.kind] || Power; return <Icon size={16} className="text-primary" />; })()}
                 <span className="text-sm font-semibold text-foreground">{longPressMarker.name || longPressMarker.kind}</span>
                 {longPressMarker.ha?.entityId && (
                   <Wifi size={10} className="text-green-400 shrink-0" />
                 )}
               </div>
-              <button onClick={onDismissLongPress} className="text-muted-foreground hover:text-foreground">
+              <button onClick={onDismissLongPress} className="text-muted-foreground hover:text-foreground transition-colors">
                 <X size={16} />
               </button>
             </div>
-
             <DeviceControlCard marker={longPressMarker} />
           </div>
         </div>
       )}
 
-      {/* Selected device widgets at bottom - one-click toggle + long-press for details */}
+      {/* ── Device pills at bottom — pill-shaped, compact ── */}
       {selectedMarkers.length > 0 && (
         <div className="absolute bottom-24 left-4 right-4 z-10 pointer-events-auto">
-          <div className="flex gap-3 overflow-x-auto pb-2">
+          <div className="flex gap-2 overflow-x-auto pb-2 px-1">
             {selectedMarkers.map((m) => {
               const isOn = getDeviceIsOn(m.id);
               const canToggle = TOGGLEABLE_KINDS.has(m.kind);
               const isMediaOn = m.kind === 'media_screen' && isOn;
+              const Icon = KIND_ICONS[m.kind] || Power;
               return (
-                <div
+                <button
                   key={m.id}
+                  data-active={isOn ? 'true' : 'false'}
                   className={cn(
-                    'glass-panel rounded-xl p-4 min-w-[200px] max-w-[240px] shrink-0 transition-all select-none',
+                    'device-pill shrink-0',
                     canToggle && !isMediaOn && 'cursor-pointer active:scale-95',
-                    !isOn && 'opacity-50 grayscale'
                   )}
                   onClick={() => {
                     if (longPressTimerRef.current) {
@@ -149,18 +148,23 @@ export default function HomeView({ longPressDeviceId, onDismissLongPress, fpsAct
                   onPointerCancel={handlePointerCancel}
                   onPointerLeave={handlePointerCancel}
                 >
-                  <p className="text-xs font-medium text-foreground mb-1 truncate">{m.name || m.kind}</p>
-                  <DeviceControlCard marker={m} compact />
-                </div>
+                  <Icon size={14} className={cn(isOn ? 'text-primary' : 'text-muted-foreground')} />
+                  <span className="text-xs font-medium text-foreground truncate max-w-[100px]">{m.name || m.kind}</span>
+                  {canToggle && (
+                    <span className={cn(
+                      'w-2 h-2 rounded-full shrink-0',
+                      isOn ? 'bg-primary' : 'bg-muted-foreground/30'
+                    )} />
+                  )}
+                </button>
               );
             })}
           </div>
         </div>
       )}
 
-      {/* Device visibility picker - top right */}
+      {/* ── Device visibility picker — top right ── */}
       {markers.length > 0 && (() => {
-        // Only show devices with generic markers (helper spheres) — not those with 3D models
         const KINDS_WITH_3D_MODELS = new Set<DeviceKind>([
           'light-fixture', 'speaker', 'soundbar', 'smart-outlet', 'vacuum',
           'light', 'switch', 'sensor', 'climate',
@@ -176,56 +180,53 @@ export default function HomeView({ longPressDeviceId, onDismissLongPress, fpsAct
             <button
               onClick={() => setPickerOpen(!pickerOpen)}
               className={cn(
-                'glass-panel rounded-full w-12 h-12 flex items-center justify-center transition-colors relative',
+                'overlay-widget w-10 h-10 flex items-center justify-center rounded-full p-0 transition-colors',
                 allToggleableHidden ? 'text-muted-foreground' : 'text-foreground'
               )}
               title={pickerOpen ? 'Stäng' : 'Visa/dölj enheter'}
             >
-              {allToggleableHidden ? <EyeOff size={20} /> : <Eye size={20} />}
+              {allToggleableHidden ? <EyeOff size={18} /> : <Eye size={18} />}
               {toggleableHiddenCount > 0 && !allToggleableHidden && (
-                <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
                   {toggleableHiddenCount}
                 </span>
               )}
             </button>
 
-            {/* Picker popup - opens downward */}
             {pickerOpen && (
-              <div className="absolute top-14 right-0 glass-panel rounded-2xl p-3 w-72 max-h-80 overflow-y-auto space-y-2 shadow-xl">
+              <div className="absolute top-12 right-0 nn-widget p-3 w-72 max-h-80 overflow-y-auto space-y-2 shadow-xl">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-semibold text-foreground">Enhetsmarkörer</span>
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Enhetsmarkörer</span>
                   <button onClick={() => setPickerOpen(false)} className="text-muted-foreground hover:text-foreground">
                     <X size={14} />
                   </button>
                 </div>
 
-                {/* Bulk actions */}
                 <div className="flex gap-2 mb-2">
                   <button
                     onClick={setAllMarkersVisible}
-                    className="flex-1 text-[11px] px-2 py-1.5 rounded-lg bg-secondary/40 text-foreground hover:bg-secondary/60 transition-colors"
+                    className="flex-1 text-[11px] px-2 py-1.5 rounded-lg bg-surface-elevated text-foreground hover:bg-surface-elevated/80 transition-colors"
                   >
                     Visa alla
                   </button>
                   <button
                     onClick={hideAllMarkers}
-                    className="flex-1 text-[11px] px-2 py-1.5 rounded-lg bg-secondary/40 text-muted-foreground hover:bg-secondary/60 transition-colors"
+                    className="flex-1 text-[11px] px-2 py-1.5 rounded-lg bg-surface-elevated text-muted-foreground hover:bg-surface-elevated/80 transition-colors"
                   >
                     Dölj alla
                   </button>
                 </div>
 
-                {/* Device list — only generic marker devices */}
                 {toggleableMarkers.map((m) => {
                   const isHidden = hiddenMarkerIds.includes(m.id);
                   const Icon = KIND_ICONS[m.kind] || Power;
                   return (
                     <div
                       key={m.id}
-                      className="flex items-center gap-3 px-2 py-1.5 rounded-lg hover:bg-secondary/20 transition-colors"
+                      className="flex items-center gap-3 px-2 py-1.5 rounded-lg hover:bg-surface-elevated/50 transition-colors"
                     >
-                      <Icon size={14} className={cn('shrink-0', isHidden ? 'text-muted-foreground/50' : 'text-primary')} />
-                      <span className={cn('text-xs flex-1 truncate', isHidden && 'text-muted-foreground/50')}>
+                      <Icon size={14} className={cn('shrink-0', isHidden ? 'text-muted-foreground/40' : 'text-primary')} />
+                      <span className={cn('text-xs flex-1 truncate', isHidden && 'text-muted-foreground/40')}>
                         {m.name || m.kind}
                       </span>
                       <Switch
