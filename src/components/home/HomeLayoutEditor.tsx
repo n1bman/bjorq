@@ -25,8 +25,8 @@ const WIDGETS: { key: HomeWidgetKey; label: string }[] = [
 ];
 
 export default function HomeLayoutEditor() {
-  const widgetLayout = useAppStore((s) => s.homeView.widgetLayout);
-  const visibleWidgets = useAppStore((s) => s.homeView.visibleWidgets);
+  const widgetLayout = useAppStore((s) => s.homeView.widgetLayout) ?? {};
+  const visibleWidgets = useAppStore((s) => s.homeView.visibleWidgets) ?? {};
   const setWidgetLayout = useAppStore((s) => s.setWidgetLayout);
   const toggleHomeLayoutEditMode = useAppStore((s) => s.toggleHomeLayoutEditMode);
   const toggleHomeWidget = useAppStore((s) => s.toggleHomeWidget);
