@@ -175,10 +175,7 @@ function HomeCategory() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between gap-2">
-        <div>
-          <p className="label-micro">Bjorq Home / Nordic Noir</p>
-          <h2 className="text-xl font-semibold text-foreground font-display mt-1">Hem, översatt från nuvarande dashboard</h2>
-        </div>
+        <div />
         <div className="flex items-center gap-2">
           <Button size="sm" variant="ghost" className="h-8 text-[11px]"
             onClick={() => setShowManager(!showManager)}>
@@ -195,8 +192,6 @@ function HomeCategory() {
 
       {/* 3D Hero Preview */}
       <div>
-        <p className="label-micro mb-2">Home Overview</p>
-        <p className="text-[13px] text-muted-foreground/60 mb-3">Samma hemvy, men mer lugn och materialitet</p>
         <div
           className="rounded-[28px] overflow-hidden h-[280px] relative cursor-pointer
             border border-[hsl(var(--glass-border)/0.12)]
