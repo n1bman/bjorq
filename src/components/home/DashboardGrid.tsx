@@ -97,9 +97,10 @@ function InfoCard({ label, value, detail }: { label: string; value: string; deta
   );
 }
 
-/* ── Aktivt rum widget ── */
-function ActiveRoomWidget({ selectedRoomId, rooms, markers }: {
+/* ── Aktivt rum widget — valbart ── */
+function ActiveRoomWidget({ selectedRoomId, setSelectedRoomId, rooms, markers }: {
   selectedRoomId: string | null;
+  setSelectedRoomId: (id: string | null) => void;
   rooms: { id: string; name: string }[];
   markers: DeviceMarker[];
 }) {
@@ -112,17 +113,28 @@ function ActiveRoomWidget({ selectedRoomId, rooms, markers }: {
     : [];
 
   return (
-    <div className="nn-widget p-5 flex flex-col gap-3 min-h-[260px]">
-      <div className="flex items-center justify-between">
+    <div className="nn-widget p-6 flex flex-col gap-4 min-h-[260px]">
+      <div className="flex items-center justify-between gap-2">
         <span className="label-micro">AKTIVT RUM</span>
       </div>
-      <p className="text-lg font-semibold text-foreground font-display">
-        {room?.name || 'Välj ett rum'}
-      </p>
-      {roomDevices.length === 0 && (
-        <p className="text-[11px] text-muted-foreground/40 mt-2">Klicka på ett rumskort nedan för att välja rum</p>
+      {/* Room selector */}
+      <select
+        value={selectedRoomId ?? ''}
+        onChange={(e) => setSelectedRoomId(e.target.value || null)}
+        className="bg-[hsl(var(--surface))] text-foreground text-sm rounded-xl px-3 py-2.5 border border-[hsl(var(--border)/0.2)] focus:outline-none focus:ring-1 focus:ring-primary/30 font-display font-semibold"
+      >
+        <option value="">Välj rum…</option>
+        {rooms.map((r) => (
+          <option key={r.id} value={r.id}>{r.name}</option>
+        ))}
+      </select>
+      {roomDevices.length === 0 && selectedRoomId && (
+        <p className="text-[11px] text-muted-foreground/30 mt-1">Inga enheter i detta rum</p>
       )}
-      <div className="space-y-1 flex-1 overflow-y-auto">
+      {!selectedRoomId && (
+        <p className="text-[11px] text-muted-foreground/30 mt-1">Välj ett rum för att se enheter</p>
+      )}
+      <div className="space-y-0.5 flex-1 overflow-y-auto">
         {roomDevices.map((d) => {
           const state = deviceStates[d.id];
           const on = state && 'on' in state.data ? (state.data as any).on : false;
@@ -132,13 +144,13 @@ function ActiveRoomWidget({ selectedRoomId, rooms, markers }: {
 
           return (
             <div key={d.id} className={cn(
-              'flex items-center justify-between py-2.5 px-3 rounded-xl transition-all',
-              on ? 'bg-primary/5' : 'opacity-50'
+              'flex items-center justify-between py-3 px-3.5 rounded-xl transition-all',
+              on ? 'bg-primary/4' : 'opacity-40'
             )}>
               <div className="min-w-0 flex-1">
                 <span className="text-[13px] text-foreground block truncate">{d.name || d.kind}</span>
                 {isLight && on && (
-                  <span className="text-[10px] text-muted-foreground/50">{pct}%</span>
+                  <span className="text-[10px] text-muted-foreground/35">{pct}%</span>
                 )}
               </div>
               {state && 'on' in state.data && (
@@ -173,7 +185,6 @@ function HomeCategory() {
   const [time, setTime] = useState(new Date());
   const previewCamRef = useRef<PreviewCameraState>({ position: [10, 12, 10], target: [0, 0, 0] });
 
-  // Time update
   useEffect(() => {
     const t = setInterval(() => setTime(new Date()), 10_000);
     return () => clearInterval(t);
@@ -279,7 +290,7 @@ function HomeCategory() {
       {showManager && <CategoryManager />}
 
       {/* ── FREE GRID — everything lives here ── */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-5">
         {/* Row 1: Info cards */}
         <InfoCard label="TID" value={timeStr} detail={dateStr} />
         <InfoCard label="UTE" value={`${Math.round(weather.temperature)}°`} detail={weather.condition || 'Klart'} />
@@ -287,9 +298,9 @@ function HomeCategory() {
         <InfoCard label="KOMFORT" value="21.5°" detail="Optimal" />
 
         {/* Row 2: 3D hero + Aktivt rum */}
-        <div className="col-span-3">
+        <div className="col-span-2 md:col-span-3">
           <div
-            className="nn-widget rounded-[28px] overflow-hidden h-[300px] relative cursor-pointer"
+            className="nn-widget rounded-[24px] overflow-hidden h-[240px] md:h-[300px] relative cursor-pointer"
             onDoubleClick={() => setShowSaveView(true)}
           >
             <DashboardPreview3D className="absolute inset-0" cameraStateRef={previewCamRef} />
@@ -317,25 +328,26 @@ function HomeCategory() {
         </div>
 
         {/* Aktivt rum widget */}
-        <div className="col-span-1">
+        <div className="col-span-2 md:col-span-1">
           <ActiveRoomWidget
             selectedRoomId={selectedRoomId}
+            setSelectedRoomId={setSelectedRoomId}
             rooms={allRooms}
             markers={markers}
           />
         </div>
 
         {/* Filter tabs — full width */}
-        <div className="col-span-4 flex items-center gap-1.5 overflow-x-auto pb-1">
+        <div className="col-span-2 md:col-span-4 flex items-center gap-2 overflow-x-auto pb-1">
           {deviceFilters.map(({ key, label }) => (
             <button
               key={key}
               onClick={() => setKindFilter(key === 'all' ? null : key as DeviceKind)}
               className={cn(
-                'px-3.5 py-1.5 rounded-full text-[11px] font-medium transition-all shrink-0 border',
+                'px-4 py-2 rounded-full text-[12px] font-medium transition-all shrink-0 border',
                 (key === 'all' && !kindFilter) || kindFilter === key
-                  ? 'bg-foreground/10 text-foreground border-[hsl(var(--border)/0.3)]'
-                  : 'text-muted-foreground/60 hover:text-foreground border-transparent hover:border-[hsl(var(--border)/0.15)]'
+                  ? 'bg-foreground/8 text-foreground border-[hsl(var(--border)/0.25)]'
+                  : 'text-muted-foreground/50 hover:text-foreground border-transparent hover:border-[hsl(var(--border)/0.12)]'
               )}
             >
               {label}
@@ -345,7 +357,7 @@ function HomeCategory() {
 
         {/* Room/category cards — span 2 cols each */}
         {filteredEntries.map((entry, index) => (
-          <div key={entry.key} className="col-span-2" onClick={() => {
+          <div key={entry.key} className="col-span-1 md:col-span-2" onClick={() => {
             // If entry devices have a roomId, select that room
             const roomId = entry.devices[0]?.roomId;
             if (roomId) setSelectedRoomId(roomId);

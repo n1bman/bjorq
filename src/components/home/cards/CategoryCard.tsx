@@ -129,7 +129,7 @@ export default function CategoryCard({
     >
       {/* Header */}
       <div
-        className="flex items-center justify-between cursor-pointer mb-2"
+        className="flex items-center justify-between cursor-pointer mb-3 py-1"
         draggable={editMode}
         onDragStart={editMode ? handleCategoryDragStart : undefined}
         onClick={() => !editMode && setCollapsed(!collapsed)}
@@ -150,29 +150,40 @@ export default function CategoryCard({
 
       {/* Device list */}
       {!collapsed && (
-        <div className="space-y-1.5 mt-1 overflow-y-auto flex-1 min-h-0">
+        <div className="space-y-1 mt-1 overflow-y-auto flex-1 min-h-0">
           {devices.map((d) => {
             const state = deviceStates[d.id];
             const on = isOn(state);
             const expanded = expandedId === d.id;
             const isDragging = draggingDeviceId === d.id;
             const isLight = state?.kind === 'light';
-            const brightness = isLight && on ? (state.data as any).brightness : 0;
+            const brightness = isLight && on ? (state.data as any).brightness ?? 200 : 0;
             const pct = Math.round((brightness / 255) * 100);
 
-            // Color tone label
+            // Determine light color for the bar
+            let barColor = '36 75% 50%'; // warm amber default
             let toneLabel = '';
             if (isLight && on) {
               const ct = (state.data as any).colorTemp;
               const cm = (state.data as any).colorMode;
-              if (cm === 'rgb') {
+              const rgb = (state.data as any).rgb;
+              if (cm === 'rgb' && rgb) {
+                // Use actual RGB color, muted
+                barColor = `${rgb[0]}, ${rgb[1]}, ${rgb[2]}`;
                 toneLabel = 'RGB';
               } else if (ct) {
-                toneLabel = ct < 250 ? 'kall vit' : ct < 350 ? 'neutral vit' : 'varm ton';
+                if (ct < 250) { barColor = '210 30% 70%'; toneLabel = 'kall vit'; }
+                else if (ct < 350) { barColor = '40 20% 65%'; toneLabel = 'neutral vit'; }
+                else { barColor = '30 80% 52%'; toneLabel = 'varm ton'; }
               } else {
                 toneLabel = 'kvällsläge';
               }
             }
+
+            const isRgbMode = (state?.data as any)?.colorMode === 'rgb';
+            const barBg = isRgbMode && (state?.data as any)?.rgb
+              ? `linear-gradient(90deg, rgba(${barColor}, 0.18) 0%, rgba(${barColor}, 0.06) ${pct}%, transparent ${pct + 15}%)`
+              : `linear-gradient(90deg, hsl(${barColor} / 0.18) 0%, hsl(${barColor} / 0.06) ${pct}%, transparent ${pct + 15}%)`;
 
             return (
               <div
@@ -184,24 +195,22 @@ export default function CategoryCard({
                 onTouchEnd={editMode ? handleDeviceTouchEnd : undefined}
                 className={cn(
                   'rounded-xl transition-all relative overflow-hidden',
-                  expanded && 'ring-1 ring-primary/15',
+                  expanded && 'ring-1 ring-primary/10',
                   isDragging && 'opacity-50 scale-95',
                   editMode && 'cursor-grab'
                 )}
               >
-                {/* Amber brightness bar background for active lights */}
+                {/* Soft fade brightness bar */}
                 {isLight && on && (
                   <div
-                    className="absolute inset-0 rounded-xl pointer-events-none"
-                    style={{
-                      background: `linear-gradient(90deg, hsl(34 80% 52% / 0.15) 0%, hsl(34 80% 52% / 0.08) ${pct}%, transparent ${pct}%)`,
-                    }}
+                    className="absolute inset-0 rounded-xl pointer-events-none transition-all duration-500"
+                    style={{ background: barBg }}
                   />
                 )}
                 <div
                   className={cn(
-                    'flex items-center gap-3 py-3 px-3.5 cursor-pointer relative z-10',
-                    !on && 'opacity-50'
+                    'flex items-center gap-3 py-3.5 px-4 cursor-pointer relative z-10',
+                    !on && 'opacity-40'
                   )}
                   onClick={() => !editMode && setExpandedId(expanded ? null : d.id)}
                 >
@@ -209,26 +218,32 @@ export default function CategoryCard({
                   <div className="flex-1 min-w-0">
                     <span className="text-[13px] text-foreground block truncate">{d.name || d.kind}</span>
                     {isLight && on && toneLabel && (
-                      <span className="text-[10px] text-muted-foreground/50">{pct}% · {toneLabel}</span>
+                      <span className="text-[10px] text-muted-foreground/40">{pct}% · {toneLabel}</span>
                     )}
                     {!isLight && !on && (
-                      <span className="text-[10px] text-muted-foreground/40">
+                      <span className="text-[10px] text-muted-foreground/30">
                         {state?.kind === 'vacuum' ? (state.data as any).status === 'docked' ? 'Dockad' : (state.data as any).status : ''}
                       </span>
                     )}
                   </div>
 
-                  {/* Brightness badge for lights */}
-                  {isLight && on && (
-                    <span className="text-[11px] font-semibold text-primary/80 bg-primary/10 px-2 py-0.5 rounded-full shrink-0">
-                      {pct}%
-                    </span>
+                  {/* Inline brightness slider for lights (visible when on, not expanded) */}
+                  {isLight && on && !expanded && !editMode && (
+                    <div className="w-20 shrink-0" onClick={(e) => e.stopPropagation()}>
+                      <Slider
+                        value={[brightness]}
+                        min={1}
+                        max={255}
+                        step={1}
+                        onValueChange={([v]) => updateDeviceState(d.id, { brightness: v })}
+                        className="h-5"
+                      />
+                    </div>
                   )}
 
-                  {/* Chevron for expandable */}
                   {!editMode && (
                     <ChevronDown size={12} className={cn(
-                      'text-muted-foreground/30 transition-transform shrink-0',
+                      'text-muted-foreground/20 transition-transform shrink-0',
                       expanded && 'rotate-180'
                     )} />
                   )}
@@ -239,11 +254,11 @@ export default function CategoryCard({
                     </div>
                   )}
 
-                  {d.ha?.entityId && <Wifi size={8} className="text-primary/30 shrink-0" />}
+                  {d.ha?.entityId && <Wifi size={8} className="text-primary/20 shrink-0" />}
                 </div>
 
                 {expanded && !editMode && (
-                  <div className="px-3 pb-3 border-t border-[hsl(var(--border)/0.1)]">
+                  <div className="px-4 pb-4 border-t border-[hsl(var(--border)/0.08)]">
                     <DeviceControlCard marker={d} />
                   </div>
                 )}
@@ -251,7 +266,7 @@ export default function CategoryCard({
             );
           })}
           {editMode && devices.length === 0 && (
-            <p className="text-[10px] text-muted-foreground/50 text-center py-2">Släpp enheter här</p>
+            <p className="text-[10px] text-muted-foreground/30 text-center py-3">Släpp enheter här</p>
           )}
         </div>
       )}
