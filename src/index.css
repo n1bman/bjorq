@@ -6,68 +6,68 @@
 
 @layer base {
   :root {
-    --background: 222 18% 11%;
-    --foreground: 210 25% 95%;
+    --background: 225 20% 7%;
+    --foreground: 210 20% 93%;
 
-    --card: 222 16% 15%;
-    --card-foreground: 210 25% 95%;
+    --card: 224 18% 10%;
+    --card-foreground: 210 20% 93%;
 
-    --popover: 222 16% 14%;
-    --popover-foreground: 210 25% 95%;
+    --popover: 224 18% 9%;
+    --popover-foreground: 210 20% 93%;
 
-    --primary: 34 80% 52%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 36 75% 50%;
+    --primary-foreground: 225 20% 5%;
 
-    --secondary: 220 14% 19%;
-    --secondary-foreground: 215 18% 86%;
+    --secondary: 224 16% 13%;
+    --secondary-foreground: 215 15% 80%;
 
-    --muted: 220 12% 17%;
-    --muted-foreground: 218 10% 52%;
+    --muted: 224 14% 12%;
+    --muted-foreground: 220 10% 45%;
 
-    --accent: 200 65% 52%;
+    --accent: 200 55% 48%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 68% 50%;
+    --destructive: 0 62% 48%;
     --destructive-foreground: 210 20% 98%;
 
-    --border: 222 12% 21%;
-    --input: 222 12% 21%;
-    --ring: 34 80% 52%;
+    --border: 224 14% 16%;
+    --input: 224 14% 14%;
+    --ring: 36 75% 50%;
 
     --radius: 1rem;
 
-    --sidebar-background: 222 20% 10%;
-    --sidebar-foreground: 215 18% 86%;
-    --sidebar-primary: 34 80% 52%;
-    --sidebar-primary-foreground: 222 18% 9%;
-    --sidebar-accent: 220 12% 17%;
-    --sidebar-accent-foreground: 215 18% 86%;
-    --sidebar-border: 222 12% 18%;
-    --sidebar-ring: 34 80% 52%;
+    --sidebar-background: 225 22% 5%;
+    --sidebar-foreground: 215 15% 80%;
+    --sidebar-primary: 36 75% 50%;
+    --sidebar-primary-foreground: 225 20% 5%;
+    --sidebar-accent: 224 14% 12%;
+    --sidebar-accent-foreground: 215 15% 80%;
+    --sidebar-border: 224 14% 12%;
+    --sidebar-ring: 36 75% 50%;
 
-    /* Custom tokens */
-    --glass: 222 16% 13% / 0.78;
-    --glass-border: 222 12% 22%;
-    --amber-glow: 34 80% 52% / 0.10;
-    --info: 200 65% 52%;
-    --info-foreground: 222 18% 9%;
-    --surface: 222 14% 14%;
-    --surface-elevated: 222 14% 17%;
-    --surface-sunken: 222 20% 8%;
+    /* Custom tokens — deeper, more material */
+    --glass: 225 18% 8% / 0.85;
+    --glass-border: 224 14% 18%;
+    --amber-glow: 36 75% 50% / 0.08;
+    --info: 200 55% 48%;
+    --info-foreground: 225 20% 5%;
+    --surface: 225 18% 9%;
+    --surface-elevated: 224 16% 12%;
+    --surface-sunken: 225 22% 5%;
 
-    /* Premium tokens */
-    --warm-glow: 34 80% 52% / 0.06;
-    --card-hover-glow: 34 60% 50% / 0.05;
-    --nav-active-glow: 34 80% 52% / 0.12;
-    --glow-amber-subtle: 34 80% 52% / 0.08;
+    /* Premium tokens — subtler */
+    --warm-glow: 36 75% 50% / 0.04;
+    --card-hover-glow: 36 60% 48% / 0.04;
+    --nav-active-glow: 36 75% 50% / 0.10;
+    --glow-amber-subtle: 36 75% 50% / 0.06;
 
     /* Widget tokens */
     --widget-radius: 1.25rem;
-    --widget-border: 222 12% 18% / 0.4;
+    --widget-border: 224 14% 14% / 0.5;
 
     /* Spacing tokens */
-    --space-panel: 1rem;
-    --space-section: 1.5rem;
+    --space-panel: 1.25rem;
+    --space-section: 2rem;
   }
 }
 
@@ -86,7 +86,8 @@
 
   h1, h2, h3, h4, h5, h6 {
     font-family: 'Space Grotesk', system-ui, sans-serif;
-    letter-spacing: -0.01em;
+    letter-spacing: -0.02em;
+    font-weight: 600;
   }
 
   /* Typography hierarchy — Nordic Noir */
@@ -98,11 +99,11 @@
   }
 
   .label-micro {
-    font-size: 10px;
+    font-size: 9px;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.2em;
-    color: hsl(var(--muted-foreground) / 0.4);
+    letter-spacing: 0.22em;
+    color: hsl(var(--muted-foreground) / 0.35);
   }
 
   select, option {
@@ -161,35 +162,28 @@
     border: 1px solid hsl(var(--glass-border) / 0.2);
   }
 
-  /* Nordic Noir widget surface — gradient depth with richer materiality */
+  /* Nordic Noir widget surface — architectural, less boxig */
   .nn-widget {
     background: linear-gradient(
-      145deg,
-      hsl(var(--surface-elevated)) 0%,
-      hsl(222 14% 13%) 60%,
-      hsl(var(--surface)) 100%
+      155deg,
+      hsl(224 16% 11%) 0%,
+      hsl(225 18% 8%) 100%
     );
     border: 1px solid hsl(var(--widget-border));
     border-radius: var(--widget-radius);
     box-shadow:
-      0 8px 24px hsl(220 20% 4% / 0.35),
-      0 2px 8px hsl(220 20% 4% / 0.2),
-      inset 0 1px 0 hsl(0 0% 100% / 0.04),
-      inset 0 -1px 0 hsl(220 20% 4% / 0.15),
-      inset 0 0 0 0.5px hsl(0 0% 100% / 0.02);
+      0 4px 20px hsl(225 22% 3% / 0.4),
+      inset 0 1px 0 hsl(0 0% 100% / 0.03);
   }
 
   .nn-widget-hover {
-    transition: box-shadow 0.35s ease, border-color 0.35s ease, transform 0.25s ease;
+    transition: box-shadow 0.4s ease, border-color 0.4s ease;
   }
   .nn-widget-hover:hover {
     box-shadow:
-      0 16px 40px hsl(220 20% 4% / 0.5),
-      0 0 0 1px hsl(var(--glow-amber-subtle)),
-      0 0 24px hsl(var(--amber-glow)),
-      inset 0 1px 0 hsl(0 0% 100% / 0.05);
-    border-color: hsl(var(--glass-border) / 0.6);
-    transform: translateY(-2px);
+      0 8px 32px hsl(225 22% 3% / 0.5),
+      0 0 20px hsl(var(--amber-glow));
+    border-color: hsl(var(--glass-border) / 0.4);
   }
 
   .amber-glow {
