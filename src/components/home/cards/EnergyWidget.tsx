@@ -35,27 +35,27 @@ export default function EnergyWidget({ alwaysExpanded = false }: { alwaysExpande
 
   const dailyCost = totalDailyKwh * energyConfig.pricePerKwh;
 
-  return (
-    <div
-      className={cn(
-        'glass-panel rounded-2xl p-5 transition-all duration-300',
-        !alwaysExpanded && 'cursor-pointer',
-        isExpanded ? 'min-w-[220px]' : 'min-w-[120px] max-w-[160px]'
-      )}
-      onClick={() => !alwaysExpanded && setExpanded(!expanded)}
-    >
-      <div className="flex items-center gap-2">
-        <Zap size={18} className="text-primary shrink-0" />
-        <div>
-          <p className="text-lg font-bold font-display text-foreground whitespace-nowrap">{totalWatts.toLocaleString('sv-SE')} W</p>
-          <p className="text-[10px] text-muted-foreground whitespace-nowrap">{energyConfig.pricePerKwh} {energyConfig.currency}/kWh</p>
+  // Full expanded panel mode (dashboard)
+  if (isExpanded) {
+    return (
+      <div
+        className={cn(
+          'glass-panel rounded-2xl p-5 min-w-[220px]',
+          !alwaysExpanded && 'cursor-pointer'
+        )}
+        onClick={() => !alwaysExpanded && setExpanded(!expanded)}
+      >
+        <div className="flex items-center gap-2">
+          <Zap size={18} className="text-primary shrink-0" />
+          <div>
+            <p className="text-lg font-bold font-display text-foreground whitespace-nowrap">{totalWatts.toLocaleString('sv-SE')} W</p>
+            <p className="text-[10px] text-muted-foreground whitespace-nowrap">{energyConfig.pricePerKwh} {energyConfig.currency}/kWh</p>
+          </div>
         </div>
-      </div>
-      <div className="mt-2 flex items-center gap-2 border-t border-border/30 pt-2">
-        <TrendingDown size={14} className="text-green-400" />
-        <span className="text-[11px] text-muted-foreground">Idag: {totalDailyKwh.toFixed(1)} kWh</span>
-      </div>
-      {isExpanded && (
+        <div className="mt-2 flex items-center gap-2 border-t border-border/30 pt-2">
+          <TrendingDown size={14} className="text-green-400" />
+          <span className="text-[11px] text-muted-foreground">Idag: {totalDailyKwh.toFixed(1)} kWh</span>
+        </div>
         <div className="mt-3 space-y-2 border-t border-border/30 pt-3">
           <div className="flex items-center gap-2">
             <BarChart3 size={12} className="text-muted-foreground" />
@@ -77,7 +77,18 @@ export default function EnergyWidget({ alwaysExpanded = false }: { alwaysExpande
             {haStatus === 'connected' ? 'Livevarden prioriteras nar HA-sensorer ar länkade.' : 'Anslut HA for att lasa live-data och fler energisensorer.'}
           </p>
         </div>
-      )}
+      </div>
+    );
+  }
+
+  // Overlay mode — compact
+  return (
+    <div className="overlay-widget">
+      <div className="flex items-center gap-2">
+        <Zap size={14} className="text-primary shrink-0" />
+        <span className="text-xl font-bold font-display text-foreground whitespace-nowrap">{totalWatts.toLocaleString('sv-SE')} W</span>
+        <span className="text-[10px] text-muted-foreground/70">{totalDailyKwh.toFixed(1)} kWh</span>
+      </div>
     </div>
   );
 }
