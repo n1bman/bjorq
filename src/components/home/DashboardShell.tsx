@@ -1,13 +1,9 @@
-import { useCallback, useState, useEffect } from 'react';
-import { PenTool, Home, ChevronLeft, ChevronRight, MoreHorizontal } from 'lucide-react';
+import { useCallback, useState, useEffect, useMemo } from 'react';
+import { PenTool, Home, ChevronLeft, ChevronRight, MoreHorizontal, Activity } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useAppStore } from '../../store/useAppStore';
 import { useWeatherSync } from '../../hooks/useWeatherSync';
 import { categories, categoryContent } from './DashboardGrid';
-import ClockWidget from './cards/ClockWidget';
-import WeatherWidget from './cards/WeatherWidget';
-import EnergyWidget from './cards/EnergyWidget';
-import ScenesWidget from './cards/ScenesWidget';
 import type { DashCategory } from '../../store/types';
 
 // Group categories for nav
@@ -242,7 +238,7 @@ export default function DashboardShell() {
           ))}
         </div>
 
-        {/* Bottom: Home + Design shortcuts */}
+        {/* Bottom: Home + Design + Hemstatus */}
         <div className={cn(
           'flex flex-col gap-1 pb-5 pt-3 border-t border-[hsl(var(--border)/0.08)]',
           collapsed ? 'px-2' : 'px-2'
@@ -269,18 +265,15 @@ export default function DashboardShell() {
             <PenTool size={18} strokeWidth={1.4} className="shrink-0" />
             {!collapsed && <span>Design</span>}
           </button>
+          {/* Hemstatus */}
+          <NavHomeStatus collapsed={collapsed} />
         </div>
       </nav>
 
       {/* ── Main Content ── */}
       <div className="flex-1 min-w-0 flex flex-col overflow-hidden bg-background">
-        {/* Summary strip — ultra-slim, barely there */}
-        <div className="shrink-0 flex items-center gap-4 px-6 py-2 bg-[hsl(222_20%_7%/0.8)] backdrop-blur-lg border-b border-[hsl(var(--border)/0.06)]">
-          <ClockWidget panel />
-          <WeatherWidget />
-          <EnergyWidget />
-          <ScenesWidget />
-        </div>
+        {/* Summary strip — typographic, Nordic Noir */}
+        <SummaryBar />
 
         {/* Content body — generous spacing */}
         <div className="flex-1 min-h-0 overflow-y-auto">
