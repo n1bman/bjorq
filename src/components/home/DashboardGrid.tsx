@@ -25,8 +25,8 @@ import CategoryCard from './cards/CategoryCard';
 import CategoryManager from './cards/CategoryManager';
 import CalendarWidget from './cards/CalendarWidget';
 import RobotPanel from './cards/RobotPanel';
-
-
+import WidgetCard from './cards/WidgetCard';
+import type { WidgetSize } from '../../store/types';
 
 import GraphicsSettings from './cards/GraphicsSettings';
 import SunWeatherPanel from './cards/SunWeatherPanel';
