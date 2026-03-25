@@ -15,36 +15,56 @@ function ClimateOverview() {
   const { climates, fans, humidifiers, waterHeaters, temperatureSensors, humiditySensors } = useAppStore(getClimateEntityViews);
 
   const renderEntityList = (title: string, items: typeof climates, emptyLabel: string) => (
-    <div className="rounded-2xl bg-secondary/20 p-4">
+    <div className="rounded-xl bg-surface-elevated/40 p-4">
       <div className="mb-2 flex items-center justify-between">
         <span className="text-xs font-semibold text-foreground">{title}</span>
-        <span className="text-[10px] text-muted-foreground">{items.length}</span>
+        <span className="text-[10px] text-muted-foreground/50">{items.length}</span>
       </div>
       {items.length === 0 ? (
-        <p className="text-[11px] text-muted-foreground/70">{emptyLabel}</p>
+        <p className="text-[11px] text-muted-foreground/50">{emptyLabel}</p>
       ) : (
         <div className="space-y-2">
           {items.slice(0, 4).map(({ entity, linked, marker, deviceState }) => (
-            <div key={entity.entityId} className="rounded-xl border border-border/40 bg-background/30 px-3 py-2">
+            <div key={entity.entityId} className="rounded-lg border border-border/20 bg-surface-sunken/30 px-3 py-2">
               <div className="flex items-center justify-between gap-2">
                 <div className="min-w-0">
                   <p className="truncate text-xs font-medium text-foreground">{entity.friendlyName}</p>
-                  <p className="truncate text-[10px] text-muted-foreground">{entity.entityId}</p>
+                  <p className="truncate text-[10px] text-muted-foreground/50">{entity.entityId}</p>
                 </div>
-                <span className={cn('rounded-full px-2 py-0.5 text-[9px]', linked ? 'bg-primary/15 text-primary' : 'bg-secondary/50 text-muted-foreground')}>
-                  {linked ? marker?.name || 'Lankad' : 'Ej länkad'}
+                <span className={cn('rounded-full px-2 py-0.5 text-[9px]', linked ? 'bg-primary/15 text-primary' : 'bg-surface-elevated text-muted-foreground/50')}>
+                  {linked ? marker?.name || 'Länkad' : 'Ej länkad'}
                 </span>
               </div>
-              <p className="mt-1 text-[10px] text-muted-foreground">
-                {deviceState?.kind === 'climate'
-                  ? `${deviceState.data.currentTemp}°C nu · mål ${deviceState.data.targetTemp}°C`
-                  : deviceState?.kind === 'fan'
-                  ? `${deviceState.data.speed}%`
-                  : entity.state}
-              </p>
+              {/* ── Nuvärde + mål — tydligt ── */}
+              {deviceState?.kind === 'climate' && (
+                <div className="mt-2 flex items-center gap-3">
+                  <div>
+                    <p className="text-lg font-bold font-display text-foreground">{deviceState.data.currentTemp}°</p>
+                    <p className="text-[9px] text-muted-foreground/60">Nu</p>
+                  </div>
+                  <span className="text-muted-foreground/30">→</span>
+                  <div>
+                    <p className="text-lg font-bold font-display text-primary">{deviceState.data.targetTemp}°</p>
+                    <p className="text-[9px] text-muted-foreground/60">Mål</p>
+                  </div>
+                  <div className="ml-auto">
+                    <span className={cn(
+                      'text-[10px] font-medium',
+                      deviceState.data.currentTemp < deviceState.data.targetTemp ? 'text-blue-400' : 'text-orange-400'
+                    )}>
+                      {deviceState.data.currentTemp < deviceState.data.targetTemp ? '↑ Värmer' : '↓ Kyler'}
+                    </span>
+                  </div>
+                </div>
+              )}
+              {deviceState && deviceState.kind !== 'climate' && (
+                <p className="mt-1 text-[10px] text-muted-foreground">
+                  {deviceState.kind === 'fan' ? `${deviceState.data.speed}%` : entity.state}
+                </p>
+              )}
             </div>
           ))}
-          {items.length > 4 && <p className="text-[10px] text-muted-foreground/70">+{items.length - 4} fler i Home Assistant</p>}
+          {items.length > 4 && <p className="text-[10px] text-muted-foreground/50">+{items.length - 4} fler i HA</p>}
         </div>
       )}
     </div>
@@ -52,10 +72,10 @@ function ClimateOverview() {
 
   return (
     <div className="grid grid-cols-2 gap-4">
-      {renderEntityList('Klimatenheter', climates, 'Inga climate.* hittades i HA än.')}
-      {renderEntityList('Ventilation & fukt', [...fans, ...humidifiers, ...waterHeaters], 'Inga fläktar, luftfuktare eller varmvattenenheter hittades än.')}
-      {renderEntityList('Temperatursensorer', temperatureSensors, 'Lagg till temperaturgivare i HA for att kunna bygga klimatlogik senare.')}
-      {renderEntityList('Fuktsensorer', humiditySensors, 'Fuktsensorer dyker upp har nar du senare kopplar in dem i HA.')}
+      {renderEntityList('Klimatenheter', climates, 'Inga climate.* hittades i HA.')}
+      {renderEntityList('Ventilation & fukt', [...fans, ...humidifiers, ...waterHeaters], 'Inga fläktar/luftfuktare hittades.')}
+      {renderEntityList('Temperatursensorer', temperatureSensors, 'Lägg till temperaturgivare i HA.')}
+      {renderEntityList('Fuktsensorer', humiditySensors, 'Fuktsensorer visas här när de kopplas in.')}
     </div>
   );
 }
