@@ -1,5 +1,6 @@
 import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { Link2, Settings2, TrendingUp, Zap } from 'lucide-react';
+import EnergySparkline from './EnergySparkline';
 import { useMemo, useState } from 'react';
 import { getEnergyEntityViews } from '../../../lib/haMenuSelectors';
 import { useAppStore } from '../../../store/useAppStore';
@@ -107,11 +108,14 @@ export default function EnergyDeviceList() {
 
   return (
     <div className="space-y-4">
-      {/* ── Hero: Live förbrukning ── */}
+      {/* ── Hero: Live förbrukning with sparkline ── */}
       <div className="nn-widget p-6">
         <div className="flex items-center gap-2 mb-4">
           <Zap size={18} className="text-primary" />
           <h4 className="text-sm font-semibold text-foreground">Energiöverblick</h4>
+          {haStatus === 'connected' && (
+            <span className="ml-1 px-1.5 py-0.5 rounded text-[8px] font-bold bg-primary/15 text-primary animate-pulse">LIVE</span>
+          )}
           <div className="ml-auto">
             <button onClick={() => setShowConfig((v) => !v)} className="rounded-lg p-1.5 text-muted-foreground hover:bg-surface-elevated/50 transition-colors">
               <Settings2 size={14} />
@@ -129,15 +133,51 @@ export default function EnergyDeviceList() {
               <label className="w-20 shrink-0 text-[10px] text-muted-foreground">Valuta</label>
               <Input value={energyConfig.currency} onChange={(e) => setEnergyConfig({ currency: e.target.value })} className="h-7 text-xs" />
             </div>
+            <div className="flex items-center gap-2">
+              <label className="w-20 shrink-0 text-[10px] text-muted-foreground">Dagsmål kWh</label>
+              <Input type="number" step="1" value={energyConfig.dailyGoalKwh} onChange={(e) => setEnergyConfig({ dailyGoalKwh: parseFloat(e.target.value) || 30 })} className="h-7 text-xs" />
+            </div>
           </div>
         )}
 
-        {/* Hero value */}
-        <div className="text-center mb-4">
-          <p className="text-5xl font-bold font-display text-foreground tracking-tight">{totalWatts}<span className="text-xl text-muted-foreground ml-1">W</span></p>
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground mt-1">
-            Just nu {haStatus === 'connected' ? '· Live' : '· Estimat'}
-          </p>
+        {/* Hero value + circular progress ring */}
+        <div className="flex items-center justify-center gap-6 mb-4">
+          <div className="relative">
+            <svg width="100" height="100" viewBox="0 0 100 100">
+              <circle cx="50" cy="50" r="42" fill="none" stroke="hsl(var(--surface-elevated))" strokeWidth="6" />
+              <circle
+                cx="50" cy="50" r="42"
+                fill="none"
+                stroke="hsl(var(--primary))"
+                strokeWidth="6"
+                strokeLinecap="round"
+                strokeDasharray={`${Math.min((totalDailyKwh / energyConfig.dailyGoalKwh) * 264, 264)} 264`}
+                transform="rotate(-90 50 50)"
+                className="transition-all duration-1000"
+              />
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <span className="text-2xl font-bold font-display text-foreground">{totalWatts}</span>
+              <span className="text-[9px] text-muted-foreground">W</span>
+            </div>
+          </div>
+          <div className="space-y-1">
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              {haStatus === 'connected' ? 'Live förbrukning' : 'Estimerad förbrukning'}
+            </p>
+            <p className="text-xs text-foreground">
+              {totalDailyKwh.toFixed(1)} / {energyConfig.dailyGoalKwh} kWh dagsmål
+            </p>
+            <p className="text-[10px] text-primary">
+              {Math.round((totalDailyKwh / energyConfig.dailyGoalKwh) * 100)}% av mål
+            </p>
+          </div>
+        </div>
+
+        {/* Sparkline */}
+        <div className="mb-4">
+          <p className="text-[9px] uppercase tracking-wider text-muted-foreground/50 mb-1">Förbrukningskurva (24h)</p>
+          <EnergySparkline width={400} height={50} totalWatts={totalWatts} showPeaks />
         </div>
 
         {/* Stats grid */}

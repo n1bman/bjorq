@@ -3,8 +3,15 @@ import { useMemo, useState } from 'react';
 import { getEnergyEntityViews } from '../../../lib/haMenuSelectors';
 import { cn } from '../../../lib/utils';
 import { useAppStore } from '../../../store/useAppStore';
+import EnergySparkline from './EnergySparkline';
+import type { WidgetOverlaySize } from '../../../store/types';
 
-export default function EnergyWidget({ alwaysExpanded = false }: { alwaysExpanded?: boolean }) {
+interface Props {
+  alwaysExpanded?: boolean;
+  size?: WidgetOverlaySize;
+}
+
+export default function EnergyWidget({ alwaysExpanded = false, size = 'normal' }: Props) {
   const [expanded, setExpanded] = useState(false);
   const isExpanded = alwaysExpanded || expanded;
   const energyConfig = useAppStore((s) => s.energyConfig);
@@ -81,7 +88,38 @@ export default function EnergyWidget({ alwaysExpanded = false }: { alwaysExpande
     );
   }
 
-  // Overlay mode — compact
+  // Compact overlay — just watt number + mini sparkline
+  if (size === 'compact') {
+    return (
+      <div className="overlay-widget">
+        <div className="flex items-center gap-2">
+          <Zap size={12} className="text-primary shrink-0" />
+          <span className="text-lg font-bold font-display text-foreground whitespace-nowrap">{totalWatts.toLocaleString('sv-SE')} W</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Expanded overlay — with mini sparkline
+  if (size === 'expanded') {
+    return (
+      <div className="overlay-widget">
+        <div className="flex items-center gap-2">
+          <Zap size={14} className="text-primary shrink-0" />
+          <span className="text-xl font-bold font-display text-foreground whitespace-nowrap">{totalWatts.toLocaleString('sv-SE')} W</span>
+          <span className="text-[10px] text-muted-foreground/70">{totalDailyKwh.toFixed(1)} kWh</span>
+        </div>
+        <div className="mt-1.5">
+          <EnergySparkline width={120} height={24} totalWatts={totalWatts} />
+        </div>
+        <div className="mt-1 text-[9px] text-muted-foreground/50">
+          ~{dailyCost.toFixed(1)} {energyConfig.currency} idag
+        </div>
+      </div>
+    );
+  }
+
+  // Normal overlay — compact
   return (
     <div className="overlay-widget">
       <div className="flex items-center gap-2">

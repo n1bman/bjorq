@@ -3,16 +3,17 @@ import { useAppStore } from '../../store/useAppStore';
 import HomeNav from './HomeNav';
 import CameraFab from './CameraFab';
 import RoomNavigator from './RoomNavigator';
+import HomeLayoutEditor from './HomeLayoutEditor';
 import ClockWidget from './cards/ClockWidget';
 import WeatherWidget from './cards/WeatherWidget';
 import EnergyWidget from './cards/EnergyWidget';
 import TemperatureWidget from './cards/TemperatureWidget';
 import DeviceControlCard from './cards/DeviceControlCard';
 import { useWeatherSync } from '../../hooks/useWeatherSync';
-import { Eye, EyeOff, Lightbulb, Thermometer, Wind, Camera, Power, Tv, Fan, Shield, Droplets, X, Wifi } from 'lucide-react';
+import { Eye, EyeOff, Lightbulb, Thermometer, Wind, Camera, Power, Tv, Fan, Shield, Droplets, X, Wifi, Settings2 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Switch } from '../ui/switch';
-import type { DeviceKind } from '../../store/types';
+import type { DeviceKind, WidgetOverlayPosition, HomeWidgetKey } from '../../store/types';
 
 const TOGGLEABLE_KINDS = new Set(['light', 'switch', 'climate', 'vacuum', 'media_screen', 'power-outlet', 'camera', 'fridge', 'oven', 'washer', 'light-fixture', 'smart-outlet']);
 
@@ -29,6 +30,14 @@ const KIND_ICONS: Partial<Record<DeviceKind, typeof Lightbulb>> = {
   humidifier: Droplets,
 };
 
+const POSITION_CLASSES: Record<WidgetOverlayPosition, string> = {
+  'top-left': 'top-5 left-5',
+  'top-right': 'top-5 right-20',
+  'center-top': 'top-5 left-1/2 -translate-x-1/2',
+  'bottom-left': 'bottom-28 left-5',
+  'bottom-right': 'bottom-28 right-5',
+};
+
 interface HomeViewProps {
   longPressDeviceId?: string | null;
   onDismissLongPress?: () => void;
@@ -37,6 +46,9 @@ interface HomeViewProps {
 
 export default function HomeView({ longPressDeviceId, onDismissLongPress, fpsActive }: HomeViewProps) {
   const visibleWidgets = useAppStore((s) => s.homeView.visibleWidgets);
+  const widgetLayout = useAppStore((s) => s.homeView.widgetLayout);
+  const homeLayoutEditMode = useAppStore((s) => s.homeView.homeLayoutEditMode);
+  const toggleHomeLayoutEditMode = useAppStore((s) => s.toggleHomeLayoutEditMode);
   const homeScreenDevices = useAppStore((s) => s.homeView.homeScreenDevices ?? []);
   const markers = useAppStore((s) => s.devices.markers);
   const hiddenMarkerIds = useAppStore((s) => s.homeView.hiddenMarkerIds ?? []);
@@ -82,18 +94,67 @@ export default function HomeView({ longPressDeviceId, onDismissLongPress, fpsAct
 
   if (fpsActive) return null;
 
+  // Group widgets by position
+  const widgetsByPosition: Record<WidgetOverlayPosition, { key: HomeWidgetKey; component: React.ReactNode }[]> = {
+    'top-left': [],
+    'top-right': [],
+    'center-top': [],
+    'bottom-left': [],
+    'bottom-right': [],
+  };
+
+  const widgetComponents: Record<HomeWidgetKey, (size: string) => React.ReactNode> = {
+    clock: (size) => <ClockWidget size={size as any} />,
+    weather: (size) => <WeatherWidget size={size as any} />,
+    temperature: (size) => <TemperatureWidget size={size as any} />,
+    energy: (size) => <EnergyWidget size={size as any} />,
+  };
+
+  const widgetKeys: HomeWidgetKey[] = ['clock', 'weather', 'temperature', 'energy'];
+  for (const key of widgetKeys) {
+    if (!visibleWidgets[key]) continue;
+    const config = widgetLayout?.[key] ?? { position: key === 'clock' || key === 'weather' ? 'top-left' : 'top-right', size: 'normal' };
+    widgetsByPosition[config.position].push({
+      key,
+      component: widgetComponents[key](config.size),
+    });
+  }
+
   return (
     <div className="absolute inset-0 z-10 pointer-events-none">
-      {/* ── Top overlay widgets — minimal, typographic ── */}
-      <div className="absolute top-5 left-5 z-10 flex items-start gap-3 pointer-events-auto">
-        {visibleWidgets.clock && <ClockWidget />}
-        {visibleWidgets.weather && <WeatherWidget />}
-      </div>
+      {/* Layout editor overlay */}
+      {homeLayoutEditMode && <HomeLayoutEditor />}
 
-      <div className="absolute top-5 right-20 z-10 flex items-start gap-3 pointer-events-auto">
-        {visibleWidgets.temperature && <TemperatureWidget />}
-        {visibleWidgets.energy && <EnergyWidget />}
-      </div>
+      {/* ── Positioned overlay widgets ── */}
+      {!homeLayoutEditMode && Object.entries(widgetsByPosition).map(([pos, widgets]) => {
+        if (widgets.length === 0) return null;
+        return (
+          <div
+            key={pos}
+            className={cn(
+              'absolute z-10 flex items-start gap-3 pointer-events-auto',
+              POSITION_CLASSES[pos as WidgetOverlayPosition],
+              // Mobile: stack vertically in center
+              'max-md:flex-col max-md:items-center'
+            )}
+          >
+            {widgets.map(({ key, component }) => (
+              <div key={key}>{component}</div>
+            ))}
+          </div>
+        );
+      })}
+
+      {/* ── Layout edit button ── */}
+      {!homeLayoutEditMode && (
+        <button
+          onClick={toggleHomeLayoutEditMode}
+          className="absolute top-5 left-1/2 -translate-x-1/2 z-20 pointer-events-auto overlay-widget px-3 py-1.5 flex items-center gap-1.5 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <Settings2 size={12} />
+          <span className="hidden md:inline">Layout</span>
+        </button>
+      )}
 
       {/* ── Long-press popup for device control ── */}
       {longPressDeviceId && longPressMarker && (
@@ -122,7 +183,7 @@ export default function HomeView({ longPressDeviceId, onDismissLongPress, fpsAct
       {/* ── Device pills at bottom — pill-shaped, compact ── */}
       {selectedMarkers.length > 0 && (
         <div className="absolute bottom-24 left-4 right-4 z-10 pointer-events-auto">
-          <div className="flex gap-2 overflow-x-auto pb-2 px-1">
+          <div className="flex gap-2 overflow-x-auto pb-2 px-1 max-md:grid max-md:grid-cols-2 max-md:gap-1.5">
             {selectedMarkers.map((m) => {
               const isOn = getDeviceIsOn(m.id);
               const canToggle = TOGGLEABLE_KINDS.has(m.kind);
@@ -133,7 +194,7 @@ export default function HomeView({ longPressDeviceId, onDismissLongPress, fpsAct
                   key={m.id}
                   data-active={isOn ? 'true' : 'false'}
                   className={cn(
-                    'device-pill shrink-0',
+                    'device-pill shrink-0 min-h-[44px]',
                     canToggle && !isMediaOn && 'cursor-pointer active:scale-95',
                   )}
                   onClick={() => {

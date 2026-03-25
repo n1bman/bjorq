@@ -8,6 +8,8 @@ import { Slider } from '../../ui/slider';
 import { Switch } from '../../ui/switch';
 import { cn } from '../../../lib/utils';
 import { getClimateEntityViews } from '../../../lib/haMenuSelectors';
+import ClimateRoomComparison from './ClimateRoomComparison';
+import ClimateTrendLine from './ClimateTrendLine';
 
 const genId = () => Math.random().toString(36).slice(2, 10);
 
@@ -295,13 +297,48 @@ function RuleCard({ rule }: { rule: ComfortRule }) {
 export default function ClimateTab() {
   const rules = useAppStore((s) => s.comfort.rules);
   const addRule = useAppStore((s) => s.addComfortRule);
+  const markers = useAppStore((s) => s.devices.markers);
+  const deviceStates = useAppStore((s) => s.devices.deviceStates);
   const [showNew, setShowNew] = useState(false);
+
+  // Get climate devices for trend lines
+  const climateDevices = markers
+    .filter((m) => m.kind === 'climate')
+    .map((m) => {
+      const st = deviceStates[m.id];
+      if (st?.kind !== 'climate') return null;
+      return { id: m.id, name: m.name || 'Klimat', current: st.data.currentTemp, target: st.data.targetTemp };
+    })
+    .filter(Boolean) as { id: string; name: string; current: number; target: number }[];
 
   return (
     <div className="space-y-4">
-      <ClimateOverview />
+      {/* 1. Room comparison — all rooms at a glance */}
+      <ClimateRoomComparison />
+
+      {/* 2. Trend lines per room */}
+      {climateDevices.length > 0 && (
+        <div className="space-y-2">
+          <h4 className="text-xs font-semibold text-foreground flex items-center gap-2">
+            <Activity size={14} className="text-primary" />
+            Temperaturtrend (24h)
+          </h4>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+            {climateDevices.map((d) => (
+              <ClimateTrendLine key={d.id} currentTemp={d.current} targetTemp={d.target} roomName={d.name} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 3. Comfort status + Override */}
       <ComfortStatus />
       <OverrideCard />
+
+      {/* 4. HA entity overview */}
+      <ClimateOverview />
+
+      {/* 5. Rules */}
       <div className="flex items-center justify-between">
         <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
           <Thermometer size={16} className="text-primary" />
