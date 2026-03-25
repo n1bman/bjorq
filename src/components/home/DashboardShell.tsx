@@ -1,5 +1,5 @@
-import { useCallback, useState, useEffect, useMemo } from 'react';
-import { PenTool, Home, ChevronLeft, ChevronRight, MoreHorizontal, Activity } from 'lucide-react';
+import { useCallback, useState, useEffect } from 'react';
+import { PenTool, Home, ChevronLeft, ChevronRight, MoreHorizontal } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useAppStore } from '../../store/useAppStore';
 import { useWeatherSync } from '../../hooks/useWeatherSync';
@@ -282,6 +282,75 @@ export default function DashboardShell() {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+/* ── Summary Bar — typographic strip ── */
+function SummaryBar() {
+  const weather = useAppStore((s) => s.environment.weather);
+  const markers = useAppStore((s) => s.devices.markers);
+  const deviceStates = useAppStore((s) => s.devices.deviceStates);
+  const [time, setTime] = useState(new Date());
+
+  useEffect(() => {
+    const t = setInterval(() => setTime(new Date()), 10_000);
+    return () => clearInterval(t);
+  }, []);
+
+  const activeCount = markers.filter((m) => {
+    const st = deviceStates[m.id];
+    if (!st) return false;
+    if ('on' in st.data) return (st.data as any).on;
+    return false;
+  }).length;
+
+  const timeStr = time.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
+
+  const items = [
+    { label: 'TID', value: timeStr },
+    { label: 'UTE', value: `${Math.round(weather.temperature)}°` },
+    { label: 'ENERGI', value: `${activeCount > 0 ? activeCount * 12 : 0} W` },
+    { label: 'KOMFORT', value: '21.5°' },
+  ];
+
+  return (
+    <div className="shrink-0 flex items-center gap-8 px-6 py-2.5 bg-[hsl(222_20%_5%/0.9)] backdrop-blur-xl border-b border-[hsl(var(--border)/0.06)]">
+      {items.map((item) => (
+        <div key={item.label} className="flex flex-col">
+          <span className="label-micro">{item.label}</span>
+          <span className="value-display text-lg text-foreground">{item.value}</span>
+        </div>
+      ))}
+      <div className="flex-1" />
+      <span className="text-[10px] text-muted-foreground/30 font-medium tracking-wider">BJORQ</span>
+    </div>
+  );
+}
+
+/* ── Nav Home Status ── */
+function NavHomeStatus({ collapsed }: { collapsed: boolean }) {
+  const markers = useAppStore((s) => s.devices.markers);
+  const deviceStates = useAppStore((s) => s.devices.deviceStates);
+  const activeCount = markers.filter((m) => {
+    const st = deviceStates[m.id];
+    if (!st) return false;
+    if ('on' in st.data) return (st.data as any).on;
+    return false;
+  }).length;
+
+  return (
+    <div className={cn(
+      'flex items-center gap-2 rounded-xl px-3 py-2 mt-1',
+      'bg-[hsl(var(--surface-sunken))] border border-[hsl(var(--border)/0.08)]'
+    )}>
+      <span className={cn('w-2 h-2 rounded-full shrink-0', activeCount > 0 ? 'bg-green-400' : 'bg-muted-foreground/30')} />
+      {!collapsed && (
+        <div className="flex flex-col min-w-0">
+          <span className="text-[9px] font-semibold uppercase tracking-[0.2em] text-muted-foreground/30">Hemstatus</span>
+          <span className="text-[11px] text-foreground/60">{activeCount} aktiva</span>
+        </div>
+      )}
     </div>
   );
 }
