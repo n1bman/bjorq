@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 
 interface Props {
@@ -54,6 +54,8 @@ export default function ClimateTrendLine({ currentTemp, targetTemp, roomName }: 
   const trendLabel = trend > 0.3 ? 'Stiger' : trend < -0.3 ? 'Sjunker' : 'Stabil';
   const trendColor = trend > 0.3 ? 'text-orange-400' : trend < -0.3 ? 'text-blue-400' : 'text-muted-foreground';
 
+  const [hoverIdx, setHoverIdx] = useState<number | null>(null);
+
   return (
     <div className="rounded-xl bg-surface-elevated/40 p-3 space-y-2">
       <div className="flex items-center justify-between">
@@ -63,18 +65,48 @@ export default function ClimateTrendLine({ currentTemp, targetTemp, roomName }: 
           <span className={`text-[9px] font-medium ${trendColor}`}>{trendLabel}</span>
         </div>
       </div>
-      <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="w-full">
-        {/* Target line — solid, more visible */}
+      <svg
+        width={width}
+        height={height}
+        viewBox={`0 0 ${width} ${height}`}
+        className="w-full"
+        onMouseLeave={() => setHoverIdx(null)}
+      >
+        {/* Target line — solid, prominent */}
         <line x1={0} y1={targetY} x2={width} y2={targetY}
-          stroke="hsl(var(--primary))" strokeWidth="1.5" opacity="0.3" />
+          stroke="hsl(var(--primary))" strokeWidth="1.5" opacity="0.35" />
         {/* Target label */}
         <text x={width - 2} y={targetY - 4} textAnchor="end" fill="hsl(var(--primary))" fontSize="7" opacity="0.5">
           Mål {targetTemp}°
         </text>
-        {/* Trend line */}
+        {/* Trend line — animated */}
         <path d={pathD} fill="none" stroke="hsl(var(--foreground))" strokeWidth="1.5" strokeLinecap="round" opacity="0.7" className="sparkline-line" />
-        {/* Current point */}
-        <circle cx={pts[pts.length - 1].x} cy={pts[pts.length - 1].y} r="3" fill="hsl(var(--primary))" />
+        {/* Current point — pulsing */}
+        <circle cx={pts[pts.length - 1].x} cy={pts[pts.length - 1].y} r="4" fill="hsl(var(--primary))" className="sparkline-pulse" />
+        <circle cx={pts[pts.length - 1].x} cy={pts[pts.length - 1].y} r="2" fill="hsl(var(--primary))" />
+        {/* Hover hit areas for tooltip */}
+        {pts.map((p, i) => (
+          <rect
+            key={i}
+            x={p.x - 4}
+            y={0}
+            width={8}
+            height={height}
+            fill="transparent"
+            onMouseEnter={() => setHoverIdx(i)}
+          />
+        ))}
+        {/* Hover tooltip */}
+        {hoverIdx !== null && pts[hoverIdx] && (
+          <g>
+            <line x1={pts[hoverIdx].x} y1={0} x2={pts[hoverIdx].x} y2={height} stroke="hsl(var(--foreground))" strokeWidth="0.5" opacity="0.3" />
+            <circle cx={pts[hoverIdx].x} cy={pts[hoverIdx].y} r="3" fill="hsl(var(--primary))" />
+            <rect x={pts[hoverIdx].x - 28} y={pts[hoverIdx].y - 22} width="56" height="16" rx="4" fill="hsl(var(--card))" stroke="hsl(var(--border))" strokeWidth="0.5" />
+            <text x={pts[hoverIdx].x} y={pts[hoverIdx].y - 11} textAnchor="middle" fill="hsl(var(--foreground))" fontSize="8" fontWeight="600">
+              {data[hoverIdx].toFixed(1)}° {String(hoverIdx).padStart(2, '0')}:00
+            </text>
+          </g>
+        )}
       </svg>
       <div className="flex items-center justify-between text-[9px] text-muted-foreground/50">
         <span>00:00</span>
