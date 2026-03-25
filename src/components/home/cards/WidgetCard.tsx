@@ -1,5 +1,4 @@
 import type { WidgetSize } from '../../../store/types';
-import type { WidgetSize } from '../../../store/types';
 import { cn } from '../../../lib/utils';
 
 interface Props {
