@@ -243,6 +243,18 @@ const storeCreator = (set: any, get: any): AppState => ({
       customStartTarget: target,
     },
   })); syncProfileToServer(); },
+  setWidgetLayout: (widget, config) => { set((s: any) => ({
+    homeView: {
+      ...s.homeView,
+      widgetLayout: {
+        ...s.homeView.widgetLayout,
+        [widget]: { ...(s.homeView.widgetLayout?.[widget] ?? {}), ...config },
+      },
+    },
+  })); syncProfileToServer(); },
+  toggleHomeLayoutEditMode: () => { set((s: any) => ({
+    homeView: { ...s.homeView, homeLayoutEditMode: !s.homeView.homeLayoutEditMode },
+  }));
   clearHomeStartCamera: () => { set((s: any) => ({
     homeView: {
       ...s.homeView,
