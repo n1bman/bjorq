@@ -7,14 +7,14 @@
 | Fas | Beskrivning | Status |
 |-----|-------------|--------|
 | 1 | Backup + projektplanfil | ✅ Klar |
-| 2 | Design tokens + glasspanel-upgrade | 🔄 Pågår |
-| 3 | Hem-vy: layoutläge, pills, polish | 🔄 Pågår |
-| 4 | Kontrollpanel: nav, shell, WidgetCard | ⬜ |
-| 5 | Widget-storlekar, drag, density | ⬜ |
-| 6 | Energi hero-widget, sparkline | ⬜ |
-| 7 | Klimat nuvärde/mål/trend | ⬜ |
-| 8 | Väder prognos, hemkoppling | ⬜ |
-| 9 | Polish: settings, profil, design-läge | ⬜ |
+| 2 | Design tokens + glasspanel-upgrade | ✅ Klar |
+| 3 | Hem-vy: layoutläge, pills, polish | ✅ Klar |
+| 4 | Kontrollpanel: nav, shell, WidgetCard | ✅ Klar |
+| 5 | Widget-storlekar, drag, density | ✅ Klar |
+| 6 | Energi hero-widget, sparkline | ✅ Klar |
+| 7 | Klimat nuvärde/mål/trend | ✅ Klar |
+| 8 | Väder prognos, hemkoppling | ✅ Klar |
+| 9 | Polish: settings, profil, design-läge | ✅ Klar |
 
 ## Backup
 
