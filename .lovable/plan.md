@@ -1,84 +1,55 @@
-# Arbetsplan: Persistent 3D Runtime & Optimering
 
-## Status: ✅ Implementerat (v1.6.0)
+
+# Översikt av byggefel och fix-plan
+
+Jag har gått igenom alla byggfel. De flesta verkar komma från ändringar du gjort på GitHub-sidan. Här är varje fel och vad som behöver göras:
 
 ---
 
-## Fas 0 — Bygg-stabilisering ✅ DONE
-- Fixat import i Scene3D till `./build/KitchenFixture3D`
-- Raderat duplikat `KitchenFixtureObject3D.tsx`
+## Fel 1: `BuildTopToolbar.tsx` — saknar `isHostedSync` import
+**Rad 152 och 422** använder `isHostedSync()` men filen importerar aldrig funktionen.
 
-## Fas 1 — Buggar och regressioner ✅ DONE
+**Fix:** Lägg till `import { isHostedSync } from '../../lib/apiClient';` i importerna (rad 1-20).
 
-### 1.1 Väggar: 90-gradersstöd vid ritning ✅
-- Axis-aligned snapping (±3° av 0/90/180/270°) i `BuildScene3D.tsx`
-- Visuell indikator: cyan linje + solid (ej dashed) + "90°"-label via `<Html>`
-- `cursorAxisAligned`-prop tillagd i `WallDrawing3D.tsx`
+---
 
-### 1.3 Dörr-öppningsriktning ✅
-- `flipped` appliceras nu på dörrpanelens position och rotation i `wallGeometry.tsx`
-- Gångjärnspunkt beräknas baserat på `flipped`-flagga
+## Fel 2: `DataBackupCard.tsx` — `Record<string, unknown>` vs `Record<string, DeviceState>`
+**Rad 146** deklarerar `deviceStates` som `Record<string, unknown>` men store-typen kräver `Record<string, DeviceState>`.
 
-### 1.4 Dörrens öppningsgrad ✅
-- `openAmount?: number` (0-1) tillagd på `WallOpening` i `types.ts`
-- Slider "Öppningsgrad" i OpeningInspector (dörrar + garageportar)
-- 3D: dörrblad roteras runt gångjärnspunkt baserat på `openAmount * π/2`
-- TODO: koppla till `haEntityId` för automatisk HA-sync
+**Fix:** Ändra `const deviceStates: Record<string, unknown> = {};` till `const deviceStates: Record<string, DeviceState> = {};` och importera `DeviceState` från types.
 
-### 1.5 Ljus går igenom väggar ✅ (pragmatisk lösning)
-- Alla ljustyper: minskad distance + decay=2
-- ceiling: 5m, strip: 6m, spot: 6m/π/7 angle, wall: 5m/π/4 angle
-- Dokumenterat: fullständig ljusblockering kräver baked lighting
+---
 
-## Fas 2 — UX-förbättringar ✅ DONE
+## Fel 3: `HAConnectionPanel.tsx` — saknar `'degraded'` i statusConfig
+Typen `HAConnectionStatus` inkluderar `'degraded'` (din GitHub-ändring i types.ts) men `statusConfig`-objektet i HAConnectionPanel har bara 4 nycklar (disconnected/connecting/connected/error).
 
-### 2.1 Sliders med exakt värdeinmatning ✅
-- Ny `SliderWithInput`-komponent (`src/components/ui/SliderWithInput.tsx`)
-- Klickbart värde → number input med Enter/Escape/blur
-- Applicerad i OpeningInspector (bredd, höjd, bröstning, position, öppningsgrad)
+**Fix:** Lägg till `degraded: { label: 'Degraderad', color: 'text-yellow-500', icon: AlertCircle }` i `statusConfig`-objektet.
 
-### 2.2 Möbelfliken stängd som standard ✅
-- Inredning startar med `select`-verktyg (inte `furnish`)
-- Katalogen visas bara när Möbler eller Wizard-verktyg är aktivt
+---
 
-### 2.3 Måla-fliken flyttad till Inredning ✅
-- `paint`-verktyg borttaget från `planritningTools`
-- Tillagt i `inredningTools` som "Måla" med Paintbrush-ikon
-- SurfaceEditor visas under Inredning-fliken
+## Fel 4: Testfiler — saknar typdeklarationer för server-JS
+`auth.test.ts`, `backupEnvelope.test.ts`, `liveHub.test.ts`, `safePaths.test.ts` importerar `.js`-filer från `server/` som saknar typdeklarationer.
 
-### 2.4 Väggar: bara färger (inga texturer) ✅
-- SurfaceEditor filtrerar vägg-material till enbart `paint`-kategorin
-- 15 nya väggfärger tillagda (mjuk rosa, oliv, skifferblå, etc.)
-- Golv behåller alla texturer som tidigare
+**Fix:** Skapa en minimal `server/types.d.ts` fil som deklarerar modulerna, eller lägg till `// @ts-ignore` ovanför varje import. Enklast: skapa en `src/test/server-modules.d.ts` med `declare module`-block.
 
-## Fas 3 — Dokumentation och mappstruktur ✅ DONE
-- `public/textures/guide/README.md` uppdaterad med korrekt mappstruktur
-- Borttagen felaktig referens till `public/textures/floor/`
-- Target-paths tillagda per preset
-- `public/textures/carpet/` skapad
+---
 
-## Fas 4 — Import/Export och long-press ✅ DONE
+## Fel 5: `haMenuSelectors.test.ts` — ofullständig mock av `AppState`
+`createState()` returnerar ett objekt som saknar ~143 properties jämfört med `AppState`-typen (som du utökat på GitHub).
 
-### 4.2 Exportera från Bibliotek ✅
-- "Exportera"-knapp tillagd i BibliotekWorkspace detaljpanel
-- Exporterar metadata som JSON-fil
+**Fix:** Behåll `as unknown as AppState` istället för direkt `as AppState`, eller lägg till saknade fält.
 
-### 4.3 Hold-long på enheter i hemmenyn ✅
-- 500ms long-press → popup med av/på + ljusstyrka-slider
-- Fungerar för alla enheter med extra kontroll för `light`
+---
 
-## Fas 5 — Troubleshooting-pass ✅ DONE
-- Raderat dead code: `PaintTool.tsx` (ersatt av inline SurfaceEditor)
-- KitchenFixtureObject3D redan borttagen
-- Inga oanvända importer kvar
-- Tester passerar
+## Sammanfattning av ändringar
 
-## Fas 6 — Version 1.1.0 ✅ DONE
-- `package.json` bumpat till 1.1.0
+| Fil | Ändring |
+|-----|---------|
+| `BuildTopToolbar.tsx` | Lägg till `isHostedSync`-import från `apiClient` |
+| `DataBackupCard.tsx` | Ändra `Record<string, unknown>` → `Record<string, DeviceState>`, importera typen |
+| `HAConnectionPanel.tsx` | Lägg till `degraded`-entry i `statusConfig` |
+| `src/test/server-modules.d.ts` | Ny fil: deklarera server-moduler för TS |
+| `haMenuSelectors.test.ts` | Ändra `as AppState` → `as unknown as AppState` |
 
-## Bevarat
-- Design / Planritning / Inredning / Bibliotek-struktur
-- Save/load kompatibilitet
-- HA-sync (ej ändrad)
-- Golv-texturer med ambientCG CDN-thumbnails
-- Vägg-mitering och hörn-geometri
+Ingen logik ändras — bara imports, typer och test-stubs fixas för att matcha de tillägg du gjort på GitHub.
+
