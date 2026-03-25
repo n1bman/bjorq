@@ -117,64 +117,62 @@ export default function CategoryCard({
   return (
     <div
       className={cn(
-        'nn-widget nn-widget-hover p-4 transition-all',
+        'nn-widget nn-widget-hover p-5 transition-all',
         span && 'col-span-2',
         dragOverActive && 'ring-2 ring-primary/40',
         editMode && 'ring-1 ring-dashed ring-muted-foreground/20'
       )}
-      style={{ maxHeight: '320px', display: 'flex', flexDirection: 'column' }}
+      style={{ maxHeight: '360px', display: 'flex', flexDirection: 'column' }}
       onDragOver={editMode ? handleDragOver : undefined}
       onDragLeave={editMode ? handleDragLeave : undefined}
       onDrop={editMode ? handleDrop : undefined}
     >
       {/* Header */}
       <div
-        className="flex items-center justify-between cursor-pointer mb-1"
+        className="flex items-center justify-between cursor-pointer mb-2"
         draggable={editMode}
         onDragStart={editMode ? handleCategoryDragStart : undefined}
         onClick={() => !editMode && setCollapsed(!collapsed)}
       >
-        <div className="flex items-center gap-2.5 min-w-0">
-          {editMode && <GripVertical size={12} className="text-muted-foreground/40 shrink-0 cursor-grab" />}
-          <CategoryIcon size={16} className={cn('shrink-0', onCount > 0 ? 'text-primary' : 'text-muted-foreground/50')} />
-          <ChevronDown size={10} className={cn(
-            'text-muted-foreground/40 transition-transform shrink-0',
-            collapsed && '-rotate-90'
-          )} />
-          <span className="text-sm font-semibold text-foreground truncate">{displayName}</span>
-          <span className="text-[10px] text-muted-foreground/50 shrink-0">{onCount}/{devices.length}</span>
+        <div className="flex flex-col min-w-0">
+          <div className="flex items-center gap-2 min-w-0">
+            {editMode && <GripVertical size={12} className="text-muted-foreground/40 shrink-0 cursor-grab" />}
+            <span className="text-[15px] font-semibold text-foreground truncate">{displayName}</span>
+          </div>
+          <span className="text-[11px] text-muted-foreground/40 mt-0.5">
+            {onCount}/{devices.length} på
+          </span>
         </div>
-        <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-          {hasLights && allOn && (
-            <div className="w-16 shrink-0">
-              <Slider
-                value={[avgBrightness]}
-                max={255}
-                step={1}
-                onValueChange={([v]) => {
-                  for (const d of lightDevices) {
-                    const st = deviceStates[d.id];
-                    if (st?.kind === 'light' && st.data.on) {
-                      updateDeviceState(d.id, { brightness: v });
-                    }
-                  }
-                }}
-              />
-            </div>
-          )}
-          <Switch checked={allOn} onCheckedChange={toggleAll} className="scale-90" />
+        <div className="flex items-center gap-2.5" onClick={(e) => e.stopPropagation()}>
+          <Switch checked={allOn} onCheckedChange={toggleAll} />
         </div>
       </div>
 
       {/* Device list */}
       {!collapsed && (
-        <div className="space-y-0.5 mt-2 overflow-y-auto flex-1 min-h-0">
+        <div className="space-y-1.5 mt-1 overflow-y-auto flex-1 min-h-0">
           {devices.map((d) => {
             const state = deviceStates[d.id];
             const on = isOn(state);
             const expanded = expandedId === d.id;
             const isDragging = draggingDeviceId === d.id;
-            const DevIcon = KIND_ICONS[d.kind] || Power;
+            const isLight = state?.kind === 'light';
+            const brightness = isLight && on ? (state.data as any).brightness : 0;
+            const pct = Math.round((brightness / 255) * 100);
+
+            // Color tone label
+            let toneLabel = '';
+            if (isLight && on) {
+              const ct = (state.data as any).colorTemp;
+              const cm = (state.data as any).colorMode;
+              if (cm === 'rgb') {
+                toneLabel = 'RGB';
+              } else if (ct) {
+                toneLabel = ct < 250 ? 'kall vit' : ct < 350 ? 'neutral vit' : 'varm ton';
+              } else {
+                toneLabel = 'kvällsläge';
+              }
+            }
 
             return (
               <div
@@ -185,41 +183,67 @@ export default function CategoryCard({
                 onTouchStart={editMode ? () => handleDeviceTouchStart(d.id) : undefined}
                 onTouchEnd={editMode ? handleDeviceTouchEnd : undefined}
                 className={cn(
-                  'rounded-lg transition-all',
-                  expanded && 'bg-surface-elevated/50 ring-1 ring-primary/15',
+                  'rounded-xl transition-all relative overflow-hidden',
+                  expanded && 'ring-1 ring-primary/15',
                   isDragging && 'opacity-50 scale-95',
-                  editMode && 'cursor-grab hover:bg-surface-elevated/30'
+                  editMode && 'cursor-grab'
                 )}
               >
+                {/* Amber brightness bar background for active lights */}
+                {isLight && on && (
+                  <div
+                    className="absolute inset-0 rounded-xl pointer-events-none"
+                    style={{
+                      background: `linear-gradient(90deg, hsl(34 80% 52% / 0.15) 0%, hsl(34 80% 52% / 0.08) ${pct}%, transparent ${pct}%)`,
+                    }}
+                  />
+                )}
                 <div
-                  className="flex items-center gap-2.5 py-2 px-3 cursor-pointer"
+                  className={cn(
+                    'flex items-center gap-3 py-3 px-3.5 cursor-pointer relative z-10',
+                    !on && 'opacity-50'
+                  )}
                   onClick={() => !editMode && setExpandedId(expanded ? null : d.id)}
                 >
                   {editMode && <GripVertical size={10} className="text-muted-foreground/30 shrink-0" />}
-                  <DevIcon size={13} className={cn('shrink-0', on ? 'text-primary' : 'text-muted-foreground/40')} />
-                  <span className="text-[13px] text-foreground flex-1 min-w-[60px] truncate">{d.name || d.kind}</span>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-[13px] text-foreground block truncate">{d.name || d.kind}</span>
+                    {isLight && on && toneLabel && (
+                      <span className="text-[10px] text-muted-foreground/50">{pct}% · {toneLabel}</span>
+                    )}
+                    {!isLight && !on && (
+                      <span className="text-[10px] text-muted-foreground/40">
+                        {state?.kind === 'vacuum' ? (state.data as any).status === 'docked' ? 'Dockad' : (state.data as any).status : ''}
+                      </span>
+                    )}
+                  </div>
 
-                  {!editMode && state?.kind === 'light' && state.data.on && !expanded && (
-                    <div className="w-14 shrink-0" onClick={(e) => e.stopPropagation()}>
-                      <Slider
-                        value={[state.data.brightness]}
-                        max={255} step={1}
-                        onValueChange={([v]) => updateDeviceState(d.id, { brightness: v })}
-                      />
-                    </div>
+                  {/* Brightness badge for lights */}
+                  {isLight && on && (
+                    <span className="text-[11px] font-semibold text-primary/80 bg-primary/10 px-2 py-0.5 rounded-full shrink-0">
+                      {pct}%
+                    </span>
+                  )}
+
+                  {/* Chevron for expandable */}
+                  {!editMode && (
+                    <ChevronDown size={12} className={cn(
+                      'text-muted-foreground/30 transition-transform shrink-0',
+                      expanded && 'rotate-180'
+                    )} />
                   )}
 
                   {!editMode && state && 'on' in state.data && state.kind !== 'sensor' && (
                     <div onClick={(e) => e.stopPropagation()}>
-                      <Switch checked={on} onCheckedChange={(v) => updateDeviceState(d.id, { on: v })} className="scale-90" />
+                      <Switch checked={on} onCheckedChange={(v) => updateDeviceState(d.id, { on: v })} />
                     </div>
                   )}
 
-                  {d.ha?.entityId && <Wifi size={8} className="text-primary/40 shrink-0" />}
+                  {d.ha?.entityId && <Wifi size={8} className="text-primary/30 shrink-0" />}
                 </div>
 
                 {expanded && !editMode && (
-                  <div className="px-2 pb-2 border-t border-border/15">
+                  <div className="px-3 pb-3 border-t border-[hsl(var(--border)/0.1)]">
                     <DeviceControlCard marker={d} />
                   </div>
                 )}
