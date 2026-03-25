@@ -1,45 +1,67 @@
 
 
-# BJORQ Nordic Noir — Visuell korrigering
+# BJORQ — Ta bort SummaryBar, gör allt till fria widgets i samma grid
 
-## Vad som behöver fixas (från dina bilder)
+## Vad du vill
 
-### 1. Summary bar (bild 1)
-Ska vara **fyra separata kort/celler i ett grid** med synliga borders/ramar — inte bara text i en flat strip. Varje cell har `label-micro` + stort värde + en tredje rad med detalj (datum, väderbeskrivning, pris, status).
+Bilden visar tydligt: TID, UTE, ENERGI och KOMFORT är **vanliga kort/widgets i samma grid** som 3D-vyn, Aktivt rum, rumskorten och allt annat. Det finns ingen separat bar — allt lever i samma fria yta.
 
-### 2. Ta bort placeholder-texter
-Radera:
-- `"Bjorq Home / Nordic Noir"` + `"Hem, översatt från nuvarande dashboard"`
-- `"Home Overview"` + `"Samma hemvy, men mer lugn och materialitet"`
+## Ändringar
 
-### 3. Trekolumnslayout med 3D + Aktivt rum (bild 4a)
-- Vänster: 3D-preview (hero) med snabbknappar (Scener, Enheter, Klimat, Robot) inuti/under
-- Höger: "AKTIVT RUM" panel där användaren väljer rum och ser enheter
-- Men detta är **fritt** — inte låst i exakt denna layout
+### 1. `DashboardShell.tsx`
+- **Ta bort `<SummaryBar />`** helt från layouten
+- Ta bort hela `SummaryBar`-funktionen
+- Huvudinnehållet (`<Content />`) fyller hela ytan utan en fast strip ovanför
 
-### 4. Switch/toggle (bild 5)
-Nuvarande switch är för ljus. Ska ha **mörkare track** (off = mörk, on = amber) med en **mörkare thumb**. Matcha Nordic Noir-temat.
+### 2. `DashboardGrid.tsx` — HomeCategory
+Bygg om HomeCategory så att **allt** är widgets i samma grid:
 
-### 5. Färgsättning och känsla
-- Text som `label-micro` ska ha rätt opacity
-- Amber brightness-bars ska vara mer levande
-- Generellt mörkare, mer premium-känsla
+```text
+┌─TID──────┐ ┌─UTE──────┐ ┌─ENERGI───┐ ┌─KOMFORT──┐
+│ 14:00    │ │ 7°C      │ │ 0 W      │ │ 21.5°    │
+│ Onsdag.. │ │ Molnigt  │ │ Normal   │ │ Optimal  │
+└──────────┘ └──────────┘ └──────────┘ └──────────┘
 
----
+┌─3D-vy (hero, col-span-2)────────┐ ┌─Aktivt rum──────────┐
+│                                   │ │ Vardagsrum           │
+│  [DashboardPreview3D]             │ │ Skap lampa-1  78% ◉  │
+│                                   │ │ Ljusarmatur   62% ◉  │
+│  [Scener] [Enheter]              │ │ Fönsterlampa      ◉  │
+│  [Klimat] [Robot]                │ │                      │
+└───────────────────────────────────┘ └──────────────────────┘
 
-## Ändrade filer
+[Alla] [Ljus] [Armaturer] [Klimat] [Media] [Robot] [Lås] [Sensor]
 
+┌─Sovrum───────┐ ┌─Badrum───────┐
+│ 2/2 på       │ │ 1/1 på       │
+│ devices...   │ │ devices...   │
+└──────────────┘ └──────────────┘
+┌─Övrigt──────┐ ┌─Hem──────────┐
+│ TV           │ │ Vacuum       │
+└──────────────┘ └──────────────┘
+```
+
+- TID/UTE/ENERGI/KOMFORT blir **4 st nn-widget kort** i rad 1 av gridet
+- 3D-vyn + Aktivt rum sida vid sida i rad 2
+- Filter tabs + rumskort under — precis som nu men i samma flöde
+- Högerkolumnen (Aktivt rum) är **bara ett till kort i gridet** — inte en separat panel
+- Allt i **ett enda fritt CSS grid** med `grid-cols-4` som bas
+
+### 3. Aktivt rum-widget
+- Visar valt rum (klickbart från rumskorten)
+- Listar enheter i det rummet med toggle/brightness
+- State: `selectedRoomId` via useState
+- Klick på ett rumskort → sätter selectedRoomId → Aktivt rum uppdateras
+
+### Tekniskt
+- Ta bort `SummaryBar` funktion + anrop i `DashboardShell.tsx`
+- Flytta TID/UTE/ENERGI/KOMFORT-logiken in i `HomeCategory` som 4 kort-komponenter
+- Aktivt rum = en ny liten inline-komponent i HomeCategory
+- Inget nytt dependency — bara omstrukturering
+
+### Filer som ändras
 | Fil | Ändring |
 |-----|---------|
-| `DashboardShell.tsx` → `SummaryBar` | Grid med 4 celler, borders, tredje rad detalj |
-| `DashboardGrid.tsx` → `HomeCategory` | Ta bort placeholder-text, behåll 3D + filter + cards |
-| `switch.tsx` | Mörkare track + thumb som matchar Nordic Noir |
-| `index.css` | Eventuella justeringar av `nn-widget`, summary-bar tokens |
-
-## Implementationsordning
-
-1. **SummaryBar** — grid med ramar, tre rader per cell (label, value, detalj)
-2. **HomeCategory** — rensa bort texter, behåll 3D hero + filter + rumskort
-3. **Switch** — mörkare track off-state, mörkare thumb, amber on-state med glow
-4. **CSS polish** — summary-bar grid tokens
+| `DashboardShell.tsx` | Ta bort SummaryBar |
+| `DashboardGrid.tsx` | HomeCategory: 4 info-kort + 3D + aktivt rum i samma grid |
 
