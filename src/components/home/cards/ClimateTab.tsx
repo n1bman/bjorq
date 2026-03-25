@@ -265,8 +265,11 @@ function RuleCard({ rule }: { rule: ComfortRule }) {
   const removeRule = useAppStore((s) => s.removeComfortRule);
   const updateRule = useAppStore((s) => s.updateComfortRule);
   const markers = useAppStore((s) => s.devices.markers);
+  const liveStates = useAppStore((s) => s.homeAssistant.liveStates);
   const [editing, setEditing] = useState(false);
   const targetDevice = markers.find((marker) => marker.id === rule.targetDeviceId);
+  const liveValue = rule.sensorEntityId ? parseFloat(liveStates[rule.sensorEntityId]?.state ?? '') : undefined;
+  const liveNum = Number.isFinite(liveValue) ? liveValue : undefined;
 
   if (editing) {
     return <RuleEditor rule={rule} onSave={(nextRule) => { updateRule(nextRule.id, nextRule); setEditing(false); }} onCancel={() => setEditing(false)} />;
@@ -277,13 +280,28 @@ function RuleCard({ rule }: { rule: ComfortRule }) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Thermometer size={14} className={rule.lastState === 'active' ? 'text-primary' : 'text-muted-foreground'} />
-          <span className="text-sm font-medium text-foreground">{rule.name}</span>
+          <div>
+            <span className="text-sm font-medium text-foreground">{rule.name}</span>
+            {rule.lastState === 'active' && (
+              <p className="text-[8px] text-primary/70">Aktiv nu</p>
+            )}
+          </div>
         </div>
         <Switch checked={rule.enabled} onCheckedChange={() => toggleRule(rule.id)} />
       </div>
       <div className="text-xs text-muted-foreground">
         Om temp {rule.condition === 'above' ? '>' : '<'} {rule.threshold}°C (±{rule.hysteresis}) → <span className="text-foreground">{targetDevice?.name || rule.targetDeviceId.slice(0, 8)}</span>
       </div>
+      {/* Live sensor value */}
+      {liveNum !== undefined && (
+        <div className="flex items-center gap-2 text-[10px]">
+          <span className="text-muted-foreground">Sensor:</span>
+          <span className={cn('font-medium', liveNum > rule.threshold ? 'text-orange-400' : 'text-foreground')}>
+            {liveNum.toFixed(1)}°C
+          </span>
+          <span className="text-muted-foreground/50">/ tröskel {rule.threshold}°C</span>
+        </div>
+      )}
       <div className="flex gap-1">
         <Button size="sm" variant="outline" onClick={() => setEditing(true)} className="h-7 flex-1 text-[10px]">Redigera</Button>
         <Button size="sm" variant="outline" onClick={() => removeRule(rule.id)} className="h-7 text-[10px] text-destructive hover:text-destructive">
@@ -311,8 +329,40 @@ export default function ClimateTab() {
     })
     .filter(Boolean) as { id: string; name: string; current: number; target: number }[];
 
+  // Hero stats
+  const avgTemp = climateDevices.length > 0
+    ? climateDevices.reduce((s, d) => s + d.current, 0) / climateDevices.length
+    : null;
+  const withinGoal = climateDevices.filter((d) => Math.abs(d.current - d.target) <= 2).length;
+  const deviating = climateDevices.length - withinGoal;
+
   return (
     <div className="space-y-4">
+      {/* Hero section — average temp + status */}
+      <div className="nn-widget p-5">
+        <div className="flex items-center gap-6">
+          <div className="text-center">
+            <p className="text-4xl font-bold font-display text-foreground tracking-tight">
+              {avgTemp !== null ? `${avgTemp.toFixed(1)}°` : '--°'}
+            </p>
+            <p className="text-[9px] uppercase tracking-wider text-muted-foreground/60 mt-1">Snitt inomhus</p>
+          </div>
+          <div className="h-12 w-px bg-border/30" />
+          <div className="space-y-1">
+            <p className="text-sm text-foreground font-medium">
+              {climateDevices.length === 0
+                ? 'Inga klimatenheter'
+                : deviating === 0
+                ? '✓ Alla rum inom mål'
+                : `${deviating} rum avviker`}
+            </p>
+            <p className="text-[10px] text-muted-foreground/60">
+              {climateDevices.length} rum · {withinGoal} inom mål
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* 1. Room comparison — all rooms at a glance */}
       <ClimateRoomComparison />
 

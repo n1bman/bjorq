@@ -31,27 +31,31 @@ export default function ClimateRoomComparison() {
     })
     .filter(Boolean) as { id: string; name: string; current: number; target: number; diff: number; on: boolean }[];
 
-  if (climateDevices.length === 0) {
-    return (
-      <div className="nn-widget p-4">
-        <p className="text-[10px] text-muted-foreground/50">Inga klimatenheter placerade. Placera climate-enheter i Design-läget.</p>
-      </div>
-    );
-  }
+  // Demo data fallback when no real devices
+  const displayDevices = climateDevices.length > 0 ? climateDevices : [
+    { id: 'demo-1', name: 'Vardagsrum', current: 21.4, target: 22, diff: -0.6, on: true },
+    { id: 'demo-2', name: 'Sovrum', current: 19.8, target: 20, diff: -0.2, on: true },
+    { id: 'demo-3', name: 'Kök', current: 23.1, target: 21, diff: 2.1, on: true },
+    { id: 'demo-4', name: 'Badrum', current: 24.5, target: 23, diff: 1.5, on: true },
+  ];
+  const isDemo = climateDevices.length === 0;
 
-  const minTemp = Math.min(...climateDevices.map((d) => Math.min(d.current, d.target))) - 1;
-  const maxTemp = Math.max(...climateDevices.map((d) => Math.max(d.current, d.target))) + 1;
+  const minTemp = Math.min(...displayDevices.map((d) => Math.min(d.current, d.target))) - 1;
+  const maxTemp = Math.max(...displayDevices.map((d) => Math.max(d.current, d.target))) + 1;
   const range = maxTemp - minTemp || 1;
 
   return (
     <div className="nn-widget p-4 space-y-3">
       <div className="flex items-center justify-between">
         <h4 className="text-xs font-semibold text-foreground">Rumsjämförelse</h4>
-        <span className="text-[9px] text-muted-foreground/50">{climateDevices.length} rum</span>
+        <div className="flex items-center gap-2">
+          {isDemo && <span className="text-[8px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">(Demo)</span>}
+          <span className="text-[9px] text-muted-foreground/50">{displayDevices.length} rum</span>
+        </div>
       </div>
 
       <div className="space-y-2.5">
-        {climateDevices.map((d) => {
+        {displayDevices.map((d) => {
           const currentPct = ((d.current - minTemp) / range) * 100;
           const targetPct = ((d.target - minTemp) / range) * 100;
           const isWarm = d.diff > 2;

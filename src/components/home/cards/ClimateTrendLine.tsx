@@ -64,11 +64,15 @@ export default function ClimateTrendLine({ currentTemp, targetTemp, roomName }: 
         </div>
       </div>
       <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="w-full">
-        {/* Target line */}
+        {/* Target line — solid, more visible */}
         <line x1={0} y1={targetY} x2={width} y2={targetY}
-          stroke="hsl(var(--primary))" strokeWidth="1" strokeDasharray="3 3" opacity="0.4" />
+          stroke="hsl(var(--primary))" strokeWidth="1.5" opacity="0.3" />
+        {/* Target label */}
+        <text x={width - 2} y={targetY - 4} textAnchor="end" fill="hsl(var(--primary))" fontSize="7" opacity="0.5">
+          Mål {targetTemp}°
+        </text>
         {/* Trend line */}
-        <path d={pathD} fill="none" stroke="hsl(var(--foreground))" strokeWidth="1.5" strokeLinecap="round" opacity="0.7" />
+        <path d={pathD} fill="none" stroke="hsl(var(--foreground))" strokeWidth="1.5" strokeLinecap="round" opacity="0.7" className="sparkline-line" />
         {/* Current point */}
         <circle cx={pts[pts.length - 1].x} cy={pts[pts.length - 1].y} r="3" fill="hsl(var(--primary))" />
       </svg>

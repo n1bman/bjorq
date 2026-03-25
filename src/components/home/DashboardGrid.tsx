@@ -209,27 +209,57 @@ function HomeCategory() {
       .filter(Boolean) as typeof entries;
   }, [sortableItems, entries]);
 
+  const density = useAppStore((s) => s.dashboard.density ?? 'balance');
+  const setDashboardDensity = useAppStore((s) => s.setDashboardDensity);
+  const densityGap = density === 'calm' ? 'gap-5' : density === 'dense' ? 'gap-2' : 'gap-3';
+
   return (
     <div className="space-y-4">
-      {/* Unified toolbar: title + all buttons on same row */}
+      {/* Unified toolbar: title + edit + density */}
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-sm font-semibold text-foreground">Hem</h2>
         <div className="flex items-center gap-2">
+          {/* Density switcher */}
+          <div className="flex items-center rounded-lg border border-border/30 overflow-hidden">
+            {(['calm', 'balance', 'dense'] as const).map((d) => (
+              <button
+                key={d}
+                onClick={() => setDashboardDensity(d)}
+                className={cn(
+                  'px-2 py-1 text-[9px] font-medium transition-colors',
+                  density === d
+                    ? 'bg-primary/15 text-primary'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
+              >
+                {d === 'calm' ? 'Lugn' : d === 'balance' ? 'Balans' : 'Tät'}
+              </button>
+            ))}
+          </div>
           <Button size="sm" variant="outline" className="h-7 text-[10px]"
             onClick={() => setShowManager(!showManager)}>
-            {showManager ? 'Stäng' : 'Hantera kategorier'}
+            {showManager ? 'Stäng' : 'Kategorier'}
           </Button>
           <Button size="sm" variant={editMode ? 'default' : 'outline'} className="h-7 text-[10px] gap-1"
             onClick={() => setEditMode(!editMode)}>
-            {editMode ? <><X size={10} /> Klar</> : <><Pencil size={10} /> Redigera</>}
+            {editMode ? <><X size={10} /> Klar</> : <><Pencil size={10} /> Anpassa</>}
           </Button>
         </div>
       </div>
 
       {editMode && (
-        <p className="text-[10px] text-muted-foreground text-center animate-pulse">
-          Dra enheter mellan kategorier · Dra kategorier för att omordna
-        </p>
+        <div className="text-center space-y-1">
+          <p className="text-[10px] text-muted-foreground animate-pulse">
+            Dra för att omordna · Välj storlek per widget
+          </p>
+          <div className="flex justify-center gap-3">
+            {(['S', 'M', 'L', 'Hero'] as const).map((s) => (
+              <span key={s} className="text-[8px] uppercase tracking-wider text-muted-foreground/40 px-2 py-0.5 rounded border border-border/20">
+                {s}
+              </span>
+            ))}
+          </div>
+        </div>
       )}
 
       {showManager && <CategoryManager />}
@@ -239,6 +269,8 @@ function HomeCategory() {
         onReorder={handleReorder}
         columns={3}
         editMode={editMode}
+        className={densityGap}
+        density={density}
       >
         {/* 3D Preview widget — double-click to save camera view */}
         <div

@@ -145,14 +145,14 @@ export default function HomeView({ longPressDeviceId, onDismissLongPress, fpsAct
         );
       })}
 
-      {/* ── Layout edit button ── */}
+      {/* ── Layout edit button — bottom-left, more visible ── */}
       {!homeLayoutEditMode && (
         <button
           onClick={toggleHomeLayoutEditMode}
-          className="absolute top-5 left-1/2 -translate-x-1/2 z-20 pointer-events-auto overlay-widget px-3 py-1.5 flex items-center gap-1.5 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+          className="absolute bottom-28 right-20 z-20 pointer-events-auto nn-widget nn-widget-hover px-4 py-2.5 flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-all shadow-lg"
         >
-          <Settings2 size={12} />
-          <span className="hidden md:inline">Layout</span>
+          <Settings2 size={14} className="text-primary" />
+          <span>Anpassa Hem</span>
         </button>
       )}
 

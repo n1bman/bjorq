@@ -60,7 +60,13 @@ export default function HomeLayoutEditor() {
               )}>
                 <p className="text-[9px] uppercase tracking-wider text-muted-foreground/50 mb-1">{label}</p>
                 {widgetsHere.map((w) => (
-                  <div key={w.key} className="text-[10px] text-primary font-medium">{w.label}</div>
+                  <div key={w.key} className="text-[10px] text-primary font-medium flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                    {w.label}
+                    <span className="text-[8px] text-muted-foreground ml-auto">
+                      {widgetLayout[w.key]?.size ?? 'normal'}
+                    </span>
+                  </div>
                 ))}
               </div>
             </div>
@@ -106,37 +112,43 @@ export default function HomeLayoutEditor() {
                 </div>
                 {visible && (
                   <>
-                    <div className="flex gap-1">
-                      {POSITIONS.map((p) => (
-                        <button
-                          key={p.key}
-                          onClick={() => setWidgetLayout(key, { position: p.key })}
-                          className={cn(
-                            'flex-1 px-1 py-1 rounded text-[8px] transition-colors',
-                            config.position === p.key
-                              ? 'bg-primary/20 text-primary border border-primary/30'
-                              : 'bg-surface-elevated/50 text-muted-foreground hover:text-foreground'
-                          )}
-                        >
-                          {p.label}
-                        </button>
-                      ))}
+                    <div>
+                      <p className="text-[8px] uppercase tracking-wider text-muted-foreground/40 mb-1">Position</p>
+                      <div className="flex gap-1">
+                        {POSITIONS.map((p) => (
+                          <button
+                            key={p.key}
+                            onClick={() => setWidgetLayout(key, { position: p.key })}
+                            className={cn(
+                              'flex-1 px-1 py-1 rounded text-[8px] transition-colors',
+                              config.position === p.key
+                                ? 'bg-primary/20 text-primary border border-primary/30'
+                                : 'bg-surface-elevated/50 text-muted-foreground hover:text-foreground'
+                            )}
+                          >
+                            {p.label}
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                    <div className="flex gap-1">
-                      {SIZES.map((s) => (
-                        <button
-                          key={s.key}
-                          onClick={() => setWidgetLayout(key, { size: s.key })}
-                          className={cn(
-                            'flex-1 px-2 py-1 rounded text-[9px] font-medium transition-colors',
-                            config.size === s.key
-                              ? 'bg-primary/20 text-primary border border-primary/30'
-                              : 'bg-surface-elevated/50 text-muted-foreground hover:text-foreground'
-                          )}
-                        >
-                          {s.label}
-                        </button>
-                      ))}
+                    <div>
+                      <p className="text-[8px] uppercase tracking-wider text-muted-foreground/40 mb-1">Storlek</p>
+                      <div className="flex gap-1">
+                        {SIZES.map((s) => (
+                          <button
+                            key={s.key}
+                            onClick={() => setWidgetLayout(key, { size: s.key })}
+                            className={cn(
+                              'flex-1 px-2 py-1.5 rounded text-[9px] font-medium transition-all',
+                              config.size === s.key
+                                ? 'bg-primary/20 text-primary border border-primary/30 shadow-sm'
+                                : 'bg-surface-elevated/50 text-muted-foreground hover:text-foreground'
+                            )}
+                          >
+                            {s.label}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   </>
                 )}

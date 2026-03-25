@@ -16,6 +16,8 @@ interface SortableWidgetGridProps {
   /** External edit mode control */
   editMode?: boolean;
   className?: string;
+  /** Density mode for spacing */
+  density?: 'calm' | 'balance' | 'dense';
 }
 
 /**
@@ -29,6 +31,7 @@ export default function SortableWidgetGrid({
   columns = 2,
   editMode = false,
   className,
+  density = 'balance',
 }: SortableWidgetGridProps) {
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [overIndex, setOverIndex] = useState<number | null>(null);
@@ -93,7 +96,8 @@ export default function SortableWidgetGrid({
     <div
       ref={containerRef}
       className={cn(
-        'grid gap-3 auto-rows-auto',
+        'grid auto-rows-auto',
+        density === 'calm' ? 'gap-5' : density === 'dense' ? 'gap-2' : 'gap-3',
         columns === 3 ? 'grid-cols-2 lg:grid-cols-3' : 'grid-cols-1 lg:grid-cols-2',
         className
       )}

@@ -143,7 +143,7 @@
     border: 1px solid hsl(var(--glass-border) / 0.2);
   }
 
-  /* Nordic Noir widget surface — gradient depth */
+  /* Nordic Noir widget surface — gradient depth with richer materiality */
   .nn-widget {
     background: linear-gradient(
       145deg,
@@ -154,17 +154,20 @@
     border-radius: var(--widget-radius);
     box-shadow:
       0 8px 24px hsl(220 20% 4% / 0.3),
-      inset 0 1px 0 hsl(0 0% 100% / 0.02);
+      inset 0 1px 0 hsl(0 0% 100% / 0.03),
+      inset 0 -1px 0 hsl(220 20% 4% / 0.1);
   }
 
   .nn-widget-hover {
-    transition: box-shadow 0.3s ease, border-color 0.3s ease;
+    transition: box-shadow 0.3s ease, border-color 0.3s ease, transform 0.2s ease;
   }
   .nn-widget-hover:hover {
     box-shadow:
       0 12px 32px hsl(220 20% 4% / 0.4),
-      0 0 0 1px hsl(var(--glow-amber-subtle));
+      0 0 0 1px hsl(var(--glow-amber-subtle)),
+      inset 0 1px 0 hsl(0 0% 100% / 0.04);
     border-color: hsl(var(--glass-border) / 0.5);
+    transform: translateY(-1px);
   }
 
   .amber-glow {
@@ -241,6 +244,70 @@
     0%, 100% { transform: rotate(0deg); }
     25% { transform: rotate(-0.5deg); }
     75% { transform: rotate(0.5deg); }
+  }
+
+  /* Sparkline draw animation */
+  .sparkline-line {
+    stroke-dasharray: 2000;
+    stroke-dashoffset: 2000;
+    animation: sparkline-draw 1.8s ease-out forwards;
+  }
+
+  @keyframes sparkline-draw {
+    to { stroke-dashoffset: 0; }
+  }
+
+  /* Sparkline pulse for current indicator */
+  .sparkline-pulse {
+    animation: sparkline-pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes sparkline-pulse {
+    0%, 100% { opacity: 0.8; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(1.3); }
+  }
+
+  /* Energy ring animate in */
+  .energy-ring-animate {
+    animation: energy-ring-in 1.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    stroke-dashoffset: 314;
+  }
+
+  @keyframes energy-ring-in {
+    from { stroke-dashoffset: 314; }
+  }
+
+  /* Energy value subtle pulse */
+  .energy-value-pulse {
+    animation: energy-val-pulse 3s ease-in-out infinite;
+  }
+
+  @keyframes energy-val-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.85; }
+  }
+
+  /* Energy bar animate width */
+  .energy-bar-animate {
+    width: var(--bar-width, 0%);
+    animation: energy-bar-fill 1s ease-out forwards;
+  }
+
+  @keyframes energy-bar-fill {
+    from { width: 0%; }
+    to { width: var(--bar-width, 0%); }
+  }
+
+  /* Dashboard content vignette for depth */
+  .dashboard-vignette {
+    position: relative;
+  }
+  .dashboard-vignette::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(ellipse at center, transparent 50%, hsl(222 18% 8% / 0.15) 100%);
   }
 
   /* Section page layout (for settings-like pages) */

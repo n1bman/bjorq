@@ -143,22 +143,33 @@ export default function EnergyDeviceList() {
         {/* Hero value + circular progress ring */}
         <div className="flex items-center justify-center gap-6 mb-4">
           <div className="relative">
-            <svg width="100" height="100" viewBox="0 0 100 100">
-              <circle cx="50" cy="50" r="42" fill="none" stroke="hsl(var(--surface-elevated))" strokeWidth="6" />
+           <svg width="120" height="120" viewBox="0 0 120 120">
+              {/* Background ring */}
+              <circle cx="60" cy="60" r="50" fill="none" stroke="hsl(var(--surface-elevated))" strokeWidth="8" />
+              {/* Animated progress ring */}
               <circle
-                cx="50" cy="50" r="42"
+                cx="60" cy="60" r="50"
                 fill="none"
                 stroke="hsl(var(--primary))"
-                strokeWidth="6"
+                strokeWidth="8"
                 strokeLinecap="round"
-                strokeDasharray={`${Math.min((totalDailyKwh / energyConfig.dailyGoalKwh) * 264, 264)} 264`}
-                transform="rotate(-90 50 50)"
-                className="transition-all duration-1000"
+                strokeDasharray={`${Math.min((totalDailyKwh / energyConfig.dailyGoalKwh) * 314, 314)} 314`}
+                transform="rotate(-90 60 60)"
+                className="energy-ring-animate"
+              />
+              {/* Glow ring */}
+              <circle
+                cx="60" cy="60" r="50"
+                fill="none"
+                stroke="hsl(var(--primary))"
+                strokeWidth="2"
+                opacity="0.15"
+                className="sparkline-pulse"
               />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-2xl font-bold font-display text-foreground">{totalWatts}</span>
-              <span className="text-[9px] text-muted-foreground">W</span>
+              <span className="text-3xl font-bold font-display text-foreground energy-value-pulse">{totalWatts}</span>
+              <span className="text-[9px] text-muted-foreground uppercase tracking-wider">Watt</span>
             </div>
           </div>
           <div className="space-y-1">
@@ -260,8 +271,8 @@ export default function EnergyDeviceList() {
                       {watts} W {livePower && <span className="ml-0.5 text-[8px] text-primary">LIVE</span>}
                     </span>
                   </div>
-                  <div className="h-1 overflow-hidden rounded-full bg-surface-elevated">
-                    <div className="h-full rounded-full bg-primary/70 transition-all" style={{ width: `${pct}%` }} />
+                  <div className="h-1.5 overflow-hidden rounded-full bg-surface-elevated">
+                    <div className="h-full rounded-full bg-primary/70 energy-bar-animate" style={{ '--bar-width': `${pct}%` } as React.CSSProperties} />
                   </div>
                   <div className="flex gap-3 text-[9px] text-muted-foreground/60">
                     <span>Dag: {getDeviceDailyKwh(marker).toFixed(1)} kWh</span>
