@@ -312,7 +312,7 @@ function SummaryBar() {
 
   const items = [
     { label: 'TID', value: timeStr, detail: dateStr },
-    { label: 'UTE', value: `${Math.round(weather.temperature)}°`, detail: weather.description || 'Klart' },
+    { label: 'UTE', value: `${Math.round(weather.temperature)}°`, detail: weather.condition || 'Klart' },
     { label: 'ENERGI', value: `${wattage} W`, detail: wattage > 50 ? 'Hög förbrukning' : 'Normal' },
     { label: 'KOMFORT', value: '21.5°', detail: 'Optimal' },
   ];
