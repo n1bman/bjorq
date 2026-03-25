@@ -826,6 +826,16 @@ export interface VisibleWidgets {
 
 export type MarkerSize = 'small' | 'medium' | 'large';
 
+export type WidgetOverlayPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | 'center-top';
+export type WidgetOverlaySize = 'compact' | 'normal' | 'expanded';
+
+export interface WidgetOverlayConfig {
+  position: WidgetOverlayPosition;
+  size: WidgetOverlaySize;
+}
+
+export type HomeWidgetKey = 'clock' | 'weather' | 'temperature' | 'energy';
+
 export interface HomeViewState {
   cameraPreset: CameraPreset;
   visibleWidgets: VisibleWidgets;
@@ -835,6 +845,8 @@ export interface HomeViewState {
   markerSize: MarkerSize;
   customStartPos?: [number, number, number];
   customStartTarget?: [number, number, number];
+  widgetLayout: Record<HomeWidgetKey, WidgetOverlayConfig>;
+  homeLayoutEditMode: boolean;
 }
 
 // ─── Activity Log ───
@@ -864,6 +876,7 @@ export interface WifiSettings {
 export interface EnergyConfig {
   pricePerKwh: number;
   currency: string;
+  dailyGoalKwh: number;
 }
 
 export interface CalendarSource {
@@ -1008,15 +1021,21 @@ export type AppMode = 'home' | 'dashboard' | 'build' | 'standby';
 // ─── Dashboard Categories & Widget Layouts ───
 export type DashCategory = 'home' | 'weather' | 'calendar' | 'devices' | 'energy' | 'climate' | 'automations' | 'scenes' | 'surveillance' | 'robot' | 'activity' | 'widgets' | 'settings' | 'profile';
 
+export type WidgetSize = 'S' | 'M' | 'L' | 'Hero';
+export type DashboardDensity = 'calm' | 'balance' | 'dense';
+
 export interface WidgetPlacement {
   widgetId: string;
   order: number;
   colSpan?: 1 | 2;
+  size?: WidgetSize;
 }
 
 export interface DashboardSettings {
   activeCategory: DashCategory;
   categoryLayouts: Partial<Record<DashCategory, WidgetPlacement[]>>;
+  density: DashboardDensity;
+  editMode: boolean;
 }
 
 // ─── Wizard Connection ───
@@ -1111,6 +1130,12 @@ export interface AppState {
   hideAllMarkers: () => void;
   saveHomeStartCamera: (pos: [number, number, number], target: [number, number, number]) => void;
   clearHomeStartCamera: () => void;
+  setWidgetLayout: (widget: HomeWidgetKey, config: Partial<WidgetOverlayConfig>) => void;
+  toggleHomeLayoutEditMode: () => void;
+
+  // Dashboard edit/density
+  setDashboardDensity: (density: DashboardDensity) => void;
+  toggleDashboardEditMode: () => void;
 
   // Device actions
   addDevice: (marker: DeviceMarker) => void;
