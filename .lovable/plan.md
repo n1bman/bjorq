@@ -1,55 +1,116 @@
 
 
-# Översikt av byggefel och fix-plan
+# BJORQ Nordic Noir UI Redesign — Final Plan
 
-Jag har gått igenom alla byggfel. De flesta verkar komma från ändringar du gjort på GitHub-sidan. Här är varje fel och vad som behöver göras:
+## 1. Backup
+- Skapa git-branch `pre-redesign-snapshot` innan första ändringen
+- Lovable version history som sekundär återställning
 
----
-
-## Fel 1: `BuildTopToolbar.tsx` — saknar `isHostedSync` import
-**Rad 152 och 422** använder `isHostedSync()` men filen importerar aldrig funktionen.
-
-**Fix:** Lägg till `import { isHostedSync } from '../../lib/apiClient';` i importerna (rad 1-20).
+## 2. Projektplanfil
+Skapar `docs/bjorq-ui-redesign-plan.md` som levande dokument.
 
 ---
 
-## Fel 2: `DataBackupCard.tsx` — `Record<string, unknown>` vs `Record<string, DeviceState>`
-**Rad 146** deklarerar `deviceStates` som `Record<string, unknown>` men store-typen kräver `Record<string, DeviceState>`.
+## 3. Hem-vyn (3D-first)
 
-**Fix:** Ändra `const deviceStates: Record<string, unknown> = {};` till `const deviceStates: Record<string, DeviceState> = {};` och importera `DeviceState` från types.
+**Bevaras:** 3D-scen som huvudfokus, center FAB, CameraFab, RoomNavigator.
+
+**Nytt — konfigurerbar widget-overlay med layoutläge:**
+- Overlay-widgets (klocka, väder, energi, temperatur) blir positionerbara och storleksbara
+- Positionering sker i ett **dedikerat layoutläge** (edit-mode) — inte fritt drag i vanlig vy
+- I layoutläge: visa grid-guides, drag-handles, storleksväljare (compact/normal/expanded)
+- Utanför layoutläge: widgets är låsta, Hem känns lugn och ren
+- Layout sparas i store (`homeView.widgetLayout`)
+- Enhetskort i botten → pill-formade kontroller (ikon + namn + toggle i en rad)
+
+## 4. Kontrollpanelen — fri widgetyta
+
+### Widgetsystem (kärna)
+- Storlekar: **S** (1 col, kompakt) / **M** (1 col, ~200px) / **L** (2 col, ~300px) / **Hero** (full bredd, ~400px)
+- **Drag & drop reorder** med visuell feedback
+- **Gruppering/kategorisering**: widgets kan taggas och filtreras
+- **Spara layout** per breakpoint: `layoutDesktop`, `layoutTablet`, `layoutMobile`
+- **Density-lägen**: Lugn / Balans / Tät (påverkar spacing och antal synliga widgets)
+- Användaren bygger sin egen startsida — detta är en kärndel av produkten
+
+### Navigation — informationsarkitektur först
+Exakt antal poster låses inte. Principerna:
+
+- **Desktop**: full rail med ikoner + labels, grupperad med separatorer (Huvudmenyer / System)
+- **Tablet**: rail kollapsar till ikoner — **ingen hover-tooltip**, istället: tap öppnar label-flyout eller inline-expand. Touch-first.
+- **Mobil**: rail borta, bottom tab-bar med **max 5 synliga tabs** + "Mer" som öppnar sheet med resterande poster
+
+Föreslagna huvudgrupper (kan justeras under implementation):
+```
+Hem · Kontrollpanel · Enheter · Energi · Klimat · Väder · Inställningar · Profil
+```
+Automation, Scener, Övervakning, Robot, Kalender, Aktivitet → tillgängliga som widgets i Kontrollpanelen + via "Mer" på mobil.
+
+### Summary-bar
+Smalare, mörkare. Klocka + väder + snabbstatus. Minimal höjd.
 
 ---
 
-## Fel 3: `HAConnectionPanel.tsx` — saknar `'degraded'` i statusConfig
-Typen `HAConnectionStatus` inkluderar `'degraded'` (din GitHub-ändring i types.ts) men `statusConfig`-objektet i HAConnectionPanel har bara 4 nycklar (disconnected/connecting/connected/error).
+## 5. Energi — egen identitet, produktnytta
 
-**Fix:** Lägg till `degraded: { label: 'Degraderad', color: 'text-yellow-500', icon: AlertCircle }` i `statusConfig`-objektet.
+- **Hero-widget**: Live-förbrukningscirkel (aktuell watt i centrum, ring = andel av dagsmål)
+- **Sparkline-graf** (inline SVG): timvis/daglig förbrukning
+- **Kostnadspanel**: estimerad dagskostnad baserat på elpris
+- **Peak-markering**: visuellt utmärkta topptider
+- **Enhetsranking**: sorterad efter förbrukning med progressbar
+
+## 6. Klimat — produktnyttig, inte gauge-dashboard
+
+Klimatvyn ska prioritera **beslutsstöd** framför visuell effekt:
+
+- **Nuvärde + mål**: Tydlig display av nuvarande temperatur/fukt vs inställt mål per rum
+- **Trend**: 24h kurva (inline SVG) — visar riktning, inte bara ögonblicksbild
+- **Rumsjämförelse**: Alla rum med temperatur side-by-side, snabb överblick av avvikelser
+- **Regler/status**: ComfortRules med tydlig status (aktiv/inaktiv/triggered) och senaste åtgärd
+- **Override-panel**: bevaras, tydligare visuell koppling till aktiva regler
+- Inga cirkulära gauges bara för show — data ska vara läsbar och actionable
+
+## 7. Väder — visuell identitet
+
+- **Nu-panel**: Stor temperatur + ikon + känsla ("Klart och kallt")
+- **Prognos-strip**: 24h horisontell med timvisa ikoner
+- **Hemkoppling**: "Påverkan på hemmet" baserat på fönster + solvinkel
+- Subtil gradient baserad på tid på dygnet
 
 ---
 
-## Fel 4: Testfiler — saknar typdeklarationer för server-JS
-`auth.test.ts`, `backupEnvelope.test.ts`, `liveHub.test.ts`, `safePaths.test.ts` importerar `.js`-filer från `server/` som saknar typdeklarationer.
+## 8. Nordic Noir designregler
 
-**Fix:** Skapa en minimal `server/types.d.ts` fil som deklarerar modulerna, eller lägg till `// @ts-ignore` ovanför varje import. Enklast: skapa en `src/test/server-modules.d.ts` med `declare module`-block.
+**ÄR:**
+- Mörkt som standard (`222 18% 11%`, blåtonad kolsvart)
+- Amber sparsamt: bara aktiv nav-indikator, FAB-glow, primära interaktioner
+- Materialitet: sotad metall, mörk sten, frostat glas — djupare blur (24px), gradient-bakgrunder på widgets (`from-[#1a1a22] to-[#12121a]`), subtila borders (`border-border/20`)
+- Typografi-hierarki: stora värden (28-48px Space Grotesk), labels (10-11px uppercase tracking-wider), rubriker (14-16px)
+- Spacing: mer luft, `gap-4` minimum
+- Färre men rikare moduler
+
+**ÄR INTE:**
+- Generisk admin-dashboard
+- Neon-accenter
+- 20 identiska cards
+- Flat design utan djup
+- 3D-scenen reducerad till ett kort
 
 ---
 
-## Fel 5: `haMenuSelectors.test.ts` — ofullständig mock av `AppState`
-`createState()` returnerar ett objekt som saknar ~143 properties jämfört med `AppState`-typen (som du utökat på GitHub).
+## 9. Implementeringsordning
 
-**Fix:** Behåll `as unknown as AppState` istället för direkt `as AppState`, eller lägg till saknade fält.
+| Fas | Fokus | Huvudfiler |
+|-----|-------|-----------|
+| **1** | Git-branch backup + projektplanfil | `docs/bjorq-ui-redesign-plan.md` |
+| **2** | Design tokens + glasspanel-upgrade | `index.css`, `tailwind.config.ts` |
+| **3** | Hem-vy: layoutläge, widget-positionering, pills, visuell polish | `HomeView.tsx`, widgets |
+| **4** | Kontrollpanel: nav-gruppering, responsiv kollaps, WidgetCard | `DashboardShell.tsx`, `DashboardGrid.tsx` |
+| **5** | Widget-storlekar, drag, density, layout-sparning | `types.ts`, `useAppStore.ts`, `SortableWidgetGrid.tsx` |
+| **6** | Energi med hero-widget, sparkline, kostnad | `EnergyWidget.tsx`, ny `EnergyHero.tsx` |
+| **7** | Klimat med nuvärde/mål/trend/rumsjämförelse/regler | `ClimateTab.tsx` |
+| **8** | Väder med prognos, hemkoppling | `WeatherWidget.tsx`, `SunWeatherPanel.tsx` |
+| **9** | Polish: settings, profil, design-läge | Diverse cards, toolbar |
 
----
-
-## Sammanfattning av ändringar
-
-| Fil | Ändring |
-|-----|---------|
-| `BuildTopToolbar.tsx` | Lägg till `isHostedSync`-import från `apiClient` |
-| `DataBackupCard.tsx` | Ändra `Record<string, unknown>` → `Record<string, DeviceState>`, importera typen |
-| `HAConnectionPanel.tsx` | Lägg till `degraded`-entry i `statusConfig` |
-| `src/test/server-modules.d.ts` | Ny fil: deklarera server-moduler för TS |
-| `haMenuSelectors.test.ts` | Ändra `as AppState` → `as unknown as AppState` |
-
-Ingen logik ändras — bara imports, typer och test-stubs fixas för att matcha de tillägg du gjort på GitHub.
+**Tekniskt:** React + Tailwind + TS, inga nya dependencies fas 1-5, inline SVG för grafer fas 6-8, Tailwind breakpoints för responsivitet, all befintlig logik (store, hooks, HA, 3D) bevaras intakt.
 
