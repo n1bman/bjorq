@@ -272,10 +272,6 @@ export default function DashboardShell() {
 
       {/* ── Main Content ── */}
       <div className="flex-1 min-w-0 flex flex-col overflow-hidden bg-background">
-        {/* Summary strip — typographic, Nordic Noir */}
-        <SummaryBar />
-
-        {/* Content body — generous spacing */}
         <div className="flex-1 min-h-0 overflow-y-auto">
           <div className="p-8 pb-12 max-w-[1400px]">
             <Content />
@@ -286,49 +282,6 @@ export default function DashboardShell() {
   );
 }
 
-/* ── Summary Bar — typographic strip ── */
-function SummaryBar() {
-  const weather = useAppStore((s) => s.environment.weather);
-  const markers = useAppStore((s) => s.devices.markers);
-  const deviceStates = useAppStore((s) => s.devices.deviceStates);
-  const [time, setTime] = useState(new Date());
-
-  useEffect(() => {
-    const t = setInterval(() => setTime(new Date()), 10_000);
-    return () => clearInterval(t);
-  }, []);
-
-  const activeCount = markers.filter((m) => {
-    const st = deviceStates[m.id];
-    if (!st) return false;
-    if ('on' in st.data) return (st.data as any).on;
-    return false;
-  }).length;
-
-  const timeStr = time.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
-
-  const dateStr = time.toLocaleDateString('sv-SE', { weekday: 'short', day: 'numeric', month: 'short' });
-  const wattage = activeCount > 0 ? activeCount * 12 : 0;
-
-  const items = [
-    { label: 'TID', value: timeStr, detail: dateStr },
-    { label: 'UTE', value: `${Math.round(weather.temperature)}°`, detail: weather.condition || 'Klart' },
-    { label: 'ENERGI', value: `${wattage} W`, detail: wattage > 50 ? 'Hög förbrukning' : 'Normal' },
-    { label: 'KOMFORT', value: '21.5°', detail: 'Optimal' },
-  ];
-
-  return (
-    <div className="shrink-0 grid grid-cols-4 gap-[1px] bg-[hsl(var(--border)/0.08)] border-b border-[hsl(var(--border)/0.08)]">
-      {items.map((item) => (
-        <div key={item.label} className="flex flex-col gap-0.5 px-5 py-3 bg-[hsl(222_20%_5%/0.95)]">
-          <span className="label-micro">{item.label}</span>
-          <span className="value-display text-xl text-foreground">{item.value}</span>
-          <span className="text-[10px] text-muted-foreground/30 font-medium">{item.detail}</span>
-        </div>
-      ))}
-    </div>
-  );
-}
 
 /* ── Nav Home Status ── */
 function NavHomeStatus({ collapsed }: { collapsed: boolean }) {
