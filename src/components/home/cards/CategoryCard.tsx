@@ -129,7 +129,7 @@ export default function CategoryCard({
     >
       {/* Header */}
       <div
-        className="flex items-center justify-between cursor-pointer mb-2"
+        className="flex items-center justify-between cursor-pointer mb-3 py-1"
         draggable={editMode}
         onDragStart={editMode ? handleCategoryDragStart : undefined}
         onClick={() => !editMode && setCollapsed(!collapsed)}
