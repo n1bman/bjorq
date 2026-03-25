@@ -271,7 +271,7 @@ function RuleCard({ rule }: { rule: ComfortRule }) {
   }
 
   return (
-    <div className={cn('glass-panel rounded-xl p-3 space-y-2', !rule.enabled && 'opacity-50', rule.lastState === 'active' && 'border-primary/30 bg-primary/5')}>
+    <div className={cn('nn-widget p-3 space-y-2', !rule.enabled && 'opacity-50', rule.lastState === 'active' && 'border-primary/20')}>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Thermometer size={14} className={rule.lastState === 'active' ? 'text-primary' : 'text-muted-foreground'} />
