@@ -25,6 +25,8 @@ import CategoryCard from './cards/CategoryCard';
 import CategoryManager from './cards/CategoryManager';
 import CalendarWidget from './cards/CalendarWidget';
 import RobotPanel from './cards/RobotPanel';
+import WidgetCard from './cards/WidgetCard';
+import type { WidgetSize } from '../../store/types';
 
 import GraphicsSettings from './cards/GraphicsSettings';
 import SunWeatherPanel from './cards/SunWeatherPanel';
@@ -272,9 +274,9 @@ function HomeCategory() {
         className={densityGap}
         density={density}
       >
-        {/* 3D Preview widget — double-click to save camera view */}
+      {/* 3D Preview widget — double-click to save camera view — with glow border */}
         <div
-          className="rounded-2xl overflow-hidden h-[200px] relative cursor-pointer border border-border/40 bg-card"
+          className="rounded-2xl overflow-hidden h-[200px] relative cursor-pointer border border-primary/15 bg-card shadow-[0_0_20px_hsl(var(--amber-glow)),inset_0_0_30px_hsl(220_20%_4%/0.4)]"
           onDoubleClick={() => setShowSaveView(true)}
         >
           <DashboardPreview3D className="absolute inset-0" cameraStateRef={previewCamRef} />
@@ -300,21 +302,43 @@ function HomeCategory() {
           )}
         </div>
 
-        {/* Category cards */}
-        {orderedEntries.map((entry, index) => (
-          <CategoryCard
-            key={entry.key}
-            category={entry.label}
-            categoryId={entry.catId}
-            devices={entry.devices}
-            span={entry.devices.length >= 5}
-            editMode={editMode}
-            categoryIndex={index}
-            onDropDevice={entry.catId ? (deviceId) => handleDropDevice(entry.catId!, deviceId) : undefined}
-            onDragCategoryStart={() => setDraggingCatIndex(index)}
-            onDropCategory={() => handleDropCategory(index)}
-          />
-        ))}
+        {/* Category cards wrapped in WidgetCard */}
+        {orderedEntries.map((entry, index) => {
+          const placement = categoryLayouts?.home?.find((p) => p.widgetId === entry.key);
+          const widgetSize: WidgetSize = placement?.size ?? (entry.devices.length >= 5 ? 'L' : 'M');
+          return (
+            <WidgetCard
+              key={entry.key}
+              size={widgetSize}
+              editMode={editMode}
+              label={entry.label}
+              onSizeChange={(newSize) => {
+                const existing = categoryLayouts?.home ?? [];
+                const updated = existing.filter((p) => p.widgetId !== entry.key);
+                updated.push({
+                  widgetId: entry.key,
+                  order: index,
+                  colSpan: newSize === 'L' || newSize === 'Hero' ? 2 : 1,
+                  size: newSize,
+                });
+                setCategoryLayout('home', updated);
+              }}
+              className="!p-0 overflow-hidden"
+            >
+              <CategoryCard
+                category={entry.label}
+                categoryId={entry.catId}
+                devices={entry.devices}
+                span={widgetSize === 'L' || widgetSize === 'Hero'}
+                editMode={editMode}
+                categoryIndex={index}
+                onDropDevice={entry.catId ? (deviceId) => handleDropDevice(entry.catId!, deviceId) : undefined}
+                onDragCategoryStart={() => setDraggingCatIndex(index)}
+                onDropCategory={() => handleDropCategory(index)}
+              />
+            </WidgetCard>
+          );
+        })}
       </SortableWidgetGrid>
 
       {orderedEntries.length === 0 && (

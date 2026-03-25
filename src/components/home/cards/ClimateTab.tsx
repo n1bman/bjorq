@@ -285,6 +285,9 @@ function RuleCard({ rule }: { rule: ComfortRule }) {
             {rule.lastState === 'active' && (
               <p className="text-[8px] text-primary/70">Aktiv nu</p>
             )}
+            {rule.lastTriggered && (
+              <p className="text-[8px] text-muted-foreground/60">Senast aktiv: {new Date(rule.lastTriggered).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })}</p>
+            )}
           </div>
         </div>
         <Switch checked={rule.enabled} onCheckedChange={() => toggleRule(rule.id)} />

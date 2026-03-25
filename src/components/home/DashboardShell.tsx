@@ -162,9 +162,10 @@ export default function DashboardShell() {
 
   return (
     <div className="fixed inset-0 flex">
-      {/* ── Nav Rail ── */}
+      {/* ── Nav Rail — deeper, more premium ── */}
       <nav className={cn(
-        'shrink-0 flex flex-col nav-rail-bg bg-background overflow-y-auto overflow-x-hidden transition-all duration-300',
+        'shrink-0 flex flex-col overflow-y-auto overflow-x-hidden transition-all duration-300',
+        'bg-[hsl(222_20%_8%)] border-r border-border/20',
         collapsed ? 'w-[64px]' : 'w-[160px]'
       )}>
         {/* Logo */}
@@ -272,8 +273,8 @@ export default function DashboardShell() {
 
       {/* ── Main Content ── */}
       <div className="flex-1 min-w-0 flex flex-col overflow-hidden bg-background">
-        {/* Summary strip — smalare, gradient-fade */}
-        <div className="shrink-0 flex items-center gap-3 px-5 py-2 bg-gradient-to-b from-surface-sunken/60 to-background/0 border-b border-border/10">
+        {/* Summary strip — ultra-slim with gradient fade */}
+        <div className="shrink-0 flex items-center gap-3 px-5 py-1.5 bg-gradient-to-b from-[hsl(222_20%_9%)] via-[hsl(222_18%_10%/0.5)] to-transparent border-b border-border/8">
           <ClockWidget panel />
           <WeatherWidget />
           <EnergyWidget />
