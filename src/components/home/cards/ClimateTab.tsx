@@ -293,11 +293,11 @@ function RuleCard({ rule }: { rule: ComfortRule }) {
         Om temp {rule.condition === 'above' ? '>' : '<'} {rule.threshold}°C (±{rule.hysteresis}) → <span className="text-foreground">{targetDevice?.name || rule.targetDeviceId.slice(0, 8)}</span>
       </div>
       {/* Live sensor value */}
-      {liveValue !== undefined && (
+      {liveNum !== undefined && (
         <div className="flex items-center gap-2 text-[10px]">
           <span className="text-muted-foreground">Sensor:</span>
-          <span className={cn('font-medium', liveValue > rule.threshold ? 'text-orange-400' : 'text-foreground')}>
-            {liveValue.toFixed(1)}°C
+          <span className={cn('font-medium', liveNum > rule.threshold ? 'text-orange-400' : 'text-foreground')}>
+            {liveNum.toFixed(1)}°C
           </span>
           <span className="text-muted-foreground/50">/ tröskel {rule.threshold}°C</span>
         </div>
