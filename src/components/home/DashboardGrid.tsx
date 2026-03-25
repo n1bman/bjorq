@@ -2,6 +2,7 @@ import { useState, useMemo, useRef } from 'react';
 import SortableWidgetGrid from './SortableWidgetGrid';
 import type { SortableItem } from './SortableWidgetGrid';
 import { Home, Cloud, Cpu, Zap, Bell, Video, Settings, Pencil, X, CalendarDays, Bot, Moon, Save, Workflow, Palette, LayoutGrid, Thermometer, Trees, User, Monitor, Database, Link2, Sparkles } from 'lucide-react';
+import WeatherHomeImpact from './cards/WeatherHomeImpact';
 import { cn } from '../../lib/utils';
 import { Button } from '../ui/button';
 import { useAppStore } from '../../store/useAppStore';
@@ -298,12 +299,12 @@ function WeatherCategory() {
   return (
     <div className="space-y-4">
       <WeatherWidget expanded />
+      <WeatherHomeImpact />
       <div className="glass-panel rounded-2xl p-4">
         <p className="text-xs text-muted-foreground">
           Väderprognosen synkas automatiskt med din plats.
           Aktivera "Live väder" för att synka med Open-Meteo.
           Ändra plats under Inställningar → Plats.
-          Nederbördseffekter i 3D hanteras under Grafik & Miljö.
         </p>
       </div>
     </div>
