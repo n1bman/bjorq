@@ -46,7 +46,7 @@ interface HomeViewProps {
 
 export default function HomeView({ longPressDeviceId, onDismissLongPress, fpsActive }: HomeViewProps) {
   const visibleWidgets = useAppStore((s) => s.homeView.visibleWidgets);
-  const widgetLayout = useAppStore((s) => s.homeView.widgetLayout);
+  const widgetLayout = useAppStore((s) => s.homeView.widgetLayout) ?? {};
   const homeLayoutEditMode = useAppStore((s) => s.homeView.homeLayoutEditMode);
   const toggleHomeLayoutEditMode = useAppStore((s) => s.toggleHomeLayoutEditMode);
   const homeScreenDevices = useAppStore((s) => s.homeView.homeScreenDevices ?? []);
