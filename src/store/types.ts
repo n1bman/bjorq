@@ -832,6 +832,9 @@ export type WidgetOverlaySize = 'compact' | 'normal' | 'expanded';
 export interface WidgetOverlayConfig {
   position: WidgetOverlayPosition;
   size: WidgetOverlaySize;
+  /** Free position as percentage of viewport (0-100) */
+  x?: number;
+  y?: number;
 }
 
 export type HomeWidgetKey = 'clock' | 'weather' | 'temperature' | 'energy';

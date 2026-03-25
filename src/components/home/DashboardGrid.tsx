@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef } from 'react';
-import SortableWidgetGrid from './SortableWidgetGrid';
-import type { SortableItem } from './SortableWidgetGrid';
+
+
 import { Home, Cloud, Cpu, Zap, Bell, Video, Settings, Pencil, X, CalendarDays, Bot, Moon, Save, Workflow, Palette, LayoutGrid, Thermometer, Trees, User, Monitor, Database, Link2, Sparkles } from 'lucide-react';
 import WeatherHomeImpact from './cards/WeatherHomeImpact';
 import { cn } from '../../lib/utils';
@@ -25,8 +25,8 @@ import CategoryCard from './cards/CategoryCard';
 import CategoryManager from './cards/CategoryManager';
 import CalendarWidget from './cards/CalendarWidget';
 import RobotPanel from './cards/RobotPanel';
-import WidgetCard from './cards/WidgetCard';
-import type { WidgetSize } from '../../store/types';
+
+
 
 import GraphicsSettings from './cards/GraphicsSettings';
 import SunWeatherPanel from './cards/SunWeatherPanel';
@@ -99,11 +99,9 @@ function HomeCategory() {
   const saveHomeStartCamera = useAppStore((s) => s.saveHomeStartCamera);
   const [showManager, setShowManager] = useState(false);
   const [editMode, setEditMode] = useState(false);
-  const [draggingCatIndex, setDraggingCatIndex] = useState<number | null>(null);
   const [showSaveView, setShowSaveView] = useState(false);
   const previewCamRef = useRef<PreviewCameraState>({ position: [10, 12, 10], target: [0, 0, 0] });
 
-  // Build room name lookup from floors
   const roomNameMap = useMemo(() => {
     const map: Record<string, string> = {};
     for (const floor of floors) {
@@ -132,7 +130,6 @@ function HomeCategory() {
       entries.push({ key: 'uncategorized', label: '⚙️ Övrigt', devices: uncategorized });
     }
   } else {
-    // Room-based grouping for lights, kind-based for everything else
     const lightsByRoom: Record<string, DeviceMarker[]> = {};
     const otherByKind: Record<string, DeviceMarker[]> = {};
 
@@ -159,6 +156,8 @@ function HomeCategory() {
     if (categoryId) moveDeviceToCategory(deviceId, categoryId);
   };
 
+  const [draggingCatIndex, setDraggingCatIndex] = useState<number | null>(null);
+
   const handleDropCategory = (targetIndex: number) => {
     if (draggingCatIndex !== null && draggingCatIndex !== targetIndex) {
       reorderCategories(draggingCatIndex, targetIndex);
@@ -166,185 +165,103 @@ function HomeCategory() {
     setDraggingCatIndex(null);
   };
 
-  // Build sortable items: 3D preview as first widget + category entries
-  const sortableItems: SortableItem[] = useMemo(() => {
-    const base: SortableItem[] = [{ id: '__3d_preview__', colSpan: 2 }];
-    const saved = categoryLayouts?.home;
-    if (saved && saved.length > 0) {
-      const ordered: SortableItem[] = [];
-      for (const s of saved) {
-        if (s.widgetId === '__3d_preview__') continue;
-        const found = entries.find((e) => e.key === s.widgetId);
-        if (found) ordered.push({ id: s.widgetId, colSpan: s.colSpan });
-      }
-      for (const e of entries) {
-        if (!ordered.find((o) => o.id === e.key)) {
-          ordered.push({ id: e.key, colSpan: e.devices.length >= 5 ? 2 : 1 });
-        }
-      }
-      return [...base, ...ordered];
-    }
-    return [
-      ...base,
-      ...entries.map((e) => ({
-        id: e.key,
-        colSpan: (e.devices.length >= 5 ? 2 : 1) as 1 | 2,
-      })),
-    ];
-  }, [entries, categoryLayouts]);
-
-  const handleReorder = (newOrder: SortableItem[]) => {
-    setCategoryLayout('home', newOrder
-      .filter((item) => item.id !== '__3d_preview__')
-      .map((item, i) => ({
-        widgetId: item.id,
-        order: i,
-        colSpan: item.colSpan,
-      })));
-  };
-
-  // Sort entries to match sortable order
-  const orderedEntries = useMemo(() => {
-    return sortableItems
-      .filter((item) => item.id !== '__3d_preview__')
-      .map((item) => entries.find((e) => e.key === item.id))
-      .filter(Boolean) as typeof entries;
-  }, [sortableItems, entries]);
-
-  const density = useAppStore((s) => s.dashboard.density ?? 'balance');
-  const setDashboardDensity = useAppStore((s) => s.setDashboardDensity);
-  const densityGap = density === 'calm' ? 'gap-5' : density === 'dense' ? 'gap-2' : 'gap-3';
-
   return (
-    <div className="space-y-4">
-      {/* Unified toolbar: title + edit + density */}
-      <div className="flex items-center justify-between gap-2">
-        <h2 className="text-sm font-semibold text-foreground">Hem</h2>
-        <div className="flex items-center gap-2">
-          {/* Density switcher */}
-          <div className="flex items-center rounded-lg border border-border/30 overflow-hidden">
-            {(['calm', 'balance', 'dense'] as const).map((d) => (
-              <button
-                key={d}
-                onClick={() => setDashboardDensity(d)}
-                className={cn(
-                  'px-2 py-1 text-[9px] font-medium transition-colors',
-                  density === d
-                    ? 'bg-primary/15 text-primary'
-                    : 'text-muted-foreground hover:text-foreground'
-                )}
-              >
-                {d === 'calm' ? 'Lugn' : d === 'balance' ? 'Balans' : 'Tät'}
-              </button>
-            ))}
-          </div>
-          <Button size="sm" variant="outline" className="h-7 text-[10px]"
-            onClick={() => setShowManager(!showManager)}>
-            {showManager ? 'Stäng' : 'Kategorier'}
-          </Button>
-          <Button size="sm" variant={editMode ? 'default' : 'outline'} className="h-7 text-[10px] gap-1"
-            onClick={() => setEditMode(!editMode)}>
-            {editMode ? <><X size={10} /> Klar</> : <><Pencil size={10} /> Anpassa</>}
-          </Button>
-        </div>
-      </div>
-
-      {editMode && (
-        <div className="text-center space-y-1">
-          <p className="text-[10px] text-muted-foreground animate-pulse">
-            Dra för att omordna · Välj storlek per widget
-          </p>
-          <div className="flex justify-center gap-3">
-            {(['S', 'M', 'L', 'Hero'] as const).map((s) => (
-              <span key={s} className="text-[8px] uppercase tracking-wider text-muted-foreground/40 px-2 py-0.5 rounded border border-border/20">
-                {s}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {showManager && <CategoryManager />}
-
-      <SortableWidgetGrid
-        items={sortableItems}
-        onReorder={handleReorder}
-        columns={3}
-        editMode={editMode}
-        className={densityGap}
-        density={density}
-      >
-      {/* 3D Preview widget — double-click to save camera view — with glow border */}
+    <div className="space-y-10">
+      {/* ── Hero: 3D Preview ── */}
+      <section className="space-y-4">
         <div
-          className="rounded-2xl overflow-hidden h-[200px] relative cursor-pointer border border-primary/15 bg-card shadow-[0_0_20px_hsl(var(--amber-glow)),inset_0_0_30px_hsl(220_20%_4%/0.4)]"
+          className="rounded-[28px] overflow-hidden relative cursor-pointer h-[280px]
+            border border-[hsl(var(--glass-border)/0.15)]
+            shadow-[0_24px_60px_hsl(220_20%_4%/0.4),inset_0_1px_0_hsl(0_0%_100%/0.03)]"
           onDoubleClick={() => setShowSaveView(true)}
         >
           <DashboardPreview3D className="absolute inset-0" cameraStateRef={previewCamRef} />
           {showSaveView && (
             <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/50 backdrop-blur-sm" onClick={(e) => e.stopPropagation()}>
-              <div className="glass-panel rounded-2xl p-5 w-64 shadow-xl space-y-3">
-                <p className="text-sm font-semibold text-foreground">Spara som startvy?</p>
-                <p className="text-xs text-muted-foreground">Den aktuella kameravinkeln sparas som din kontrollpanelvy.</p>
-                <div className="flex gap-2">
-                  <Button size="sm" variant="outline" className="flex-1" onClick={() => setShowSaveView(false)}>Avbryt</Button>
-                  <Button size="sm" className="flex-1 gap-1" onClick={() => {
-                    saveHomeStartCamera(
-                      previewCamRef.current.position,
-                      previewCamRef.current.target,
-                    );
+              <div className="nn-widget p-6 w-72 shadow-xl space-y-4">
+                <p className="text-base font-semibold text-foreground font-display">Spara som startvy?</p>
+                <p className="text-[13px] text-muted-foreground leading-relaxed">Den aktuella kameravinkeln sparas som din kontrollpanelvy.</p>
+                <div className="flex gap-3">
+                  <Button size="sm" variant="outline" className="flex-1 h-10" onClick={() => setShowSaveView(false)}>Avbryt</Button>
+                  <Button size="sm" className="flex-1 h-10 gap-1.5" onClick={() => {
+                    saveHomeStartCamera(previewCamRef.current.position, previewCamRef.current.target);
                     setShowSaveView(false);
                   }}>
-                    <Save size={12} /> Spara
+                    <Save size={13} /> Spara
                   </Button>
                 </div>
               </div>
             </div>
           )}
         </div>
+      </section>
 
-        {/* Category cards wrapped in WidgetCard */}
-        {orderedEntries.map((entry, index) => {
+      {/* ── Toolbar ── */}
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground/40 font-semibold">Kontrollpanel</p>
+          <h2 className="text-xl font-semibold text-foreground font-display mt-1">Dina enheter</h2>
+        </div>
+        <div className="flex items-center gap-3">
+          <Button size="sm" variant="ghost" className="h-9 text-[12px] gap-1.5 text-muted-foreground"
+            onClick={() => setShowManager(!showManager)}>
+            {showManager ? 'Stäng' : 'Kategorier'}
+          </Button>
+          <Button size="sm" variant={editMode ? 'default' : 'ghost'} className="h-9 text-[12px] gap-1.5"
+            onClick={() => setEditMode(!editMode)}>
+            {editMode ? <><X size={12} /> Klar</> : <><Pencil size={12} /> Anpassa</>}
+          </Button>
+        </div>
+      </div>
+
+      {showManager && <CategoryManager />}
+
+      {/* ── Sections — open, breathing layout ── */}
+      <div className="space-y-8">
+        {entries.map((entry, index) => {
           const placement = categoryLayouts?.home?.find((p) => p.widgetId === entry.key);
-          const widgetSize: WidgetSize = placement?.size ?? (entry.devices.length >= 5 ? 'L' : 'M');
+          const isLarge = (placement?.colSpan === 2) || entry.devices.length >= 5;
+
           return (
-            <WidgetCard
-              key={entry.key}
-              size={widgetSize}
-              editMode={editMode}
-              label={entry.label}
-              onSizeChange={(newSize) => {
-                const existing = categoryLayouts?.home ?? [];
-                const updated = existing.filter((p) => p.widgetId !== entry.key);
-                updated.push({
-                  widgetId: entry.key,
-                  order: index,
-                  colSpan: newSize === 'L' || newSize === 'Hero' ? 2 : 1,
-                  size: newSize,
-                });
-                setCategoryLayout('home', updated);
-              }}
-              className="!p-0 overflow-hidden"
-            >
-              <CategoryCard
-                category={entry.label}
-                categoryId={entry.catId}
-                devices={entry.devices}
-                span={widgetSize === 'L' || widgetSize === 'Hero'}
-                editMode={editMode}
-                categoryIndex={index}
-                onDropDevice={entry.catId ? (deviceId) => handleDropDevice(entry.catId!, deviceId) : undefined}
-                onDragCategoryStart={() => setDraggingCatIndex(index)}
-                onDropCategory={() => handleDropCategory(index)}
-              />
-            </WidgetCard>
+            <section key={entry.key} className="space-y-3">
+              {/* Section header — typographic */}
+              <div className="flex items-center justify-between">
+                <h3 className="text-[13px] font-semibold text-foreground/80 tracking-wide">{entry.label}</h3>
+                <span className="text-[10px] text-muted-foreground/40 tabular-nums">
+                  {entry.devices.length} {entry.devices.length === 1 ? 'enhet' : 'enheter'}
+                </span>
+              </div>
+
+              {/* Devices — card-less, open */}
+              <div className={cn(
+                'rounded-[24px] p-5 transition-all',
+                'bg-gradient-to-br from-[hsl(var(--surface-elevated)/0.4)] to-[hsl(var(--surface)/0.2)]',
+                'border border-[hsl(var(--glass-border)/0.12)]',
+                editMode && 'ring-1 ring-primary/15',
+              )}>
+                <CategoryCard
+                  category={entry.label}
+                  categoryId={entry.catId}
+                  devices={entry.devices}
+                  span={isLarge}
+                  editMode={editMode}
+                  categoryIndex={index}
+                  onDropDevice={entry.catId ? (deviceId) => handleDropDevice(entry.catId!, deviceId) : undefined}
+                  onDragCategoryStart={() => setDraggingCatIndex(index)}
+                  onDropCategory={() => handleDropCategory(index)}
+                />
+              </div>
+            </section>
           );
         })}
-      </SortableWidgetGrid>
+      </div>
 
-      {orderedEntries.length === 0 && (
-        <div className="text-center py-6">
-          <p className="text-sm text-muted-foreground">Inga enheter ännu</p>
-          <p className="text-xs text-muted-foreground/60 mt-1">Gå till Design → Inredning → Enheter för att placera</p>
+      {entries.length === 0 && (
+        <div className="text-center py-16 space-y-3">
+          <p className="text-base text-muted-foreground font-display">Inga enheter ännu</p>
+          <p className="text-[13px] text-muted-foreground/50 max-w-sm mx-auto leading-relaxed">
+            Gå till Design → Inredning → Enheter för att placera enheter i ditt hem
+          </p>
         </div>
       )}
     </div>

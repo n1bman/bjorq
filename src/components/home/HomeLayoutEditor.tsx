@@ -1,20 +1,17 @@
-import { Settings2, X, Check } from 'lucide-react';
+import { useState, useRef, useCallback } from 'react';
+import { Settings2, Check, GripHorizontal } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { cn } from '../../lib/utils';
-import type { HomeWidgetKey, WidgetOverlayPosition, WidgetOverlaySize } from '../../store/types';
-
-const POSITIONS: { key: WidgetOverlayPosition; label: string }[] = [
-  { key: 'top-left', label: 'Uppe vänster' },
-  { key: 'top-right', label: 'Uppe höger' },
-  { key: 'center-top', label: 'Uppe mitten' },
-  { key: 'bottom-left', label: 'Nere vänster' },
-  { key: 'bottom-right', label: 'Nere höger' },
-];
+import type { HomeWidgetKey, WidgetOverlaySize } from '../../store/types';
+import ClockWidget from './cards/ClockWidget';
+import WeatherWidget from './cards/WeatherWidget';
+import EnergyWidget from './cards/EnergyWidget';
+import TemperatureWidget from './cards/TemperatureWidget';
 
 const SIZES: { key: WidgetOverlaySize; label: string }[] = [
-  { key: 'compact', label: 'Kompakt' },
+  { key: 'compact', label: 'Minimal' },
   { key: 'normal', label: 'Normal' },
-  { key: 'expanded', label: 'Utökad' },
+  { key: 'expanded', label: 'Detaljerad' },
 ];
 
 const WIDGETS: { key: HomeWidgetKey; label: string }[] = [
@@ -24,6 +21,20 @@ const WIDGETS: { key: HomeWidgetKey; label: string }[] = [
   { key: 'energy', label: 'Energi' },
 ];
 
+const DEFAULT_POSITIONS: Record<HomeWidgetKey, { x: number; y: number }> = {
+  clock: { x: 3, y: 4 },
+  weather: { x: 3, y: 14 },
+  temperature: { x: 78, y: 4 },
+  energy: { x: 78, y: 14 },
+};
+
+const widgetRenderers: Record<HomeWidgetKey, (size: WidgetOverlaySize) => React.ReactNode> = {
+  clock: (size) => <ClockWidget size={size} />,
+  weather: (size) => <WeatherWidget size={size} />,
+  temperature: (size) => <TemperatureWidget size={size} />,
+  energy: (size) => <EnergyWidget size={size} />,
+};
+
 export default function HomeLayoutEditor() {
   const widgetLayout = useAppStore((s) => s.homeView.widgetLayout) ?? {};
   const visibleWidgets = useAppStore((s) => s.homeView.visibleWidgets) ?? {};
@@ -31,118 +42,154 @@ export default function HomeLayoutEditor() {
   const toggleHomeLayoutEditMode = useAppStore((s) => s.toggleHomeLayoutEditMode);
   const toggleHomeWidget = useAppStore((s) => s.toggleHomeWidget);
 
-  return (
-    <div className="absolute inset-0 z-40 pointer-events-auto">
-      {/* Semi-transparent backdrop with grid guides */}
-      <div className="absolute inset-0 bg-background/60 backdrop-blur-sm">
-        {/* Grid guides */}
-        <div className="absolute inset-4 border border-dashed border-primary/20 rounded-2xl" />
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 bottom-4 border-l border-dashed border-primary/10" />
-        <div className="absolute left-4 top-1/2 -translate-y-1/2 right-4 border-t border-dashed border-primary/10" />
+  const [dragging, setDragging] = useState<HomeWidgetKey | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const dragStartRef = useRef<{ startX: number; startY: number; origX: number; origY: number }>({
+    startX: 0, startY: 0, origX: 0, origY: 0,
+  });
 
-        {/* Position zone indicators */}
-        {POSITIONS.map(({ key, label }) => {
-          const posClasses: Record<WidgetOverlayPosition, string> = {
-            'top-left': 'top-6 left-6',
-            'top-right': 'top-6 right-6',
-            'center-top': 'top-6 left-1/2 -translate-x-1/2',
-            'bottom-left': 'bottom-28 left-6',
-            'bottom-right': 'bottom-28 right-6',
-          };
-          const widgetsHere = WIDGETS.filter(
-            (w) => visibleWidgets[w.key] && widgetLayout[w.key]?.position === key
-          );
-          return (
-            <div key={key} className={cn('absolute', posClasses[key])}>
-              <div className={cn(
-                'rounded-xl border-2 border-dashed px-4 py-3 min-w-[120px] min-h-[60px] transition-all',
-                widgetsHere.length > 0 ? 'border-primary/40 bg-primary/5' : 'border-muted-foreground/20'
-              )}>
-                <p className="text-[9px] uppercase tracking-wider text-muted-foreground/50 mb-1">{label}</p>
-                {widgetsHere.map((w) => (
-                  <div key={w.key} className="text-[10px] text-primary font-medium flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-primary" />
-                    {w.label}
-                    <span className="text-[8px] text-muted-foreground ml-auto">
-                      {widgetLayout[w.key]?.size ?? 'normal'}
-                    </span>
-                  </div>
-                ))}
+  const handlePointerDown = useCallback((key: HomeWidgetKey, e: React.PointerEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragging(key);
+    const config = widgetLayout[key];
+    const pos = { x: config?.x ?? DEFAULT_POSITIONS[key].x, y: config?.y ?? DEFAULT_POSITIONS[key].y };
+    dragStartRef.current = { startX: e.clientX, startY: e.clientY, origX: pos.x, origY: pos.y };
+    (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+  }, [widgetLayout]);
+
+  const handlePointerMove = useCallback((e: React.PointerEvent) => {
+    if (!dragging || !containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const dx = ((e.clientX - dragStartRef.current.startX) / rect.width) * 100;
+    const dy = ((e.clientY - dragStartRef.current.startY) / rect.height) * 100;
+    const newX = Math.max(0, Math.min(90, dragStartRef.current.origX + dx));
+    const newY = Math.max(0, Math.min(85, dragStartRef.current.origY + dy));
+    setWidgetLayout(dragging, { x: Math.round(newX * 10) / 10, y: Math.round(newY * 10) / 10 });
+  }, [dragging, setWidgetLayout]);
+
+  const handlePointerUp = useCallback(() => {
+    setDragging(null);
+  }, []);
+
+  return (
+    <div
+      ref={containerRef}
+      className="absolute inset-0 z-40 pointer-events-auto"
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerUp}
+    >
+      {/* Semi-transparent backdrop */}
+      <div className="absolute inset-0 bg-[hsl(222_18%_6%/0.5)] backdrop-blur-sm" />
+
+      {/* Subtle grid guides */}
+      <div className="absolute inset-0 opacity-[0.04]" style={{
+        backgroundImage: 'linear-gradient(hsl(var(--primary)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--primary)) 1px, transparent 1px)',
+        backgroundSize: '10% 10%',
+      }} />
+
+      {/* Draggable widgets */}
+      {WIDGETS.map(({ key, label }) => {
+        if (!visibleWidgets[key]) return null;
+        const config = widgetLayout[key];
+        const size = config?.size ?? 'normal';
+        const pos = {
+          x: config?.x ?? DEFAULT_POSITIONS[key].x,
+          y: config?.y ?? DEFAULT_POSITIONS[key].y,
+        };
+        const isDragging = dragging === key;
+
+        return (
+          <div
+            key={key}
+            className={cn(
+              'absolute z-10 group transition-shadow',
+              isDragging ? 'cursor-grabbing z-50' : 'cursor-grab',
+            )}
+            style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
+          >
+            {/* Drag handle */}
+            <div
+              className={cn(
+                'absolute -top-6 left-1/2 -translate-x-1/2 flex items-center gap-1 px-2 py-1 rounded-lg transition-all',
+                'bg-primary/90 text-primary-foreground text-[9px] font-semibold uppercase tracking-wider',
+                isDragging ? 'opacity-100 scale-105' : 'opacity-70 group-hover:opacity-100',
+              )}
+              onPointerDown={(e) => handlePointerDown(key, e)}
+            >
+              <GripHorizontal size={10} />
+              {label}
+            </div>
+
+            {/* Ring indicator */}
+            <div className={cn(
+              'rounded-2xl ring-2 transition-all',
+              isDragging
+                ? 'ring-primary shadow-[0_0_32px_hsl(var(--amber-glow))]'
+                : 'ring-primary/30 group-hover:ring-primary/60',
+            )}>
+              {widgetRenderers[key](size)}
+            </div>
+          </div>
+        );
+      })}
+
+      {/* Config panel — bottom center */}
+      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[480px] max-w-[calc(100vw-2rem)] z-50">
+        <div className="nn-widget p-6 shadow-2xl space-y-5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Settings2 size={16} className="text-primary" />
+              <div>
+                <h3 className="text-sm font-semibold text-foreground font-display">Layoutläge</h3>
+                <p className="text-[10px] text-muted-foreground/60 mt-0.5">Dra widgetarna fritt · Välj storlek nedan</p>
               </div>
             </div>
-          );
-        })}
-      </div>
-
-      {/* Config panel */}
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 nn-widget p-5 w-[420px] max-w-[calc(100vw-2rem)] shadow-2xl space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Settings2 size={16} className="text-primary" />
-            <h3 className="text-sm font-semibold text-foreground">Layoutläge</h3>
+            <button
+              onClick={toggleHomeLayoutEditMode}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors tracking-wide"
+            >
+              <Check size={13} /> Klar
+            </button>
           </div>
-          <button
-            onClick={toggleHomeLayoutEditMode}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors"
-          >
-            <Check size={12} /> Klar
-          </button>
-        </div>
 
-        <div className="space-y-3 max-h-[40vh] overflow-y-auto">
-          {WIDGETS.map(({ key, label }) => {
-            const config = widgetLayout[key] ?? { position: 'top-left', size: 'normal' };
-            const visible = visibleWidgets[key];
-            return (
-              <div key={key} className={cn(
-                'rounded-xl p-3 space-y-2 border border-border/20 transition-opacity',
-                !visible && 'opacity-40'
-              )}>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-foreground">{label}</span>
-                  <button
-                    onClick={() => toggleHomeWidget(key)}
-                    className={cn(
-                      'px-2 py-0.5 rounded text-[9px] font-medium transition-colors',
-                      visible ? 'bg-primary/15 text-primary' : 'bg-muted text-muted-foreground'
-                    )}
-                  >
-                    {visible ? 'Synlig' : 'Dold'}
-                  </button>
-                </div>
-                {visible && (
-                  <>
+          <div className="space-y-3 max-h-[35vh] overflow-y-auto">
+            {WIDGETS.map(({ key, label }) => {
+              const config = widgetLayout[key] ?? { position: 'top-left' as const, size: 'normal' as const };
+              const visible = visibleWidgets[key];
+              return (
+                <div key={key} className={cn(
+                  'rounded-xl p-4 space-y-3 transition-all',
+                  visible
+                    ? 'bg-[hsl(var(--surface-elevated)/0.5)] border border-[hsl(var(--glass-border)/0.2)]'
+                    : 'opacity-30',
+                )}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[13px] font-medium text-foreground">{label}</span>
+                    <button
+                      onClick={() => toggleHomeWidget(key)}
+                      className={cn(
+                        'px-3 py-1 rounded-lg text-[10px] font-semibold transition-colors tracking-wide',
+                        visible ? 'bg-primary/15 text-primary' : 'bg-muted text-muted-foreground'
+                      )}
+                    >
+                      {visible ? 'Synlig' : 'Dold'}
+                    </button>
+                  </div>
+                  {visible && (
                     <div>
-                      <p className="text-[8px] uppercase tracking-wider text-muted-foreground/40 mb-1">Position</p>
-                      <div className="flex gap-1">
-                        {POSITIONS.map((p) => (
-                          <button
-                            key={p.key}
-                            onClick={() => setWidgetLayout(key, { position: p.key })}
-                            className={cn(
-                              'flex-1 px-1 py-1 rounded text-[8px] transition-colors',
-                              config.position === p.key
-                                ? 'bg-primary/20 text-primary border border-primary/30'
-                                : 'bg-surface-elevated/50 text-muted-foreground hover:text-foreground'
-                            )}
-                          >
-                            {p.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    <div>
-                      <p className="text-[8px] uppercase tracking-wider text-muted-foreground/40 mb-1">Storlek</p>
-                      <div className="flex gap-1">
+                      <p className="text-[9px] uppercase tracking-[0.2em] text-muted-foreground/40 mb-2">Storlek</p>
+                      <div className="flex gap-1.5">
                         {SIZES.map((s) => (
                           <button
                             key={s.key}
                             onClick={() => setWidgetLayout(key, { size: s.key })}
                             className={cn(
-                              'flex-1 px-2 py-1.5 rounded text-[9px] font-medium transition-all',
+                              'flex-1 px-3 py-2 rounded-xl text-[11px] font-medium transition-all',
                               config.size === s.key
-                                ? 'bg-primary/20 text-primary border border-primary/30 shadow-sm'
-                                : 'bg-surface-elevated/50 text-muted-foreground hover:text-foreground'
+                                ? 'bg-primary/20 text-primary border border-primary/30'
+                                : 'bg-[hsl(var(--surface)/0.5)] text-muted-foreground hover:text-foreground'
                             )}
                           >
                             {s.label}
@@ -150,11 +197,11 @@ export default function HomeLayoutEditor() {
                         ))}
                       </div>
                     </div>
-                  </>
-                )}
-              </div>
-            );
-          })}
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>
