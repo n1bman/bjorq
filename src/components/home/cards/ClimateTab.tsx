@@ -86,10 +86,10 @@ function OverrideCard() {
   const remaining = override.until ? Math.max(0, Math.round((new Date(override.until).getTime() - Date.now()) / 60000)) : 0;
 
   return (
-    <div className={cn('glass-panel rounded-2xl p-4 space-y-3', override.active && 'border-orange-500/30 bg-orange-500/5')}>
+    <div className={cn('nn-widget p-4 space-y-3', override.active && 'border-orange-500/20')}>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Pause size={16} className={override.active ? 'text-orange-400' : 'text-muted-foreground'} />
+          <Pause size={16} className={override.active ? 'text-orange-400' : 'text-muted-foreground/50'} />
           <div>
             <h4 className="text-sm font-semibold text-foreground">Pausa regler</h4>
             {override.active && <p className="text-[10px] text-orange-400">{remaining} min kvar</p>}
@@ -97,7 +97,7 @@ function OverrideCard() {
         </div>
         {override.active ? (
           <Button size="sm" variant="outline" onClick={() => setOverride({ active: false, until: undefined })} className="h-8 text-xs">
-            Ateraktivera
+            Återaktivera
           </Button>
         ) : (
           <Button size="sm" variant="outline" onClick={() => setOverride({ active: true, until: new Date(Date.now() + 30 * 60000).toISOString() })} className="h-8 text-xs gap-1">
@@ -121,34 +121,34 @@ function ComfortStatus() {
   }));
 
   return (
-    <div className="glass-panel rounded-2xl p-4 space-y-3">
+    <div className="nn-widget p-4 space-y-3">
       <div className="flex items-center gap-2">
         <Activity size={16} className="text-primary" />
         <h4 className="text-sm font-semibold text-foreground">Komfortstatus</h4>
       </div>
       {override.active && (
-        <div className="flex items-center gap-2 rounded-lg border border-orange-500/20 bg-orange-500/10 px-3 py-1.5">
+        <div className="flex items-center gap-2 rounded-lg border border-orange-500/15 bg-orange-500/5 px-3 py-1.5">
           <Pause size={12} className="text-orange-400" />
-          <span className="text-xs text-orange-400">Regler pausade just nu</span>
+          <span className="text-xs text-orange-400">Regler pausade</span>
         </div>
       )}
       {sensorValues.length > 0 ? (
         <div className="grid grid-cols-2 gap-2">
           {sensorValues.map((value, index) => (
-            <div key={index} className="rounded-lg bg-secondary/30 px-3 py-2 text-center">
-              <p className="text-lg font-bold text-foreground">{value.value.toFixed(1)}{value.unit}</p>
-              <p className="text-[10px] text-muted-foreground">{value.name}</p>
+            <div key={index} className="rounded-xl bg-surface-elevated/40 px-3 py-3 text-center">
+              <p className="text-2xl font-bold font-display text-foreground">{value.value.toFixed(1)}<span className="text-sm text-muted-foreground">{value.unit}</span></p>
+              <p className="text-[9px] uppercase tracking-wider text-muted-foreground/60 mt-1">{value.name}</p>
             </div>
           ))}
         </div>
       ) : (
-        <p className="text-xs text-muted-foreground">Inga sensorer kopplade till klimatregler ännu.</p>
+        <p className="text-xs text-muted-foreground/50">Inga sensorer kopplade till klimatregler.</p>
       )}
       {activeRules.length > 0 && (
         <div className="space-y-1">
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Aktiva regler</p>
+          <p className="text-[9px] uppercase tracking-wider text-muted-foreground/40">Aktiva regler</p>
           {activeRules.map((rule) => (
-            <div key={rule.id} className="flex items-center gap-2 rounded-lg bg-primary/10 px-3 py-1.5">
+            <div key={rule.id} className="flex items-center gap-2 rounded-lg bg-primary/8 px-3 py-1.5">
               <Wind size={12} className="text-primary" />
               <span className="text-xs text-foreground">{rule.name}</span>
             </div>
