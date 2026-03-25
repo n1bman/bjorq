@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Clock } from 'lucide-react';
-import { cn } from '../../../lib/utils';
 
-export default function ClockWidget() {
+interface Props {
+  /** When true, renders as full panel (dashboard). Default: minimal overlay (Hem). */
+  panel?: boolean;
+}
+
+export default function ClockWidget({ panel }: Props = {}) {
   const [now, setNow] = useState(new Date());
-  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 1000);
@@ -12,32 +14,29 @@ export default function ClockWidget() {
   }, []);
 
   const time = now.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
-  const seconds = now.toLocaleTimeString('sv-SE', { second: '2-digit' }).split(':').pop();
   const date = now.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' });
-  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-  return (
-    <div
-      className={cn(
-        'glass-panel rounded-2xl p-5 cursor-pointer transition-all duration-300',
-        expanded ? 'min-w-[200px]' : 'min-w-[140px] max-w-[160px]'
-      )}
-      onClick={() => setExpanded(!expanded)}
-    >
-      <div className="flex items-center gap-2">
-        <Clock size={16} className="text-primary shrink-0" />
-        <p className="text-3xl font-bold font-display text-foreground tracking-tight">{time}</p>
-      </div>
-      {expanded ? (
+  if (panel) {
+    const seconds = now.toLocaleTimeString('sv-SE', { second: '2-digit' }).split(':').pop();
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    return (
+      <div className="glass-panel rounded-2xl p-5">
+        <p className="text-4xl font-bold font-display text-foreground tracking-tight">{time}</p>
         <div className="mt-2 pt-2 border-t border-border/30 space-y-1">
           <p className="text-xs text-foreground capitalize">{date}</p>
           <p className="text-[11px] text-muted-foreground">Sekunder: :{seconds}</p>
           <p className="text-[11px] text-muted-foreground">Tidszon: {timezone}</p>
           <p className="text-[11px] text-muted-foreground">Vecka {getWeekNumber(now)}</p>
         </div>
-      ) : (
-        <p className="text-xs text-muted-foreground capitalize mt-0.5 truncate">{date}</p>
-      )}
+      </div>
+    );
+  }
+
+  // Overlay mode — pure typography, minimal chrome
+  return (
+    <div className="overlay-widget">
+      <p className="text-3xl font-bold font-display text-foreground tracking-tight leading-none">{time}</p>
+      <p className="text-[10px] text-muted-foreground/70 capitalize mt-1 tracking-wide">{date}</p>
     </div>
   );
 }
