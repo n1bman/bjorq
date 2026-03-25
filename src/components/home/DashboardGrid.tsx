@@ -85,6 +85,75 @@ const kindCategory: Record<DeviceKind, string> = {
 /** Light-type device kinds that should be grouped by room */
 const LIGHT_KINDS: Set<DeviceKind> = new Set(['light', 'switch', 'power-outlet', 'light-fixture', 'smart-outlet']);
 
+/* ── Info widget cards (TID, UTE, ENERGI, KOMFORT) ── */
+function InfoCard({ label, value, detail }: { label: string; value: string; detail: string }) {
+  return (
+    <div className="nn-widget p-4 flex flex-col gap-1">
+      <span className="label-micro">{label}</span>
+      <span className="text-xl font-bold text-foreground font-display tracking-tight">{value}</span>
+      <span className="text-[10px] text-muted-foreground/40 font-medium">{detail}</span>
+    </div>
+  );
+}
+
+/* ── Aktivt rum widget ── */
+function ActiveRoomWidget({ selectedRoomId, rooms, markers }: {
+  selectedRoomId: string | null;
+  rooms: { id: string; name: string }[];
+  markers: DeviceMarker[];
+}) {
+  const deviceStates = useAppStore((s) => s.devices.deviceStates);
+  const updateDeviceState = useAppStore((s) => s.updateDeviceState);
+
+  const room = rooms.find((r) => r.id === selectedRoomId);
+  const roomDevices = selectedRoomId
+    ? markers.filter((m) => m.roomId === selectedRoomId)
+    : [];
+
+  return (
+    <div className="nn-widget p-5 flex flex-col gap-3 min-h-[260px]">
+      <div className="flex items-center justify-between">
+        <span className="label-micro">AKTIVT RUM</span>
+      </div>
+      <p className="text-lg font-semibold text-foreground font-display">
+        {room?.name || 'Välj ett rum'}
+      </p>
+      {roomDevices.length === 0 && (
+        <p className="text-[11px] text-muted-foreground/40 mt-2">Klicka på ett rumskort nedan för att välja rum</p>
+      )}
+      <div className="space-y-1 flex-1 overflow-y-auto">
+        {roomDevices.map((d) => {
+          const state = deviceStates[d.id];
+          const on = state && 'on' in state.data ? (state.data as any).on : false;
+          const isLight = state?.kind === 'light';
+          const brightness = isLight && on ? (state.data as any).brightness ?? 200 : 0;
+          const pct = Math.round((brightness / 255) * 100);
+
+          return (
+            <div key={d.id} className={cn(
+              'flex items-center justify-between py-2.5 px-3 rounded-xl transition-all',
+              on ? 'bg-primary/5' : 'opacity-50'
+            )}>
+              <div className="min-w-0 flex-1">
+                <span className="text-[13px] text-foreground block truncate">{d.name || d.kind}</span>
+                {isLight && on && (
+                  <span className="text-[10px] text-muted-foreground/50">{pct}%</span>
+                )}
+              </div>
+              {state && 'on' in state.data && (
+                <Switch
+                  checked={on}
+                  onCheckedChange={(v) => updateDeviceState(d.id, { on: v })}
+                />
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function HomeCategory() {
   const markers = useAppStore((s) => s.devices.markers);
   const floors = useAppStore((s) => s.layout.floors);
@@ -92,22 +161,48 @@ function HomeCategory() {
   const moveDeviceToCategory = useAppStore((s) => s.moveDeviceToCategory);
   const reorderCategories = useAppStore((s) => s.reorderCategories);
   const saveHomeStartCamera = useAppStore((s) => s.saveHomeStartCamera);
+  const weather = useAppStore((s) => s.environment.weather);
+  const deviceStates = useAppStore((s) => s.devices.deviceStates);
   const [showManager, setShowManager] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [draggingCatIndex, setDraggingCatIndex] = useState<number | null>(null);
   const [showSaveView, setShowSaveView] = useState(false);
   const [kindFilter, setKindFilter] = useState<DeviceKind | null>(null);
+  const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
+  const [time, setTime] = useState(new Date());
   const previewCamRef = useRef<PreviewCameraState>({ position: [10, 12, 10], target: [0, 0, 0] });
+
+  // Time update
+  useState(() => {
+    const t = setInterval(() => setTime(new Date()), 10_000);
+    return () => clearInterval(t);
+  });
+
+  const activeCount = markers.filter((m) => {
+    const st = deviceStates[m.id];
+    if (!st) return false;
+    if ('on' in st.data) return (st.data as any).on;
+    return false;
+  }).length;
+  const wattage = activeCount > 0 ? activeCount * 12 : 0;
+  const timeStr = time.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
+  const dateStr = time.toLocaleDateString('sv-SE', { weekday: 'short', day: 'numeric', month: 'short' });
+
+  const allRooms = useMemo(() => {
+    const result: { id: string; name: string }[] = [];
+    for (const floor of floors) {
+      for (const room of floor.rooms) {
+        result.push({ id: room.id, name: room.name || 'Rum' });
+      }
+    }
+    return result;
+  }, [floors]);
 
   const roomNameMap = useMemo(() => {
     const map: Record<string, string> = {};
-    for (const floor of floors) {
-      for (const room of floor.rooms) {
-        map[room.id] = room.name || 'Rum';
-      }
-    }
+    for (const r of allRooms) map[r.id] = r.name;
     return map;
-  }, [floors]);
+  }, [allRooms]);
 
   let entries: { key: string; label: string; catId?: string; devices: DeviceMarker[] }[];
 
@@ -121,7 +216,6 @@ function HomeCategory() {
         return { key: cat.id, label: `${cat.icon} ${cat.name}`, catId: cat.id, devices };
       })
       .filter((e) => e.devices.length > 0 || editMode);
-
     const uncategorized = markers.filter((m) => !categorizedIds.has(m.id));
     if (uncategorized.length > 0) {
       entries.push({ key: 'uncategorized', label: '⚙️ Övrigt', devices: uncategorized });
@@ -129,7 +223,6 @@ function HomeCategory() {
   } else {
     const lightsByRoom: Record<string, DeviceMarker[]> = {};
     const otherByKind: Record<string, DeviceMarker[]> = {};
-
     for (const m of markers) {
       if (LIGHT_KINDS.has(m.kind)) {
         const roomName = m.roomId ? (roomNameMap[m.roomId] || 'Rum') : 'Övrigt';
@@ -142,14 +235,12 @@ function HomeCategory() {
         otherByKind[cat].push(m);
       }
     }
-
     entries = [
       ...Object.entries(lightsByRoom).map(([label, devices]) => ({ key: label, label, devices })),
       ...Object.entries(otherByKind).map(([label, devices]) => ({ key: label, label, devices })),
     ];
   }
 
-  // Apply device kind filter
   const filteredEntries = kindFilter
     ? entries.map((e) => ({
         ...e,
@@ -169,98 +260,107 @@ function HomeCategory() {
   };
 
   const density = useAppStore((s) => s.dashboard.density ?? 'balance');
-  const setDashboardDensity = useAppStore((s) => s.setDashboardDensity);
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between gap-2">
-        <div />
-        <div className="flex items-center gap-2">
-          <Button size="sm" variant="ghost" className="h-8 text-[11px]"
-            onClick={() => setShowManager(!showManager)}>
-            {showManager ? 'Stäng' : 'Hantera kategorier'}
-          </Button>
-          <Button size="sm" variant={editMode ? 'default' : 'ghost'} className="h-8 text-[11px] gap-1"
-            onClick={() => setEditMode(!editMode)}>
-            {editMode ? <><X size={11} /> Klar</> : <><Pencil size={11} /> Redigera</>}
-          </Button>
-        </div>
+    <div className="space-y-5">
+      {/* Header — edit controls */}
+      <div className="flex items-center justify-end gap-2">
+        <Button size="sm" variant="ghost" className="h-8 text-[11px]"
+          onClick={() => setShowManager(!showManager)}>
+          {showManager ? 'Stäng' : 'Hantera kategorier'}
+        </Button>
+        <Button size="sm" variant={editMode ? 'default' : 'ghost'} className="h-8 text-[11px] gap-1"
+          onClick={() => setEditMode(!editMode)}>
+          {editMode ? <><X size={11} /> Klar</> : <><Pencil size={11} /> Redigera</>}
+        </Button>
       </div>
 
       {showManager && <CategoryManager />}
 
-      {/* 3D Hero Preview */}
-      <div>
-        <div
-          className="rounded-[28px] overflow-hidden h-[280px] relative cursor-pointer
-            border border-[hsl(var(--glass-border)/0.12)]
-            shadow-[0_24px_60px_hsl(220_20%_4%/0.4),inset_0_1px_0_hsl(0_0%_100%/0.03)]"
-          onDoubleClick={() => setShowSaveView(true)}
-        >
-          <DashboardPreview3D className="absolute inset-0" cameraStateRef={previewCamRef} />
-          {/* Overlay text on 3D */}
-          <div className="absolute bottom-4 left-5 z-10">
-            <p className="text-[10px] text-foreground/40 font-medium tracking-wider uppercase">Plan • status</p>
-          </div>
-          {showSaveView && (
-            <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/50 backdrop-blur-sm" onClick={(e) => e.stopPropagation()}>
-              <div className="nn-widget p-6 w-72 shadow-xl space-y-4">
-                <p className="text-base font-semibold text-foreground font-display">Spara som startvy?</p>
-                <p className="text-[13px] text-muted-foreground leading-relaxed">Den aktuella kameravinkeln sparas som din kontrollpanelvy.</p>
-                <div className="flex gap-3">
-                  <Button size="sm" variant="outline" className="flex-1 h-10" onClick={() => setShowSaveView(false)}>Avbryt</Button>
-                  <Button size="sm" className="flex-1 h-10 gap-1.5" onClick={() => {
-                    saveHomeStartCamera(previewCamRef.current.position, previewCamRef.current.target);
-                    setShowSaveView(false);
-                  }}>
-                    <Save size={13} /> Spara
-                  </Button>
+      {/* ── FREE GRID — everything lives here ── */}
+      <div className="grid grid-cols-4 gap-4">
+        {/* Row 1: Info cards */}
+        <InfoCard label="TID" value={timeStr} detail={dateStr} />
+        <InfoCard label="UTE" value={`${Math.round(weather.temperature)}°`} detail={weather.condition || 'Klart'} />
+        <InfoCard label="ENERGI" value={`${wattage} W`} detail={wattage > 50 ? 'Hög förbrukning' : 'Normal'} />
+        <InfoCard label="KOMFORT" value="21.5°" detail="Optimal" />
+
+        {/* Row 2: 3D hero + Aktivt rum */}
+        <div className="col-span-3">
+          <div
+            className="nn-widget rounded-[28px] overflow-hidden h-[300px] relative cursor-pointer"
+            onDoubleClick={() => setShowSaveView(true)}
+          >
+            <DashboardPreview3D className="absolute inset-0" cameraStateRef={previewCamRef} />
+            <div className="absolute bottom-4 left-5 z-10">
+              <p className="text-[10px] text-foreground/40 font-medium tracking-wider uppercase">Plan • status</p>
+            </div>
+            {showSaveView && (
+              <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/50 backdrop-blur-sm" onClick={(e) => e.stopPropagation()}>
+                <div className="nn-widget p-6 w-72 shadow-xl space-y-4">
+                  <p className="text-base font-semibold text-foreground font-display">Spara som startvy?</p>
+                  <p className="text-[13px] text-muted-foreground leading-relaxed">Den aktuella kameravinkeln sparas som din kontrollpanelvy.</p>
+                  <div className="flex gap-3">
+                    <Button size="sm" variant="outline" className="flex-1 h-10" onClick={() => setShowSaveView(false)}>Avbryt</Button>
+                    <Button size="sm" className="flex-1 h-10 gap-1.5" onClick={() => {
+                      saveHomeStartCamera(previewCamRef.current.position, previewCamRef.current.target);
+                      setShowSaveView(false);
+                    }}>
+                      <Save size={13} /> Spara
+                    </Button>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Device filter tabs */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
-        {deviceFilters.map(({ key, label }) => (
-          <button
-            key={key}
-            onClick={() => setKindFilter(key === 'all' ? null : key as DeviceKind)}
-            className={cn(
-              'px-3.5 py-1.5 rounded-full text-[11px] font-medium transition-all shrink-0 border',
-              (key === 'all' && !kindFilter) || kindFilter === key
-                ? 'bg-foreground/10 text-foreground border-[hsl(var(--border)/0.3)]'
-                : 'text-muted-foreground/60 hover:text-foreground border-transparent hover:border-[hsl(var(--border)/0.15)]'
             )}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+          </div>
+        </div>
 
-      {/* Room/category cards — two-column grid */}
-      <div className={cn(
-        'grid gap-5',
-        density === 'calm' ? 'grid-cols-1 lg:grid-cols-2' :
-        density === 'dense' ? 'grid-cols-2 lg:grid-cols-3' :
-        'grid-cols-1 lg:grid-cols-2'
-      )}>
-        {filteredEntries.map((entry, index) => (
-          <CategoryCard
-            key={entry.key}
-            category={entry.label}
-            categoryId={entry.catId}
-            devices={entry.devices}
-            span={false}
-            editMode={editMode}
-            categoryIndex={index}
-            onDropDevice={entry.catId ? (deviceId) => handleDropDevice(entry.catId!, deviceId) : undefined}
-            onDragCategoryStart={() => setDraggingCatIndex(index)}
-            onDropCategory={() => handleDropCategory(index)}
+        {/* Aktivt rum widget */}
+        <div className="col-span-1">
+          <ActiveRoomWidget
+            selectedRoomId={selectedRoomId}
+            rooms={allRooms}
+            markers={markers}
           />
+        </div>
+
+        {/* Filter tabs — full width */}
+        <div className="col-span-4 flex items-center gap-1.5 overflow-x-auto pb-1">
+          {deviceFilters.map(({ key, label }) => (
+            <button
+              key={key}
+              onClick={() => setKindFilter(key === 'all' ? null : key as DeviceKind)}
+              className={cn(
+                'px-3.5 py-1.5 rounded-full text-[11px] font-medium transition-all shrink-0 border',
+                (key === 'all' && !kindFilter) || kindFilter === key
+                  ? 'bg-foreground/10 text-foreground border-[hsl(var(--border)/0.3)]'
+                  : 'text-muted-foreground/60 hover:text-foreground border-transparent hover:border-[hsl(var(--border)/0.15)]'
+              )}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* Room/category cards — span 2 cols each */}
+        {filteredEntries.map((entry, index) => (
+          <div key={entry.key} className="col-span-2" onClick={() => {
+            // If entry devices have a roomId, select that room
+            const roomId = entry.devices[0]?.roomId;
+            if (roomId) setSelectedRoomId(roomId);
+          }}>
+            <CategoryCard
+              category={entry.label}
+              categoryId={entry.catId}
+              devices={entry.devices}
+              span={false}
+              editMode={editMode}
+              categoryIndex={index}
+              onDropDevice={entry.catId ? (deviceId) => handleDropDevice(entry.catId!, deviceId) : undefined}
+              onDragCategoryStart={() => setDraggingCatIndex(index)}
+              onDropCategory={() => handleDropCategory(index)}
+            />
+          </div>
         ))}
       </div>
 
