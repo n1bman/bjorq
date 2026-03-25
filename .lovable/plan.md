@@ -1,204 +1,167 @@
 
 
-# BJORQ Nordic Noir — Fullständig implementeringsplan
+# BJORQ Nordic Noir — Implementeringsrunda 2: Upplevelsefokus
 
-## Analys av gap mellan plan och nuläge
+## Sammanfattning
 
-Nuvarande implementation har grundstrukturen på plats men saknar djup i alla sex områden som användaren identifierat.
-
----
-
-## 1. Hem-vyn — Konfigurerbart overlay-system
-
-**Nuläge:** Widgets är hårdkodade till top-left/top-right. `HomeWidgetConfig` kan visa/dölja men saknar position/storlek/layoutläge.
-
-**Ändringar:**
-
-### 1a. Utöka `HomeViewState` i `types.ts`
-Lägg till:
-```typescript
-interface WidgetOverlayConfig {
-  position: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | 'center-top';
-  size: 'compact' | 'normal' | 'expanded';
-}
-homeWidgetLayout: Record<'clock' | 'weather' | 'temperature' | 'energy', WidgetOverlayConfig>;
-homeLayoutEditMode: boolean;
-```
-
-### 1b. Ny komponent: `HomeLayoutEditor.tsx`
-- Visas när `homeLayoutEditMode = true`
-- Grid-guide overlay med halvtransparenta drop-zoner
-- Varje widget visar drag-handle + storleksväljare (compact/normal/expanded)
-- Knapp i HomeView (t.ex. kugghjul-ikon) för att aktivera/avsluta layoutläge
-- Vid avslut: spara layout till store
-
-### 1c. Uppdatera `HomeView.tsx`
-- Läs `homeWidgetLayout` från store istället för hårdkodade positioner
-- Varje overlay renderas i en `PositionedOverlay`-wrapper som placerar via absolute + Tailwind-klasser baserat på sparad position
-- Widgets ska stödja `size`-prop: compact (bara värde), normal (nuvarande), expanded (mer detalj)
-
-### 1d. Uppdatera `ClockWidget`, `WeatherWidget`, `TemperatureWidget`, `EnergyWidget`
-- Lägg till `size?: 'compact' | 'normal' | 'expanded'` prop
-- `compact`: bara t.ex. "18:42" / "7°" / "342W"
-- `expanded`: mer info — datum+vecka, vind+fukt, dagskostnad
-
-### 1e. Uppdatera `HomeWidgetConfig.tsx`
-- Lägg till position-väljare (5 positioner) och storleksväljare per widget
-
-**Filer:** `types.ts`, `useAppStore.ts`, `HomeView.tsx`, `HomeWidgetConfig.tsx`, ny `HomeLayoutEditor.tsx`, `ClockWidget.tsx`, `WeatherWidget.tsx`, `TemperatureWidget.tsx`, `EnergyWidget.tsx`
+Koden har strukturen men upplevelsen matchar inte planen. Denna runda fokuserar på att **synliggöra** systemen som redan finns i kod men inte känns i UI:t, samt stärka de moduler som fortfarande är för tunna.
 
 ---
 
-## 2. Kontrollpanelen — Fri widgetyta
+## Fas 1: Kontrollpanelen — Synlig widgetfrihet
 
-**Nuläge:** `SortableWidgetGrid` stödjer bara `colSpan: 1 | 2`. Inga explicita storlekar S/M/L/Hero. Ingen density. Ingen breakpoint-layout.
+**Problem:** Dashboard ser ut som kategorikort i en grid. Widgetstorlekarna S/M/L/Hero finns i typer men syns aldrig. Edit-mode och density finns i store men exponeras inte i UI.
 
 **Ändringar:**
 
-### 2a. Utöka `WidgetPlacement` i `types.ts`
-```typescript
-interface WidgetPlacement {
-  widgetId: string;
-  order: number;
-  colSpan?: 1 | 2;
-  size?: 'S' | 'M' | 'L' | 'Hero';
-}
-interface DashboardSettings {
-  activeCategory: DashCategory;
-  categoryLayouts: Partial<Record<DashCategory, WidgetPlacement[]>>;
-  density: 'calm' | 'balance' | 'dense';
-}
-```
+### 1a. Dashboard toolbar med edit-mode + density (`DashboardGrid.tsx` HomeCategory)
+- Lägg till en tydlig "Anpassa"-knapp som aktiverar `dashboard.editMode` via store
+- I edit-mode: varje widget får en **storleksväljare-bar** (S/M/L/Hero knappar) ovanför sig
+- Density-växlare (3 knappar: Lugn/Balans/Tät) visas i toolbaren — ändrar grid gap och padding live
+- "Klar"-knapp sparar och stänger edit-mode
 
-### 2b. Ny komponent: `WidgetCard.tsx`
-- Wrapper med Nordic Noir styling baserat på `size`
-- S: `min-h-[80px]`, 1 col
-- M: `min-h-[180px]`, 1 col
-- L: `min-h-[280px]`, 2 col
-- Hero: `min-h-[360px]`, full bredd
-- `.nn-widget` bakgrund, gradient, subtil amber border-hover
+### 1b. WidgetCard wrapping (`DashboardGrid.tsx`)
+- Wrappa ALLA kategorikort och widgetar i `WidgetCard` med rätt `size`-prop
+- Hero = `col-span-full min-h-[360px]` — t.ex. 3D-preview eller energi-hero
+- L = `lg:col-span-2 min-h-[280px]`
+- Storleksändring i edit-mode sparar till `categoryLayouts`
 
-### 2c. Uppdatera `SortableWidgetGrid.tsx`
-- Stödja 4 storlekar istället för bara colSpan
-- Hero = full-bredd (col-span-all)
-- Visuell feedback vid drag (ghost + drop-indikator)
+### 1c. SortableWidgetGrid — stödja mixed sizes
+- Uppdatera grid-klasser baserat på density:
+  - Lugn: `gap-5`, M min-h ökar
+  - Balans: `gap-3` (nuvarande)
+  - Tät: `gap-2`, mindre padding i WidgetCard
 
-### 2d. Dashboard edit-mode
-- Knapp "Anpassa dashboard" i `DashboardGrid.tsx` HomeCategory
-- I edit-mode: varje widget visar storleksväljare (S/M/L/Hero) + drag-handle
-- Density-växlare (3 knappar: Lugn/Balans/Tät) som justerar grid gap och widget min-height
+### 1d. Visuell feedback i edit-mode
+- Wobble-animation redan finns — bra
+- Lägg till storleks-label (S/M/L/Hero) som liten badge på varje widget
+- Drop-zone glow vid drag
 
-### 2e. Uppdatera `CategoryCard.tsx`
-- Ta bort emoji-ikoner → Lucide-ikoner genomgående
-- Stödja `size`-prop från WidgetCard
-
-**Filer:** `types.ts`, `useAppStore.ts`, ny `WidgetCard.tsx`, `SortableWidgetGrid.tsx`, `DashboardGrid.tsx`, `CategoryCard.tsx`
+**Filer:** `DashboardGrid.tsx`, `SortableWidgetGrid.tsx`, `WidgetCard.tsx`, `useAppStore.ts` (exponera `toggleDashboardEditMode`, `setDashboardDensity`)
 
 ---
 
-## 3. Energi — Starkare live-datavisualisering
+## Fas 2: Hem-vyn — Layoutläge som verkligen syns
 
-**Nuläge:** Hero-siffra finns men saknar sparkline, peak-markeringar och levande känsla.
+**Problem:** HomeLayoutEditor finns men användaren ser inte tydligt hur man når det eller vad man kan göra. Layout-knappen är väldigt diskret.
 
 **Ändringar:**
 
-### 3a. Ny komponent: `EnergySparkline.tsx`
-- Inline SVG sparkline baserad på simulerad/lagrad timdata
-- Animerad linje (CSS stroke-dashoffset animation)
-- Peak-markeringar som cirklar med tooltip
+### 2a. Tydligare ingång till layoutläge
+- Flytta layout-knappen: istället för mitt-top, lägg den i en mer synlig position (t.ex. bredvid CameraFab eller som en subtil floating-knapp i hörnet)
+- Ge den en tydligare ikon + kort label "Anpassa Hem"
 
-### 3b. Uppdatera `EnergyDeviceList.tsx`
-- Integrera sparkline i hero-sektionen
-- Lägg till cirkulär förbrukningsindikator (SVG ring) som visar andel av dagsmål
-- Dagsmål = konfigurerbart i energyConfig (ny `dailyGoalKwh`-property)
-- Enhetsranking: sortera med tydligare progressbar + animerad fill
-- "LIVE"-pulsindikator vid ansluten HA
+### 2b. HomeLayoutEditor — mer interaktivt
+- I layoutläge: varje widget ska ha **synliga kontroller direkt på widgeten**:
+  - Storleksväxlare (compact/normal/expanded) som 3 små knappar
+  - Positions-pilar eller drag-handle
+- Visa halvtransparenta "drop-zoner" för alla 5 positioner med labels
+- Lägg till en **förhandsgranskning** av vald storlek (widgeten ändrar sig live)
 
-### 3c. Uppdatera `EnergyWidget.tsx` (overlay-mode)
-- Compact-mode: bara watt + mini-sparkline (liten 60x20px SVG)
+### 2c. Widget-storlekar som faktiskt syns
+- `compact` → radikalt enklare (bara ett värde, t.ex. "18:42" utan ram)
+- `normal` → nuvarande
+- `expanded` → större med mer data
+- Se till att skillnaden är **visuellt tydlig** — inte bara mer text utan annorlunda layout
 
-**Filer:** ny `EnergySparkline.tsx`, `EnergyDeviceList.tsx`, `EnergyWidget.tsx`, `types.ts` (EnergyConfig utökas)
+**Filer:** `HomeView.tsx`, `HomeLayoutEditor.tsx`, `ClockWidget.tsx`, `WeatherWidget.tsx`, `TemperatureWidget.tsx`, `EnergyWidget.tsx`
 
 ---
 
-## 4. Klimat — Tydligare beslutsstöd
+## Fas 3: Energi — Levande datakänsla
 
-**Nuläge:** ClimateOverview visar nuvärde+mål per enhet men saknar trend, rumsjämförelse och tydlig regelstatus.
+**Problem:** Sparkline och ring finns men känns statiska. Saknar animation och levande känsla.
 
 **Ändringar:**
 
-### 4a. Ny komponent: `ClimateRoomComparison.tsx`
-- Alla rum med temperatur side-by-side som horisontella barer
-- Avvikelse från mål markeras visuellt (röd om > +2°, blå om < -2°)
+### 3a. EnergySparkline — animerad draw
+- Lägg till CSS `@keyframes sparkline-draw` i `index.css` (stroke-dashoffset 0→full)
+- Sparkline ska "ritas" från vänster till höger vid mount
+- Pulsande glow på current-time-indicator
 
-### 4b. Ny komponent: `ClimateTrendLine.tsx`
-- 24h inline SVG kurva per rum/sensor
-- Visar riktning (stiger/sjunker) med pil och textindikator
+### 3b. Hero-ring — pulsande animation
+- Ringen ska animeras in (strokeDasharray transition)
+- Lägg till en svag puls-animation på center-värdet (watt-siffran)
 
-### 4c. Uppdatera `ClimateTab.tsx`
-- Ny ordning: 1) Rumsjämförelse (alla rum i en blick), 2) Komfortstatus med trendlinjer, 3) Override, 4) Regler
-- ComfortStatus: lägg till senaste åtgärd/triggertid per aktiv regel
-- RuleCard: visa `lastTriggered`-timestamp och aktuellt sensorvärde
+### 3c. Enhetsranking — mer liv
+- Progressbar ska animeras in (width transition)
+- LIVE-badge pulserar
+- Hover/tap på enhet visar mer detalj (daily kWh breakdown)
 
-**Filer:** ny `ClimateRoomComparison.tsx`, ny `ClimateTrendLine.tsx`, `ClimateTab.tsx`
+### 3d. Peak-markeringar i sparkline
+- Peaks ska ha tooltip vid hover (visar tid + watt)
+- Röd/amber färg på peaks som överstiger dagsmål-linjens motsvarighet
+
+**Filer:** `EnergySparkline.tsx`, `EnergyDeviceList.tsx`, `index.css`
 
 ---
 
-## 5. Väder — Egen identitet och produktnytta
+## Fas 4: Klimat — Produktnyttigt beslutsstöd
 
-**Nuläge:** `WeatherCategory` i DashboardGrid är bara `<WeatherWidget expanded />` + ett textblock.
+**Problem:** ClimateRoomComparison och ClimateTrendLine finns men klimatvyn känns fortfarande tunn. Tomma tillstånd dominerar.
 
 **Ändringar:**
 
-### 5a. Uppdatera `WeatherWidget.tsx` expanded-mode
-- "Nu-panel": Större temperatur (48px), ikon + känsla ("Klart och kallt")
-- Tidsgradient: bakgrunden subtilt ljusare/mörkare baserat på tid på dygnet
-- 24h prognos-strip: horisontell scroll med timvisa ikoner (generera demo-data om forecast saknas)
+### 4a. Bättre empty states
+- Istället för "Inga klimatenheter placerade" → visa en illustrativ placeholder med instruktioner
+- Lägg till demo-data-fallback: om inga enheter finns, visa exempeldata med "(Demo)" label
 
-### 5b. Ny komponent: `WeatherHomeImpact.tsx`
-- "Påverkan på hemmet" — analyserar solvinkel + fönsterpositioner
-- T.ex. "Sol från söder, sovrum uppvärms" eller "Regn förväntas kl 15"
-- Läser `environment.sunAzimuth`, `environment.sunElevation` + rums-/fönsterdata
+### 4b. ClimateTab — starkare nuvärde vs mål
+- Flytta upp nuvärde/mål-displayen (idag gömd i entity-listan)
+- Skapa en tydlig "hero-sektion" i toppen av klimat:
+  - Snitt-temperatur i hemmet (stort tal, Space Grotesk 36px)
+  - Antal rum inom/utanför mål
+  - Enkel status: "Alla rum inom mål" eller "2 rum avviker"
 
-### 5c. Uppdatera `WeatherCategory` i `DashboardGrid.tsx`
-- Ny layout: Nu-panel (hero) + 24h prognos + WeatherHomeImpact + SunWeatherPanel-länk
+### 4c. ClimateTrendLine — interaktivare
+- Visa tooltip vid hover med exakt temperatur + tid
+- Markera måltemperaturen tydligare (heldragen linje i stället för dashed)
 
-**Filer:** `WeatherWidget.tsx`, ny `WeatherHomeImpact.tsx`, `DashboardGrid.tsx`
+### 4d. Regelstatus — mer tydlighet
+- RuleCard: visa `lastTriggered` som "Senast aktiv: 14:32" under regelnamnet
+- Visa aktuellt sensorvärde live bredvid tröskelvärdet
+
+**Filer:** `ClimateTab.tsx`, `ClimateTrendLine.tsx`, `ClimateRoomComparison.tsx`
 
 ---
 
-## 6. Responsivitet
+## Fas 5: Visuell nivå — Nordic Noir i hela produkten
 
-**Nuläge:** DashboardShell har mobil/tablet/desktop men widgets anpassas inte. Hem-vyn har ingen responsiv logik.
+**Problem:** Designen ser ut som en mörk dashboard med amber accent, inte som Nordic Noir premium.
 
 **Ändringar:**
 
-### 6a. Uppdatera `HomeView.tsx`
-- Mobil (<768px): overlays staplat vertikalt i top-center, device-pills i 2-kolumns grid
-- Tablet: nuvarande layout men med större touch-targets
+### 5a. DashboardShell — shell-känsla
+- Nav-rail: djupare bakgrund, subtilare separatorer
+- Summary-bar: ännu smalare, gradient-fade istället för solid border
+- Content area: subtil vinjett-effekt (radial gradient overlay) för djupkänsla
 
-### 6b. Uppdatera `DashboardGrid.tsx`
-- Mobil: alla widgets single-column, Hero = full-bredd
-- Tablet: 2-kolumns grid
-- Desktop: 3-kolumns grid (nuvarande 2 → 3)
+### 5b. WidgetCard — rikare materialitet
+- Alla `.nn-widget` → lägg till `inset shadow` för djup
+- Subtil gradient-border (border-image med gradient) på hover
+- Typography: alla värde-siffror → `font-display` (Space Grotesk), alla labels → uppercase tracking-wider
 
-### 6c. Uppdatera alla widget-komponenter
-- Kontrollera att text inte trunkeras på mobil
-- Touch-targets minimum 44px
+### 5c. Spacing och rytm
+- Dashboard content: `gap-4` minimum (kontrollera att density "Lugn" ger `gap-5`)
+- Sektionsrubriker: mer luft ovanför (`mt-6`) och tydligare separator
 
-**Filer:** `HomeView.tsx`, `DashboardGrid.tsx`, `SortableWidgetGrid.tsx`, diverse widget-filer
+### 5d. 3D-preview i dashboard
+- Ge 3D-preview-widgeten en subtil glow-border för att signalera att den är "levande"
+- Mörkare overlay i hörnen (vinjett) för att skilja den från vanliga kort
+
+**Filer:** `index.css`, `DashboardShell.tsx`, `DashboardGrid.tsx`, `WidgetCard.tsx`
 
 ---
 
 ## Implementeringsordning
 
-1. **Types + Store** — utöka `HomeViewState`, `WidgetPlacement`, `DashboardSettings`, `EnergyConfig`
-2. **Hem overlay-system** — `HomeLayoutEditor`, positionerade widgets, storlekar
-3. **Kontrollpanel widgetsystem** — `WidgetCard`, S/M/L/Hero, density, edit-mode
-4. **Energi** — sparkline, cirkulär ring, peak, levande känsla
-5. **Klimat** — rumsjämförelse, trendlinje, regelstatus
-6. **Väder** — nu-panel, 24h strip, hemkoppling
-7. **Responsivitet** — alla vyer anpassade för mobil/tablet/desktop
+| Fas | Fokus | Uppskattning |
+|-----|-------|-------------|
+| **1** | Kontrollpanel: synlig edit-mode, density, WidgetCard wrapping | Störst påverkan |
+| **2** | Hem: tydligare layoutläge och storlekar | |
+| **3** | Energi: animation och levande känsla | |
+| **4** | Klimat: hero-sektion, demo-data, regelstatus | |
+| **5** | Nordic Noir: shell, materialitet, spacing | Genomgående polish |
 
-Alla ändringar görs i befintlig React/Tailwind/TS-kodbas utan nya dependencies. Inline SVG för sparklines/trender. Befintlig logik (store, hooks, HA, 3D) bevaras intakt.
+Alla faser görs i befintlig React/Tailwind/TS utan nya dependencies. Befintlig logik bevaras intakt — fokus är på att **synliggöra** och **förstärka** det som redan finns i kod.
 
