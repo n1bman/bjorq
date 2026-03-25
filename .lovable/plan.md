@@ -1,167 +1,114 @@
 
 
-# BJORQ Nordic Noir — Implementeringsrunda 2: Upplevelsefokus
+# BJORQ Nordic Noir — Implementera designvisionen från screenshots
 
-## Sammanfattning
+## Analys av vad screenshots visar vs nuläge
 
-Koden har strukturen men upplevelsen matchar inte planen. Denna runda fokuserar på att **synliggöra** systemen som redan finns i kod men inte känns i UI:t, samt stärka de moduler som fortfarande är för tunna.
+Bilderna visar en specifik visuell riktning som skiljer sig från nuläget på flera sätt:
 
----
+### Vad som behöver ändras
 
-## Fas 1: Kontrollpanelen — Synlig widgetfrihet
+**1. Kontrollpanelens Hem-vy (DashboardGrid HomeCategory)**
+- **Nu:** Toolbar + SortableWidgetGrid med WidgetCard-wrapping
+- **Vision:** Tre-kolumnslayout med:
+  - Kolumn 1-2: "HOME OVERVIEW" hero-sektion med 3D-preview + snabbkontroller (Scener, Enheter, Klimat, Robot) + rumskort under med device filter tabs
+  - Kolumn 3: Kontextpanel som visar "AKTIVT RUM" (valt rum med enheter) och "VALD ENHET" (detaljer för vald enhet)
 
-**Problem:** Dashboard ser ut som kategorikort i en grid. Widgetstorlekarna S/M/L/Hero finns i typer men syns aldrig. Edit-mode och density finns i store men exponeras inte i UI.
+**2. Summary bar (toppen)**
+- **Nu:** Slim strip med widget-komponenter
+- **Vision:** Större typografi med `label-micro` ovanför stora värden (TID → 14:00, UTE → 7C, ENERGI → 0 W, KOMFORT → 21.5). Mer Nordic Noir-känsla med tydligare hierarki.
 
-**Ändringar:**
+**3. Nav rail (vänster)**
+- **Nu:** Fungerar men gruppnamn och spacing kan förbättras
+- **Vision:** Tydligare vertikal lista, alla kategorier synliga med labels, "Hemvy"/"Design" + "Hemstatus 18 aktiva" längst ner
 
-### 1a. Dashboard toolbar med edit-mode + density (`DashboardGrid.tsx` HomeCategory)
-- Lägg till en tydlig "Anpassa"-knapp som aktiverar `dashboard.editMode` via store
-- I edit-mode: varje widget får en **storleksväljare-bar** (S/M/L/Hero knappar) ovanför sig
-- Density-växlare (3 knappar: Lugn/Balans/Tät) visas i toolbaren — ändrar grid gap och padding live
-- "Klar"-knapp sparar och stänger edit-mode
-
-### 1b. WidgetCard wrapping (`DashboardGrid.tsx`)
-- Wrappa ALLA kategorikort och widgetar i `WidgetCard` med rätt `size`-prop
-- Hero = `col-span-full min-h-[360px]` — t.ex. 3D-preview eller energi-hero
-- L = `lg:col-span-2 min-h-[280px]`
-- Storleksändring i edit-mode sparar till `categoryLayouts`
-
-### 1c. SortableWidgetGrid — stödja mixed sizes
-- Uppdatera grid-klasser baserat på density:
-  - Lugn: `gap-5`, M min-h ökar
-  - Balans: `gap-3` (nuvarande)
-  - Tät: `gap-2`, mindre padding i WidgetCard
-
-### 1d. Visuell feedback i edit-mode
-- Wobble-animation redan finns — bra
-- Lägg till storleks-label (S/M/L/Hero) som liten badge på varje widget
-- Drop-zone glow vid drag
-
-**Filer:** `DashboardGrid.tsx`, `SortableWidgetGrid.tsx`, `WidgetCard.tsx`, `useAppStore.ts` (exponera `toggleDashboardEditMode`, `setDashboardDensity`)
+**4. Höger kontextpanel (NY)**
+- Visar info om aktivt rum och vald enhet
+- Visar shell-info, Visual DNA-beskrivning
+- Responsiv: visas på desktop, dold på tablet/mobil
 
 ---
 
-## Fas 2: Hem-vyn — Layoutläge som verkligen syns
+## Fasindelning
 
-**Problem:** HomeLayoutEditor finns men användaren ser inte tydligt hur man når det eller vad man kan göra. Layout-knappen är väldigt diskret.
+### Fas 1: Summary bar — typografisk uppgradering
+**Fil:** `DashboardShell.tsx` rad 278-283
 
-**Ändringar:**
+Byt ut widget-komponenterna i summary bar mot en ren typografisk strip:
+- Fyra kolumner: TID, UTE, ENERGI, KOMFORT
+- Varje med `label-micro` rubrik + stort `value-display` värde
+- Hämta data från befintliga store-hooks (weather, energy, comfort)
 
-### 2a. Tydligare ingång till layoutläge
-- Flytta layout-knappen: istället för mitt-top, lägg den i en mer synlig position (t.ex. bredvid CameraFab eller som en subtil floating-knapp i hörnet)
-- Ge den en tydligare ikon + kort label "Anpassa Hem"
+### Fas 2: Hem-kategori — trekolumnslayout med kontextpanel
+**Fil:** `DashboardGrid.tsx` HomeCategory (rad 91-351)
 
-### 2b. HomeLayoutEditor — mer interaktivt
-- I layoutläge: varje widget ska ha **synliga kontroller direkt på widgeten**:
-  - Storleksväxlare (compact/normal/expanded) som 3 små knappar
-  - Positions-pilar eller drag-handle
-- Visa halvtransparenta "drop-zoner" för alla 5 positioner med labels
-- Lägg till en **förhandsgranskning** av vald storlek (widgeten ändrar sig live)
+Bygg om HomeCategory till trekolumnslayout:
+- **Vänster (col-span-2):**
+  - "HOME OVERVIEW" hero med 3D-preview (behåll DashboardPreview3D)
+  - Grid med snabbkontroll-knappar (Scener, Enheter, Klimat, Robot)
+  - Device filter tabs (Alla, Ljus, Armaturer, etc.) — redan finns
+  - Rumskort under (CategoryCard per rum) — redan finns
+- **Höger (col-span-1):**
+  - "AKTIVT RUM" — visar valt rum med enheter och inline-kontroller
+  - "VALD ENHET" — visar detaljkontroll (ljusstyrka, ton, scener)
+  - State: `selectedRoom`, `selectedDevice` via useState
 
-### 2c. Widget-storlekar som faktiskt syns
-- `compact` → radikalt enklare (bara ett värde, t.ex. "18:42" utan ram)
-- `normal` → nuvarande
-- `expanded` → större med mer data
-- Se till att skillnaden är **visuellt tydlig** — inte bara mer text utan annorlunda layout
+### Fas 3: Nav rail — polish och hemstatus
+**Fil:** `DashboardShell.tsx` nav (rad 166-273)
 
-**Filer:** `HomeView.tsx`, `HomeLayoutEditor.tsx`, `ClockWidget.tsx`, `WeatherWidget.tsx`, `TemperatureWidget.tsx`, `EnergyWidget.tsx`
+- Visa alla kategorier med labels (inte collapsed som default på desktop)
+- Lägg till "Hemstatus" längst ner med antal aktiva enheter
+- Fixa spacing och typografi enligt screenshots
 
----
+### Fas 4: Nordic Noir visuell polish
+**Fil:** `index.css`
 
-## Fas 3: Energi — Levande datakänsla
-
-**Problem:** Sparkline och ring finns men känns statiska. Saknar animation och levande känsla.
-
-**Ändringar:**
-
-### 3a. EnergySparkline — animerad draw
-- Lägg till CSS `@keyframes sparkline-draw` i `index.css` (stroke-dashoffset 0→full)
-- Sparkline ska "ritas" från vänster till höger vid mount
-- Pulsande glow på current-time-indicator
-
-### 3b. Hero-ring — pulsande animation
-- Ringen ska animeras in (strokeDasharray transition)
-- Lägg till en svag puls-animation på center-värdet (watt-siffran)
-
-### 3c. Enhetsranking — mer liv
-- Progressbar ska animeras in (width transition)
-- LIVE-badge pulserar
-- Hover/tap på enhet visar mer detalj (daily kWh breakdown)
-
-### 3d. Peak-markeringar i sparkline
-- Peaks ska ha tooltip vid hover (visar tid + watt)
-- Röd/amber färg på peaks som överstiger dagsmål-linjens motsvarighet
-
-**Filer:** `EnergySparkline.tsx`, `EnergyDeviceList.tsx`, `index.css`
+- Summary bar: mörkare bakgrund, subtilare border
+- Rumskort: varmare amber-glow på aktiva enheter med brightness-bar
+- Generellt: mer luft mellan sektioner, tydligare label-micro-hierarki
 
 ---
 
-## Fas 4: Klimat — Produktnyttigt beslutsstöd
+## Tekniska detaljer
 
-**Problem:** ClimateRoomComparison och ClimateTrendLine finns men klimatvyn känns fortfarande tunn. Tomma tillstånd dominerar.
+### Summary bar data
+```tsx
+// Hämta från befintliga hooks/store
+const weather = useAppStore(s => s.weather);
+const markers = useAppStore(s => s.devices.markers);
+const deviceStates = useAppStore(s => s.devices.deviceStates);
+// Beräkna komfortvärde från comfort engine
+```
 
-**Ändringar:**
+### Trekolumnslayout
+```text
+┌─────────────────────────┬───────────┐
+│ HOME OVERVIEW           │ AKTIVT    │
+│ [3D Preview]            │ RUM       │
+│ [Scener][Enheter]       │ Vardags.. │
+│ [Klimat][Robot]         │ enheter.. │
+│                         │           │
+│ [Alla][Ljus][Arma...]   │ VALD      │
+│ ┌─Sovrum──┐ ┌─Badrum─┐  │ ENHET     │
+│ │ lamp 68%│ │lamp 78%│  │ Slider..  │
+│ └─────────┘ └────────┘  │ Tonval..  │
+│ ┌─Övrigt──┐ ┌─Hem────┐  │           │
+│ │ TV      │ │Vacuum  │  │           │
+│ └─────────┘ └────────┘  │           │
+└─────────────────────────┴───────────┘
+```
 
-### 4a. Bättre empty states
-- Istället för "Inga klimatenheter placerade" → visa en illustrativ placeholder med instruktioner
-- Lägg till demo-data-fallback: om inga enheter finns, visa exempeldata med "(Demo)" label
+### Ändrade filer
+| Fil | Ändring |
+|-----|---------|
+| `DashboardShell.tsx` | Summary bar typografi, nav rail polish, hemstatus |
+| `DashboardGrid.tsx` | HomeCategory trekolumnslayout med kontextpanel |
+| `index.css` | Eventuella nya utility-klasser |
 
-### 4b. ClimateTab — starkare nuvärde vs mål
-- Flytta upp nuvärde/mål-displayen (idag gömd i entity-listan)
-- Skapa en tydlig "hero-sektion" i toppen av klimat:
-  - Snitt-temperatur i hemmet (stort tal, Space Grotesk 36px)
-  - Antal rum inom/utanför mål
-  - Enkel status: "Alla rum inom mål" eller "2 rum avviker"
-
-### 4c. ClimateTrendLine — interaktivare
-- Visa tooltip vid hover med exakt temperatur + tid
-- Markera måltemperaturen tydligare (heldragen linje i stället för dashed)
-
-### 4d. Regelstatus — mer tydlighet
-- RuleCard: visa `lastTriggered` som "Senast aktiv: 14:32" under regelnamnet
-- Visa aktuellt sensorvärde live bredvid tröskelvärdet
-
-**Filer:** `ClimateTab.tsx`, `ClimateTrendLine.tsx`, `ClimateRoomComparison.tsx`
-
----
-
-## Fas 5: Visuell nivå — Nordic Noir i hela produkten
-
-**Problem:** Designen ser ut som en mörk dashboard med amber accent, inte som Nordic Noir premium.
-
-**Ändringar:**
-
-### 5a. DashboardShell — shell-känsla
-- Nav-rail: djupare bakgrund, subtilare separatorer
-- Summary-bar: ännu smalare, gradient-fade istället för solid border
-- Content area: subtil vinjett-effekt (radial gradient overlay) för djupkänsla
-
-### 5b. WidgetCard — rikare materialitet
-- Alla `.nn-widget` → lägg till `inset shadow` för djup
-- Subtil gradient-border (border-image med gradient) på hover
-- Typography: alla värde-siffror → `font-display` (Space Grotesk), alla labels → uppercase tracking-wider
-
-### 5c. Spacing och rytm
-- Dashboard content: `gap-4` minimum (kontrollera att density "Lugn" ger `gap-5`)
-- Sektionsrubriker: mer luft ovanför (`mt-6`) och tydligare separator
-
-### 5d. 3D-preview i dashboard
-- Ge 3D-preview-widgeten en subtil glow-border för att signalera att den är "levande"
-- Mörkare overlay i hörnen (vinjett) för att skilja den från vanliga kort
-
-**Filer:** `index.css`, `DashboardShell.tsx`, `DashboardGrid.tsx`, `WidgetCard.tsx`
-
----
-
-## Implementeringsordning
-
-| Fas | Fokus | Uppskattning |
-|-----|-------|-------------|
-| **1** | Kontrollpanel: synlig edit-mode, density, WidgetCard wrapping | Störst påverkan |
-| **2** | Hem: tydligare layoutläge och storlekar | |
-| **3** | Energi: animation och levande känsla | |
-| **4** | Klimat: hero-sektion, demo-data, regelstatus | |
-| **5** | Nordic Noir: shell, materialitet, spacing | Genomgående polish |
-
-Alla faser görs i befintlig React/Tailwind/TS utan nya dependencies. Befintlig logik bevaras intakt — fokus är på att **synliggöra** och **förstärka** det som redan finns i kod.
+### Bevaras
+- All befintlig logik (store, hooks, HA-integration, 3D)
+- CategoryCard-komponenten (rumskort)
+- DeviceControlCard (enhetsdetaljer)
+- SortableWidgetGrid (dragfunktion i edit-mode)
+- Tablet/mobil-layouter (anpassas med responsiva breakpoints)
 
