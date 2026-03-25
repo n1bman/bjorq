@@ -15,36 +15,56 @@ function ClimateOverview() {
   const { climates, fans, humidifiers, waterHeaters, temperatureSensors, humiditySensors } = useAppStore(getClimateEntityViews);
 
   const renderEntityList = (title: string, items: typeof climates, emptyLabel: string) => (
-    <div className="rounded-2xl bg-secondary/20 p-4">
+    <div className="rounded-xl bg-surface-elevated/40 p-4">
       <div className="mb-2 flex items-center justify-between">
         <span className="text-xs font-semibold text-foreground">{title}</span>
-        <span className="text-[10px] text-muted-foreground">{items.length}</span>
+        <span className="text-[10px] text-muted-foreground/50">{items.length}</span>
       </div>
       {items.length === 0 ? (
-        <p className="text-[11px] text-muted-foreground/70">{emptyLabel}</p>
+        <p className="text-[11px] text-muted-foreground/50">{emptyLabel}</p>
       ) : (
         <div className="space-y-2">
           {items.slice(0, 4).map(({ entity, linked, marker, deviceState }) => (
-            <div key={entity.entityId} className="rounded-xl border border-border/40 bg-background/30 px-3 py-2">
+            <div key={entity.entityId} className="rounded-lg border border-border/20 bg-surface-sunken/30 px-3 py-2">
               <div className="flex items-center justify-between gap-2">
                 <div className="min-w-0">
                   <p className="truncate text-xs font-medium text-foreground">{entity.friendlyName}</p>
-                  <p className="truncate text-[10px] text-muted-foreground">{entity.entityId}</p>
+                  <p className="truncate text-[10px] text-muted-foreground/50">{entity.entityId}</p>
                 </div>
-                <span className={cn('rounded-full px-2 py-0.5 text-[9px]', linked ? 'bg-primary/15 text-primary' : 'bg-secondary/50 text-muted-foreground')}>
-                  {linked ? marker?.name || 'Lankad' : 'Ej länkad'}
+                <span className={cn('rounded-full px-2 py-0.5 text-[9px]', linked ? 'bg-primary/15 text-primary' : 'bg-surface-elevated text-muted-foreground/50')}>
+                  {linked ? marker?.name || 'Länkad' : 'Ej länkad'}
                 </span>
               </div>
-              <p className="mt-1 text-[10px] text-muted-foreground">
-                {deviceState?.kind === 'climate'
-                  ? `${deviceState.data.currentTemp}°C nu · mål ${deviceState.data.targetTemp}°C`
-                  : deviceState?.kind === 'fan'
-                  ? `${deviceState.data.speed}%`
-                  : entity.state}
-              </p>
+              {/* ── Nuvärde + mål — tydligt ── */}
+              {deviceState?.kind === 'climate' && (
+                <div className="mt-2 flex items-center gap-3">
+                  <div>
+                    <p className="text-lg font-bold font-display text-foreground">{deviceState.data.currentTemp}°</p>
+                    <p className="text-[9px] text-muted-foreground/60">Nu</p>
+                  </div>
+                  <span className="text-muted-foreground/30">→</span>
+                  <div>
+                    <p className="text-lg font-bold font-display text-primary">{deviceState.data.targetTemp}°</p>
+                    <p className="text-[9px] text-muted-foreground/60">Mål</p>
+                  </div>
+                  <div className="ml-auto">
+                    <span className={cn(
+                      'text-[10px] font-medium',
+                      deviceState.data.currentTemp < deviceState.data.targetTemp ? 'text-blue-400' : 'text-orange-400'
+                    )}>
+                      {deviceState.data.currentTemp < deviceState.data.targetTemp ? '↑ Värmer' : '↓ Kyler'}
+                    </span>
+                  </div>
+                </div>
+              )}
+              {deviceState && deviceState.kind !== 'climate' && (
+                <p className="mt-1 text-[10px] text-muted-foreground">
+                  {deviceState.kind === 'fan' ? `${deviceState.data.speed}%` : entity.state}
+                </p>
+              )}
             </div>
           ))}
-          {items.length > 4 && <p className="text-[10px] text-muted-foreground/70">+{items.length - 4} fler i Home Assistant</p>}
+          {items.length > 4 && <p className="text-[10px] text-muted-foreground/50">+{items.length - 4} fler i HA</p>}
         </div>
       )}
     </div>
@@ -52,10 +72,10 @@ function ClimateOverview() {
 
   return (
     <div className="grid grid-cols-2 gap-4">
-      {renderEntityList('Klimatenheter', climates, 'Inga climate.* hittades i HA än.')}
-      {renderEntityList('Ventilation & fukt', [...fans, ...humidifiers, ...waterHeaters], 'Inga fläktar, luftfuktare eller varmvattenenheter hittades än.')}
-      {renderEntityList('Temperatursensorer', temperatureSensors, 'Lagg till temperaturgivare i HA for att kunna bygga klimatlogik senare.')}
-      {renderEntityList('Fuktsensorer', humiditySensors, 'Fuktsensorer dyker upp har nar du senare kopplar in dem i HA.')}
+      {renderEntityList('Klimatenheter', climates, 'Inga climate.* hittades i HA.')}
+      {renderEntityList('Ventilation & fukt', [...fans, ...humidifiers, ...waterHeaters], 'Inga fläktar/luftfuktare hittades.')}
+      {renderEntityList('Temperatursensorer', temperatureSensors, 'Lägg till temperaturgivare i HA.')}
+      {renderEntityList('Fuktsensorer', humiditySensors, 'Fuktsensorer visas här när de kopplas in.')}
     </div>
   );
 }
@@ -66,10 +86,10 @@ function OverrideCard() {
   const remaining = override.until ? Math.max(0, Math.round((new Date(override.until).getTime() - Date.now()) / 60000)) : 0;
 
   return (
-    <div className={cn('glass-panel rounded-2xl p-4 space-y-3', override.active && 'border-orange-500/30 bg-orange-500/5')}>
+    <div className={cn('nn-widget p-4 space-y-3', override.active && 'border-orange-500/20')}>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Pause size={16} className={override.active ? 'text-orange-400' : 'text-muted-foreground'} />
+          <Pause size={16} className={override.active ? 'text-orange-400' : 'text-muted-foreground/50'} />
           <div>
             <h4 className="text-sm font-semibold text-foreground">Pausa regler</h4>
             {override.active && <p className="text-[10px] text-orange-400">{remaining} min kvar</p>}
@@ -77,7 +97,7 @@ function OverrideCard() {
         </div>
         {override.active ? (
           <Button size="sm" variant="outline" onClick={() => setOverride({ active: false, until: undefined })} className="h-8 text-xs">
-            Ateraktivera
+            Återaktivera
           </Button>
         ) : (
           <Button size="sm" variant="outline" onClick={() => setOverride({ active: true, until: new Date(Date.now() + 30 * 60000).toISOString() })} className="h-8 text-xs gap-1">
@@ -101,34 +121,34 @@ function ComfortStatus() {
   }));
 
   return (
-    <div className="glass-panel rounded-2xl p-4 space-y-3">
+    <div className="nn-widget p-4 space-y-3">
       <div className="flex items-center gap-2">
         <Activity size={16} className="text-primary" />
         <h4 className="text-sm font-semibold text-foreground">Komfortstatus</h4>
       </div>
       {override.active && (
-        <div className="flex items-center gap-2 rounded-lg border border-orange-500/20 bg-orange-500/10 px-3 py-1.5">
+        <div className="flex items-center gap-2 rounded-lg border border-orange-500/15 bg-orange-500/5 px-3 py-1.5">
           <Pause size={12} className="text-orange-400" />
-          <span className="text-xs text-orange-400">Regler pausade just nu</span>
+          <span className="text-xs text-orange-400">Regler pausade</span>
         </div>
       )}
       {sensorValues.length > 0 ? (
         <div className="grid grid-cols-2 gap-2">
           {sensorValues.map((value, index) => (
-            <div key={index} className="rounded-lg bg-secondary/30 px-3 py-2 text-center">
-              <p className="text-lg font-bold text-foreground">{value.value.toFixed(1)}{value.unit}</p>
-              <p className="text-[10px] text-muted-foreground">{value.name}</p>
+            <div key={index} className="rounded-xl bg-surface-elevated/40 px-3 py-3 text-center">
+              <p className="text-2xl font-bold font-display text-foreground">{value.value.toFixed(1)}<span className="text-sm text-muted-foreground">{value.unit}</span></p>
+              <p className="text-[9px] uppercase tracking-wider text-muted-foreground/60 mt-1">{value.name}</p>
             </div>
           ))}
         </div>
       ) : (
-        <p className="text-xs text-muted-foreground">Inga sensorer kopplade till klimatregler ännu.</p>
+        <p className="text-xs text-muted-foreground/50">Inga sensorer kopplade till klimatregler.</p>
       )}
       {activeRules.length > 0 && (
         <div className="space-y-1">
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Aktiva regler</p>
+          <p className="text-[9px] uppercase tracking-wider text-muted-foreground/40">Aktiva regler</p>
           {activeRules.map((rule) => (
-            <div key={rule.id} className="flex items-center gap-2 rounded-lg bg-primary/10 px-3 py-1.5">
+            <div key={rule.id} className="flex items-center gap-2 rounded-lg bg-primary/8 px-3 py-1.5">
               <Wind size={12} className="text-primary" />
               <span className="text-xs text-foreground">{rule.name}</span>
             </div>
@@ -251,7 +271,7 @@ function RuleCard({ rule }: { rule: ComfortRule }) {
   }
 
   return (
-    <div className={cn('glass-panel rounded-xl p-3 space-y-2', !rule.enabled && 'opacity-50', rule.lastState === 'active' && 'border-primary/30 bg-primary/5')}>
+    <div className={cn('nn-widget p-3 space-y-2', !rule.enabled && 'opacity-50', rule.lastState === 'active' && 'border-primary/20')}>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Thermometer size={14} className={rule.lastState === 'active' ? 'text-primary' : 'text-muted-foreground'} />

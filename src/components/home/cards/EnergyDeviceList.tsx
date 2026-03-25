@@ -107,19 +107,20 @@ export default function EnergyDeviceList() {
 
   return (
     <div className="space-y-4">
-      <div className="glass-panel rounded-2xl p-4">
-        <div className="mb-3 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Zap size={16} className="text-primary" />
-            <h4 className="text-sm font-semibold text-foreground">Energioverblick</h4>
+      {/* ── Hero: Live förbrukning ── */}
+      <div className="nn-widget p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Zap size={18} className="text-primary" />
+          <h4 className="text-sm font-semibold text-foreground">Energiöverblick</h4>
+          <div className="ml-auto">
+            <button onClick={() => setShowConfig((v) => !v)} className="rounded-lg p-1.5 text-muted-foreground hover:bg-surface-elevated/50 transition-colors">
+              <Settings2 size={14} />
+            </button>
           </div>
-          <button onClick={() => setShowConfig((v) => !v)} className="rounded p-1 text-muted-foreground hover:bg-secondary/30">
-            <Settings2 size={14} />
-          </button>
         </div>
 
         {showConfig && (
-          <div className="mb-3 space-y-2 rounded-lg bg-secondary/30 p-3">
+          <div className="mb-4 space-y-2 rounded-xl bg-surface-elevated/50 p-3">
             <div className="flex items-center gap-2">
               <label className="w-20 shrink-0 text-[10px] text-muted-foreground">Pris/kWh</label>
               <Input type="number" step="0.1" value={energyConfig.pricePerKwh} onChange={(e) => setEnergyConfig({ pricePerKwh: parseFloat(e.target.value) || 0 })} className="h-7 text-xs" />
@@ -131,51 +132,59 @@ export default function EnergyDeviceList() {
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <p className="text-lg font-bold text-foreground">{totalWatts} W</p>
-            <p className="text-[10px] text-muted-foreground">Just nu {haStatus === 'connected' ? '(live om kopplad)' : '(estimat)'}</p>
+        {/* Hero value */}
+        <div className="text-center mb-4">
+          <p className="text-5xl font-bold font-display text-foreground tracking-tight">{totalWatts}<span className="text-xl text-muted-foreground ml-1">W</span></p>
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground mt-1">
+            Just nu {haStatus === 'connected' ? '· Live' : '· Estimat'}
+          </p>
+        </div>
+
+        {/* Stats grid */}
+        <div className="grid grid-cols-3 gap-3">
+          <div className="rounded-xl bg-surface-elevated/40 p-3 text-center">
+            <p className="text-lg font-bold font-display text-foreground">{totalDailyKwh.toFixed(1)}</p>
+            <p className="text-[9px] uppercase tracking-wider text-muted-foreground/60">kWh idag</p>
+            <p className="text-[10px] text-primary mt-0.5">~{(totalDailyKwh * energyConfig.pricePerKwh).toFixed(1)} {energyConfig.currency}</p>
           </div>
-          <div>
-            <p className="text-lg font-bold text-foreground">{totalDailyKwh.toFixed(1)} kWh</p>
-            <p className="text-[10px] text-muted-foreground">Idag · ~{(totalDailyKwh * energyConfig.pricePerKwh).toFixed(1)} {energyConfig.currency}</p>
+          <div className="rounded-xl bg-surface-elevated/40 p-3 text-center">
+            <p className="text-lg font-bold font-display text-foreground">{totalWeeklyKwh.toFixed(0)}</p>
+            <p className="text-[9px] uppercase tracking-wider text-muted-foreground/60">kWh vecka</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">~{(totalWeeklyKwh * energyConfig.pricePerKwh).toFixed(0)} {energyConfig.currency}</p>
           </div>
-          <div>
-            <p className="text-sm font-semibold text-foreground">{totalWeeklyKwh.toFixed(1)} kWh</p>
-            <p className="text-[10px] text-muted-foreground">Vecka · ~{(totalWeeklyKwh * energyConfig.pricePerKwh).toFixed(0)} {energyConfig.currency}</p>
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-foreground">{totalMonthlyKwh.toFixed(1)} kWh</p>
-            <p className="text-[10px] text-muted-foreground">Manad · ~{(totalMonthlyKwh * energyConfig.pricePerKwh).toFixed(0)} {energyConfig.currency}</p>
+          <div className="rounded-xl bg-surface-elevated/40 p-3 text-center">
+            <p className="text-lg font-bold font-display text-foreground">{totalMonthlyKwh.toFixed(0)}</p>
+            <p className="text-[9px] uppercase tracking-wider text-muted-foreground/60">kWh månad</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">~{(totalMonthlyKwh * energyConfig.pricePerKwh).toFixed(0)} {energyConfig.currency}</p>
           </div>
         </div>
       </div>
 
       {(powerSensors.length > 0 || energySensors.length > 0) && (
-        <div className="glass-panel rounded-2xl p-4">
+        <div className="nn-widget p-4">
           <div className="mb-3 flex items-center gap-2">
             <Link2 size={14} className="text-muted-foreground" />
-            <h4 className="text-xs font-semibold text-foreground">Tillgangliga HA-sensorer</h4>
+            <h4 className="text-xs font-semibold text-foreground">HA-sensorer</h4>
           </div>
           <div className="grid grid-cols-2 gap-3 text-xs">
-            <div className="rounded-xl bg-secondary/20 p-3">
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Effekt</p>
-              <p className="mt-1 text-lg font-semibold text-foreground">{powerSensors.length}</p>
+            <div className="rounded-xl bg-surface-elevated/40 p-3">
+              <p className="text-[9px] uppercase tracking-wider text-muted-foreground/60">Effekt</p>
+              <p className="mt-1 text-lg font-semibold font-display text-foreground">{powerSensors.length}</p>
             </div>
-            <div className="rounded-xl bg-secondary/20 p-3">
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Energi</p>
-              <p className="mt-1 text-lg font-semibold text-foreground">{energySensors.length}</p>
+            <div className="rounded-xl bg-surface-elevated/40 p-3">
+              <p className="text-[9px] uppercase tracking-wider text-muted-foreground/60">Energi</p>
+              <p className="mt-1 text-lg font-semibold font-display text-foreground">{energySensors.length}</p>
             </div>
           </div>
-          <p className="mt-3 text-[10px] text-muted-foreground/70">Koppla sensorer till placerade enheter for live watt och kWh. Det gor energimenyn framtidssaker nar du senare lagger till fler matare i HA.</p>
+          <p className="mt-3 text-[10px] text-muted-foreground/60">Koppla sensorer till placerade enheter för live watt och kWh.</p>
         </div>
       )}
 
       {chartData.length > 0 && (
-        <div className="glass-panel rounded-2xl p-4">
+        <div className="nn-widget p-4">
           <div className="mb-3 flex items-center gap-2">
-            <TrendingUp size={14} className="text-muted-foreground" />
-            <h4 className="text-xs font-semibold text-foreground">Veckoforbrukning per enhet</h4>
+            <TrendingUp size={14} className="text-primary" />
+            <h4 className="text-xs font-semibold text-foreground">Veckoförbrukning per enhet</h4>
           </div>
           <div className="h-40">
             <ResponsiveContainer width="100%" height="100%">
@@ -195,8 +204,8 @@ export default function EnergyDeviceList() {
       )}
 
       {trackedDevices.length > 0 && (
-        <div className="glass-panel space-y-2 rounded-2xl p-4">
-          <h4 className="mb-2 text-xs font-semibold text-foreground">Enheter med energiovervakning</h4>
+        <div className="nn-widget p-4 space-y-2">
+          <h4 className="mb-2 text-xs font-semibold text-foreground">Enhetsranking</h4>
           {trackedDevices
             .sort((a, b) => getDeviceWatts(b) - getDeviceWatts(a))
             .map((marker) => {
@@ -211,10 +220,10 @@ export default function EnergyDeviceList() {
                       {watts} W {livePower && <span className="ml-0.5 text-[8px] text-primary">LIVE</span>}
                     </span>
                   </div>
-                  <div className="h-1.5 overflow-hidden rounded-full bg-muted">
-                    <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${pct}%` }} />
+                  <div className="h-1 overflow-hidden rounded-full bg-surface-elevated">
+                    <div className="h-full rounded-full bg-primary/70 transition-all" style={{ width: `${pct}%` }} />
                   </div>
-                  <div className="flex gap-3 text-[9px] text-muted-foreground">
+                  <div className="flex gap-3 text-[9px] text-muted-foreground/60">
                     <span>Dag: {getDeviceDailyKwh(marker).toFixed(1)} kWh</span>
                     <span>~{(getDeviceDailyKwh(marker) * energyConfig.pricePerKwh).toFixed(1)} {energyConfig.currency}</span>
                   </div>
@@ -224,8 +233,8 @@ export default function EnergyDeviceList() {
         </div>
       )}
 
-      <div className="glass-panel space-y-2 rounded-2xl p-4">
-        <h4 className="mb-2 text-xs font-semibold text-foreground">Aktivera energiovervakning</h4>
+      <div className="nn-widget p-4 space-y-2">
+        <h4 className="mb-2 text-xs font-semibold text-foreground">Energiövervakning</h4>
         <div className="max-h-80 space-y-2.5 overflow-y-auto">
           {markers.map((marker) => (
             <div key={marker.id} className="space-y-1 rounded-xl bg-secondary/10 p-3">

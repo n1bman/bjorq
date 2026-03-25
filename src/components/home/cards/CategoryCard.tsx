@@ -4,20 +4,15 @@ import type { DeviceMarker, DeviceState, DeviceKind } from '../../../store/types
 import { Switch } from '../../ui/switch';
 import { Slider } from '../../ui/slider';
 import { cn } from '../../../lib/utils';
-import { ChevronDown, Wifi, GripVertical } from 'lucide-react';
+import { ChevronDown, Wifi, GripVertical, Lightbulb, Thermometer, Wind, Camera, Power, Tv, Fan, Shield, Droplets, Lock, Car, Zap } from 'lucide-react';
 import DeviceControlCard from './DeviceControlCard';
 
-const kindEmoji: Record<DeviceKind, string> = {
-  light: '💡', switch: '🔌', sensor: '🌡️', climate: '❄️',
-  vacuum: '🤖', camera: '📷', fridge: '🧊', oven: '🍳',
-  washer: '🫧', 'garage-door': '🚗', 'door-lock': '🔒',
-  'power-outlet': '🔌', media_screen: '📺',
-  fan: '🌀', cover: '🪟', scene: '🎬',
-  alarm: '🚨', 'water-heater': '🔥', humidifier: '💧',
-  siren: '🔔', valve: '🔧', remote: '📡', 'lawn-mower': '🌿',
-  speaker: '🔊', soundbar: '🎵',
-  'light-fixture': '💡', 'smart-outlet': '🔌',
-  egg: '🥚',
+const KIND_ICONS: Partial<Record<DeviceKind, typeof Lightbulb>> = {
+  light: Lightbulb, switch: Power, sensor: Thermometer, climate: Wind,
+  vacuum: Zap, camera: Camera, 'power-outlet': Power, media_screen: Tv,
+  fan: Fan, alarm: Shield, humidifier: Droplets, 'door-lock': Lock,
+  'garage-door': Car, 'light-fixture': Lightbulb, 'smart-outlet': Power,
+  speaker: Tv, soundbar: Tv,
 };
 
 function isOn(state?: DeviceState): boolean {
@@ -54,7 +49,6 @@ export default function CategoryCard({
   const onCount = devices.filter((d) => isOn(deviceStates[d.id])).length;
   const allOn = onCount === devices.length && devices.length > 0;
 
-  // Category-level brightness for light devices
   const LIGHT_DEVICE_KINDS = new Set(['light', 'light-fixture']);
   const lightDevices = devices.filter((d) => LIGHT_DEVICE_KINDS.has(d.kind));
   const hasLights = lightDevices.length > 0;
@@ -74,6 +68,9 @@ export default function CategoryCard({
     }
   };
 
+  // Extract category display name (remove emoji prefix if present)
+  const displayName = category.replace(/^[\p{Emoji}\s]+/u, '').trim() || category;
+
   const handleDeviceDragStart = useCallback((e: React.DragEvent, deviceId: string) => {
     e.dataTransfer.setData('device-id', deviceId);
     e.dataTransfer.effectAllowed = 'move';
@@ -87,11 +84,7 @@ export default function CategoryCard({
   }, [onDragCategoryStart]);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
-    if (e.dataTransfer.types.includes('device-id')) {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = 'move';
-      setDragOverActive(true);
-    } else if (e.dataTransfer.types.includes('category-drag')) {
+    if (e.dataTransfer.types.includes('device-id') || e.dataTransfer.types.includes('category-drag')) {
       e.preventDefault();
       e.dataTransfer.dropEffect = 'move';
       setDragOverActive(true);
@@ -104,32 +97,30 @@ export default function CategoryCard({
     e.preventDefault();
     setDragOverActive(false);
     const deviceId = e.dataTransfer.getData('device-id');
-    if (deviceId && onDropDevice) {
-      onDropDevice(deviceId);
-    }
-    if (e.dataTransfer.getData('category-drag') && onDropCategory) {
-      onDropCategory();
-    }
+    if (deviceId && onDropDevice) onDropDevice(deviceId);
+    if (e.dataTransfer.getData('category-drag') && onDropCategory) onDropCategory();
   }, [onDropDevice, onDropCategory]);
 
   const handleDeviceTouchStart = useCallback((deviceId: string) => {
     if (!editMode) return;
-    longPressTimer.current = setTimeout(() => {
-      setDraggingDeviceId(deviceId);
-    }, 600);
+    longPressTimer.current = setTimeout(() => setDraggingDeviceId(deviceId), 600);
   }, [editMode]);
 
   const handleDeviceTouchEnd = useCallback(() => {
     if (longPressTimer.current) clearTimeout(longPressTimer.current);
   }, []);
 
+  // Determine primary icon for category
+  const primaryKind = devices[0]?.kind;
+  const CategoryIcon = (primaryKind && KIND_ICONS[primaryKind]) || Lightbulb;
+
   return (
     <div
       className={cn(
-        'glass-panel glass-panel-hover rounded-2xl p-4 transition-all',
+        'nn-widget nn-widget-hover p-4 transition-all',
         span && 'col-span-2',
-        dragOverActive && 'ring-2 ring-primary/50 bg-primary/5',
-        editMode && 'ring-1 ring-dashed ring-muted-foreground/30'
+        dragOverActive && 'ring-2 ring-primary/40',
+        editMode && 'ring-1 ring-dashed ring-muted-foreground/20'
       )}
       style={{ maxHeight: '320px', display: 'flex', flexDirection: 'column' }}
       onDragOver={editMode ? handleDragOver : undefined}
@@ -143,14 +134,15 @@ export default function CategoryCard({
         onDragStart={editMode ? handleCategoryDragStart : undefined}
         onClick={() => !editMode && setCollapsed(!collapsed)}
       >
-        <div className="flex items-center gap-2 min-w-0">
-          {editMode && <GripVertical size={12} className="text-muted-foreground shrink-0 cursor-grab" />}
-          <ChevronDown size={12} className={cn(
-            'text-muted-foreground transition-transform shrink-0',
+        <div className="flex items-center gap-2.5 min-w-0">
+          {editMode && <GripVertical size={12} className="text-muted-foreground/40 shrink-0 cursor-grab" />}
+          <CategoryIcon size={16} className={cn('shrink-0', onCount > 0 ? 'text-primary' : 'text-muted-foreground/50')} />
+          <ChevronDown size={10} className={cn(
+            'text-muted-foreground/40 transition-transform shrink-0',
             collapsed && '-rotate-90'
           )} />
-          <span className="text-base font-semibold text-foreground truncate">{category}</span>
-          <span className="text-xs text-muted-foreground shrink-0">{onCount}/{devices.length}</span>
+          <span className="text-sm font-semibold text-foreground truncate">{displayName}</span>
+          <span className="text-[10px] text-muted-foreground/50 shrink-0">{onCount}/{devices.length}</span>
         </div>
         <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
           {hasLights && allOn && (
@@ -174,15 +166,15 @@ export default function CategoryCard({
         </div>
       </div>
 
-      {/* Compact device list */}
+      {/* Device list */}
       {!collapsed && (
-        <div className="space-y-1 mt-2 overflow-y-auto flex-1 min-h-0">
+        <div className="space-y-0.5 mt-2 overflow-y-auto flex-1 min-h-0">
           {devices.map((d) => {
             const state = deviceStates[d.id];
             const on = isOn(state);
             const expanded = expandedId === d.id;
-            const emoji = kindEmoji[d.kind] || '⚙️';
             const isDragging = draggingDeviceId === d.id;
+            const DevIcon = KIND_ICONS[d.kind] || Power;
 
             return (
               <div
@@ -194,18 +186,18 @@ export default function CategoryCard({
                 onTouchEnd={editMode ? handleDeviceTouchEnd : undefined}
                 className={cn(
                   'rounded-lg transition-all',
-                  expanded && 'bg-secondary/30 ring-1 ring-primary/20',
+                  expanded && 'bg-surface-elevated/50 ring-1 ring-primary/15',
                   isDragging && 'opacity-50 scale-95',
-                  editMode && 'cursor-grab hover:bg-secondary/20'
+                  editMode && 'cursor-grab hover:bg-surface-elevated/30'
                 )}
               >
                 <div
-                  className="flex items-center gap-2 py-2.5 px-3 cursor-pointer"
+                  className="flex items-center gap-2.5 py-2 px-3 cursor-pointer"
                   onClick={() => !editMode && setExpandedId(expanded ? null : d.id)}
                 >
-                  {editMode && <GripVertical size={10} className="text-muted-foreground/50 shrink-0" />}
-                  <span className="text-sm">{emoji}</span>
-                  <span className="text-sm text-foreground flex-1 min-w-[60px]" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.name || d.kind}</span>
+                  {editMode && <GripVertical size={10} className="text-muted-foreground/30 shrink-0" />}
+                  <DevIcon size={13} className={cn('shrink-0', on ? 'text-primary' : 'text-muted-foreground/40')} />
+                  <span className="text-[13px] text-foreground flex-1 min-w-[60px] truncate">{d.name || d.kind}</span>
 
                   {!editMode && state?.kind === 'light' && state.data.on && !expanded && (
                     <div className="w-14 shrink-0" onClick={(e) => e.stopPropagation()}>
@@ -223,11 +215,11 @@ export default function CategoryCard({
                     </div>
                   )}
 
-                  {d.ha?.entityId && <Wifi size={8} className="text-primary/50 shrink-0" />}
+                  {d.ha?.entityId && <Wifi size={8} className="text-primary/40 shrink-0" />}
                 </div>
 
                 {expanded && !editMode && (
-                  <div className="px-2 pb-2 border-t border-border/20">
+                  <div className="px-2 pb-2 border-t border-border/15">
                     <DeviceControlCard marker={d} />
                   </div>
                 )}
@@ -235,7 +227,7 @@ export default function CategoryCard({
             );
           })}
           {editMode && devices.length === 0 && (
-            <p className="text-[10px] text-muted-foreground text-center py-2">Släpp enheter här</p>
+            <p className="text-[10px] text-muted-foreground/50 text-center py-2">Släpp enheter här</p>
           )}
         </div>
       )}
