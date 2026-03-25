@@ -162,27 +162,27 @@ export default function DashboardShell() {
 
   return (
     <div className="fixed inset-0 flex">
-      {/* ── Nav Rail — deeper, more premium ── */}
+      {/* ── Nav Rail — architectural, premium ── */}
       <nav className={cn(
         'shrink-0 flex flex-col overflow-y-auto overflow-x-hidden transition-all duration-300',
-        'bg-[hsl(222_20%_8%)] border-r border-border/20',
-        collapsed ? 'w-[64px]' : 'w-[160px]'
+        'bg-[hsl(222_20%_6%)] border-r border-[hsl(var(--border)/0.12)]',
+        collapsed ? 'w-[64px]' : 'w-[180px]'
       )}>
         {/* Logo */}
         <div className={cn(
-          'flex items-center py-4',
-          collapsed ? 'justify-center px-2' : 'justify-between px-4'
+          'flex items-center py-6',
+          collapsed ? 'justify-center px-2' : 'justify-between px-5'
         )}>
           <span className={cn(
-            'font-bold tracking-widest text-primary font-display',
-            collapsed ? 'text-xs' : 'text-sm'
+            'font-bold tracking-[0.3em] text-primary font-display',
+            collapsed ? 'text-xs' : 'text-[13px]'
           )}>
             {collapsed ? 'B' : 'BJORQ'}
           </span>
           {!isTablet && (
             <button
               onClick={() => setRailCollapsed(!railCollapsed)}
-              className="text-muted-foreground/40 hover:text-muted-foreground transition-colors"
+              className="text-muted-foreground/30 hover:text-muted-foreground transition-colors p-1"
             >
               {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
             </button>
@@ -190,17 +190,18 @@ export default function DashboardShell() {
         </div>
 
         {/* Nav groups */}
-        <div className="flex-1 flex flex-col gap-1 px-1.5 py-1">
+        <div className="flex-1 flex flex-col gap-0.5 px-2 py-2">
           {NAV_GROUPS.map((group, gi) => (
             <div key={group.label}>
               {gi > 0 && (
                 <div className={cn(
-                  'my-2',
-                  collapsed ? 'mx-2 border-t border-border/20' : 'mx-3 border-t border-border/20'
+                  'my-3',
+                  collapsed ? 'mx-3' : 'mx-4',
+                  'border-t border-[hsl(var(--border)/0.08)]'
                 )} />
               )}
               {!collapsed && (
-                <p className="px-3 py-1 text-[9px] font-semibold uppercase tracking-[0.15em] text-muted-foreground/40">
+                <p className="px-4 py-2 text-[9px] font-semibold uppercase tracking-[0.25em] text-muted-foreground/25">
                   {group.label}
                 </p>
               )}
@@ -214,17 +215,17 @@ export default function DashboardShell() {
                     key={key}
                     onClick={() => handleCategoryClick(key)}
                     className={cn(
-                      'relative flex items-center w-full rounded-xl text-[11px] font-medium transition-all select-none',
+                      'relative flex items-center w-full rounded-xl text-[12px] font-medium transition-all select-none',
                       collapsed
-                        ? 'justify-center px-2 py-2.5'
-                        : 'gap-2.5 px-3 py-2.5 text-left',
+                        ? 'justify-center px-2 py-3'
+                        : 'gap-3 px-4 py-3 text-left',
                       active
-                        ? 'nav-item-active text-primary'
-                        : 'text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent/30 border-l-[3px] border-transparent'
+                        ? 'text-primary bg-[hsl(var(--nav-active-glow))] border-l-[3px] border-primary shadow-[-4px_0_16px_hsl(var(--amber-glow))]'
+                        : 'text-[hsl(var(--sidebar-foreground)/0.4)] hover:text-[hsl(var(--sidebar-foreground)/0.7)] hover:bg-[hsl(var(--sidebar-accent)/0.2)] border-l-[3px] border-transparent'
                     )}
                     title={collapsed ? cat.label : undefined}
                   >
-                    <Icon size={18} strokeWidth={active ? 2.2 : 1.5} className="shrink-0" />
+                    <Icon size={18} strokeWidth={active ? 2.2 : 1.4} className="shrink-0" />
                     {!collapsed && <span className="leading-tight truncate">{cat.label}</span>}
                     {key === 'activity' && unreadCount > 0 && (
                       <span className={cn(
@@ -243,29 +244,29 @@ export default function DashboardShell() {
 
         {/* Bottom: Home + Design shortcuts */}
         <div className={cn(
-          'flex flex-col gap-1 pb-4 pt-2 border-t border-sidebar-border/30',
-          collapsed ? 'px-1.5' : 'px-2'
+          'flex flex-col gap-1 pb-5 pt-3 border-t border-[hsl(var(--border)/0.08)]',
+          collapsed ? 'px-2' : 'px-2'
         )}>
           <button
             onClick={() => setAppMode('home')}
             className={cn(
-              'flex items-center w-full rounded-xl text-[11px] font-medium text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent/30 transition-all border-l-[3px] border-transparent',
-              collapsed ? 'justify-center px-2 py-2.5' : 'gap-2.5 px-3 py-2.5'
+              'flex items-center w-full rounded-xl text-[12px] font-medium text-[hsl(var(--sidebar-foreground)/0.4)] hover:text-[hsl(var(--sidebar-foreground)/0.7)] hover:bg-[hsl(var(--sidebar-accent)/0.2)] transition-all border-l-[3px] border-transparent',
+              collapsed ? 'justify-center px-2 py-3' : 'gap-3 px-4 py-3'
             )}
             title={collapsed ? 'Hemvy' : undefined}
           >
-            <Home size={18} strokeWidth={1.5} className="shrink-0" />
+            <Home size={18} strokeWidth={1.4} className="shrink-0" />
             {!collapsed && <span>Hemvy</span>}
           </button>
           <button
             onClick={() => setAppMode('build')}
             className={cn(
-              'flex items-center w-full rounded-xl text-[11px] font-medium text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent/30 transition-all border-l-[3px] border-transparent',
-              collapsed ? 'justify-center px-2 py-2.5' : 'gap-2.5 px-3 py-2.5'
+              'flex items-center w-full rounded-xl text-[12px] font-medium text-[hsl(var(--sidebar-foreground)/0.4)] hover:text-[hsl(var(--sidebar-foreground)/0.7)] hover:bg-[hsl(var(--sidebar-accent)/0.2)] transition-all border-l-[3px] border-transparent',
+              collapsed ? 'justify-center px-2 py-3' : 'gap-3 px-4 py-3'
             )}
             title={collapsed ? 'Design' : undefined}
           >
-            <PenTool size={18} strokeWidth={1.5} className="shrink-0" />
+            <PenTool size={18} strokeWidth={1.4} className="shrink-0" />
             {!collapsed && <span>Design</span>}
           </button>
         </div>
@@ -273,17 +274,17 @@ export default function DashboardShell() {
 
       {/* ── Main Content ── */}
       <div className="flex-1 min-w-0 flex flex-col overflow-hidden bg-background">
-        {/* Summary strip — ultra-slim with gradient fade */}
-        <div className="shrink-0 flex items-center gap-3 px-5 py-1.5 bg-gradient-to-b from-[hsl(222_20%_9%)] via-[hsl(222_18%_10%/0.5)] to-transparent border-b border-border/8">
+        {/* Summary strip — ultra-slim, barely there */}
+        <div className="shrink-0 flex items-center gap-4 px-6 py-2 bg-[hsl(222_20%_7%/0.8)] backdrop-blur-lg border-b border-[hsl(var(--border)/0.06)]">
           <ClockWidget panel />
           <WeatherWidget />
           <EnergyWidget />
           <ScenesWidget />
         </div>
 
-        {/* Content body with vignette */}
-        <div className="flex-1 min-h-0 overflow-y-auto dashboard-vignette">
-          <div className="p-5 pb-8">
+        {/* Content body — generous spacing */}
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          <div className="p-8 pb-12 max-w-[1400px]">
             <Content />
           </div>
         </div>
