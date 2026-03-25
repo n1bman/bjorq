@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+// @ts-ignore — server JS module without type declarations
 import { assertSafeFilename, assertSafeSegment, resolveInside } from '../../server/storage/safePaths.js';
 
 describe('safePaths', () => {

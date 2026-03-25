@@ -2,6 +2,7 @@
 import { toast } from 'sonner';
 import { Database, Download, Play, Save, Trash2, Upload, XCircle } from 'lucide-react';
 import { useAppStore, getDefaultState, persistHostedProjectNow } from '../../../store/useAppStore';
+import type { DeviceState } from '../../../store/types';
 import { Button } from '../../ui/button';
 import {
   createHostedBackup,
