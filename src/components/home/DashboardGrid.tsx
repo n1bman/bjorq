@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { Home, Cloud, Cpu, Zap, Bell, Video, Settings, Pencil, X, CalendarDays, Bot, Moon, Save, Workflow, Palette, LayoutGrid, Thermometer, Trees, User, Monitor, Database, Link2, Sparkles } from 'lucide-react';
 import { Switch } from '../ui/switch';
 import WeatherHomeImpact from './cards/WeatherHomeImpact';
@@ -174,10 +174,10 @@ function HomeCategory() {
   const previewCamRef = useRef<PreviewCameraState>({ position: [10, 12, 10], target: [0, 0, 0] });
 
   // Time update
-  useState(() => {
+  useEffect(() => {
     const t = setInterval(() => setTime(new Date()), 10_000);
     return () => clearInterval(t);
-  });
+  }, []);
 
   const activeCount = markers.filter((m) => {
     const st = deviceStates[m.id];
