@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
-import { Settings2, Check, GripHorizontal, Minus, Plus } from 'lucide-react';
+import { Settings2, Check, GripHorizontal } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { cn } from '../../lib/utils';
 import type { HomeWidgetKey, WidgetOverlaySize } from '../../store/types';
