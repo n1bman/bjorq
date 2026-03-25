@@ -55,7 +55,7 @@ function createState(): AppState {
     terrain: {} as any,
     wizard: {} as any,
     dashboard: {} as any,
-  } as AppState;
+  } as unknown as AppState;
 }
 
 describe('haMenuSelectors', () => {

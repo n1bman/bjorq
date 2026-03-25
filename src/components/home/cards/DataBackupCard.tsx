@@ -143,7 +143,7 @@ export default function DataBackupCard() {
   const handleLoadDemo = () => {
     const demoLayout = createDemoLayout();
     const demoDevices = createDemoDevices();
-    const deviceStates: Record<string, unknown> = {};
+    const deviceStates: Record<string, DeviceState> = {};
 
     demoDevices.markers.forEach((marker) => {
       deviceStates[marker.id] = getDefaultState(marker.kind);

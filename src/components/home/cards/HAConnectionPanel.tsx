@@ -27,6 +27,7 @@ export default function HAConnectionPanel() {
     connecting: { label: 'Ansluter...', color: 'text-yellow-400', icon: RefreshCw },
     connected: { label: 'Ansluten', color: 'text-green-400', icon: Wifi },
     error: { label: 'Anslutningsfel', color: 'text-destructive', icon: AlertCircle },
+    degraded: { label: 'Degraderad', color: 'text-yellow-500', icon: AlertCircle },
   };
 
   const cfg = statusConfig[status];
