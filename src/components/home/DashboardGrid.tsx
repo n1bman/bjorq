@@ -91,16 +91,12 @@ function HomeCategory() {
   const customCategories = useAppStore((s) => s.customCategories);
   const moveDeviceToCategory = useAppStore((s) => s.moveDeviceToCategory);
   const reorderCategories = useAppStore((s) => s.reorderCategories);
-  const categoryLayouts = useAppStore((s) => s.dashboard.categoryLayouts);
-  const setCategoryLayout = useAppStore((s) => s.setCategoryLayout);
   const saveHomeStartCamera = useAppStore((s) => s.saveHomeStartCamera);
-  const setDashCategory = useAppStore((s) => s.setDashCategory);
   const [showManager, setShowManager] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [draggingCatIndex, setDraggingCatIndex] = useState<number | null>(null);
   const [showSaveView, setShowSaveView] = useState(false);
-  const [selectedRoom, setSelectedRoom] = useState<string | null>(null);
-  const [selectedDevice, setSelectedDevice] = useState<string | null>(null);
+  const [kindFilter, setKindFilter] = useState<DeviceKind | null>(null);
   const previewCamRef = useRef<PreviewCameraState>({ position: [10, 12, 10], target: [0, 0, 0] });
 
   const roomNameMap = useMemo(() => {
@@ -153,6 +149,14 @@ function HomeCategory() {
     ];
   }
 
+  // Apply device kind filter
+  const filteredEntries = kindFilter
+    ? entries.map((e) => ({
+        ...e,
+        devices: e.devices.filter((d) => d.kind === kindFilter),
+      })).filter((e) => e.devices.length > 0)
+    : entries;
+
   const handleDropDevice = (categoryId: string, deviceId: string) => {
     if (categoryId) moveDeviceToCategory(deviceId, categoryId);
   };
@@ -166,207 +170,113 @@ function HomeCategory() {
 
   const density = useAppStore((s) => s.dashboard.density ?? 'balance');
   const setDashboardDensity = useAppStore((s) => s.setDashboardDensity);
-  const deviceStates = useAppStore((s) => s.devices.deviceStates);
-
-  // Selected room data
-  const selectedRoomEntry = selectedRoom ? entries.find((e) => e.key === selectedRoom) : null;
-  const selectedDeviceMarker = selectedDevice ? markers.find((m) => m.id === selectedDevice) : null;
-
-  // Quick action buttons
-  const quickActions = [
-    { label: 'Scener', icon: Palette, action: () => setDashCategory('scenes') },
-    { label: 'Enheter', icon: Cpu, action: () => setDashCategory('devices') },
-    { label: 'Klimat', icon: Thermometer, action: () => setDashCategory('climate') },
-    { label: 'Robot', icon: Bot, action: () => setDashCategory('robot') },
-  ];
 
   return (
     <div className="space-y-6">
-      {/* Toolbar */}
+      {/* Header */}
       <div className="flex items-center justify-between gap-2">
         <div>
-          <p className="label-micro">Kontrollpanel</p>
-          <h2 className="text-xl font-semibold text-foreground font-display mt-1">Hem</h2>
+          <p className="label-micro">Bjorq Home / Nordic Noir</p>
+          <h2 className="text-xl font-semibold text-foreground font-display mt-1">Hem, översatt från nuvarande dashboard</h2>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex items-center rounded-xl border border-[hsl(var(--border)/0.2)] overflow-hidden">
-            {(['calm', 'balance', 'dense'] as const).map((d) => (
-              <button
-                key={d}
-                onClick={() => setDashboardDensity(d)}
-                className={cn(
-                  'px-3 py-1.5 text-[10px] font-medium transition-colors',
-                  density === d
-                    ? 'bg-primary/15 text-primary'
-                    : 'text-muted-foreground hover:text-foreground'
-                )}
-              >
-                {d === 'calm' ? 'Lugn' : d === 'balance' ? 'Balans' : 'Tät'}
-              </button>
-            ))}
-          </div>
           <Button size="sm" variant="ghost" className="h-8 text-[11px]"
             onClick={() => setShowManager(!showManager)}>
-            {showManager ? 'Stäng' : 'Kategorier'}
+            {showManager ? 'Stäng' : 'Hantera kategorier'}
           </Button>
           <Button size="sm" variant={editMode ? 'default' : 'ghost'} className="h-8 text-[11px] gap-1"
             onClick={() => setEditMode(!editMode)}>
-            {editMode ? <><X size={11} /> Klar</> : <><Pencil size={11} /> Anpassa</>}
+            {editMode ? <><X size={11} /> Klar</> : <><Pencil size={11} /> Redigera</>}
           </Button>
         </div>
       </div>
 
       {showManager && <CategoryManager />}
 
-      {/* Three-column layout */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        {/* Left: HOME OVERVIEW (col-span-2) */}
-        <div className="xl:col-span-2 space-y-5">
-          {/* 3D Hero Preview */}
-          <div>
-            <p className="label-micro mb-2">Home Overview</p>
-            <div
-              className="rounded-[24px] overflow-hidden h-[280px] relative cursor-pointer
-                border border-[hsl(var(--glass-border)/0.15)]
-                shadow-[0_16px_48px_hsl(220_20%_4%/0.35),inset_0_1px_0_hsl(0_0%_100%/0.03)]"
-              onDoubleClick={() => setShowSaveView(true)}
-            >
-              <DashboardPreview3D className="absolute inset-0" cameraStateRef={previewCamRef} />
-              {showSaveView && (
-                <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/50 backdrop-blur-sm" onClick={(e) => e.stopPropagation()}>
-                  <div className="nn-widget p-6 w-72 shadow-xl space-y-4">
-                    <p className="text-base font-semibold text-foreground font-display">Spara som startvy?</p>
-                    <p className="text-[13px] text-muted-foreground leading-relaxed">Den aktuella kameravinkeln sparas som din kontrollpanelvy.</p>
-                    <div className="flex gap-3">
-                      <Button size="sm" variant="outline" className="flex-1 h-10" onClick={() => setShowSaveView(false)}>Avbryt</Button>
-                      <Button size="sm" className="flex-1 h-10 gap-1.5" onClick={() => {
-                        saveHomeStartCamera(previewCamRef.current.position, previewCamRef.current.target);
-                        setShowSaveView(false);
-                      }}>
-                        <Save size={13} /> Spara
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
+      {/* 3D Hero Preview */}
+      <div>
+        <p className="label-micro mb-2">Home Overview</p>
+        <p className="text-[13px] text-muted-foreground/60 mb-3">Samma hemvy, men mer lugn och materialitet</p>
+        <div
+          className="rounded-[28px] overflow-hidden h-[280px] relative cursor-pointer
+            border border-[hsl(var(--glass-border)/0.12)]
+            shadow-[0_24px_60px_hsl(220_20%_4%/0.4),inset_0_1px_0_hsl(0_0%_100%/0.03)]"
+          onDoubleClick={() => setShowSaveView(true)}
+        >
+          <DashboardPreview3D className="absolute inset-0" cameraStateRef={previewCamRef} />
+          {/* Overlay text on 3D */}
+          <div className="absolute bottom-4 left-5 z-10">
+            <p className="text-[10px] text-foreground/40 font-medium tracking-wider uppercase">Plan • status</p>
           </div>
-
-          {/* Quick actions */}
-          <div className="grid grid-cols-4 gap-3">
-            {quickActions.map(({ label, icon: Icon, action }) => (
-              <button
-                key={label}
-                onClick={action}
-                className="nn-widget nn-widget-hover flex flex-col items-center gap-2 py-4 px-3 transition-all"
-              >
-                <Icon size={20} className="text-primary" strokeWidth={1.6} />
-                <span className="text-[11px] font-medium text-foreground">{label}</span>
-              </button>
-            ))}
-          </div>
-
-          {/* Room/category cards */}
-          <div>
-            <p className="label-micro mb-3">Rum & enheter</p>
-            <div className={cn(
-              'grid gap-4',
-              density === 'calm' ? 'grid-cols-1 lg:grid-cols-2' :
-              density === 'dense' ? 'grid-cols-2 lg:grid-cols-3' :
-              'grid-cols-1 lg:grid-cols-2'
-            )}>
-              {entries.map((entry, index) => (
-                <div
-                  key={entry.key}
-                  onClick={() => {
-                    setSelectedRoom(entry.key);
-                    setSelectedDevice(null);
-                  }}
-                  className={cn(
-                    'cursor-pointer transition-all',
-                    selectedRoom === entry.key && 'ring-1 ring-primary/30 rounded-[var(--widget-radius)]'
-                  )}
-                >
-                  <CategoryCard
-                    category={entry.label}
-                    categoryId={entry.catId}
-                    devices={entry.devices}
-                    span={false}
-                    editMode={editMode}
-                    categoryIndex={index}
-                    onDropDevice={entry.catId ? (deviceId) => handleDropDevice(entry.catId!, deviceId) : undefined}
-                    onDragCategoryStart={() => setDraggingCatIndex(index)}
-                    onDropCategory={() => handleDropCategory(index)}
-                  />
+          {showSaveView && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/50 backdrop-blur-sm" onClick={(e) => e.stopPropagation()}>
+              <div className="nn-widget p-6 w-72 shadow-xl space-y-4">
+                <p className="text-base font-semibold text-foreground font-display">Spara som startvy?</p>
+                <p className="text-[13px] text-muted-foreground leading-relaxed">Den aktuella kameravinkeln sparas som din kontrollpanelvy.</p>
+                <div className="flex gap-3">
+                  <Button size="sm" variant="outline" className="flex-1 h-10" onClick={() => setShowSaveView(false)}>Avbryt</Button>
+                  <Button size="sm" className="flex-1 h-10 gap-1.5" onClick={() => {
+                    saveHomeStartCamera(previewCamRef.current.position, previewCamRef.current.target);
+                    setShowSaveView(false);
+                  }}>
+                    <Save size={13} /> Spara
+                  </Button>
                 </div>
-              ))}
-            </div>
-          </div>
-
-          {entries.length === 0 && (
-            <div className="text-center py-12 space-y-3">
-              <p className="text-base text-muted-foreground font-display">Inga enheter ännu</p>
-              <p className="text-[13px] text-muted-foreground/50 max-w-sm mx-auto leading-relaxed">
-                Gå till Design → Inredning → Enheter för att placera enheter i ditt hem
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* Right: Context panel (AKTIVT RUM + VALD ENHET) */}
-        <div className="hidden xl:block space-y-5">
-          {/* AKTIVT RUM */}
-          <div className="nn-widget p-5 space-y-4 sticky top-0">
-            <p className="label-micro">Aktivt rum</p>
-            {selectedRoomEntry ? (
-              <>
-                <h3 className="text-lg font-semibold text-foreground font-display">
-                  {selectedRoomEntry.label.replace(/^[\p{Emoji}\s]+/u, '').trim()}
-                </h3>
-                <div className="space-y-1">
-                  {selectedRoomEntry.devices.map((d) => {
-                    const st = deviceStates[d.id];
-                    const isDevOn = st && 'on' in st.data ? (st.data as any).on : false;
-                    return (
-                      <button
-                        key={d.id}
-                        onClick={() => setSelectedDevice(d.id)}
-                        className={cn(
-                          'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all',
-                          selectedDevice === d.id
-                            ? 'bg-primary/10 border border-primary/20'
-                            : 'hover:bg-[hsl(var(--surface-elevated)/0.5)] border border-transparent'
-                        )}
-                      >
-                        <span className={cn('w-2 h-2 rounded-full shrink-0', isDevOn ? 'bg-primary' : 'bg-muted-foreground/30')} />
-                        <span className="text-[13px] text-foreground flex-1 truncate">{d.name || d.kind}</span>
-                        {st?.kind === 'light' && isDevOn && (
-                          <span className="text-[10px] text-muted-foreground">{Math.round(((st.data as any).brightness / 255) * 100)}%</span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              </>
-            ) : (
-              <div className="py-8 text-center">
-                <p className="text-[13px] text-muted-foreground/50">Välj ett rum för att se enheter</p>
               </div>
-            )}
-          </div>
-
-          {/* VALD ENHET */}
-          {selectedDeviceMarker && (
-            <div className="nn-widget p-5 space-y-3">
-              <p className="label-micro">Vald enhet</p>
-              <h3 className="text-base font-semibold text-foreground font-display">
-                {selectedDeviceMarker.name || selectedDeviceMarker.kind}
-              </h3>
-              <DeviceControlCard marker={selectedDeviceMarker} />
             </div>
           )}
         </div>
       </div>
+
+      {/* Device filter tabs */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+        {deviceFilters.map(({ key, label }) => (
+          <button
+            key={key}
+            onClick={() => setKindFilter(key === 'all' ? null : key as DeviceKind)}
+            className={cn(
+              'px-3.5 py-1.5 rounded-full text-[11px] font-medium transition-all shrink-0 border',
+              (key === 'all' && !kindFilter) || kindFilter === key
+                ? 'bg-foreground/10 text-foreground border-[hsl(var(--border)/0.3)]'
+                : 'text-muted-foreground/60 hover:text-foreground border-transparent hover:border-[hsl(var(--border)/0.15)]'
+            )}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* Room/category cards — two-column grid */}
+      <div className={cn(
+        'grid gap-5',
+        density === 'calm' ? 'grid-cols-1 lg:grid-cols-2' :
+        density === 'dense' ? 'grid-cols-2 lg:grid-cols-3' :
+        'grid-cols-1 lg:grid-cols-2'
+      )}>
+        {filteredEntries.map((entry, index) => (
+          <CategoryCard
+            key={entry.key}
+            category={entry.label}
+            categoryId={entry.catId}
+            devices={entry.devices}
+            span={false}
+            editMode={editMode}
+            categoryIndex={index}
+            onDropDevice={entry.catId ? (deviceId) => handleDropDevice(entry.catId!, deviceId) : undefined}
+            onDragCategoryStart={() => setDraggingCatIndex(index)}
+            onDropCategory={() => handleDropCategory(index)}
+          />
+        ))}
+      </div>
+
+      {filteredEntries.length === 0 && (
+        <div className="text-center py-12 space-y-3">
+          <p className="text-base text-muted-foreground font-display">Inga enheter ännu</p>
+          <p className="text-[13px] text-muted-foreground/50 max-w-sm mx-auto leading-relaxed">
+            Gå till Design → Inredning → Enheter för att placera enheter i ditt hem
+          </p>
+        </div>
+      )}
     </div>
   );
 }
