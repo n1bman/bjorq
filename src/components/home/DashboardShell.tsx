@@ -4,10 +4,6 @@ import { cn } from '../../lib/utils';
 import { useAppStore } from '../../store/useAppStore';
 import { useWeatherSync } from '../../hooks/useWeatherSync';
 import { categories, categoryContent } from './DashboardGrid';
-import ClockWidget from './cards/ClockWidget';
-import WeatherWidget from './cards/WeatherWidget';
-import EnergyWidget from './cards/EnergyWidget';
-import ScenesWidget from './cards/ScenesWidget';
 import type { DashCategory } from '../../store/types';
 
 // Group categories for nav
@@ -242,7 +238,7 @@ export default function DashboardShell() {
           ))}
         </div>
 
-        {/* Bottom: Home + Design shortcuts */}
+        {/* Bottom: Home + Design + Hemstatus */}
         <div className={cn(
           'flex flex-col gap-1 pb-5 pt-3 border-t border-[hsl(var(--border)/0.08)]',
           collapsed ? 'px-2' : 'px-2'
@@ -269,18 +265,15 @@ export default function DashboardShell() {
             <PenTool size={18} strokeWidth={1.4} className="shrink-0" />
             {!collapsed && <span>Design</span>}
           </button>
+          {/* Hemstatus */}
+          <NavHomeStatus collapsed={collapsed} />
         </div>
       </nav>
 
       {/* ── Main Content ── */}
       <div className="flex-1 min-w-0 flex flex-col overflow-hidden bg-background">
-        {/* Summary strip — ultra-slim, barely there */}
-        <div className="shrink-0 flex items-center gap-4 px-6 py-2 bg-[hsl(222_20%_7%/0.8)] backdrop-blur-lg border-b border-[hsl(var(--border)/0.06)]">
-          <ClockWidget panel />
-          <WeatherWidget />
-          <EnergyWidget />
-          <ScenesWidget />
-        </div>
+        {/* Summary strip — typographic, Nordic Noir */}
+        <SummaryBar />
 
         {/* Content body — generous spacing */}
         <div className="flex-1 min-h-0 overflow-y-auto">
@@ -289,6 +282,75 @@ export default function DashboardShell() {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+/* ── Summary Bar — typographic strip ── */
+function SummaryBar() {
+  const weather = useAppStore((s) => s.environment.weather);
+  const markers = useAppStore((s) => s.devices.markers);
+  const deviceStates = useAppStore((s) => s.devices.deviceStates);
+  const [time, setTime] = useState(new Date());
+
+  useEffect(() => {
+    const t = setInterval(() => setTime(new Date()), 10_000);
+    return () => clearInterval(t);
+  }, []);
+
+  const activeCount = markers.filter((m) => {
+    const st = deviceStates[m.id];
+    if (!st) return false;
+    if ('on' in st.data) return (st.data as any).on;
+    return false;
+  }).length;
+
+  const timeStr = time.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
+
+  const items = [
+    { label: 'TID', value: timeStr },
+    { label: 'UTE', value: `${Math.round(weather.temperature)}°` },
+    { label: 'ENERGI', value: `${activeCount > 0 ? activeCount * 12 : 0} W` },
+    { label: 'KOMFORT', value: '21.5°' },
+  ];
+
+  return (
+    <div className="shrink-0 flex items-center gap-8 px-6 py-2.5 bg-[hsl(222_20%_5%/0.9)] backdrop-blur-xl border-b border-[hsl(var(--border)/0.06)]">
+      {items.map((item) => (
+        <div key={item.label} className="flex flex-col">
+          <span className="label-micro">{item.label}</span>
+          <span className="value-display text-lg text-foreground">{item.value}</span>
+        </div>
+      ))}
+      <div className="flex-1" />
+      <span className="text-[10px] text-muted-foreground/30 font-medium tracking-wider">BJORQ</span>
+    </div>
+  );
+}
+
+/* ── Nav Home Status ── */
+function NavHomeStatus({ collapsed }: { collapsed: boolean }) {
+  const markers = useAppStore((s) => s.devices.markers);
+  const deviceStates = useAppStore((s) => s.devices.deviceStates);
+  const activeCount = markers.filter((m) => {
+    const st = deviceStates[m.id];
+    if (!st) return false;
+    if ('on' in st.data) return (st.data as any).on;
+    return false;
+  }).length;
+
+  return (
+    <div className={cn(
+      'flex items-center gap-2 rounded-xl px-3 py-2 mt-1',
+      'bg-[hsl(var(--surface-sunken))] border border-[hsl(var(--border)/0.08)]'
+    )}>
+      <span className={cn('w-2 h-2 rounded-full shrink-0', activeCount > 0 ? 'bg-green-400' : 'bg-muted-foreground/30')} />
+      {!collapsed && (
+        <div className="flex flex-col min-w-0">
+          <span className="text-[9px] font-semibold uppercase tracking-[0.2em] text-muted-foreground/30">Hemstatus</span>
+          <span className="text-[11px] text-foreground/60">{activeCount} aktiva</span>
+        </div>
+      )}
     </div>
   );
 }
