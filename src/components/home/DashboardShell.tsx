@@ -82,8 +82,8 @@ export default function DashboardShell() {
       {/* ── Main Content Area ── */}
       <div className="flex-1 min-w-0 flex flex-col overflow-hidden bg-background">
         {/* Top summary cards */}
-        <div className="shrink-0 flex items-start gap-3 px-5 py-3 summary-bar overflow-x-auto">
-          <ClockWidget />
+        <div className="shrink-0 flex items-center gap-3 px-5 py-2.5 summary-bar overflow-x-auto">
+          <ClockWidget panel />
           <WeatherWidget />
           <EnergyWidget />
           <ScenesWidget />

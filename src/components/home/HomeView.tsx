@@ -60,7 +60,7 @@ export default function HomeView({ longPressDeviceId, onDismissLongPress, fpsAct
     return true;
   };
 
-  const handlePointerDown = useCallback((id: string) => {
+  const handlePointerDown = useCallback((_id: string) => {
     longPressTimerRef.current = setTimeout(() => {}, 500);
   }, []);
 
