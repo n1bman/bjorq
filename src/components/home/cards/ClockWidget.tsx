@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
+import type { WidgetOverlaySize } from '../../../store/types';
 
 interface Props {
-  /** When true, renders as full panel (dashboard). Default: minimal overlay (Hem). */
+  /** When true, renders as full panel (dashboard). */
   panel?: boolean;
+  /** Overlay size mode */
+  size?: WidgetOverlaySize;
 }
 
-export default function ClockWidget({ panel }: Props = {}) {
+export default function ClockWidget({ panel, size = 'normal' }: Props) {
   const [now, setNow] = useState(new Date());
 
   useEffect(() => {
@@ -32,7 +35,28 @@ export default function ClockWidget({ panel }: Props = {}) {
     );
   }
 
-  // Overlay mode — pure typography, minimal chrome
+  // Compact overlay
+  if (size === 'compact') {
+    return (
+      <div className="overlay-widget">
+        <p className="text-xl font-bold font-display text-foreground tracking-tight leading-none">{time}</p>
+      </div>
+    );
+  }
+
+  // Expanded overlay
+  if (size === 'expanded') {
+    const seconds = now.toLocaleTimeString('sv-SE', { second: '2-digit' }).split(':').pop();
+    return (
+      <div className="overlay-widget">
+        <p className="text-3xl font-bold font-display text-foreground tracking-tight leading-none">{time}<span className="text-lg text-muted-foreground/50">:{seconds}</span></p>
+        <p className="text-[10px] text-muted-foreground/70 capitalize mt-1 tracking-wide">{date}</p>
+        <p className="text-[9px] text-muted-foreground/50 mt-0.5">Vecka {getWeekNumber(now)}</p>
+      </div>
+    );
+  }
+
+  // Normal overlay — pure typography, minimal chrome
   return (
     <div className="overlay-widget">
       <p className="text-3xl font-bold font-display text-foreground tracking-tight leading-none">{time}</p>
