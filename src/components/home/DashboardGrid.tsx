@@ -166,6 +166,47 @@ function ActiveRoomWidget({ selectedRoomId, setSelectedRoomId, rooms, markers }:
     </div>
   );
 }
+
+function HomeCategory() {
+  const markers = useAppStore((s) => s.devices.markers);
+  const floors = useAppStore((s) => s.layout.floors);
+  const customCategories = useAppStore((s) => s.customCategories);
+  const moveDeviceToCategory = useAppStore((s) => s.moveDeviceToCategory);
+  const reorderCategories = useAppStore((s) => s.reorderCategories);
+  const saveHomeStartCamera = useAppStore((s) => s.saveHomeStartCamera);
+  const weather = useAppStore((s) => s.environment.weather);
+  const deviceStates = useAppStore((s) => s.devices.deviceStates);
+  const [showManager, setShowManager] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [draggingCatIndex, setDraggingCatIndex] = useState<number | null>(null);
+  const [showSaveView, setShowSaveView] = useState(false);
+  const [kindFilter, setKindFilter] = useState<DeviceKind | null>(null);
+  const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
+  const [time, setTime] = useState(new Date());
+  const previewCamRef = useRef<PreviewCameraState>({ position: [10, 12, 10], target: [0, 0, 0] });
+
+  useEffect(() => {
+    const t = setInterval(() => setTime(new Date()), 10_000);
+    return () => clearInterval(t);
+  }, []);
+
+  const activeCount = markers.filter((m) => {
+    const st = deviceStates[m.id];
+    if (!st) return false;
+    if ('on' in st.data) return (st.data as any).on;
+    return false;
+  }).length;
+  const wattage = activeCount > 0 ? activeCount * 12 : 0;
+  const timeStr = time.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
+  const dateStr = time.toLocaleDateString('sv-SE', { weekday: 'short', day: 'numeric', month: 'short' });
+
+  const allRooms = useMemo(() => {
+    const result: { id: string; name: string }[] = [];
+    for (const floor of floors) {
+      for (const room of floor.rooms) {
+        result.push({ id: room.id, name: room.name || 'Rum' });
+      }
+    }
     return result;
   }, [floors]);
 
