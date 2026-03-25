@@ -161,30 +161,30 @@ export default function EnergyDeviceList() {
       </div>
 
       {(powerSensors.length > 0 || energySensors.length > 0) && (
-        <div className="glass-panel rounded-2xl p-4">
+        <div className="nn-widget p-4">
           <div className="mb-3 flex items-center gap-2">
             <Link2 size={14} className="text-muted-foreground" />
-            <h4 className="text-xs font-semibold text-foreground">Tillgangliga HA-sensorer</h4>
+            <h4 className="text-xs font-semibold text-foreground">HA-sensorer</h4>
           </div>
           <div className="grid grid-cols-2 gap-3 text-xs">
-            <div className="rounded-xl bg-secondary/20 p-3">
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Effekt</p>
-              <p className="mt-1 text-lg font-semibold text-foreground">{powerSensors.length}</p>
+            <div className="rounded-xl bg-surface-elevated/40 p-3">
+              <p className="text-[9px] uppercase tracking-wider text-muted-foreground/60">Effekt</p>
+              <p className="mt-1 text-lg font-semibold font-display text-foreground">{powerSensors.length}</p>
             </div>
-            <div className="rounded-xl bg-secondary/20 p-3">
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Energi</p>
-              <p className="mt-1 text-lg font-semibold text-foreground">{energySensors.length}</p>
+            <div className="rounded-xl bg-surface-elevated/40 p-3">
+              <p className="text-[9px] uppercase tracking-wider text-muted-foreground/60">Energi</p>
+              <p className="mt-1 text-lg font-semibold font-display text-foreground">{energySensors.length}</p>
             </div>
           </div>
-          <p className="mt-3 text-[10px] text-muted-foreground/70">Koppla sensorer till placerade enheter for live watt och kWh. Det gor energimenyn framtidssaker nar du senare lagger till fler matare i HA.</p>
+          <p className="mt-3 text-[10px] text-muted-foreground/60">Koppla sensorer till placerade enheter för live watt och kWh.</p>
         </div>
       )}
 
       {chartData.length > 0 && (
-        <div className="glass-panel rounded-2xl p-4">
+        <div className="nn-widget p-4">
           <div className="mb-3 flex items-center gap-2">
-            <TrendingUp size={14} className="text-muted-foreground" />
-            <h4 className="text-xs font-semibold text-foreground">Veckoforbrukning per enhet</h4>
+            <TrendingUp size={14} className="text-primary" />
+            <h4 className="text-xs font-semibold text-foreground">Veckoförbrukning per enhet</h4>
           </div>
           <div className="h-40">
             <ResponsiveContainer width="100%" height="100%">
@@ -204,8 +204,8 @@ export default function EnergyDeviceList() {
       )}
 
       {trackedDevices.length > 0 && (
-        <div className="glass-panel space-y-2 rounded-2xl p-4">
-          <h4 className="mb-2 text-xs font-semibold text-foreground">Enheter med energiovervakning</h4>
+        <div className="nn-widget p-4 space-y-2">
+          <h4 className="mb-2 text-xs font-semibold text-foreground">Enhetsranking</h4>
           {trackedDevices
             .sort((a, b) => getDeviceWatts(b) - getDeviceWatts(a))
             .map((marker) => {
@@ -220,10 +220,10 @@ export default function EnergyDeviceList() {
                       {watts} W {livePower && <span className="ml-0.5 text-[8px] text-primary">LIVE</span>}
                     </span>
                   </div>
-                  <div className="h-1.5 overflow-hidden rounded-full bg-muted">
-                    <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${pct}%` }} />
+                  <div className="h-1 overflow-hidden rounded-full bg-surface-elevated">
+                    <div className="h-full rounded-full bg-primary/70 transition-all" style={{ width: `${pct}%` }} />
                   </div>
-                  <div className="flex gap-3 text-[9px] text-muted-foreground">
+                  <div className="flex gap-3 text-[9px] text-muted-foreground/60">
                     <span>Dag: {getDeviceDailyKwh(marker).toFixed(1)} kWh</span>
                     <span>~{(getDeviceDailyKwh(marker) * energyConfig.pricePerKwh).toFixed(1)} {energyConfig.currency}</span>
                   </div>
@@ -233,8 +233,8 @@ export default function EnergyDeviceList() {
         </div>
       )}
 
-      <div className="glass-panel space-y-2 rounded-2xl p-4">
-        <h4 className="mb-2 text-xs font-semibold text-foreground">Aktivera energiovervakning</h4>
+      <div className="nn-widget p-4 space-y-2">
+        <h4 className="mb-2 text-xs font-semibold text-foreground">Energiövervakning</h4>
         <div className="max-h-80 space-y-2.5 overflow-y-auto">
           {markers.map((marker) => (
             <div key={marker.id} className="space-y-1 rounded-xl bg-secondary/10 p-3">
