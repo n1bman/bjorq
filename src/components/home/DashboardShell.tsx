@@ -307,23 +307,25 @@ function SummaryBar() {
 
   const timeStr = time.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
 
+  const dateStr = time.toLocaleDateString('sv-SE', { weekday: 'short', day: 'numeric', month: 'short' });
+  const wattage = activeCount > 0 ? activeCount * 12 : 0;
+
   const items = [
-    { label: 'TID', value: timeStr },
-    { label: 'UTE', value: `${Math.round(weather.temperature)}°` },
-    { label: 'ENERGI', value: `${activeCount > 0 ? activeCount * 12 : 0} W` },
-    { label: 'KOMFORT', value: '21.5°' },
+    { label: 'TID', value: timeStr, detail: dateStr },
+    { label: 'UTE', value: `${Math.round(weather.temperature)}°`, detail: weather.condition || 'Klart' },
+    { label: 'ENERGI', value: `${wattage} W`, detail: wattage > 50 ? 'Hög förbrukning' : 'Normal' },
+    { label: 'KOMFORT', value: '21.5°', detail: 'Optimal' },
   ];
 
   return (
-    <div className="shrink-0 flex items-center gap-8 px-6 py-2.5 bg-[hsl(222_20%_5%/0.9)] backdrop-blur-xl border-b border-[hsl(var(--border)/0.06)]">
+    <div className="shrink-0 grid grid-cols-4 gap-[1px] bg-[hsl(var(--border)/0.08)] border-b border-[hsl(var(--border)/0.08)]">
       {items.map((item) => (
-        <div key={item.label} className="flex flex-col">
+        <div key={item.label} className="flex flex-col gap-0.5 px-5 py-3 bg-[hsl(222_20%_5%/0.95)]">
           <span className="label-micro">{item.label}</span>
-          <span className="value-display text-lg text-foreground">{item.value}</span>
+          <span className="value-display text-xl text-foreground">{item.value}</span>
+          <span className="text-[10px] text-muted-foreground/30 font-medium">{item.detail}</span>
         </div>
       ))}
-      <div className="flex-1" />
-      <span className="text-[10px] text-muted-foreground/30 font-medium tracking-wider">BJORQ</span>
     </div>
   );
 }
