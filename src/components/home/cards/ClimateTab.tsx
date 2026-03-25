@@ -311,8 +311,40 @@ export default function ClimateTab() {
     })
     .filter(Boolean) as { id: string; name: string; current: number; target: number }[];
 
+  // Hero stats
+  const avgTemp = climateDevices.length > 0
+    ? climateDevices.reduce((s, d) => s + d.current, 0) / climateDevices.length
+    : null;
+  const withinGoal = climateDevices.filter((d) => Math.abs(d.current - d.target) <= 2).length;
+  const deviating = climateDevices.length - withinGoal;
+
   return (
     <div className="space-y-4">
+      {/* Hero section — average temp + status */}
+      <div className="nn-widget p-5">
+        <div className="flex items-center gap-6">
+          <div className="text-center">
+            <p className="text-4xl font-bold font-display text-foreground tracking-tight">
+              {avgTemp !== null ? `${avgTemp.toFixed(1)}°` : '--°'}
+            </p>
+            <p className="text-[9px] uppercase tracking-wider text-muted-foreground/60 mt-1">Snitt inomhus</p>
+          </div>
+          <div className="h-12 w-px bg-border/30" />
+          <div className="space-y-1">
+            <p className="text-sm text-foreground font-medium">
+              {climateDevices.length === 0
+                ? 'Inga klimatenheter'
+                : deviating === 0
+                ? '✓ Alla rum inom mål'
+                : `${deviating} rum avviker`}
+            </p>
+            <p className="text-[10px] text-muted-foreground/60">
+              {climateDevices.length} rum · {withinGoal} inom mål
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* 1. Room comparison — all rooms at a glance */}
       <ClimateRoomComparison />
 

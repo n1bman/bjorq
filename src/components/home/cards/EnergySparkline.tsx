@@ -77,20 +77,16 @@ export default function EnergySparkline({ width = 280, height = 60, totalWatts, 
       </defs>
       {/* Fill area */}
       <path d={fillD} fill="url(#sparkline-grad)" />
-      {/* Line */}
+      {/* Line — animated draw */}
       <path
         d={pathD}
         fill="none"
         stroke="hsl(var(--primary))"
         strokeWidth="2"
         strokeLinecap="round"
-        className="animate-[sparkline-draw_1.5s_ease-out_forwards]"
-        style={{
-          strokeDasharray: width * 2,
-          strokeDashoffset: 0,
-        }}
+        className="sparkline-line"
       />
-      {/* Current time indicator */}
+      {/* Current time indicator — pulsing */}
       <line
         x1={currentX} y1={0} x2={currentX} y2={height}
         stroke="hsl(var(--primary))"
@@ -98,11 +94,19 @@ export default function EnergySparkline({ width = 280, height = 60, totalWatts, 
         strokeDasharray="2 2"
         opacity="0.4"
       />
-      {/* Peak markers */}
+      <circle cx={currentX} cy={points[hour]?.y ?? height / 2} r="4" fill="hsl(var(--primary))" className="sparkline-pulse" />
+      {/* Peak markers with hover tooltips */}
       {peaks.map((p, i) => (
-        <g key={i}>
-          <circle cx={p.x} cy={p.y} r="3" fill="hsl(var(--primary))" opacity="0.8" />
-          <circle cx={p.x} cy={p.y} r="5" fill="none" stroke="hsl(var(--primary))" strokeWidth="1" opacity="0.3" />
+        <g key={i} className="group cursor-pointer">
+          <circle cx={p.x} cy={p.y} r="3.5" fill="hsl(var(--primary))" opacity="0.9" />
+          <circle cx={p.x} cy={p.y} r="6" fill="none" stroke="hsl(var(--primary))" strokeWidth="1" opacity="0.3" className="sparkline-pulse" />
+          {/* Tooltip */}
+          <g className="opacity-0 group-hover:opacity-100 transition-opacity">
+            <rect x={p.x - 24} y={p.y - 22} width="48" height="16" rx="4" fill="hsl(var(--card))" stroke="hsl(var(--border))" strokeWidth="0.5" />
+            <text x={p.x} y={p.y - 11} textAnchor="middle" fill="hsl(var(--primary))" fontSize="8" fontWeight="600">
+              {Math.round(p.value)}W
+            </text>
+          </g>
         </g>
       ))}
     </svg>
