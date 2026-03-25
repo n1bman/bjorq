@@ -1,114 +1,45 @@
 
 
-# BJORQ Nordic Noir — Implementera designvisionen från screenshots
+# BJORQ Nordic Noir — Visuell korrigering
 
-## Analys av vad screenshots visar vs nuläge
+## Vad som behöver fixas (från dina bilder)
 
-Bilderna visar en specifik visuell riktning som skiljer sig från nuläget på flera sätt:
+### 1. Summary bar (bild 1)
+Ska vara **fyra separata kort/celler i ett grid** med synliga borders/ramar — inte bara text i en flat strip. Varje cell har `label-micro` + stort värde + en tredje rad med detalj (datum, väderbeskrivning, pris, status).
 
-### Vad som behöver ändras
+### 2. Ta bort placeholder-texter
+Radera:
+- `"Bjorq Home / Nordic Noir"` + `"Hem, översatt från nuvarande dashboard"`
+- `"Home Overview"` + `"Samma hemvy, men mer lugn och materialitet"`
 
-**1. Kontrollpanelens Hem-vy (DashboardGrid HomeCategory)**
-- **Nu:** Toolbar + SortableWidgetGrid med WidgetCard-wrapping
-- **Vision:** Tre-kolumnslayout med:
-  - Kolumn 1-2: "HOME OVERVIEW" hero-sektion med 3D-preview + snabbkontroller (Scener, Enheter, Klimat, Robot) + rumskort under med device filter tabs
-  - Kolumn 3: Kontextpanel som visar "AKTIVT RUM" (valt rum med enheter) och "VALD ENHET" (detaljer för vald enhet)
+### 3. Trekolumnslayout med 3D + Aktivt rum (bild 4a)
+- Vänster: 3D-preview (hero) med snabbknappar (Scener, Enheter, Klimat, Robot) inuti/under
+- Höger: "AKTIVT RUM" panel där användaren väljer rum och ser enheter
+- Men detta är **fritt** — inte låst i exakt denna layout
 
-**2. Summary bar (toppen)**
-- **Nu:** Slim strip med widget-komponenter
-- **Vision:** Större typografi med `label-micro` ovanför stora värden (TID → 14:00, UTE → 7C, ENERGI → 0 W, KOMFORT → 21.5). Mer Nordic Noir-känsla med tydligare hierarki.
+### 4. Switch/toggle (bild 5)
+Nuvarande switch är för ljus. Ska ha **mörkare track** (off = mörk, on = amber) med en **mörkare thumb**. Matcha Nordic Noir-temat.
 
-**3. Nav rail (vänster)**
-- **Nu:** Fungerar men gruppnamn och spacing kan förbättras
-- **Vision:** Tydligare vertikal lista, alla kategorier synliga med labels, "Hemvy"/"Design" + "Hemstatus 18 aktiva" längst ner
-
-**4. Höger kontextpanel (NY)**
-- Visar info om aktivt rum och vald enhet
-- Visar shell-info, Visual DNA-beskrivning
-- Responsiv: visas på desktop, dold på tablet/mobil
+### 5. Färgsättning och känsla
+- Text som `label-micro` ska ha rätt opacity
+- Amber brightness-bars ska vara mer levande
+- Generellt mörkare, mer premium-känsla
 
 ---
 
-## Fasindelning
+## Ändrade filer
 
-### Fas 1: Summary bar — typografisk uppgradering
-**Fil:** `DashboardShell.tsx` rad 278-283
-
-Byt ut widget-komponenterna i summary bar mot en ren typografisk strip:
-- Fyra kolumner: TID, UTE, ENERGI, KOMFORT
-- Varje med `label-micro` rubrik + stort `value-display` värde
-- Hämta data från befintliga store-hooks (weather, energy, comfort)
-
-### Fas 2: Hem-kategori — trekolumnslayout med kontextpanel
-**Fil:** `DashboardGrid.tsx` HomeCategory (rad 91-351)
-
-Bygg om HomeCategory till trekolumnslayout:
-- **Vänster (col-span-2):**
-  - "HOME OVERVIEW" hero med 3D-preview (behåll DashboardPreview3D)
-  - Grid med snabbkontroll-knappar (Scener, Enheter, Klimat, Robot)
-  - Device filter tabs (Alla, Ljus, Armaturer, etc.) — redan finns
-  - Rumskort under (CategoryCard per rum) — redan finns
-- **Höger (col-span-1):**
-  - "AKTIVT RUM" — visar valt rum med enheter och inline-kontroller
-  - "VALD ENHET" — visar detaljkontroll (ljusstyrka, ton, scener)
-  - State: `selectedRoom`, `selectedDevice` via useState
-
-### Fas 3: Nav rail — polish och hemstatus
-**Fil:** `DashboardShell.tsx` nav (rad 166-273)
-
-- Visa alla kategorier med labels (inte collapsed som default på desktop)
-- Lägg till "Hemstatus" längst ner med antal aktiva enheter
-- Fixa spacing och typografi enligt screenshots
-
-### Fas 4: Nordic Noir visuell polish
-**Fil:** `index.css`
-
-- Summary bar: mörkare bakgrund, subtilare border
-- Rumskort: varmare amber-glow på aktiva enheter med brightness-bar
-- Generellt: mer luft mellan sektioner, tydligare label-micro-hierarki
-
----
-
-## Tekniska detaljer
-
-### Summary bar data
-```tsx
-// Hämta från befintliga hooks/store
-const weather = useAppStore(s => s.weather);
-const markers = useAppStore(s => s.devices.markers);
-const deviceStates = useAppStore(s => s.devices.deviceStates);
-// Beräkna komfortvärde från comfort engine
-```
-
-### Trekolumnslayout
-```text
-┌─────────────────────────┬───────────┐
-│ HOME OVERVIEW           │ AKTIVT    │
-│ [3D Preview]            │ RUM       │
-│ [Scener][Enheter]       │ Vardags.. │
-│ [Klimat][Robot]         │ enheter.. │
-│                         │           │
-│ [Alla][Ljus][Arma...]   │ VALD      │
-│ ┌─Sovrum──┐ ┌─Badrum─┐  │ ENHET     │
-│ │ lamp 68%│ │lamp 78%│  │ Slider..  │
-│ └─────────┘ └────────┘  │ Tonval..  │
-│ ┌─Övrigt──┐ ┌─Hem────┐  │           │
-│ │ TV      │ │Vacuum  │  │           │
-│ └─────────┘ └────────┘  │           │
-└─────────────────────────┴───────────┘
-```
-
-### Ändrade filer
 | Fil | Ändring |
 |-----|---------|
-| `DashboardShell.tsx` | Summary bar typografi, nav rail polish, hemstatus |
-| `DashboardGrid.tsx` | HomeCategory trekolumnslayout med kontextpanel |
-| `index.css` | Eventuella nya utility-klasser |
+| `DashboardShell.tsx` → `SummaryBar` | Grid med 4 celler, borders, tredje rad detalj |
+| `DashboardGrid.tsx` → `HomeCategory` | Ta bort placeholder-text, behåll 3D + filter + cards |
+| `switch.tsx` | Mörkare track + thumb som matchar Nordic Noir |
+| `index.css` | Eventuella justeringar av `nn-widget`, summary-bar tokens |
 
-### Bevaras
-- All befintlig logik (store, hooks, HA-integration, 3D)
-- CategoryCard-komponenten (rumskort)
-- DeviceControlCard (enhetsdetaljer)
-- SortableWidgetGrid (dragfunktion i edit-mode)
-- Tablet/mobil-layouter (anpassas med responsiva breakpoints)
+## Implementationsordning
+
+1. **SummaryBar** — grid med ramar, tre rader per cell (label, value, detalj)
+2. **HomeCategory** — rensa bort texter, behåll 3D hero + filter + rumskort
+3. **Switch** — mörkare track off-state, mörkare thumb, amber on-state med glow
+4. **CSS polish** — summary-bar grid tokens
 
