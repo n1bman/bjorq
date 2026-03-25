@@ -46,17 +46,24 @@
     --sidebar-ring: 34 80% 52%;
 
     /* Custom tokens */
-    --glass: 222 16% 15% / 0.72;
-    --glass-border: 222 12% 25%;
-    --amber-glow: 34 80% 52% / 0.12;
+    --glass: 222 16% 13% / 0.78;
+    --glass-border: 222 12% 22%;
+    --amber-glow: 34 80% 52% / 0.10;
     --info: 200 65% 52%;
     --info-foreground: 222 18% 9%;
-    --surface: 222 14% 16%;
+    --surface: 222 14% 14%;
+    --surface-elevated: 222 14% 17%;
+    --surface-sunken: 222 20% 8%;
 
     /* Premium tokens */
-    --warm-glow: 34 80% 52% / 0.08;
-    --card-hover-glow: 34 60% 50% / 0.06;
-    --nav-active-glow: 34 80% 52% / 0.15;
+    --warm-glow: 34 80% 52% / 0.06;
+    --card-hover-glow: 34 60% 50% / 0.05;
+    --nav-active-glow: 34 80% 52% / 0.12;
+    --glow-amber-subtle: 34 80% 52% / 0.08;
+
+    /* Widget tokens */
+    --widget-radius: 1.25rem;
+    --widget-border: 222 12% 18% / 0.4;
 
     /* Spacing tokens */
     --space-panel: 1rem;
@@ -106,15 +113,16 @@
   }
 }
 
-/* Glass morphism utility */
+/* Glass morphism utility — Nordic Noir: deeper, more material */
 @layer components {
   .glass-panel {
     background: hsl(var(--glass));
-    backdrop-filter: blur(20px);
-    border: 1px solid hsl(var(--glass-border) / 0.4);
+    backdrop-filter: blur(24px) saturate(1.2);
+    border: 1px solid hsl(var(--glass-border) / 0.3);
     box-shadow:
-      0 8px 32px 0 hsl(220 20% 4% / 0.25),
-      inset 0 1px 0 0 hsl(0 0% 100% / 0.03);
+      0 8px 32px 0 hsl(220 20% 4% / 0.35),
+      inset 0 1px 0 0 hsl(0 0% 100% / 0.02),
+      inset 0 -1px 0 0 hsl(220 20% 4% / 0.15);
     padding: var(--space-panel);
   }
 
@@ -123,20 +131,68 @@
   }
   .glass-panel-hover:hover {
     box-shadow:
-      0 8px 32px 0 hsl(220 20% 4% / 0.3),
-      0 0 20px hsl(var(--card-hover-glow)),
-      inset 0 1px 0 0 hsl(0 0% 100% / 0.05);
-    border-color: hsl(var(--glass-border) / 0.6);
+      0 12px 40px 0 hsl(220 20% 4% / 0.4),
+      0 0 24px hsl(var(--card-hover-glow)),
+      inset 0 1px 0 0 hsl(0 0% 100% / 0.04);
+    border-color: hsl(var(--glass-border) / 0.5);
   }
 
   .glass-panel-soft {
-    background: hsl(var(--glass) / 0.4);
-    backdrop-filter: blur(12px);
-    border: 1px solid hsl(var(--glass-border) / 0.3);
+    background: hsl(var(--glass) / 0.35);
+    backdrop-filter: blur(16px) saturate(1.1);
+    border: 1px solid hsl(var(--glass-border) / 0.2);
+  }
+
+  /* Nordic Noir widget surface — gradient depth */
+  .nn-widget {
+    background: linear-gradient(
+      145deg,
+      hsl(var(--surface-elevated)) 0%,
+      hsl(var(--surface)) 100%
+    );
+    border: 1px solid hsl(var(--widget-border));
+    border-radius: var(--widget-radius);
+    box-shadow:
+      0 8px 24px hsl(220 20% 4% / 0.3),
+      inset 0 1px 0 hsl(0 0% 100% / 0.02);
+  }
+
+  .nn-widget-hover {
+    transition: box-shadow 0.3s ease, border-color 0.3s ease;
+  }
+  .nn-widget-hover:hover {
+    box-shadow:
+      0 12px 32px hsl(220 20% 4% / 0.4),
+      0 0 0 1px hsl(var(--glow-amber-subtle));
+    border-color: hsl(var(--glass-border) / 0.5);
   }
 
   .amber-glow {
-    box-shadow: 0 0 20px hsl(var(--amber-glow));
+    box-shadow: 0 0 16px hsl(var(--amber-glow));
+  }
+
+  /* Pill-shaped device control */
+  .device-pill {
+    @apply inline-flex items-center gap-2.5 px-4 py-2.5 rounded-full transition-all select-none;
+    background: hsl(var(--glass));
+    backdrop-filter: blur(20px);
+    border: 1px solid hsl(var(--glass-border) / 0.25);
+  }
+  .device-pill[data-active="true"] {
+    border-color: hsl(var(--primary) / 0.3);
+    box-shadow: 0 0 12px hsl(var(--glow-amber-subtle));
+  }
+  .device-pill[data-active="false"] {
+    opacity: 0.5;
+  }
+
+  /* Overlay widget — minimal, typographic */
+  .overlay-widget {
+    @apply rounded-2xl transition-all duration-300;
+    background: hsl(var(--glass) / 0.5);
+    backdrop-filter: blur(20px);
+    border: 1px solid hsl(var(--glass-border) / 0.15);
+    padding: 0.75rem 1rem;
   }
 
   /* Nav rail styling */
