@@ -1,6 +1,7 @@
 import { useAppStore } from '../../../store/useAppStore';
-import { Thermometer, Wind, Droplets } from 'lucide-react';
+import { Thermometer, Wind, Droplets, Clock } from 'lucide-react';
 import { cn } from '../../../lib/utils';
+import type { WidgetOverlaySize } from '../../../store/types';
 
 const weatherIcons: Record<string, string> = {
   clear: '☀️',
@@ -16,12 +17,34 @@ const conditionLabels: Record<string, string> = {
   snow: 'Snö',
 };
 
+const conditionFeeling: Record<string, string> = {
+  clear: 'Klart och fint',
+  cloudy: 'Grått och lugnt',
+  rain: 'Regnigt och fuktigt',
+  snow: 'Snöigt och kallt',
+};
+
 interface Props {
-  /** Force expanded panel mode (dashboard/weather tab) */
   expanded?: boolean;
+  size?: WidgetOverlaySize;
 }
 
-export default function WeatherWidget({ expanded: forceExpanded }: Props = {}) {
+/** Generate demo hourly forecast data */
+function generateHourlyForecast(temp: number, condition: string) {
+  const hour = new Date().getHours();
+  const conditions = ['clear', 'cloudy', 'rain', 'snow'];
+  return Array.from({ length: 24 }, (_, i) => {
+    const h = (hour + i) % 24;
+    const variation = Math.sin(h * 0.3) * 3 + Math.sin(h * 0.7) * 1.5;
+    return {
+      hour: h,
+      temp: Math.round(temp + variation),
+      condition: i < 6 ? condition : conditions[Math.floor(Math.sin(i * 0.8) * 1.5 + 1.5) % 4],
+    };
+  });
+}
+
+export default function WeatherWidget({ expanded: forceExpanded, size = 'normal' }: Props) {
   const condition = useAppStore((s) => s.environment.weather.condition);
   const temperature = useAppStore((s) => s.environment.weather.temperature);
   const windSpeed = useAppStore((s) => s.environment.weather.windSpeed);
@@ -30,40 +53,73 @@ export default function WeatherWidget({ expanded: forceExpanded }: Props = {}) {
 
   const isExpanded = forceExpanded ?? false;
 
-  // Expanded panel mode — full detail
+  // Time-of-day gradient
+  const hour = new Date().getHours();
+  const isDark = hour < 6 || hour > 20;
+  const isSunset = hour >= 17 && hour <= 20;
+  const timeGradient = isDark
+    ? 'from-[#0a0a14] to-[#12121a]'
+    : isSunset
+    ? 'from-[#1a1520] to-[#12121a]'
+    : 'from-[#141822] to-[#12121a]';
+
+  // Expanded panel mode — full detail with 24h strip
   if (isExpanded) {
+    const hourly = generateHourlyForecast(temperature, condition);
+
     return (
-      <div className="glass-panel rounded-2xl p-5 w-full">
-        <div className="flex items-center gap-5">
-          <span className="text-5xl">{weatherIcons[condition] ?? '☀️'}</span>
+      <div className={cn('nn-widget p-5 w-full bg-gradient-to-br', timeGradient)}>
+        {/* Hero: Nu-panel */}
+        <div className="flex items-center gap-5 mb-4">
+          <span className="text-6xl">{weatherIcons[condition] ?? '☀️'}</span>
           <div>
-            <div className="flex items-center gap-1">
-              <Thermometer size={20} className="text-primary" />
-              <span className="text-4xl font-bold font-display text-foreground">{temperature}°C</span>
+            <div className="flex items-baseline gap-1">
+              <span className="text-5xl font-bold font-display text-foreground tracking-tight">{temperature}°</span>
+              <span className="text-lg text-muted-foreground">C</span>
             </div>
-            <p className="text-sm text-muted-foreground">{conditionLabels[condition] ?? condition} · Utomhus</p>
+            <p className="text-sm text-muted-foreground/80 mt-0.5">{conditionFeeling[condition] ?? condition}</p>
           </div>
-          <div className="ml-auto flex items-center gap-5">
+          <div className="ml-auto flex flex-col gap-2">
             <div className="flex items-center gap-1.5">
-              <Wind size={16} className="text-muted-foreground" />
-              <div>
-                <span className="text-sm font-medium text-foreground">{windSpeed ?? 3.2} m/s</span>
-                <p className="text-[10px] text-muted-foreground">Vind</p>
-              </div>
+              <Wind size={14} className="text-muted-foreground/60" />
+              <span className="text-sm font-medium text-foreground">{windSpeed ?? 3.2} m/s</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <Droplets size={16} className="text-muted-foreground" />
-              <div>
-                <span className="text-sm font-medium text-foreground">{humidity ?? 62}%</span>
-                <p className="text-[10px] text-muted-foreground">Fukt</p>
-              </div>
+              <Droplets size={14} className="text-muted-foreground/60" />
+              <span className="text-sm font-medium text-foreground">{humidity ?? 62}%</span>
             </div>
           </div>
         </div>
 
+        {/* 24h prognos-strip */}
+        <div className="border-t border-border/20 pt-3">
+          <div className="flex items-center gap-1.5 mb-2">
+            <Clock size={12} className="text-muted-foreground/50" />
+            <p className="text-[9px] uppercase tracking-wider text-muted-foreground/50 font-semibold">24-timmarsprognos</p>
+          </div>
+          <div className="flex gap-0 overflow-x-auto pb-1 -mx-1">
+            {hourly.map((h, i) => (
+              <div
+                key={i}
+                className={cn(
+                  'flex flex-col items-center gap-0.5 min-w-[36px] px-1 py-1.5 rounded-lg transition-colors',
+                  i === 0 && 'bg-primary/10'
+                )}
+              >
+                <span className="text-[8px] text-muted-foreground/50">
+                  {i === 0 ? 'Nu' : `${String(h.hour).padStart(2, '0')}`}
+                </span>
+                <span className="text-sm">{weatherIcons[h.condition] ?? '☁️'}</span>
+                <span className="text-[9px] font-semibold text-foreground">{h.temp}°</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Day forecast */}
         {forecast && forecast.length > 0 && (
-          <div className="mt-4 pt-4 border-t border-border/30">
-            <p className="text-[10px] text-muted-foreground font-medium mb-2">Prognos</p>
+          <div className="mt-3 pt-3 border-t border-border/20">
+            <p className="text-[9px] uppercase tracking-wider text-muted-foreground/50 font-semibold mb-2">Dagsprognos</p>
             <div className="flex gap-1 overflow-x-auto pb-1">
               {forecast.map((day, i) => (
                 <div
@@ -90,7 +146,36 @@ export default function WeatherWidget({ expanded: forceExpanded }: Props = {}) {
     );
   }
 
-  // Overlay mode — compact, typographic
+  // Compact overlay
+  if (size === 'compact') {
+    return (
+      <div className="overlay-widget">
+        <div className="flex items-center gap-1.5">
+          <span className="text-sm">{weatherIcons[condition] ?? '☀️'}</span>
+          <span className="text-lg font-bold font-display text-foreground">{temperature}°</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Expanded overlay
+  if (size === 'expanded') {
+    return (
+      <div className="overlay-widget">
+        <div className="flex items-center gap-2">
+          <span className="text-lg">{weatherIcons[condition] ?? '☀️'}</span>
+          <span className="text-xl font-bold font-display text-foreground">{temperature}°</span>
+          <span className="text-[10px] text-muted-foreground/70">{conditionFeeling[condition] ?? condition}</span>
+        </div>
+        <div className="flex items-center gap-3 mt-1.5 text-[9px] text-muted-foreground/60">
+          <span>💨 {windSpeed ?? 3.2} m/s</span>
+          <span>💧 {humidity ?? 62}%</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Normal overlay — compact, typographic
   return (
     <div className="overlay-widget">
       <div className="flex items-center gap-2">
