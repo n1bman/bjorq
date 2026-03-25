@@ -112,11 +112,13 @@ export default function HomeView({ longPressDeviceId, onDismissLongPress, fpsAct
 
   const widgetKeys: HomeWidgetKey[] = ['clock', 'weather', 'temperature', 'energy'];
   for (const key of widgetKeys) {
-    if (!visibleWidgets[key]) continue;
-    const config = widgetLayout?.[key] ?? { position: key === 'clock' || key === 'weather' ? 'top-left' : 'top-right', size: 'normal' };
-    widgetsByPosition[config.position].push({
+    if (!visibleWidgets?.[key]) continue;
+    const config = widgetLayout?.[key] ?? { position: (key === 'clock' || key === 'weather' ? 'top-left' : 'top-right') as WidgetOverlayPosition, size: 'normal' as const };
+    const pos = config.position ?? 'top-left';
+    if (!widgetsByPosition[pos]) widgetsByPosition[pos] = [];
+    widgetsByPosition[pos].push({
       key,
-      component: widgetComponents[key](config.size),
+      component: widgetComponents[key](config.size ?? 'normal'),
     });
   }
 
