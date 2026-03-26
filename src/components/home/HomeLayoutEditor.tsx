@@ -1,8 +1,8 @@
 import { useState, useRef, useCallback } from 'react';
-import { Settings2, Check, GripHorizontal, Home, Camera as CameraIcon, DoorOpen, Palette, Cpu } from 'lucide-react';
+import { Settings2, Check, GripHorizontal, Home, Camera as CameraIcon, DoorOpen, Palette, Cpu, Lightbulb, Thermometer, Wind, Camera, Power, Tv, Fan, Shield, Droplets } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { cn } from '../../lib/utils';
-import type { HomeWidgetKey, WidgetOverlaySize } from '../../store/types';
+import type { HomeWidgetKey, WidgetOverlaySize, DeviceKind } from '../../store/types';
 import ClockWidget from './cards/ClockWidget';
 import WeatherWidget from './cards/WeatherWidget';
 import EnergyWidget from './cards/EnergyWidget';
@@ -20,13 +20,12 @@ const WIDGET_WIDGETS: { key: HomeWidgetKey; label: string; hasSize: boolean }[] 
   { key: 'temperature', label: 'Temperatur', hasSize: true },
   { key: 'energy', label: 'Energi', hasSize: true },
   { key: 'scenes', label: 'Scener', hasSize: false },
-  { key: 'devices', label: 'Enheter', hasSize: false },
   { key: 'nav', label: 'Navigering', hasSize: false },
   { key: 'camera', label: 'Kamera', hasSize: false },
   { key: 'rooms', label: 'Rum', hasSize: false },
 ];
 
-const DEFAULT_POSITIONS: Record<HomeWidgetKey, { x: number; y: number }> = {
+const DEFAULT_POSITIONS: Record<string, { x: number; y: number }> = {
   clock: { x: 3, y: 4 },
   weather: { x: 3, y: 14 },
   temperature: { x: 78, y: 4 },
@@ -45,7 +44,6 @@ const widgetRenderers: Partial<Record<HomeWidgetKey, (size: WidgetOverlaySize) =
   energy: (size) => <EnergyWidget size={size} />,
 };
 
-/** Simple placeholder icons for non-widget draggable elements */
 const controlRenderers: Partial<Record<HomeWidgetKey, () => React.ReactNode>> = {
   nav: () => (
     <div className="w-14 h-14 rounded-full glass-panel flex items-center justify-center text-muted-foreground">
@@ -68,15 +66,21 @@ const controlRenderers: Partial<Record<HomeWidgetKey, () => React.ReactNode>> = 
       <span className="text-xs font-medium">Scener</span>
     </div>
   ),
-  devices: () => (
-    <div className="px-4 py-3 rounded-2xl glass-panel flex items-center gap-2 text-muted-foreground">
-      <Cpu size={16} />
-      <span className="text-xs font-medium">Enheter</span>
-    </div>
-  ),
 };
 
-/** Keys that should always be visible (no hide toggle) */
+const KIND_ICONS: Partial<Record<DeviceKind, typeof Lightbulb>> = {
+  light: Lightbulb,
+  sensor: Thermometer,
+  climate: Wind,
+  camera: Camera,
+  switch: Power,
+  'power-outlet': Power,
+  'media_screen': Tv,
+  fan: Fan,
+  alarm: Shield,
+  humidifier: Droplets,
+};
+
 const ALWAYS_VISIBLE: Set<HomeWidgetKey> = new Set(['nav']);
 
 export default function HomeLayoutEditor() {
@@ -85,19 +89,31 @@ export default function HomeLayoutEditor() {
   const setWidgetLayout = useAppStore((s) => s.setWidgetLayout);
   const toggleHomeLayoutEditMode = useAppStore((s) => s.toggleHomeLayoutEditMode);
   const toggleHomeWidget = useAppStore((s) => s.toggleHomeWidget);
+  const homeScreenDevices = useAppStore((s) => s.homeView.homeScreenDevices ?? []);
+  const markers = useAppStore((s) => s.devices.markers);
 
-  const [dragging, setDragging] = useState<HomeWidgetKey | null>(null);
+  const selectedMarkers = markers.filter((m) => homeScreenDevices.includes(m.id));
+
+  const [dragging, setDragging] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const dragStartRef = useRef<{ startX: number; startY: number; origX: number; origY: number }>({
     startX: 0, startY: 0, origX: 0, origY: 0,
   });
 
-  const handlePointerDown = useCallback((key: HomeWidgetKey, e: React.PointerEvent) => {
+  const getDefaultPos = (key: string, idx?: number) => {
+    if (DEFAULT_POSITIONS[key]) return DEFAULT_POSITIONS[key];
+    // Auto-stagger device widgets
+    const i = idx ?? 0;
+    return { x: 3 + i * 12, y: 82 };
+  };
+
+  const handlePointerDown = useCallback((key: string, e: React.PointerEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setDragging(key);
     const config = widgetLayout[key];
-    const pos = { x: config?.x ?? DEFAULT_POSITIONS[key].x, y: config?.y ?? DEFAULT_POSITIONS[key].y };
+    const defPos = DEFAULT_POSITIONS[key] ?? { x: 50, y: 50 };
+    const pos = { x: config?.x ?? defPos.x, y: config?.y ?? defPos.y };
     dragStartRef.current = { startX: e.clientX, startY: e.clientY, origX: pos.x, origY: pos.y };
     containerRef.current?.setPointerCapture(e.pointerId);
   }, [widgetLayout]);
@@ -135,14 +151,14 @@ export default function HomeLayoutEditor() {
         backgroundSize: '10% 10%',
       }} />
 
-      {/* Draggable elements */}
+      {/* Draggable widget elements */}
       {WIDGET_WIDGETS.map(({ key, label, hasSize }) => {
         if (!isVisible(key)) return null;
         const config = widgetLayout[key];
         const size = config?.size ?? 'normal';
         const pos = {
-          x: config?.x ?? DEFAULT_POSITIONS[key].x,
-          y: config?.y ?? DEFAULT_POSITIONS[key].y,
+          x: config?.x ?? DEFAULT_POSITIONS[key]?.x ?? 50,
+          y: config?.y ?? DEFAULT_POSITIONS[key]?.y ?? 50,
         };
         const isDragging = dragging === key;
 
@@ -156,7 +172,6 @@ export default function HomeLayoutEditor() {
             style={{ left: `${pos.x}%`, top: `${pos.y}%`, touchAction: 'none' }}
             onPointerDown={(e) => handlePointerDown(key, e)}
           >
-            {/* Drag label */}
             <div
               className={cn(
                 'absolute -top-6 left-1/2 -translate-x-1/2 flex items-center gap-1 px-2 py-1 rounded-lg transition-all',
@@ -168,7 +183,6 @@ export default function HomeLayoutEditor() {
               {label}
             </div>
 
-            {/* Ring indicator */}
             <div className={cn(
               'rounded-2xl ring-2 transition-all',
               isDragging
@@ -179,6 +193,53 @@ export default function HomeLayoutEditor() {
                 ? widgetRenderers[key]!(size as WidgetOverlaySize)
                 : controlRenderers[key]?.()
               }
+            </div>
+          </div>
+        );
+      })}
+
+      {/* Draggable device widgets */}
+      {selectedMarkers.map((m, idx) => {
+        const defPos = getDefaultPos(m.id, idx);
+        const config = widgetLayout[m.id];
+        const pos = {
+          x: config?.x ?? defPos.x,
+          y: config?.y ?? defPos.y,
+        };
+        const isDragging = dragging === m.id;
+        const Icon = KIND_ICONS[m.kind] || Power;
+
+        return (
+          <div
+            key={m.id}
+            className={cn(
+              'absolute z-10 group transition-shadow select-none',
+              isDragging ? 'cursor-grabbing z-50' : 'cursor-grab',
+            )}
+            style={{ left: `${pos.x}%`, top: `${pos.y}%`, touchAction: 'none' }}
+            onPointerDown={(e) => handlePointerDown(m.id, e)}
+          >
+            <div
+              className={cn(
+                'absolute -top-6 left-1/2 -translate-x-1/2 flex items-center gap-1 px-2 py-1 rounded-lg transition-all',
+                'bg-primary/90 text-primary-foreground text-[9px] font-semibold uppercase tracking-wider whitespace-nowrap',
+                isDragging ? 'opacity-100 scale-105' : 'opacity-70 group-hover:opacity-100',
+              )}
+            >
+              <GripHorizontal size={10} />
+              {m.name || m.kind}
+            </div>
+
+            <div className={cn(
+              'rounded-2xl ring-2 transition-all',
+              isDragging
+                ? 'ring-primary shadow-[0_0_32px_hsl(var(--amber-glow))]'
+                : 'ring-primary/30 group-hover:ring-primary/60',
+            )}>
+              <div className="glass-panel rounded-2xl px-4 py-3 flex items-center gap-3 backdrop-blur-xl min-w-[120px]">
+                <Icon size={16} className="text-muted-foreground" />
+                <span className="text-[13px] font-medium text-foreground truncate max-w-[100px]">{m.name || m.kind}</span>
+              </div>
             </div>
           </div>
         );
@@ -255,6 +316,23 @@ export default function HomeLayoutEditor() {
                 </div>
               );
             })}
+
+            {/* Device widgets section */}
+            {selectedMarkers.length > 0 && (
+              <div className="pt-2 border-t border-[hsl(var(--glass-border)/0.1)]">
+                <p className="text-[9px] uppercase tracking-[0.2em] text-muted-foreground/40 mb-2">Enhets-widgets</p>
+                {selectedMarkers.map((m) => {
+                  const Icon = KIND_ICONS[m.kind] || Power;
+                  return (
+                    <div key={m.id} className="rounded-xl p-3 bg-[hsl(var(--surface-elevated)/0.5)] border border-[hsl(var(--glass-border)/0.2)] flex items-center gap-3 mb-2">
+                      <Icon size={14} className="text-primary shrink-0" />
+                      <span className="text-[13px] font-medium text-foreground truncate flex-1">{m.name || m.kind}</span>
+                      <span className="text-[10px] text-muted-foreground/40">Dragbar</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       </div>
