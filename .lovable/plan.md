@@ -1,67 +1,49 @@
 
 
-# BJORQ — Ta bort SummaryBar, gör allt till fria widgets i samma grid
+# BJORQ — UI-korrigeringar (4 punkter)
 
-## Vad du vill
+## 1. Enhetskort: tydligare linje + brightness bar bara i stängt läge
 
-Bilden visar tydligt: TID, UTE, ENERGI och KOMFORT är **vanliga kort/widgets i samma grid** som 3D-vyn, Aktivt rum, rumskorten och allt annat. Det finns ingen separat bar — allt lever i samma fria yta.
+**Problem:** Brightness-baren (den fadeade ljusraden) visas även i expanded-läge. Dubbel info: "68% neutral vit" visas både i stängt och öppet läge. Det finns 2 on/off-switchar (en i raden + en i DeviceControlCard).
 
-## Ändringar
+**Fix i `CategoryCard.tsx`:**
+- Lägg till en tydligare `border` runt varje enhetsrad (`border border-[hsl(var(--border)/0.15)] rounded-xl`)
+- Villkora brightness-baren: visa **bara** när `!expanded` — när man öppnar enheten ska baren försvinna
+- Ta bort `toneLabel`-texten under enhetsnamnet (rad 220-222: `{pct}% · {toneLabel}`) — den informationen finns redan i det expanderade DeviceControlCard
+- Ta bort den duplicerade switchen: behåll **bara** switchen i raden (rad 251-254), ta bort switchen i `LightControl` inuti `DeviceControlCard.tsx` (rad 308)
 
-### 1. `DashboardShell.tsx`
-- **Ta bort `<SummaryBar />`** helt från layouten
-- Ta bort hela `SummaryBar`-funktionen
-- Huvudinnehållet (`<Content />`) fyller hela ytan utan en fast strip ovanför
+**Fix i `DeviceControlCard.tsx` → `LightControl`:**
+- Ta bort `<Switch>` från LightControl (rad 308) — switchen i CategoryCard-raden räcker
 
-### 2. `DashboardGrid.tsx` — HomeCategory
-Bygg om HomeCategory så att **allt** är widgets i samma grid:
+## 2. "Hantera kategorier" flytta till höger om filter-tabs
 
-```text
-┌─TID──────┐ ┌─UTE──────┐ ┌─ENERGI───┐ ┌─KOMFORT──┐
-│ 14:00    │ │ 7°C      │ │ 0 W      │ │ 21.5°    │
-│ Onsdag.. │ │ Molnigt  │ │ Normal   │ │ Optimal  │
-└──────────┘ └──────────┘ └──────────┘ └──────────┘
+**Fix i `DashboardGrid.tsx` → `HomeCategory`:**
+- Ta bort header-diven med "Hantera kategorier" + "Redigera" (rad 279-288)
+- Flytta dessa knappar in i filter-tabs-raden (rad 341-356), placerade till höger efter alla filterchips
+- Layout: `flex items-center` med chips till vänster, knappar till höger med `ml-auto`
 
-┌─3D-vy (hero, col-span-2)────────┐ ┌─Aktivt rum──────────┐
-│                                   │ │ Vardagsrum           │
-│  [DashboardPreview3D]             │ │ Skap lampa-1  78% ◉  │
-│                                   │ │ Ljusarmatur   62% ◉  │
-│  [Scener] [Enheter]              │ │ Fönsterlampa      ◉  │
-│  [Klimat] [Robot]                │ │                      │
-└───────────────────────────────────┘ └──────────────────────┘
+## 3. Ta bort Hemstatus från vänstermenyn
 
-[Alla] [Ljus] [Armaturer] [Klimat] [Media] [Robot] [Lås] [Sensor]
+**Fix i `DashboardShell.tsx`:**
+- Ta bort `<NavHomeStatus collapsed={collapsed} />` (rad 269)
+- Ta bort hela `NavHomeStatus`-funktionen (rad 287-311)
 
-┌─Sovrum───────┐ ┌─Badrum───────┐
-│ 2/2 på       │ │ 1/1 på       │
-│ devices...   │ │ devices...   │
-└──────────────┘ └──────────────┘
-┌─Övrigt──────┐ ┌─Hem──────────┐
-│ TV           │ │ Vacuum       │
-└──────────────┘ └──────────────┘
-```
+## 4. Info-korten (TID/UTE/ENERGI/KOMFORT) — mer livfulla + klickbara
 
-- TID/UTE/ENERGI/KOMFORT blir **4 st nn-widget kort** i rad 1 av gridet
-- 3D-vyn + Aktivt rum sida vid sida i rad 2
-- Filter tabs + rumskort under — precis som nu men i samma flöde
-- Högerkolumnen (Aktivt rum) är **bara ett till kort i gridet** — inte en separat panel
-- Allt i **ett enda fritt CSS grid** med `grid-cols-4` som bas
+**Fix i `DashboardGrid.tsx` → `InfoCard`:**
+- Gör korten klickbara: UTE → navigerar till `weather`, ENERGI → `energy`, KOMFORT → `climate`
+- Acceptera en `onClick`-prop och lägg till `cursor-pointer hover:ring-1 hover:ring-primary/20`
+- Ge varje kort en subtil accent: TID = neutral, UTE = blå tint, ENERGI = amber tint, KOMFORT = grön tint
+- Uppdatera anropen (rad 295-298) att skicka `onClick={() => setDashCategory('weather')}` etc.
 
-### 3. Aktivt rum-widget
-- Visar valt rum (klickbart från rumskorten)
-- Listar enheter i det rummet med toggle/brightness
-- State: `selectedRoomId` via useState
-- Klick på ett rumskort → sätter selectedRoomId → Aktivt rum uppdateras
+---
 
-### Tekniskt
-- Ta bort `SummaryBar` funktion + anrop i `DashboardShell.tsx`
-- Flytta TID/UTE/ENERGI/KOMFORT-logiken in i `HomeCategory` som 4 kort-komponenter
-- Aktivt rum = en ny liten inline-komponent i HomeCategory
-- Inget nytt dependency — bara omstrukturering
+## Filer som ändras
 
-### Filer som ändras
-| Fil | Ändring |
-|-----|---------|
-| `DashboardShell.tsx` | Ta bort SummaryBar |
-| `DashboardGrid.tsx` | HomeCategory: 4 info-kort + 3D + aktivt rum i samma grid |
+| Fil | Vad |
+|-----|-----|
+| `CategoryCard.tsx` | Border på rader, brightness bar bara !expanded, ta bort dubbel tone-text |
+| `DeviceControlCard.tsx` | Ta bort Switch från LightControl |
+| `DashboardGrid.tsx` | Flytta hantera/redigera till filter-rad, klickbara info-kort |
+| `DashboardShell.tsx` | Ta bort NavHomeStatus |
 
