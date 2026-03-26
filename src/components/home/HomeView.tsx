@@ -36,6 +36,9 @@ const DEFAULT_POSITIONS: Record<HomeWidgetKey, { x: number; y: number }> = {
   weather: { x: 3, y: 14 },
   temperature: { x: 78, y: 4 },
   energy: { x: 78, y: 14 },
+  nav: { x: 46, y: 90 },
+  camera: { x: 90, y: 78 },
+  rooms: { x: 82, y: 78 },
 };
 
 interface HomeViewProps {
@@ -96,12 +99,24 @@ export default function HomeView({ longPressDeviceId, onDismissLongPress, fpsAct
 
   const widgetKeys: HomeWidgetKey[] = ['clock', 'weather', 'temperature', 'energy'];
 
-  const widgetComponents: Record<HomeWidgetKey, (size: string) => React.ReactNode> = {
+  const widgetComponents: Record<string, (size: string) => React.ReactNode> = {
     clock: (size) => <ClockWidget size={size as any} />,
     weather: (size) => <WeatherWidget size={size as any} />,
     temperature: (size) => <TemperatureWidget size={size as any} />,
     energy: (size) => <EnergyWidget size={size as any} />,
   };
+
+  const getPos = (key: HomeWidgetKey) => {
+    const config = widgetLayout[key];
+    return {
+      x: config?.x ?? DEFAULT_POSITIONS[key].x,
+      y: config?.y ?? DEFAULT_POSITIONS[key].y,
+    };
+  };
+
+  const navPos = getPos('nav');
+  const cameraPos = getPos('camera');
+  const roomsPos = getPos('rooms');
 
   return (
     <div className="absolute inset-0 z-10 pointer-events-none">
@@ -132,21 +147,17 @@ export default function HomeView({ longPressDeviceId, onDismissLongPress, fpsAct
         );
       })}
 
-      {/* ── Layout edit button ── */}
+      {/* ── Layout edit button — top left corner ── */}
       {!homeLayoutEditMode && (
         <button
           onClick={toggleHomeLayoutEditMode}
-          className="absolute bottom-28 right-20 z-20 pointer-events-auto group"
+          className="fixed top-4 left-4 z-20 pointer-events-auto w-10 h-10 rounded-full flex items-center justify-center transition-all
+            bg-[hsl(var(--surface)/0.5)] backdrop-blur-xl border border-[hsl(var(--glass-border)/0.2)]
+            hover:border-[hsl(var(--primary)/0.3)] hover:shadow-[0_0_24px_hsl(var(--amber-glow))]
+            text-muted-foreground hover:text-primary"
+          title="Anpassa hemvy"
         >
-          <div className="flex items-center gap-2.5 px-5 py-3 rounded-2xl transition-all
-            bg-[hsl(var(--surface)/0.6)] backdrop-blur-xl border border-[hsl(var(--glass-border)/0.2)]
-            hover:border-[hsl(var(--primary)/0.3)] hover:shadow-[0_0_24px_hsl(var(--amber-glow))]"
-          >
-            <Settings2 size={15} className="text-primary" />
-            <span className="text-[11px] font-medium text-muted-foreground group-hover:text-foreground transition-colors tracking-wide">
-              Anpassa
-            </span>
-          </div>
+          <Settings2 size={16} />
         </button>
       )}
 
@@ -301,9 +312,9 @@ export default function HomeView({ longPressDeviceId, onDismissLongPress, fpsAct
       })()}
 
       <div className="pointer-events-auto">
-        <CameraFab />
-        <RoomNavigator />
-        <HomeNav />
+        <CameraFab style={{ left: `${cameraPos.x}%`, top: `${cameraPos.y}%` }} />
+        <RoomNavigator style={{ left: `${roomsPos.x}%`, top: `${roomsPos.y}%` }} />
+        <HomeNav style={{ left: `${navPos.x}%`, top: `${navPos.y}%` }} />
       </div>
     </div>
   );

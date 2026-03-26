@@ -822,6 +822,9 @@ export interface VisibleWidgets {
   temperature: boolean;
   energy: boolean;
   calendar: boolean;
+  nav?: boolean;
+  camera?: boolean;
+  rooms?: boolean;
 }
 
 export type MarkerSize = 'small' | 'medium' | 'large';
@@ -837,7 +840,7 @@ export interface WidgetOverlayConfig {
   y?: number;
 }
 
-export type HomeWidgetKey = 'clock' | 'weather' | 'temperature' | 'energy';
+export type HomeWidgetKey = 'clock' | 'weather' | 'temperature' | 'energy' | 'nav' | 'camera' | 'rooms';
 
 export interface HomeViewState {
   cameraPreset: CameraPreset;

@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
-import { Settings2, Check, GripHorizontal } from 'lucide-react';
+import { Settings2, Check, GripHorizontal, Home, Camera as CameraIcon, DoorOpen } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { cn } from '../../lib/utils';
 import type { HomeWidgetKey, WidgetOverlaySize } from '../../store/types';
@@ -14,11 +14,14 @@ const SIZES: { key: WidgetOverlaySize; label: string }[] = [
   { key: 'expanded', label: 'Detaljerad' },
 ];
 
-const WIDGETS: { key: HomeWidgetKey; label: string }[] = [
-  { key: 'clock', label: 'Klocka' },
-  { key: 'weather', label: 'Väder' },
-  { key: 'temperature', label: 'Temperatur' },
-  { key: 'energy', label: 'Energi' },
+const WIDGET_WIDGETS: { key: HomeWidgetKey; label: string; hasSize: boolean }[] = [
+  { key: 'clock', label: 'Klocka', hasSize: true },
+  { key: 'weather', label: 'Väder', hasSize: true },
+  { key: 'temperature', label: 'Temperatur', hasSize: true },
+  { key: 'energy', label: 'Energi', hasSize: true },
+  { key: 'nav', label: 'Navigering', hasSize: false },
+  { key: 'camera', label: 'Kamera', hasSize: false },
+  { key: 'rooms', label: 'Rum', hasSize: false },
 ];
 
 const DEFAULT_POSITIONS: Record<HomeWidgetKey, { x: number; y: number }> = {
@@ -26,14 +29,39 @@ const DEFAULT_POSITIONS: Record<HomeWidgetKey, { x: number; y: number }> = {
   weather: { x: 3, y: 14 },
   temperature: { x: 78, y: 4 },
   energy: { x: 78, y: 14 },
+  nav: { x: 46, y: 90 },
+  camera: { x: 90, y: 78 },
+  rooms: { x: 82, y: 78 },
 };
 
-const widgetRenderers: Record<HomeWidgetKey, (size: WidgetOverlaySize) => React.ReactNode> = {
+const widgetRenderers: Partial<Record<HomeWidgetKey, (size: WidgetOverlaySize) => React.ReactNode>> = {
   clock: (size) => <ClockWidget size={size} />,
   weather: (size) => <WeatherWidget size={size} />,
   temperature: (size) => <TemperatureWidget size={size} />,
   energy: (size) => <EnergyWidget size={size} />,
 };
+
+/** Simple placeholder icons for non-widget draggable elements */
+const controlRenderers: Partial<Record<HomeWidgetKey, () => React.ReactNode>> = {
+  nav: () => (
+    <div className="w-14 h-14 rounded-full glass-panel flex items-center justify-center text-muted-foreground">
+      <Home size={22} />
+    </div>
+  ),
+  camera: () => (
+    <div className="w-14 h-14 rounded-full glass-panel flex items-center justify-center text-muted-foreground">
+      <CameraIcon size={20} />
+    </div>
+  ),
+  rooms: () => (
+    <div className="w-14 h-14 rounded-full glass-panel flex items-center justify-center text-muted-foreground">
+      <DoorOpen size={20} />
+    </div>
+  ),
+};
+
+/** Keys that should always be visible (no hide toggle) */
+const ALWAYS_VISIBLE: Set<HomeWidgetKey> = new Set(['nav']);
 
 export default function HomeLayoutEditor() {
   const widgetLayout = useAppStore((s) => s.homeView.widgetLayout) ?? {};
@@ -63,14 +91,16 @@ export default function HomeLayoutEditor() {
     const rect = containerRef.current.getBoundingClientRect();
     const dx = ((e.clientX - dragStartRef.current.startX) / rect.width) * 100;
     const dy = ((e.clientY - dragStartRef.current.startY) / rect.height) * 100;
-    const newX = Math.max(0, Math.min(90, dragStartRef.current.origX + dx));
-    const newY = Math.max(0, Math.min(85, dragStartRef.current.origY + dy));
+    const newX = Math.max(0, Math.min(95, dragStartRef.current.origX + dx));
+    const newY = Math.max(0, Math.min(92, dragStartRef.current.origY + dy));
     setWidgetLayout(dragging, { x: Math.round(newX * 10) / 10, y: Math.round(newY * 10) / 10 });
   }, [dragging, setWidgetLayout]);
 
   const handlePointerUp = useCallback(() => {
     setDragging(null);
   }, []);
+
+  const isVisible = (key: HomeWidgetKey) => ALWAYS_VISIBLE.has(key) || visibleWidgets[key];
 
   return (
     <div
@@ -89,9 +119,9 @@ export default function HomeLayoutEditor() {
         backgroundSize: '10% 10%',
       }} />
 
-      {/* Draggable widgets */}
-      {WIDGETS.map(({ key, label }) => {
-        if (!visibleWidgets[key]) return null;
+      {/* Draggable elements */}
+      {WIDGET_WIDGETS.map(({ key, label, hasSize }) => {
+        if (!isVisible(key)) return null;
         const config = widgetLayout[key];
         const size = config?.size ?? 'normal';
         const pos = {
@@ -129,7 +159,10 @@ export default function HomeLayoutEditor() {
                 ? 'ring-primary shadow-[0_0_32px_hsl(var(--amber-glow))]'
                 : 'ring-primary/30 group-hover:ring-primary/60',
             )}>
-              {widgetRenderers[key](size)}
+              {hasSize && widgetRenderers[key]
+                ? widgetRenderers[key]!(size as WidgetOverlaySize)
+                : controlRenderers[key]?.()
+              }
             </div>
           </div>
         );
@@ -143,7 +176,7 @@ export default function HomeLayoutEditor() {
               <Settings2 size={16} className="text-primary" />
               <div>
                 <h3 className="text-sm font-semibold text-foreground font-display">Layoutläge</h3>
-                <p className="text-[10px] text-muted-foreground/60 mt-0.5">Dra widgetarna fritt · Välj storlek nedan</p>
+                <p className="text-[10px] text-muted-foreground/60 mt-0.5">Dra elementen fritt · Välj storlek nedan</p>
               </div>
             </div>
             <button
@@ -155,9 +188,10 @@ export default function HomeLayoutEditor() {
           </div>
 
           <div className="space-y-3 max-h-[35vh] overflow-y-auto">
-            {WIDGETS.map(({ key, label }) => {
+            {WIDGET_WIDGETS.map(({ key, label, hasSize }) => {
               const config = widgetLayout[key] ?? { position: 'top-left' as const, size: 'normal' as const };
-              const visible = visibleWidgets[key];
+              const visible = isVisible(key);
+              const canHide = !ALWAYS_VISIBLE.has(key);
               return (
                 <div key={key} className={cn(
                   'rounded-xl p-4 space-y-3 transition-all',
@@ -167,17 +201,21 @@ export default function HomeLayoutEditor() {
                 )}>
                   <div className="flex items-center justify-between">
                     <span className="text-[13px] font-medium text-foreground">{label}</span>
-                    <button
-                      onClick={() => toggleHomeWidget(key)}
-                      className={cn(
-                        'px-3 py-1 rounded-lg text-[10px] font-semibold transition-colors tracking-wide',
-                        visible ? 'bg-primary/15 text-primary' : 'bg-muted text-muted-foreground'
-                      )}
-                    >
-                      {visible ? 'Synlig' : 'Dold'}
-                    </button>
+                    {canHide ? (
+                      <button
+                        onClick={() => toggleHomeWidget(key)}
+                        className={cn(
+                          'px-3 py-1 rounded-lg text-[10px] font-semibold transition-colors tracking-wide',
+                          visible ? 'bg-primary/15 text-primary' : 'bg-muted text-muted-foreground'
+                        )}
+                      >
+                        {visible ? 'Synlig' : 'Dold'}
+                      </button>
+                    ) : (
+                      <span className="text-[10px] text-muted-foreground/40 tracking-wide">Alltid synlig</span>
+                    )}
                   </div>
-                  {visible && (
+                  {visible && hasSize && (
                     <div>
                       <p className="text-[9px] uppercase tracking-[0.2em] text-muted-foreground/40 mb-2">Storlek</p>
                       <div className="flex gap-1.5">
