@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
-import { Settings2, Check, GripHorizontal, Home, Camera as CameraIcon, DoorOpen } from 'lucide-react';
+import { Settings2, Check, GripHorizontal, Home, Camera as CameraIcon, DoorOpen, Palette, Cpu } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { cn } from '../../lib/utils';
 import type { HomeWidgetKey, WidgetOverlaySize } from '../../store/types';
@@ -19,6 +19,8 @@ const WIDGET_WIDGETS: { key: HomeWidgetKey; label: string; hasSize: boolean }[] 
   { key: 'weather', label: 'Väder', hasSize: true },
   { key: 'temperature', label: 'Temperatur', hasSize: true },
   { key: 'energy', label: 'Energi', hasSize: true },
+  { key: 'scenes', label: 'Scener', hasSize: false },
+  { key: 'devices', label: 'Enheter', hasSize: false },
   { key: 'nav', label: 'Navigering', hasSize: false },
   { key: 'camera', label: 'Kamera', hasSize: false },
   { key: 'rooms', label: 'Rum', hasSize: false },
@@ -29,6 +31,8 @@ const DEFAULT_POSITIONS: Record<HomeWidgetKey, { x: number; y: number }> = {
   weather: { x: 3, y: 14 },
   temperature: { x: 78, y: 4 },
   energy: { x: 78, y: 14 },
+  scenes: { x: 3, y: 78 },
+  devices: { x: 3, y: 85 },
   nav: { x: 46, y: 90 },
   camera: { x: 90, y: 78 },
   rooms: { x: 82, y: 78 },
@@ -56,6 +60,18 @@ const controlRenderers: Partial<Record<HomeWidgetKey, () => React.ReactNode>> = 
   rooms: () => (
     <div className="w-14 h-14 rounded-full glass-panel flex items-center justify-center text-muted-foreground">
       <DoorOpen size={20} />
+    </div>
+  ),
+  scenes: () => (
+    <div className="px-4 py-3 rounded-2xl glass-panel flex items-center gap-2 text-muted-foreground">
+      <Palette size={16} />
+      <span className="text-xs font-medium">Scener</span>
+    </div>
+  ),
+  devices: () => (
+    <div className="px-4 py-3 rounded-2xl glass-panel flex items-center gap-2 text-muted-foreground">
+      <Cpu size={16} />
+      <span className="text-xs font-medium">Enheter</span>
     </div>
   ),
 };
@@ -91,8 +107,8 @@ export default function HomeLayoutEditor() {
     const rect = containerRef.current.getBoundingClientRect();
     const dx = ((e.clientX - dragStartRef.current.startX) / rect.width) * 100;
     const dy = ((e.clientY - dragStartRef.current.startY) / rect.height) * 100;
-    const newX = Math.max(1, Math.min(88, dragStartRef.current.origX + dx));
-    const newY = Math.max(1, Math.min(85, dragStartRef.current.origY + dy));
+    const newX = Math.max(1, Math.min(92, dragStartRef.current.origX + dx));
+    const newY = Math.max(1, Math.min(92, dragStartRef.current.origY + dy));
     setWidgetLayout(dragging, { x: Math.round(newX * 10) / 10, y: Math.round(newY * 10) / 10 });
   }, [dragging, setWidgetLayout]);
 
@@ -168,7 +184,7 @@ export default function HomeLayoutEditor() {
         );
       })}
 
-      {/* Config panel — bottom center */}
+      {/* Config panel — center of screen */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[480px] max-w-[calc(100vw-2rem)] z-50">
         <div className="nn-widget p-6 shadow-2xl space-y-5">
           <div className="flex items-center justify-between">

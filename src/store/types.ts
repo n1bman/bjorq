@@ -840,7 +840,7 @@ export interface WidgetOverlayConfig {
   y?: number;
 }
 
-export type HomeWidgetKey = 'clock' | 'weather' | 'temperature' | 'energy' | 'nav' | 'camera' | 'rooms';
+export type HomeWidgetKey = 'clock' | 'weather' | 'temperature' | 'energy' | 'nav' | 'camera' | 'rooms' | 'scenes' | 'devices';
 
 export interface HomeViewState {
   cameraPreset: CameraPreset;
