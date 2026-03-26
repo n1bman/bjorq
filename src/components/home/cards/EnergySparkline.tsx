@@ -16,7 +16,6 @@ interface Props {
 /** Generate 24h simulated hourly data based on current watts */
 function generateHourlyData(totalWatts: number): number[] {
   const baseWatts = totalWatts * 0.4;
-  const baseWatts = totalWatts * 0.4;
   const data: number[] = [];
   for (let i = 0; i < 24; i++) {
     let mult = 0.5;

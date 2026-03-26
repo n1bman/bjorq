@@ -78,7 +78,6 @@ export default function ClimateTrendLine({ currentTemp, targetTemp, roomName }: 
         <text x={width - 2} y={targetY - 4} textAnchor="end" fill="hsl(var(--section-climate))" fontSize="7" opacity="0.5">
           Mål {targetTemp}°
         </text>
-        </text>
         {/* Trend line — animated */}
         <path d={pathD} fill="none" stroke="hsl(var(--foreground))" strokeWidth="1.5" strokeLinecap="round" opacity="0.7" className="sparkline-line" />
         {/* Current point — pulsing */}

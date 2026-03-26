@@ -1,5 +1,5 @@
 import { useAppStore } from '../../../store/useAppStore';
-import { Thermometer, Wind, Droplets, Clock } from 'lucide-react';
+import { Wind, Droplets, Clock } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import type { WidgetOverlaySize } from '../../../store/types';
 
