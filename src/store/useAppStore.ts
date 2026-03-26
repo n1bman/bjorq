@@ -418,13 +418,20 @@ const storeCreator = (set: any, get: any): AppState => ({
   toggleAutomation: (id) => { set((s: any) => ({ automations: s.automations.map((a: any) => a.id === id ? { ...a, enabled: !a.enabled } : a) })); syncProfileToServer(); },
   addScene: (scene) => { set((s: any) => ({ savedScenes: [...s.savedScenes, scene] })); syncProfileToServer(); },
   removeScene: (id) => { set((s: any) => ({ savedScenes: s.savedScenes.filter((sc: any) => sc.id !== id) })); syncProfileToServer(); },
+  updateScene: (id, changes) => { set((s: any) => ({ savedScenes: s.savedScenes.map((sc: any) => sc.id === id ? { ...sc, ...changes } : sc) })); syncProfileToServer(); },
   activateScene: (id) => {
     const s = get();
     const scene = s.savedScenes.find((sc: any) => sc.id === id);
     if (!scene) return;
     for (const snap of scene.snapshots) {
       const current = s.devices.deviceStates[snap.deviceId];
-      if (current) {
+      if (!current) continue;
+      const action = snap.action || 'set';
+      if (action === 'off') {
+        s.updateDeviceState(snap.deviceId, { on: false });
+      } else if (action === 'on') {
+        s.updateDeviceState(snap.deviceId, { on: true, ...snap.state });
+      } else {
         s.updateDeviceState(snap.deviceId, snap.state);
       }
     }
