@@ -192,128 +192,114 @@ export default function HomeView({ longPressDeviceId, onDismissLongPress, fpsAct
         </div>
       )}
 
-      {/* ── Device pills at bottom ── */}
-      {!homeLayoutEditMode && selectedMarkers.length > 0 && (visibleWidgets?.devices !== false) && (
-        <div
-          className="absolute z-10 pointer-events-auto"
-          style={{ left: `${getPos('devices').x}%`, top: `${getPos('devices').y}%` }}
-        >
-          {/* Expanded pill panel */}
-          {expandedPillId && (() => {
-            const em = selectedMarkers.find((m) => m.id === expandedPillId);
-            if (!em) return null;
-            const emIsOn = getDeviceIsOn(em.id);
-            const entityId = em.ha?.entityId;
-            const callSvc = (domain: string, service: string, data: Record<string, unknown> = {}) => {
-              if (entityId) {
-                const payload = { entity_id: entityId, ...data };
-                if (isHostedSync()) {
-                  callHAService(domain, service, payload).catch(console.warn);
-                } else {
-                  haServiceCaller.current?.(domain, service, payload);
-                }
-              }
-            };
-            if (em.kind === 'vacuum') {
-              return (
-                <div className="glass-panel rounded-2xl p-3 mb-2 flex flex-wrap gap-2 animate-in fade-in slide-in-from-bottom-2 duration-150 backdrop-blur-xl">
-                  <button onClick={() => callSvc('vacuum', 'start')} className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-primary/15 text-primary text-xs font-medium hover:bg-primary/25 transition-colors">
-                    <Play size={12} /> Städa
-                  </button>
-                  <button onClick={() => callSvc('vacuum', 'pause')} className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-secondary/50 text-foreground text-xs font-medium hover:bg-secondary/70 transition-colors">
-                    <Pause size={12} /> Paus
-                  </button>
-                  <button onClick={() => callSvc('vacuum', 'stop')} className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-secondary/50 text-foreground text-xs font-medium hover:bg-secondary/70 transition-colors">
-                    <Square size={12} /> Stopp
-                  </button>
-                  <button onClick={() => callSvc('vacuum', 'return_to_base')} className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-secondary/50 text-foreground text-xs font-medium hover:bg-secondary/70 transition-colors">
-                    <HomeIcon size={12} /> Docka
-                  </button>
-                </div>
-              );
-            }
+      {/* ── Individual device widgets ── */}
+      {!homeLayoutEditMode && selectedMarkers.length > 0 && (visibleWidgets?.devices !== false) && selectedMarkers.map((m, idx) => {
+        const devicePos = widgetLayout[m.id]
+          ? { x: Math.max(1, Math.min(92, widgetLayout[m.id].x ?? 3)), y: Math.max(1, Math.min(92, widgetLayout[m.id].y ?? (70 + idx * 6))) }
+          : { x: 3 + idx * 12, y: 82 };
+        const isOn = getDeviceIsOn(m.id);
+        const canToggle = TOGGLEABLE_KINDS.has(m.kind);
+        const isExpanded = expandedPillId === m.id;
+        const hasExpand = m.kind === 'vacuum' || m.kind === 'climate' || m.kind === 'media_screen';
+        const Icon = KIND_ICONS[m.kind] || Power;
+        const entityId = m.ha?.entityId;
 
-            if (em.kind === 'climate') {
-              const climateData = deviceStates[em.id]?.data as any;
+        const callSvc = (domain: string, service: string, data: Record<string, unknown> = {}) => {
+          if (entityId) {
+            const payload = { entity_id: entityId, ...data };
+            if (isHostedSync()) {
+              callHAService(domain, service, payload).catch(console.warn);
+            } else {
+              haServiceCaller.current?.(domain, service, payload);
+            }
+          }
+        };
+
+        return (
+          <div
+            key={m.id}
+            className="absolute z-10 pointer-events-auto"
+            style={{ left: `${devicePos.x}%`, top: `${devicePos.y}%` }}
+          >
+            <button
+              className={cn(
+                'glass-panel rounded-2xl px-4 py-3 flex items-center gap-3 backdrop-blur-xl transition-all min-w-[120px]',
+                'border border-[hsl(var(--glass-border)/0.15)] shadow-lg',
+                isOn && 'border-[hsl(var(--primary)/0.25)]',
+                isExpanded && 'ring-1 ring-primary/30',
+                canToggle && !hasExpand && 'active:scale-95 cursor-pointer',
+              )}
+              onClick={() => {
+                if (hasExpand) {
+                  setExpandedPillId(isExpanded ? null : m.id);
+                } else if (canToggle) {
+                  toggleDeviceState(m.id);
+                }
+              }}
+              onPointerDown={() => handlePointerDown(m.id)}
+              onPointerUp={handlePointerUp}
+              onPointerCancel={handlePointerCancel}
+              onPointerLeave={handlePointerCancel}
+            >
+              <Icon size={16} className={cn(isOn ? 'text-primary' : 'text-muted-foreground')} />
+              <span className="text-[13px] font-medium text-foreground truncate max-w-[100px]">{m.name || m.kind}</span>
+              {hasExpand && (
+                <ChevronDown size={12} className={cn('text-muted-foreground transition-transform ml-auto', isExpanded && 'rotate-180')} />
+              )}
+              {canToggle && !hasExpand && (
+                <span className={cn(
+                  'w-2.5 h-2.5 rounded-full shrink-0 ml-auto transition-colors',
+                  isOn ? 'bg-primary shadow-[0_0_8px_hsl(var(--amber-glow))]' : 'bg-muted-foreground/30'
+                )} />
+              )}
+            </button>
+
+            {/* Inline expand panel */}
+            {isExpanded && m.kind === 'vacuum' && (
+              <div className="glass-panel rounded-2xl p-3 mt-2 flex flex-wrap gap-2 animate-in fade-in slide-in-from-top-2 duration-150 backdrop-blur-xl border border-[hsl(var(--glass-border)/0.15)] min-w-[200px]">
+                <button onClick={() => callSvc('vacuum', 'start')} className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-primary/15 text-primary text-xs font-medium hover:bg-primary/25 transition-colors">
+                  <Play size={12} /> Städa
+                </button>
+                <button onClick={() => callSvc('vacuum', 'pause')} className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[hsl(var(--surface-elevated)/0.5)] text-foreground text-xs font-medium hover:bg-[hsl(var(--surface-elevated)/0.7)] transition-colors">
+                  <Pause size={12} /> Paus
+                </button>
+                <button onClick={() => callSvc('vacuum', 'stop')} className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[hsl(var(--surface-elevated)/0.5)] text-foreground text-xs font-medium hover:bg-[hsl(var(--surface-elevated)/0.7)] transition-colors">
+                  <Square size={12} /> Stopp
+                </button>
+                <button onClick={() => callSvc('vacuum', 'return_to_base')} className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[hsl(var(--surface-elevated)/0.5)] text-foreground text-xs font-medium hover:bg-[hsl(var(--surface-elevated)/0.7)] transition-colors">
+                  <HomeIcon size={12} /> Docka
+                </button>
+              </div>
+            )}
+
+            {isExpanded && m.kind === 'climate' && (() => {
+              const climateData = deviceStates[m.id]?.data as any;
               const temp = climateData?.temperature ?? 22;
               return (
-                <div className="glass-panel rounded-2xl p-3 mb-2 flex items-center gap-3 animate-in fade-in slide-in-from-bottom-2 duration-150 backdrop-blur-xl">
+                <div className="glass-panel rounded-2xl p-3 mt-2 flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-150 backdrop-blur-xl border border-[hsl(var(--glass-border)/0.15)]">
                   <span className="text-xs text-muted-foreground">Temp</span>
-                  <button onClick={() => callSvc('climate', 'set_temperature', { temperature: temp - 0.5 })} className="w-8 h-8 rounded-xl bg-secondary/50 flex items-center justify-center text-foreground hover:bg-secondary/70 transition-colors">
+                  <button onClick={() => callSvc('climate', 'set_temperature', { temperature: temp - 0.5 })} className="w-8 h-8 rounded-xl bg-[hsl(var(--surface-elevated)/0.5)] flex items-center justify-center text-foreground hover:bg-[hsl(var(--surface-elevated)/0.7)] transition-colors">
                     <Minus size={14} />
                   </button>
                   <span className="text-sm font-bold text-foreground min-w-[3ch] text-center">{temp}°</span>
-                  <button onClick={() => callSvc('climate', 'set_temperature', { temperature: temp + 0.5 })} className="w-8 h-8 rounded-xl bg-secondary/50 flex items-center justify-center text-foreground hover:bg-secondary/70 transition-colors">
+                  <button onClick={() => callSvc('climate', 'set_temperature', { temperature: temp + 0.5 })} className="w-8 h-8 rounded-xl bg-[hsl(var(--surface-elevated)/0.5)] flex items-center justify-center text-foreground hover:bg-[hsl(var(--surface-elevated)/0.7)] transition-colors">
                     <Plus size={14} />
                   </button>
                 </div>
               );
-            }
+            })()}
 
-            if (em.kind === 'media_screen') {
-              return (
-                <div className="glass-panel rounded-2xl p-3 mb-2 flex flex-wrap gap-2 animate-in fade-in slide-in-from-bottom-2 duration-150 backdrop-blur-xl">
-                  <button onClick={() => callSvc('media_player', emIsOn ? 'media_pause' : 'media_play')} className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-primary/15 text-primary text-xs font-medium hover:bg-primary/25 transition-colors">
-                    {emIsOn ? <Pause size={12} /> : <Play size={12} />}
-                    {emIsOn ? 'Paus' : 'Spela'}
-                  </button>
-                </div>
-              );
-            }
-
-            return null;
-          })()}
-
-          <div className="flex gap-2 overflow-x-auto pb-2 px-1 max-w-[500px]">
-            {selectedMarkers.map((m) => {
-              const isOn = getDeviceIsOn(m.id);
-              const canToggle = TOGGLEABLE_KINDS.has(m.kind);
-              const isMediaOn = m.kind === 'media_screen' && isOn;
-              const hasExpand = m.kind === 'vacuum' || m.kind === 'climate' || m.kind === 'media_screen';
-              const Icon = KIND_ICONS[m.kind] || Power;
-              const isExpanded = expandedPillId === m.id;
-              return (
-                <button
-                  key={m.id}
-                  data-active={isOn ? 'true' : 'false'}
-                  className={cn(
-                    'device-pill shrink-0 min-h-[48px] rounded-xl',
-                    canToggle && !isMediaOn && !hasExpand && 'cursor-pointer active:scale-95',
-                    isExpanded && 'ring-1 ring-primary/40',
-                  )}
-                  onClick={() => {
-                    if (longPressTimerRef.current) {
-                      clearTimeout(longPressTimerRef.current);
-                      longPressTimerRef.current = null;
-                    }
-                    if (hasExpand) {
-                      setExpandedPillId(isExpanded ? null : m.id);
-                    } else if (!longPressDeviceId && canToggle && !isMediaOn) {
-                      toggleDeviceState(m.id);
-                    }
-                  }}
-                  onPointerDown={() => handlePointerDown(m.id)}
-                  onPointerUp={handlePointerUp}
-                  onPointerCancel={handlePointerCancel}
-                  onPointerLeave={handlePointerCancel}
-                >
-                  <Icon size={15} className={cn(isOn ? 'text-primary' : 'text-muted-foreground')} />
-                  <span className="text-[13px] font-medium text-foreground truncate max-w-[120px]">{m.name || m.kind}</span>
-                  {hasExpand && (
-                    <ChevronDown size={12} className={cn('text-muted-foreground transition-transform', isExpanded && 'rotate-180')} />
-                  )}
-                  {canToggle && !hasExpand && (
-                    <span className={cn(
-                      'w-2.5 h-2.5 rounded-full shrink-0 transition-colors',
-                      isOn ? 'bg-primary shadow-[0_0_8px_hsl(var(--amber-glow))]' : 'bg-muted-foreground/30'
-                    )} />
-                  )}
+            {isExpanded && m.kind === 'media_screen' && (
+              <div className="glass-panel rounded-2xl p-3 mt-2 flex flex-wrap gap-2 animate-in fade-in slide-in-from-top-2 duration-150 backdrop-blur-xl border border-[hsl(var(--glass-border)/0.15)]">
+                <button onClick={() => callSvc('media_player', isOn ? 'media_pause' : 'media_play')} className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-primary/15 text-primary text-xs font-medium hover:bg-primary/25 transition-colors">
+                  {isOn ? <Pause size={12} /> : <Play size={12} />}
+                  {isOn ? 'Paus' : 'Spela'}
                 </button>
-              );
-            })}
+              </div>
+            )}
           </div>
-        </div>
-      )}
+        );
+      })}
 
       {/* ── Device visibility picker — top right ── */}
       {!homeLayoutEditMode && markers.length > 0 && (() => {
