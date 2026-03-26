@@ -60,15 +60,15 @@ export const categories: { key: DashCategory; label: string; icon: typeof Home }
   { key: 'profile', label: 'Profil', icon: User },
 ];
 
-const deviceFilters: { key: DeviceKind | 'all'; label: string; emoji: string }[] = [
-  { key: 'all', label: 'Alla', emoji: '🏠' },
-  { key: 'light', label: 'Ljus', emoji: '💡' },
-  { key: 'light-fixture', label: 'Armaturer', emoji: '💡' },
-  { key: 'climate', label: 'Klimat', emoji: '❄️' },
-  { key: 'media_screen', label: 'Media', emoji: '📺' },
-  { key: 'vacuum', label: 'Robot', emoji: '🤖' },
-  { key: 'door-lock', label: 'Lås', emoji: '🔒' },
-  { key: 'sensor', label: 'Sensor', emoji: '🌡️' },
+const deviceFilters: { key: DeviceKind | 'all'; label: string }[] = [
+  { key: 'all', label: 'Alla' },
+  { key: 'light', label: 'Ljus' },
+  { key: 'light-fixture', label: 'Armaturer' },
+  { key: 'climate', label: 'Klimat' },
+  { key: 'media_screen', label: 'Media' },
+  { key: 'vacuum', label: 'Robot' },
+  { key: 'door-lock', label: 'Lås' },
+  { key: 'sensor', label: 'Sensor' },
 ];
 
 const kindCategory: Record<DeviceKind, string> = {
@@ -118,7 +118,7 @@ function InfoCard({ label, value, detail, onClick, accent, sparkData, sparkColor
   return (
     <div
       className={cn(
-        'nn-widget p-4 flex items-center gap-3 transition-all',
+        'nn-widget p-4 md:p-5 flex items-center gap-3 transition-all',
         onClick && 'cursor-pointer hover:ring-1 hover:ring-primary/20 hover:scale-[1.02]',
       )}
       style={accent ? { borderLeft: `3px solid ${accent}` } : undefined}
@@ -127,7 +127,7 @@ function InfoCard({ label, value, detail, onClick, accent, sparkData, sparkColor
       <div className="flex flex-col gap-1 flex-1 min-w-0">
         <span className="label-micro">{label}</span>
         <span className="text-xl font-bold text-foreground font-display tracking-tight">{value}</span>
-        <span className="text-[10px] text-muted-foreground/40 font-medium">{detail}</span>
+        <span className="text-xs text-muted-foreground/40 font-medium">{detail}</span>
       </div>
       {sparkData && sparkColor && <MiniSparkline data={sparkData} color={sparkColor} />}
     </div>
@@ -183,7 +183,7 @@ function QuickScenesWidget() {
                     {LIcon ? (
                       <LIcon size={20} className="text-foreground/60 group-hover:text-primary transition-colors" />
                     ) : (
-                      <span className="text-xl">{scene.icon || '💡'}</span>
+                      <span className="text-xl"><Sparkles size={20} className="text-foreground/60" /></span>
                     )}
                   </div>
                   <span className="text-[10px] text-muted-foreground/70 text-center truncate w-16 group-hover:text-foreground transition-colors">
@@ -265,12 +265,12 @@ function HomeCategory() {
         const devices = cat.deviceIds
           .map((id) => markers.find((m) => m.id === id))
           .filter(Boolean) as DeviceMarker[];
-        return { key: cat.id, label: `${cat.icon} ${cat.name}`, catId: cat.id, devices };
+        return { key: cat.id, label: cat.name, catId: cat.id, devices };
       })
       .filter((e) => e.devices.length > 0 || editMode);
     const uncategorized = markers.filter((m) => !categorizedIds.has(m.id));
     if (uncategorized.length > 0) {
-      entries.push({ key: 'uncategorized', label: '⚙️ Övrigt', devices: uncategorized });
+      entries.push({ key: 'uncategorized', label: 'Övrigt', devices: uncategorized });
     }
   } else {
     const lightsByRoom: Record<string, DeviceMarker[]> = {};
@@ -278,7 +278,7 @@ function HomeCategory() {
     for (const m of markers) {
       if (LIGHT_KINDS.has(m.kind)) {
         const roomName = m.roomId ? (roomNameMap[m.roomId] || 'Rum') : 'Övrigt';
-        const key = `💡 ${roomName}`;
+        const key = roomName;
         if (!lightsByRoom[key]) lightsByRoom[key] = [];
         lightsByRoom[key].push(m);
       } else {
