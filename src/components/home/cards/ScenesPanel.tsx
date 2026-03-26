@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Play, Plus, Trash2, Moon, Sun, Lightbulb, Tv, Film, Snowflake, Flame, Power, Coffee, PartyPopper, Sunset, Sparkles, Home, Eye, X, ChevronDown, Clock, Zap, Timer } from 'lucide-react';
+import { Play, Plus, Trash2, Moon, Sun, Lightbulb, Tv, Film, Snowflake, Flame, Power, Coffee, PartyPopper, Sunset, Sparkles, Home, Eye, X, ChevronDown, Clock, Zap } from 'lucide-react';
 import { useAppStore } from '../../../store/useAppStore';
 import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
