@@ -201,11 +201,24 @@ export function useThemeEffect() {
         const hslPart = basePalette.split('/')[0].trim();
         root.style.setProperty('--glass', `${hslPart} / ${customColors.glassOpacity}`);
       }
-      // Border opacity — alpha-based approach
-      if (customColors.borderOpacity !== undefined) {
-        const alpha = customColors.borderOpacity;
-        root.style.setProperty('--border', `0 0% 100% / ${alpha.toFixed(2)}`);
-        root.style.setProperty('--glass-border', `0 0% 100% / ${Math.max(alpha - 0.04, 0).toFixed(2)}`);
+      // Secondary text color
+      if (customColors.textSecondaryColor?.startsWith('#') && customColors.textSecondaryColor.length >= 7) {
+        const secHsl = hexToHsl(customColors.textSecondaryColor);
+        root.style.setProperty('--muted-foreground', secHsl);
+        root.style.setProperty('--secondary-foreground', secHsl);
+        root.style.setProperty('--sidebar-foreground', secHsl);
+      }
+      // Border color + opacity
+      if (customColors.borderOpacity !== undefined || customColors.borderColor) {
+        const alpha = customColors.borderOpacity ?? 0.10;
+        if (customColors.borderColor?.startsWith('#') && customColors.borderColor.length >= 7) {
+          const borderHsl = hexToHsl(customColors.borderColor);
+          root.style.setProperty('--border', `${borderHsl} / ${alpha.toFixed(2)}`);
+          root.style.setProperty('--glass-border', `${borderHsl} / ${Math.max(alpha - 0.04, 0).toFixed(2)}`);
+        } else {
+          root.style.setProperty('--border', `0 0% 100% / ${alpha.toFixed(2)}`);
+          root.style.setProperty('--glass-border', `0 0% 100% / ${Math.max(alpha - 0.04, 0).toFixed(2)}`);
+        }
       }
       // Glow intensity
       if (customColors.glowIntensity !== undefined) {
