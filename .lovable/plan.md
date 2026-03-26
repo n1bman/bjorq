@@ -1,72 +1,51 @@
 
 
-# Fix: Layoutläge för fler element + widget-storlek i layoutläge + ljusbugg vid döljning
+# Fix: Ljusbugg vid döljning av markörer + Scenikon-färgväljare
 
-## Problem
+## Problem 1: Ljuset ändras vid döljning/visning av markörer
 
-1. **Enhetsmarkörer-knappen och Anpassa-knappen saknas i layoutläget** — de har fasta positioner (`fixed top-4 left-4` / `fixed top-5 right-5`) och kan inte dras.
+**Rotorsak:** `LightMarkerLightOnly` (rad 1658-1659) har en annan `lightColor`-logik än `LightMarker` (rad 48-50):
 
-2. **Enhets-widgets (vacuum, TV, etc.) visas i sin fullstorlek i layoutläget** — men deras representation i `HomeLayoutEditor` är bara en liten pill med ikon+namn. I layoutläget bör de visas i sin riktiga storlek så man ser hur mycket yta de tar.
+- **LightMarker:** `if (!isOn) → grey; if (!lightData) → warm yellow (#f5c542)`
+- **LightMarkerLightOnly:** `if (!lightData || !isOn) → grey (#555555)`
 
-3. **Ljusstyrka ändras vid döljning av markörer** — `LightMarkerLightOnly` rad 1652 har `const isOn = lightData?.on ?? false` (default OFF). `LightMarker` rad 41 har `const isOn = hasState ? (lightData?.on ?? false) : true` (default ON). När man döljer en markör som saknar explicit state byter den från ON → OFF, vilket ändrar ljuset.
+När `isOn=true` men `lightData=null` (ingen explicit state), ger LightMarker varmt gult ljus men LightMarkerLightOnly ger grått. Resultat: döljning → ljuset slocknar/ändras.
+
+**Fix:** Synka `lightColor`-logiken i `LightMarkerLightOnly` med `LightMarker` — exakt samma useMemo:
+
+```tsx
+// rad 1658-1666, ändra till:
+const lightColor = useMemo(() => {
+  if (!isOn) return new THREE.Color('#555555');
+  if (!lightData) return new THREE.Color('#f5c542'); // warm preview — same as LightMarker
+  if (lightData.colorMode === 'rgb' && lightData.rgbColor) {
+    return new THREE.Color(lightData.rgbColor[0] / 255, lightData.rgbColor[1] / 255, lightData.rgbColor[2] / 255);
+  }
+  if (lightData.colorMode === 'temp' && lightData.colorTemp) {
+    return miredsToColor(lightData.colorTemp);
+  }
+  return new THREE.Color('#f5c542');
+}, [lightData?.colorMode, lightData?.rgbColor?.[0], lightData?.rgbColor?.[1], lightData?.rgbColor?.[2], lightData?.colorTemp, isOn, hasState]);
+```
 
 ---
 
-## Fix 1: Lägg till Enhetsmarkörer-knapp och Anpassa-knapp i layoutläget
+## Problem 2: Ingen färgväljare för scenikoner
 
-**`HomeLayoutEditor.tsx`**:
-- Lägg till `'markerPicker'` och `'layoutButton'` i `WIDGET_WIDGETS` (eller som separata draggables).
-- Ge dem defaultpositioner: `markerPicker: { x: 90, y: 3 }`, `layoutButton: { x: 2, y: 2 }`.
-- Rendera dem som ikoner (Eye-ikon resp. Settings2-ikon) med drag-label.
+Användaren vill välja egen färg på den valda scenikonen för bättre visuell identitet.
 
-**`HomeView.tsx`**:
-- Enhetsmarkörer-knappen (rad 369) och Anpassa-knappen (rad 159): läs position från `widgetLayout['markerPicker']` / `widgetLayout['layoutButton']` istf. `fixed top-5 right-5` / `fixed top-4 left-4`.
-- Byt till `absolute` med `left: x%`, `top: y%`.
+**Fix:**
+1. Lägg till `iconColor?: string` i `SavedScene` (types.ts)
+2. I `SceneForm` (ScenesPanel.tsx):
+   - Lägg till `iconColor` state
+   - Under ikonväljaren, lägg till en rad med 8-10 färgcirklar + en input type="color" för fri färg
+   - Spara `iconColor` i scene-objektet
+3. Överallt scenikonen renderas, applicera `style={{ color: scene.iconColor }}` om satt
 
-**`DEFAULT_POSITIONS`** i båda filer:
+**Färgval-rad under ikonväljaren:**
 ```
-markerPicker: { x: 92, y: 3 },
-layoutButton: { x: 2, y: 2 },
+○ vit  ○ guld  ○ röd  ○ blå  ○ grön  ○ lila  ○ rosa  ○ [custom picker]
 ```
-
-## Fix 2: Visa enhets-widgets i riktig storlek i layoutläget
-
-**`HomeLayoutEditor.tsx`** rad 210-262:
-
-Idag renderas device-widgets som en pill:
-```tsx
-<div className="glass-panel rounded-2xl px-4 py-3 flex items-center gap-3 ...">
-  <Icon size={16} /> <span>{m.name}</span>
-</div>
-```
-
-Ersätt med att rendera samma kort-design som `HomeView` — med header + typ-specifika kontroller (vacuum-knappar, media-knappar, etc.) men i en icke-interaktiv version (bara visuellt). Alternativt: gör kortet bredare (`min-w-[180px]`) med en extra rad som visar enhetstypen.
-
-Enklaste approach: ge kortet samma `min-w-[180px] max-w-[260px]` och lägg till en statusrad per typ:
-- vacuum: "Städa · Paus · Stopp · Docka"
-- media_screen: "⏮ ▶ ⏭ ⏹"
-- speaker: "▶ Vol −/+"
-- light: en grå slider-mock
-- fan: "Låg · Med · Hög"
-- default: "Av/På"
-
-## Fix 3: Ljusbugg — `LightMarkerLightOnly` default isOn
-
-**`DeviceMarkers3D.tsx`** rad 1648-1652:
-
-Ändra:
-```tsx
-const lightData = state?.kind === 'light' ? state.data : null;
-const isOn = lightData?.on ?? false;
-```
-Till:
-```tsx
-const hasState = state?.kind === 'light';
-const lightData = hasState ? state.data : null;
-const isOn = hasState ? (lightData?.on ?? false) : true;
-```
-
-Identisk logik som `LightMarker` (rad 39-41). Nu behåller dolda markörer samma ljus som synliga.
 
 ---
 
@@ -74,7 +53,7 @@ Identisk logik som `LightMarker` (rad 39-41). Nu behåller dolda markörer samma
 
 | Fil | Ändring |
 |-----|---------|
-| `src/components/home/HomeLayoutEditor.tsx` | Lägg till markerPicker + layoutButton som draggables, gör device-kort större |
-| `src/components/home/HomeView.tsx` | Positionera markerPicker + layoutButton via widgetLayout |
-| `src/components/devices/DeviceMarkers3D.tsx` | Fix `LightMarkerLightOnly` isOn default till `true` |
+| `src/components/devices/DeviceMarkers3D.tsx` | Synka lightColor-logiken i LightMarkerLightOnly med LightMarker |
+| `src/store/types.ts` | Lägg till `iconColor?: string` i SavedScene |
+| `src/components/home/cards/ScenesPanel.tsx` | Färgväljare under ikonväljaren, spara/läs iconColor |
 
