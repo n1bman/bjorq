@@ -330,10 +330,50 @@ function SceneForm({ scene, onSave, onCancel, onActivate, onRemove }: {
         <span className="text-[10px] text-muted-foreground/50 uppercase tracking-wider">Ikon</span>
         <div className="grid grid-cols-7 gap-2">
           {sceneIconOptions.map(({ key, icon: Icon }) => (
-            <button key={key} onClick={() => setIcon(key)} className={cn('w-10 h-10 rounded-full flex items-center justify-center transition-all', icon === key ? 'bg-primary/20 border border-primary/40 text-primary' : 'border border-[hsl(var(--border)/0.12)] text-muted-foreground/40 hover:text-foreground hover:border-[hsl(var(--border)/0.25)]')}>
+            <button key={key} onClick={() => setIcon(key)} className={cn('w-10 h-10 rounded-full flex items-center justify-center transition-all', icon === key ? 'bg-primary/20 border border-primary/40' : 'border border-[hsl(var(--border)/0.12)] text-muted-foreground/40 hover:text-foreground hover:border-[hsl(var(--border)/0.25)]')} style={icon === key && iconColor ? { color: iconColor, borderColor: iconColor + '66' } : undefined}>
               <Icon size={16} />
             </button>
           ))}
+        </div>
+      </div>
+
+      {/* Icon color picker */}
+      <div className="space-y-2">
+        <span className="text-[10px] text-muted-foreground/50 uppercase tracking-wider">Ikonfärg</span>
+        <div className="flex items-center gap-2 flex-wrap">
+          {[
+            { color: '', label: 'Standard' },
+            { color: '#d7a35d', label: 'Guld' },
+            { color: '#ef4444', label: 'Röd' },
+            { color: '#3b82f6', label: 'Blå' },
+            { color: '#22c55e', label: 'Grön' },
+            { color: '#a855f7', label: 'Lila' },
+            { color: '#ec4899', label: 'Rosa' },
+            { color: '#f97316', label: 'Orange' },
+            { color: '#06b6d4', label: 'Cyan' },
+          ].map(({ color, label }) => (
+            <button
+              key={color || 'default'}
+              title={label}
+              onClick={() => setIconColor(color)}
+              className={cn(
+                'w-7 h-7 rounded-full border-2 transition-all flex items-center justify-center text-[8px]',
+                iconColor === color ? 'border-foreground/60 scale-110' : 'border-[hsl(var(--border)/0.2)] hover:scale-105'
+              )}
+              style={color ? { backgroundColor: color } : undefined}
+            >
+              {!color && <span className="text-muted-foreground/60">—</span>}
+            </button>
+          ))}
+          <label className="w-7 h-7 rounded-full border-2 border-[hsl(var(--border)/0.2)] overflow-hidden cursor-pointer hover:scale-105 transition-all relative" title="Egen färg">
+            <input
+              type="color"
+              value={iconColor || '#d7a35d'}
+              onChange={(e) => setIconColor(e.target.value)}
+              className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+            />
+            <div className="w-full h-full" style={{ background: 'conic-gradient(red, yellow, lime, aqua, blue, magenta, red)' }} />
+          </label>
         </div>
       </div>
 
