@@ -989,11 +989,21 @@ export interface SavedScene {
   automation?: SceneAutomation;
 }
 
+export interface CustomColors {
+  buttonColor?: string;
+  sliderColor?: string;
+  bgColor?: string;
+  menuColor?: string;
+  glassOpacity?: number;    // 0.5-1.0
+  borderOpacity?: number;   // 0-0.3
+}
+
 export interface UserProfile {
   name: string;
-  theme: 'dark' | 'midnight' | 'light';
+  theme: 'dark' | 'midnight' | 'light' | 'nordic';
   accentColor: string;
   dashboardBg: 'scene3d' | 'gradient' | 'solid';
+  customColors?: CustomColors;
 }
 
 // ─── Standby Settings ───

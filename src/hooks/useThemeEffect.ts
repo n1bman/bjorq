@@ -72,10 +72,34 @@ const lightPalette: ThemePalette = {
   '--glass-border': '220 14% 82%',
 };
 
+const nordicPalette: ThemePalette = {
+  '--background': '225 20% 7%',
+  '--foreground': '40 15% 90%',
+  '--card': '225 18% 10%',
+  '--card-foreground': '40 15% 90%',
+  '--popover': '225 18% 10%',
+  '--popover-foreground': '40 15% 90%',
+  '--secondary': '225 14% 14%',
+  '--secondary-foreground': '40 12% 78%',
+  '--muted': '225 12% 12%',
+  '--muted-foreground': '220 8% 48%',
+  '--border': '30 8% 18%',
+  '--input': '225 14% 15%',
+  '--sidebar-background': '225 22% 6%',
+  '--sidebar-foreground': '40 12% 78%',
+  '--sidebar-accent': '225 14% 11%',
+  '--sidebar-accent-foreground': '40 12% 78%',
+  '--sidebar-border': '30 8% 15%',
+  '--surface': '225 16% 11%',
+  '--glass': '225 20% 9% / 0.88',
+  '--glass-border': '30 10% 20%',
+};
+
 const palettes: Record<string, ThemePalette> = {
   dark: darkPalette,
   midnight: midnightPalette,
   light: lightPalette,
+  nordic: nordicPalette,
 };
 
 function hexToHsl(hex: string): string {
@@ -105,6 +129,7 @@ function hexToHsl(hex: string): string {
 export function useThemeEffect() {
   const theme = useAppStore((s) => s.profile.theme);
   const accentColor = useAppStore((s) => s.profile.accentColor);
+  const customColors = useAppStore((s) => s.profile.customColors);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -113,17 +138,55 @@ export function useThemeEffect() {
     Object.entries(palette).forEach(([prop, value]) => {
       root.style.setProperty(prop, value);
     });
-  }, [theme]);
+
+    // Apply custom color overrides
+    if (customColors) {
+      if (customColors.bgColor && customColors.bgColor.startsWith('#') && customColors.bgColor.length >= 7) {
+        root.style.setProperty('--background', hexToHsl(customColors.bgColor));
+      }
+      if (customColors.buttonColor && customColors.buttonColor.startsWith('#') && customColors.buttonColor.length >= 7) {
+        root.style.setProperty('--secondary', hexToHsl(customColors.buttonColor));
+      }
+      if (customColors.menuColor && customColors.menuColor.startsWith('#') && customColors.menuColor.length >= 7) {
+        const menuHsl = hexToHsl(customColors.menuColor);
+        root.style.setProperty('--sidebar-background', menuHsl);
+      }
+      if (customColors.glassOpacity !== undefined) {
+        // Re-apply glass with custom opacity
+        const basePalette = palette['--glass'] || '222 16% 15% / 0.72';
+        const hslPart = basePalette.split('/')[0].trim();
+        root.style.setProperty('--glass', `${hslPart} / ${customColors.glassOpacity}`);
+      }
+      if (customColors.borderOpacity !== undefined) {
+        const borderBase = palette['--border'] || '222 12% 21%';
+        // Parse the HSL and adjust lightness based on opacity
+        const newL = Math.round(21 * (0.5 + customColors.borderOpacity * 2));
+        const parts = borderBase.split(' ');
+        if (parts.length >= 3) {
+          root.style.setProperty('--border', `${parts[0]} ${parts[1]} ${newL}%`);
+          root.style.setProperty('--glass-border', `${parts[0]} ${parts[1]} ${Math.min(newL + 5, 40)}%`);
+        }
+      }
+    }
+  }, [theme, customColors]);
 
   useEffect(() => {
     if (!accentColor || !accentColor.startsWith('#') || accentColor.length < 7) return;
     const root = document.documentElement;
     const hsl = hexToHsl(accentColor);
+    const customSlider = customColors?.sliderColor;
 
     root.style.setProperty('--primary', hsl);
     root.style.setProperty('--ring', hsl);
     root.style.setProperty('--sidebar-primary', hsl);
     root.style.setProperty('--sidebar-ring', hsl);
     root.style.setProperty('--amber-glow', `${hsl} / 0.15`);
-  }, [accentColor]);
+
+    // Slider color override
+    if (customSlider && customSlider.startsWith('#') && customSlider.length >= 7) {
+      root.style.setProperty('--slider-accent', hexToHsl(customSlider));
+    } else {
+      root.style.setProperty('--slider-accent', hsl);
+    }
+  }, [accentColor, customColors?.sliderColor]);
 }
