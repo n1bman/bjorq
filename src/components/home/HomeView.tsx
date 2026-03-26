@@ -112,8 +112,8 @@ export default function HomeView({ longPressDeviceId, onDismissLongPress, fpsAct
   const getPos = (key: HomeWidgetKey) => {
     const config = widgetLayout[key];
     return {
-      x: config?.x ?? DEFAULT_POSITIONS[key].x,
-      y: config?.y ?? DEFAULT_POSITIONS[key].y,
+      x: Math.max(1, Math.min(88, config?.x ?? DEFAULT_POSITIONS[key].x)),
+      y: Math.max(1, Math.min(85, config?.y ?? DEFAULT_POSITIONS[key].y)),
     };
   };
 
