@@ -67,7 +67,7 @@ export default function HomeView({ longPressDeviceId, onDismissLongPress, fpsAct
   const deviceStates = useAppStore((s) => s.devices.deviceStates);
   
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [expandedPillId, setExpandedPillId] = useState<string | null>(null);
+  // expandedPillId removed — all controls are always visible in unified cards
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useWeatherSync();
 
