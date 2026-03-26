@@ -15,25 +15,21 @@ interface Props {
 
 /** Generate 24h simulated hourly data based on current watts */
 function generateHourlyData(totalWatts: number): number[] {
-  const hour = new Date().getHours();
   const baseWatts = totalWatts * 0.4;
   const data: number[] = [];
   for (let i = 0; i < 24; i++) {
-    // Simulate usage pattern: peak at 8, 12, 18-20
-    const hourOffset = (i - hour + 24) % 24;
     let mult = 0.5;
     if (i >= 7 && i <= 9) mult = 0.9;
     if (i >= 11 && i <= 13) mult = 0.75;
     if (i >= 17 && i <= 21) mult = 1.0;
     if (i >= 23 || i <= 5) mult = 0.3;
-    // Add some variation
     const noise = 0.85 + Math.sin(i * 2.3 + totalWatts * 0.01) * 0.15;
     data.push(baseWatts + totalWatts * mult * noise * 0.6);
   }
   return data;
 }
 
-export default function EnergySparkline({ width = 280, height = 60, totalWatts, dailyGoalKwh, showPeaks = true }: Props) {
+export default function EnergySparkline({ width = 280, height = 60, totalWatts, showPeaks = true }: Props) {
   const data = useMemo(() => generateHourlyData(totalWatts), [totalWatts]);
   const max = Math.max(...data, 1);
   const min = Math.min(...data);
@@ -52,10 +48,8 @@ export default function EnergySparkline({ width = 280, height = 60, totalWatts, 
     return `C ${cpx} ${prev.y} ${cpx} ${p.y} ${p.x} ${p.y}`;
   }).join(' ');
 
-  // Fill path
   const fillD = `${pathD} L ${width} ${height} L 0 ${height} Z`;
 
-  // Find peaks (local max above 80th percentile)
   const threshold = min + range * 0.8;
   const peaks = showPeaks ? points.filter((p, i) => {
     if (p.value < threshold) return false;
@@ -71,39 +65,34 @@ export default function EnergySparkline({ width = 280, height = 60, totalWatts, 
     <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="overflow-visible">
       <defs>
         <linearGradient id="sparkline-grad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.3" />
-          <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0.02" />
+          <stop offset="0%" stopColor="hsl(var(--section-energy))" stopOpacity="0.3" />
+          <stop offset="100%" stopColor="hsl(var(--section-energy))" stopOpacity="0.02" />
         </linearGradient>
       </defs>
-      {/* Fill area */}
       <path d={fillD} fill="url(#sparkline-grad)" />
-      {/* Line — animated draw */}
       <path
         d={pathD}
         fill="none"
-        stroke="hsl(var(--primary))"
+        stroke="hsl(var(--section-energy))"
         strokeWidth="2"
         strokeLinecap="round"
         className="sparkline-line"
       />
-      {/* Current time indicator — pulsing */}
       <line
         x1={currentX} y1={0} x2={currentX} y2={height}
-        stroke="hsl(var(--primary))"
+        stroke="hsl(var(--section-energy))"
         strokeWidth="1"
         strokeDasharray="2 2"
         opacity="0.4"
       />
-      <circle cx={currentX} cy={points[hour]?.y ?? height / 2} r="4" fill="hsl(var(--primary))" className="sparkline-pulse" />
-      {/* Peak markers with hover tooltips */}
+      <circle cx={currentX} cy={points[hour]?.y ?? height / 2} r="4" fill="hsl(var(--section-energy))" className="sparkline-pulse" />
       {peaks.map((p, i) => (
         <g key={i} className="group cursor-pointer">
-          <circle cx={p.x} cy={p.y} r="3.5" fill="hsl(var(--primary))" opacity="0.9" />
-          <circle cx={p.x} cy={p.y} r="6" fill="none" stroke="hsl(var(--primary))" strokeWidth="1" opacity="0.3" className="sparkline-pulse" />
-          {/* Tooltip */}
+          <circle cx={p.x} cy={p.y} r="3.5" fill="hsl(var(--section-energy))" opacity="0.9" />
+          <circle cx={p.x} cy={p.y} r="6" fill="none" stroke="hsl(var(--section-energy))" strokeWidth="1" opacity="0.3" className="sparkline-pulse" />
           <g className="opacity-0 group-hover:opacity-100 transition-opacity">
             <rect x={p.x - 24} y={p.y - 22} width="48" height="16" rx="4" fill="hsl(var(--card))" stroke="hsl(var(--border))" strokeWidth="0.5" />
-            <text x={p.x} y={p.y - 11} textAnchor="middle" fill="hsl(var(--primary))" fontSize="8" fontWeight="600">
+            <text x={p.x} y={p.y - 11} textAnchor="middle" fill="hsl(var(--section-energy))" fontSize="8" fontWeight="600">
               {Math.round(p.value)}W
             </text>
           </g>

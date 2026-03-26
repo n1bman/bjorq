@@ -1,12 +1,31 @@
-import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Area, AreaChart, Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { Link2, Settings2, TrendingUp, Zap } from 'lucide-react';
-import EnergySparkline from './EnergySparkline';
 import { useMemo, useState } from 'react';
 import { getEnergyEntityViews } from '../../../lib/haMenuSelectors';
 import { useAppStore } from '../../../store/useAppStore';
 import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
 import { Switch } from '../../ui/switch';
+
+/** Generate 24h area chart data */
+function generate24hData(totalWatts: number) {
+  const hour = new Date().getHours();
+  const base = totalWatts * 0.4;
+  return Array.from({ length: 24 }, (_, i) => {
+    let mult = 0.5;
+    if (i >= 7 && i <= 9) mult = 0.9;
+    if (i >= 11 && i <= 13) mult = 0.75;
+    if (i >= 17 && i <= 21) mult = 1.0;
+    if (i >= 23 || i <= 5) mult = 0.3;
+    const noise = 0.85 + Math.sin(i * 2.3 + totalWatts * 0.01) * 0.15;
+    const watts = Math.round(base + totalWatts * mult * noise * 0.6);
+    return {
+      hour: `${String(i).padStart(2, '0')}:00`,
+      watt: watts,
+      isCurrent: i === hour,
+    };
+  });
+}
 
 export default function EnergyDeviceList() {
   const markers = useAppStore((s) => s.devices.markers);
@@ -39,6 +58,13 @@ export default function EnergyDeviceList() {
   const totalWeeklyKwh = trackedDevices.reduce((sum, marker) => sum + (marker.energyTracking?.weeklyKwh ?? getDeviceDailyKwh(marker) * 7), 0);
   const totalMonthlyKwh = trackedDevices.reduce((sum, marker) => sum + (marker.energyTracking?.monthlyKwh ?? getDeviceDailyKwh(marker) * 30), 0);
 
+  const peakWatts = useMemo(() => {
+    const data = generate24hData(totalWatts);
+    return Math.max(...data.map(d => d.watt));
+  }, [totalWatts]);
+
+  const areaData = useMemo(() => generate24hData(totalWatts), [totalWatts]);
+
   const chartData = useMemo(() => trackedDevices
     .map((marker) => ({
       name: marker.name || marker.kind,
@@ -63,7 +89,7 @@ export default function EnergyDeviceList() {
     if (!isPicking) {
       return (
         <Button size="sm" variant="ghost" className="h-5 px-1 text-[9px]" onClick={() => setPicking(markerId)}>
-          {currentEntityId ? 'Byt sensor' : 'Valj sensor'}
+          {currentEntityId ? 'Byt sensor' : 'Välj sensor'}
         </Button>
       );
     }
@@ -73,7 +99,7 @@ export default function EnergyDeviceList() {
         {sensors.map(({ entity }) => (
           <button
             key={entity.entityId}
-            className="w-full truncate rounded px-1.5 py-1 text-left text-[9px] text-foreground hover:bg-primary/20"
+            className="w-full truncate rounded px-1.5 py-1 text-left text-[9px] text-foreground hover:bg-[hsl(var(--section-energy))]/20"
             onClick={() => {
               updateDevice(markerId, {
                 energyTracking: {
@@ -106,15 +132,17 @@ export default function EnergyDeviceList() {
     );
   };
 
+  const energyAccent = 'hsl(var(--section-energy))';
+
   return (
     <div className="space-y-4">
-      {/* ── Hero: Live förbrukning with sparkline ── */}
-      <div className="nn-widget p-6">
+      {/* ── Hero: Settings + KPI row ── */}
+      <div className="nn-widget p-5">
         <div className="flex items-center gap-2 mb-4">
-          <Zap size={18} className="text-primary" />
+          <Zap size={18} className="text-[hsl(var(--section-energy))]" />
           <h4 className="text-sm font-semibold text-foreground">Energiöverblick</h4>
           {haStatus === 'connected' && (
-            <span className="ml-1 px-1.5 py-0.5 rounded text-[8px] font-bold bg-primary/15 text-primary animate-pulse">LIVE</span>
+            <span className="ml-1 px-1.5 py-0.5 rounded text-[8px] font-bold bg-[hsl(var(--section-energy))]/15 text-[hsl(var(--section-energy))] animate-pulse">LIVE</span>
           )}
           <div className="ml-auto">
             <button onClick={() => setShowConfig((v) => !v)} className="rounded-lg p-1.5 text-muted-foreground hover:bg-surface-elevated/50 transition-colors">
@@ -140,55 +168,79 @@ export default function EnergyDeviceList() {
           </div>
         )}
 
-        {/* Hero value + circular progress ring */}
-        <div className="flex items-center justify-center gap-6 mb-4">
-          <div className="relative">
-           <svg width="120" height="120" viewBox="0 0 120 120">
-              {/* Background ring */}
-              <circle cx="60" cy="60" r="50" fill="none" stroke="hsl(var(--surface-elevated))" strokeWidth="8" />
-              {/* Animated progress ring */}
-              <circle
-                cx="60" cy="60" r="50"
-                fill="none"
-                stroke="hsl(var(--primary))"
-                strokeWidth="8"
-                strokeLinecap="round"
-                strokeDasharray={`${Math.min((totalDailyKwh / energyConfig.dailyGoalKwh) * 314, 314)} 314`}
-                transform="rotate(-90 60 60)"
-                className="energy-ring-animate"
-              />
-              {/* Glow ring */}
-              <circle
-                cx="60" cy="60" r="50"
-                fill="none"
-                stroke="hsl(var(--primary))"
-                strokeWidth="2"
-                opacity="0.15"
-                className="sparkline-pulse"
-              />
-            </svg>
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-3xl font-bold font-display text-foreground energy-value-pulse">{totalWatts}</span>
-              <span className="text-[9px] text-muted-foreground uppercase tracking-wider">Watt</span>
-            </div>
+        {/* KPI row — 4 cards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+          <div className="rounded-xl bg-surface-elevated/40 p-3 text-center" style={{ borderTop: `2px solid ${energyAccent}` }}>
+            <p className="text-[9px] uppercase tracking-wider text-muted-foreground/60">Nu</p>
+            <p className="text-xl font-bold font-display text-[hsl(var(--section-energy))]">{totalWatts}</p>
+            <p className="text-[9px] text-muted-foreground/50">Watt</p>
           </div>
-          <div className="space-y-1">
-            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
-              {haStatus === 'connected' ? 'Live förbrukning' : 'Estimerad förbrukning'}
-            </p>
-            <p className="text-xs text-foreground">
-              {totalDailyKwh.toFixed(1)} / {energyConfig.dailyGoalKwh} kWh dagsmål
-            </p>
-            <p className="text-[10px] text-primary">
-              {Math.round((totalDailyKwh / energyConfig.dailyGoalKwh) * 100)}% av mål
-            </p>
+          <div className="rounded-xl bg-surface-elevated/40 p-3 text-center" style={{ borderTop: `2px solid ${energyAccent}` }}>
+            <p className="text-[9px] uppercase tracking-wider text-muted-foreground/60">Idag</p>
+            <p className="text-xl font-bold font-display text-[hsl(var(--section-energy))]">{totalDailyKwh.toFixed(1)}</p>
+            <p className="text-[9px] text-muted-foreground/50">kWh</p>
+          </div>
+          <div className="rounded-xl bg-surface-elevated/40 p-3 text-center" style={{ borderTop: `2px solid ${energyAccent}` }}>
+            <p className="text-[9px] uppercase tracking-wider text-muted-foreground/60">Kostnad</p>
+            <p className="text-xl font-bold font-display text-[hsl(var(--section-energy))]">~{(totalDailyKwh * energyConfig.pricePerKwh).toFixed(1)}</p>
+            <p className="text-[9px] text-muted-foreground/50">{energyConfig.currency}</p>
+          </div>
+          <div className="rounded-xl bg-surface-elevated/40 p-3 text-center" style={{ borderTop: `2px solid ${energyAccent}` }}>
+            <p className="text-[9px] uppercase tracking-wider text-muted-foreground/60">Peak</p>
+            <p className="text-xl font-bold font-display text-[hsl(var(--section-energy))]">{peakWatts}</p>
+            <p className="text-[9px] text-muted-foreground/50">Watt</p>
           </div>
         </div>
 
-        {/* Sparkline */}
+        {/* Main chart — Area chart 24h */}
         <div className="mb-4">
-          <p className="text-[9px] uppercase tracking-wider text-muted-foreground/50 mb-1">Förbrukningskurva (24h)</p>
-          <EnergySparkline width={400} height={50} totalWatts={totalWatts} showPeaks />
+          <p className="text-[9px] uppercase tracking-wider text-muted-foreground/50 mb-2">Förbrukningskurva (24h)</p>
+          <div className="h-[140px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={areaData} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
+                <defs>
+                  <linearGradient id="energyAreaGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="hsl(var(--section-energy))" stopOpacity={0.35} />
+                    <stop offset="100%" stopColor="hsl(var(--section-energy))" stopOpacity={0.02} />
+                  </linearGradient>
+                </defs>
+                <XAxis dataKey="hour" tick={{ fontSize: 9 }} tickLine={false} axisLine={false} interval={5} />
+                <YAxis tick={{ fontSize: 9 }} tickLine={false} axisLine={false} />
+                <Tooltip
+                  contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: '11px' }}
+                  formatter={(value: number) => [`${value} W`, 'Effekt']}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="watt"
+                  stroke="hsl(var(--section-energy))"
+                  strokeWidth={2}
+                  fill="url(#energyAreaGrad)"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Secondary ring + goal */}
+        <div className="flex items-center gap-4 mb-4 p-3 rounded-xl bg-surface-elevated/30">
+          <svg width="64" height="64" viewBox="0 0 64 64">
+            <circle cx="32" cy="32" r="26" fill="none" stroke="hsl(var(--surface-elevated))" strokeWidth="5" />
+            <circle
+              cx="32" cy="32" r="26"
+              fill="none"
+              stroke="hsl(var(--section-energy))"
+              strokeWidth="5"
+              strokeLinecap="round"
+              strokeDasharray={`${Math.min((totalDailyKwh / energyConfig.dailyGoalKwh) * 163, 163)} 163`}
+              transform="rotate(-90 32 32)"
+              className="energy-ring-animate"
+            />
+          </svg>
+          <div className="space-y-0.5">
+            <p className="text-xs text-foreground font-medium">{totalDailyKwh.toFixed(1)} / {energyConfig.dailyGoalKwh} kWh</p>
+            <p className="text-[10px] text-[hsl(var(--section-energy))]">{Math.round((totalDailyKwh / energyConfig.dailyGoalKwh) * 100)}% av dagsmål</p>
+          </div>
         </div>
 
         {/* Stats grid */}
@@ -196,7 +248,7 @@ export default function EnergyDeviceList() {
           <div className="rounded-xl bg-surface-elevated/40 p-3 text-center">
             <p className="text-lg font-bold font-display text-foreground">{totalDailyKwh.toFixed(1)}</p>
             <p className="text-[9px] uppercase tracking-wider text-muted-foreground/60">kWh idag</p>
-            <p className="text-[10px] text-primary mt-0.5">~{(totalDailyKwh * energyConfig.pricePerKwh).toFixed(1)} {energyConfig.currency}</p>
+            <p className="text-[10px] text-[hsl(var(--section-energy))] mt-0.5">~{(totalDailyKwh * energyConfig.pricePerKwh).toFixed(1)} {energyConfig.currency}</p>
           </div>
           <div className="rounded-xl bg-surface-elevated/40 p-3 text-center">
             <p className="text-lg font-bold font-display text-foreground">{totalWeeklyKwh.toFixed(0)}</p>
@@ -234,7 +286,7 @@ export default function EnergyDeviceList() {
       {chartData.length > 0 && (
         <div className="nn-widget p-4">
           <div className="mb-3 flex items-center gap-2">
-            <TrendingUp size={14} className="text-primary" />
+            <TrendingUp size={14} className="text-[hsl(var(--section-energy))]" />
             <h4 className="text-xs font-semibold text-foreground">Veckoförbrukning per enhet</h4>
           </div>
           <div className="h-40">
@@ -245,7 +297,7 @@ export default function EnergyDeviceList() {
                 <Tooltip formatter={(value: number) => `${value.toFixed(1)} kWh`} />
                 <Bar dataKey="kwh" radius={[0, 4, 4, 0]}>
                   {chartData.map((_, index) => (
-                    <Cell key={index} fill="hsl(var(--primary))" opacity={0.6 + (index === 0 ? 0.4 : 0)} />
+                    <Cell key={index} fill="hsl(var(--section-energy))" opacity={0.6 + (index === 0 ? 0.4 : 0)} />
                   ))}
                 </Bar>
               </BarChart>
@@ -268,11 +320,11 @@ export default function EnergyDeviceList() {
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-foreground">{marker.name || marker.kind}</span>
                     <span className="text-xs font-medium text-foreground">
-                      {watts} W {livePower && <span className="ml-0.5 text-[8px] text-primary">LIVE</span>}
+                      {watts} W {livePower && <span className="ml-0.5 text-[8px] text-[hsl(var(--section-energy))]">LIVE</span>}
                     </span>
                   </div>
                   <div className="h-1.5 overflow-hidden rounded-full bg-surface-elevated">
-                    <div className="h-full rounded-full bg-primary/70 energy-bar-animate" style={{ '--bar-width': `${pct}%` } as React.CSSProperties} />
+                    <div className="h-full rounded-full bg-[hsl(var(--section-energy))]/70 energy-bar-animate" style={{ '--bar-width': `${pct}%` } as React.CSSProperties} />
                   </div>
                   <div className="flex gap-3 text-[9px] text-muted-foreground/60">
                     <span>Dag: {getDeviceDailyKwh(marker).toFixed(1)} kWh</span>
@@ -315,7 +367,7 @@ export default function EnergyDeviceList() {
                     <div className="flex items-center gap-1 text-[9px] text-muted-foreground">
                       <Link2 size={9} />
                       <span>Effektsensor</span>
-                      <span className="truncate text-primary">{marker.energyTracking.powerEntityId || 'Ej kopplad'}</span>
+                      <span className="truncate text-[hsl(var(--section-energy))]">{marker.energyTracking.powerEntityId || 'Ej kopplad'}</span>
                     </div>
                     {renderSensorPicker(marker.id, 'power', marker.energyTracking.powerEntityId)}
                   </div>
@@ -324,7 +376,7 @@ export default function EnergyDeviceList() {
                     <div className="flex items-center gap-1 text-[9px] text-muted-foreground">
                       <Link2 size={9} />
                       <span>Energisensor</span>
-                      <span className="truncate text-primary">{marker.energyTracking.energyEntityId || 'Ej kopplad'}</span>
+                      <span className="truncate text-[hsl(var(--section-energy))]">{marker.energyTracking.energyEntityId || 'Ej kopplad'}</span>
                     </div>
                     {renderSensorPicker(marker.id, 'energy', marker.energyTracking.energyEntityId)}
                   </div>

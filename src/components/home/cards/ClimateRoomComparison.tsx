@@ -86,7 +86,7 @@ export default function ClimateRoomComparison() {
                 <div
                   className={cn(
                     'absolute top-0 bottom-0 left-0 rounded-full transition-all duration-700',
-                    isWarm ? 'bg-orange-400/70' : isCold ? 'bg-blue-400/70' : 'bg-primary/60'
+                    isWarm ? 'bg-orange-400/70' : isCold ? 'bg-blue-400/70' : 'bg-[hsl(var(--section-climate))]/60'
                   )}
                   style={{ width: `${currentPct}%` }}
                 />

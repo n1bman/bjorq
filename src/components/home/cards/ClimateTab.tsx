@@ -33,7 +33,7 @@ function ClimateOverview() {
                   <p className="truncate text-xs font-medium text-foreground">{entity.friendlyName}</p>
                   <p className="truncate text-[10px] text-muted-foreground/50">{entity.entityId}</p>
                 </div>
-                <span className={cn('rounded-full px-2 py-0.5 text-[9px]', linked ? 'bg-primary/15 text-primary' : 'bg-surface-elevated text-muted-foreground/50')}>
+                <span className={cn('rounded-full px-2 py-0.5 text-[9px]', linked ? 'bg-[hsl(var(--section-climate))]/15 text-[hsl(var(--section-climate))]' : 'bg-surface-elevated text-muted-foreground/50')}>
                   {linked ? marker?.name || 'Länkad' : 'Ej länkad'}
                 </span>
               </div>
@@ -125,7 +125,7 @@ function ComfortStatus() {
   return (
     <div className="nn-widget p-4 space-y-3">
       <div className="flex items-center gap-2">
-        <Activity size={16} className="text-primary" />
+        <Activity size={16} className="text-[hsl(var(--section-climate))]" />
         <h4 className="text-sm font-semibold text-foreground">Komfortstatus</h4>
       </div>
       {override.active && (
@@ -150,8 +150,8 @@ function ComfortStatus() {
         <div className="space-y-1">
           <p className="text-[9px] uppercase tracking-wider text-muted-foreground/40">Aktiva regler</p>
           {activeRules.map((rule) => (
-            <div key={rule.id} className="flex items-center gap-2 rounded-lg bg-primary/8 px-3 py-1.5">
-              <Wind size={12} className="text-primary" />
+            <div key={rule.id} className="flex items-center gap-2 rounded-lg bg-[hsl(var(--section-climate))]/8 px-3 py-1.5">
+              <Wind size={12} className="text-[hsl(var(--section-climate))]" />
               <span className="text-xs text-foreground">{rule.name}</span>
             </div>
           ))}
@@ -276,14 +276,14 @@ function RuleCard({ rule }: { rule: ComfortRule }) {
   }
 
   return (
-    <div className={cn('nn-widget p-3 space-y-2', !rule.enabled && 'opacity-50', rule.lastState === 'active' && 'border-primary/20')}>
+    <div className={cn('nn-widget p-3 space-y-2', !rule.enabled && 'opacity-50', rule.lastState === 'active' && 'border-[hsl(var(--section-climate))]/20')}>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Thermometer size={14} className={rule.lastState === 'active' ? 'text-primary' : 'text-muted-foreground'} />
+          <Thermometer size={14} className={rule.lastState === 'active' ? 'text-[hsl(var(--section-climate))]' : 'text-muted-foreground'} />
           <div>
             <span className="text-sm font-medium text-foreground">{rule.name}</span>
             {rule.lastState === 'active' && (
-              <p className="text-[8px] text-primary/70">Aktiv nu</p>
+              <p className="text-[8px] text-[hsl(var(--section-climate))]/70">Aktiv nu</p>
             )}
             {rule.lastTriggered && (
               <p className="text-[8px] text-muted-foreground/60">Senast aktiv: {new Date(rule.lastTriggered).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })}</p>
@@ -373,7 +373,7 @@ export default function ClimateTab() {
       {climateDevices.length > 0 && (
         <div className="space-y-2">
           <h4 className="text-xs font-semibold text-foreground flex items-center gap-2">
-            <Activity size={14} className="text-primary" />
+            <Activity size={14} className="text-[hsl(var(--section-climate))]" />
             Temperaturtrend (24h)
           </h4>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
@@ -394,7 +394,7 @@ export default function ClimateTab() {
       {/* 5. Rules */}
       <div className="flex items-center justify-between">
         <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
-          <Thermometer size={16} className="text-primary" />
+          <Thermometer size={16} className="text-[hsl(var(--section-climate))]" />
           Klimatregler ({rules.length})
         </h3>
         <Button size="sm" variant="outline" onClick={() => setShowNew(true)} className="h-8 gap-1 text-xs">

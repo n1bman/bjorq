@@ -53,7 +53,7 @@ export default function EnergyWidget({ alwaysExpanded = false, size = 'normal' }
         onClick={() => !alwaysExpanded && setExpanded(!expanded)}
       >
         <div className="flex items-center gap-2">
-          <Zap size={18} className="text-primary shrink-0" />
+          <Zap size={18} className="text-[hsl(var(--section-energy))] shrink-0" />
           <div>
             <p className="text-lg font-bold font-display text-foreground whitespace-nowrap">{totalWatts.toLocaleString('sv-SE')} W</p>
             <p className="text-[10px] text-muted-foreground whitespace-nowrap">{energyConfig.pricePerKwh} {energyConfig.currency}/kWh</p>
@@ -88,24 +88,24 @@ export default function EnergyWidget({ alwaysExpanded = false, size = 'normal' }
     );
   }
 
-  // Compact overlay — just watt number + mini sparkline
+  // Compact overlay
   if (size === 'compact') {
     return (
       <div className="overlay-widget">
         <div className="flex items-center gap-2">
-          <Zap size={12} className="text-primary shrink-0" />
+          <Zap size={12} className="text-[hsl(var(--section-energy))] shrink-0" />
           <span className="text-lg font-bold font-display text-foreground whitespace-nowrap">{totalWatts.toLocaleString('sv-SE')} W</span>
         </div>
       </div>
     );
   }
 
-  // Expanded overlay — with mini sparkline
+  // Expanded overlay
   if (size === 'expanded') {
     return (
       <div className="overlay-widget">
         <div className="flex items-center gap-2">
-          <Zap size={14} className="text-primary shrink-0" />
+          <Zap size={14} className="text-[hsl(var(--section-energy))] shrink-0" />
           <span className="text-xl font-bold font-display text-foreground whitespace-nowrap">{totalWatts.toLocaleString('sv-SE')} W</span>
           <span className="text-[10px] text-muted-foreground/70">{totalDailyKwh.toFixed(1)} kWh</span>
         </div>
@@ -119,11 +119,11 @@ export default function EnergyWidget({ alwaysExpanded = false, size = 'normal' }
     );
   }
 
-  // Normal overlay — compact
+  // Normal overlay
   return (
     <div className="overlay-widget">
       <div className="flex items-center gap-2">
-        <Zap size={14} className="text-primary shrink-0" />
+        <Zap size={14} className="text-[hsl(var(--section-energy))] shrink-0" />
         <span className="text-xl font-bold font-display text-foreground whitespace-nowrap">{totalWatts.toLocaleString('sv-SE')} W</span>
         <span className="text-[10px] text-muted-foreground/70">{totalDailyKwh.toFixed(1)} kWh</span>
       </div>
