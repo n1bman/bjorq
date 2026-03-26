@@ -10,7 +10,7 @@ import EnergyWidget from './cards/EnergyWidget';
 import TemperatureWidget from './cards/TemperatureWidget';
 import DeviceControlCard from './cards/DeviceControlCard';
 import { useWeatherSync } from '../../hooks/useWeatherSync';
-import { Eye, EyeOff, Lightbulb, Thermometer, Wind, Camera, Power, Tv, Fan, Shield, Droplets, X, Wifi, Settings2 } from 'lucide-react';
+import { Eye, EyeOff, Lightbulb, Thermometer, Wind, Camera, Power, Tv, Fan, Shield, Droplets, X, Wifi, Settings2, ChevronDown, Play, Pause, Home as HomeIcon, Square, Plus, Minus } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Switch } from '../ui/switch';
 import type { DeviceKind, HomeWidgetKey } from '../../store/types';
@@ -62,6 +62,7 @@ export default function HomeView({ longPressDeviceId, onDismissLongPress, fpsAct
   const deviceStates = useAppStore((s) => s.devices.deviceStates);
   
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [expandedPillId, setExpandedPillId] = useState<string | null>(null);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useWeatherSync();
 
@@ -188,26 +189,90 @@ export default function HomeView({ longPressDeviceId, onDismissLongPress, fpsAct
       {/* ── Device pills at bottom ── */}
       {selectedMarkers.length > 0 && (
         <div className="absolute bottom-24 left-4 right-4 z-10 pointer-events-auto">
+          {/* Expanded pill panel */}
+          {expandedPillId && (() => {
+            const em = selectedMarkers.find((m) => m.id === expandedPillId);
+            if (!em) return null;
+            const emIsOn = getDeviceIsOn(em.id);
+            const callService = useAppStore.getState().callDeviceService;
+
+            if (em.kind === 'vacuum') {
+              return (
+                <div className="nn-widget p-3 mb-2 flex flex-wrap gap-2 animate-in fade-in slide-in-from-bottom-2 duration-150">
+                  <button onClick={() => callService?.(em.id, 'start')} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-primary/15 text-primary text-xs font-medium hover:bg-primary/25 transition-colors">
+                    <Play size={12} /> Städa
+                  </button>
+                  <button onClick={() => callService?.(em.id, 'pause')} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-secondary/50 text-foreground text-xs font-medium hover:bg-secondary/70 transition-colors">
+                    <Pause size={12} /> Paus
+                  </button>
+                  <button onClick={() => callService?.(em.id, 'stop')} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-secondary/50 text-foreground text-xs font-medium hover:bg-secondary/70 transition-colors">
+                    <Square size={12} /> Stopp
+                  </button>
+                  <button onClick={() => callService?.(em.id, 'return_to_base')} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-secondary/50 text-foreground text-xs font-medium hover:bg-secondary/70 transition-colors">
+                    <HomeIcon size={12} /> Docka
+                  </button>
+                </div>
+              );
+            }
+
+            if (em.kind === 'climate') {
+              const climateData = deviceStates[em.id]?.data as any;
+              const temp = climateData?.temperature ?? 22;
+              return (
+                <div className="nn-widget p-3 mb-2 flex items-center gap-3 animate-in fade-in slide-in-from-bottom-2 duration-150">
+                  <span className="text-xs text-muted-foreground">Temp</span>
+                  <button onClick={() => callService?.(em.id, 'set_temperature', { temperature: temp - 0.5 })} className="w-8 h-8 rounded-lg bg-secondary/50 flex items-center justify-center text-foreground hover:bg-secondary/70 transition-colors">
+                    <Minus size={14} />
+                  </button>
+                  <span className="text-sm font-bold text-foreground min-w-[3ch] text-center">{temp}°</span>
+                  <button onClick={() => callService?.(em.id, 'set_temperature', { temperature: temp + 0.5 })} className="w-8 h-8 rounded-lg bg-secondary/50 flex items-center justify-center text-foreground hover:bg-secondary/70 transition-colors">
+                    <Plus size={14} />
+                  </button>
+                </div>
+              );
+            }
+
+            if (em.kind === 'media_screen') {
+              return (
+                <div className="nn-widget p-3 mb-2 flex flex-wrap gap-2 animate-in fade-in slide-in-from-bottom-2 duration-150">
+                  <button onClick={() => callService?.(em.id, emIsOn ? 'media_pause' : 'media_play')} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-primary/15 text-primary text-xs font-medium hover:bg-primary/25 transition-colors">
+                    {emIsOn ? <Pause size={12} /> : <Play size={12} />}
+                    {emIsOn ? 'Paus' : 'Spela'}
+                  </button>
+                </div>
+              );
+            }
+
+            return null;
+          })()}
+
           <div className="flex gap-2.5 overflow-x-auto pb-2 px-1 max-md:grid max-md:grid-cols-2 max-md:gap-2">
             {selectedMarkers.map((m) => {
               const isOn = getDeviceIsOn(m.id);
               const canToggle = TOGGLEABLE_KINDS.has(m.kind);
               const isMediaOn = m.kind === 'media_screen' && isOn;
+              const hasExpand = m.kind === 'vacuum' || m.kind === 'climate' || m.kind === 'media_screen';
               const Icon = KIND_ICONS[m.kind] || Power;
+              const isExpanded = expandedPillId === m.id;
               return (
                 <button
                   key={m.id}
                   data-active={isOn ? 'true' : 'false'}
                   className={cn(
                     'device-pill shrink-0 min-h-[48px]',
-                    canToggle && !isMediaOn && 'cursor-pointer active:scale-95',
+                    canToggle && !isMediaOn && !hasExpand && 'cursor-pointer active:scale-95',
+                    isExpanded && 'ring-1 ring-primary/40',
                   )}
                   onClick={() => {
                     if (longPressTimerRef.current) {
                       clearTimeout(longPressTimerRef.current);
                       longPressTimerRef.current = null;
                     }
-                    if (!longPressDeviceId && canToggle && !isMediaOn) toggleDeviceState(m.id);
+                    if (hasExpand) {
+                      setExpandedPillId(isExpanded ? null : m.id);
+                    } else if (!longPressDeviceId && canToggle && !isMediaOn) {
+                      toggleDeviceState(m.id);
+                    }
                   }}
                   onPointerDown={() => handlePointerDown(m.id)}
                   onPointerUp={handlePointerUp}
@@ -216,7 +281,10 @@ export default function HomeView({ longPressDeviceId, onDismissLongPress, fpsAct
                 >
                   <Icon size={15} className={cn(isOn ? 'text-primary' : 'text-muted-foreground')} />
                   <span className="text-[13px] font-medium text-foreground truncate max-w-[120px]">{m.name || m.kind}</span>
-                  {canToggle && (
+                  {hasExpand && (
+                    <ChevronDown size={12} className={cn('text-muted-foreground transition-transform', isExpanded && 'rotate-180')} />
+                  )}
+                  {canToggle && !hasExpand && (
                     <span className={cn(
                       'w-2.5 h-2.5 rounded-full shrink-0 transition-colors',
                       isOn ? 'bg-primary shadow-[0_0_8px_hsl(var(--amber-glow))]' : 'bg-muted-foreground/30'
