@@ -1,58 +1,149 @@
 
-Mål: Få färglogiken i Utseende att bli förutsägbar (särskilt accent + senaste använda), separera 3D-bakgrund från UI-bakgrund, och lägga temats export/import i Profil.
 
-1) Stabilisera färgval och byt färg-popup-logik
-- Fil: `src/components/home/cards/ThemeCard.tsx`
-- Ersätt nuvarande “live-spara på varje drag”-beteende för accent/custom pickers med två steg:
-  - preview (visuell uppdatering medan man drar)
-  - commit (spara slutvärde när man bekräftar/stänger picker)
-- Byt från nuvarande native `type="color"`-flöde till en mer kontrollerad popover-flow för att undvika att sista färgen tappas.
-- Spara alltid både “startfärg” och “slutfärg” vid commit så användaren kan gå tillbaka.
+# Utseende-systemet — fullständig ombyggnad
 
-2) Fixa “Senast använda” så den blir praktiskt användbar
-- Fil: `src/components/home/cards/ThemeCard.tsx`
-- Nu floodas listan med nästan identiska blå nyanser (bekräftat av replay-event).
-- Ändra logik så recent-färger uppdateras endast på commit, inte på varje drag-event.
-- Normalisera hex (lowercase), deduplicera, behåll max 6.
-- Låt “Senast använda” kunna appliceras på aktuell färgkontroll (inte bara accent implicit), så den matchar användarens arbetsflöde från popupen.
+## Översikt
 
-3) Särskilj bakgrundslogiken (3D-scen vs UI)
-- Filer:  
-  - `src/components/home/cards/ThemeCard.tsx`  
-  - `src/pages/Index.tsx` (eller `src/components/home/DashboardShell.tsx`, beroende på var overlay ska ligga)  
-  - `src/store/types.ts`
-- Behåll bakgrundslägena (3D-vy/Gradient/Enfärgad) som “scen-bakgrund”.
-- Döp om nuvarande färgpunkt “Bakgrund” till “Panelbakgrund (UI)” för att undvika sammanblandning.
-- Lägg till separat scenfärg för läget “Enfärgad” (t.ex. `sceneOverlayColor`) så färgen gäller 3D-bilden, inte hela UI:t.
-- Wire:a `profile.dashboardBg` till faktisk rendering via overlay ovanpå 3D-scenen:
-  - `scene3d` = ingen overlay
-  - `gradient` = gradient overlay
-  - `solid` = solid overlay med vald scenfärg
+Bygger om hela temainställningspanelen och det underliggande tokensystemet till ett riktigt kontrollcenter med Nordic Noir som förstklassigt premiumtema, intelligenta defaults, och professionell UX.
 
-4) Lägg temahantering för export/import under Profil
-- Filer:
-  - Ny: `src/components/home/cards/ThemeBackupCard.tsx`
-  - `src/components/home/DashboardGrid.tsx`
-  - ev. `src/store/types.ts` (export payload-typ)
-- Lägg ett nytt kort i Profil → Data: “Teman”.
-- Exportera/importera tema-data separat (utan full installationsbackup):
-  - `theme`, `accentColor`, `dashboardBg`, `customColors`, `savedThemes`
-- Import ska validera JSON-format och merge:a säkert (dedupe på tema-id/namn).
+---
 
-5) Säkerställ kompatibilitet och migrering
-- Fil: `src/store/types.ts` (+ ev. lätt guard i `useAppStore.ts` vid behov)
-- Nya fält görs optional för bakåtkompatibilitet.
-- Existerande sparad data fortsätter fungera utan hård migration.
-- Ingen ändring i full backup-format krävs för att befintliga backups ska fortsätta gå att läsa.
+## 1. Nytt token-system i `useThemeEffect.ts`
 
-Tekniska detaljer (kort)
-- Huvudorsak till “Senast använda funkar inte”: färginput skickar många mellanvärden under drag, och varje värde pushas till recent-listan.
-- Rotfix: commit-baserad persist + recent-lista uppdateras endast vid commit.
-- Bakgrundsförvirring idag: `dashboardBg` visas i UI men är i praktiken inte tydligt kopplad till en separat scen-overlay; samtidigt används `bgColor` för UI-variabler. Dessa två måste separeras tydligt i både namn och rendering.
+Byter från nuvarande begränsade palett (~20 variabler) till ett utökat system med ~35 variabler per tema. Nordic Noir-paletten byggs om helt efter den specificerade färgsättningen:
 
-Filer som ändras
-- `src/components/home/cards/ThemeCard.tsx`
-- `src/store/types.ts`
-- `src/pages/Index.tsx` (alternativt `src/components/home/DashboardShell.tsx`)
-- `src/components/home/DashboardGrid.tsx`
-- `src/components/home/cards/ThemeBackupCard.tsx` (ny)
+**Nordic Noir tokens (hex → HSL):**
+- `--background`: `#07090d` → `220 30% 4%`
+- `--surface`: `#0b0e14` → `220 28% 6%`
+- `--card` / `--popover`: `#171b24` → `222 20% 11%`
+- `--secondary` (knappar): `#1c212b` → `220 18% 14%`
+- `--foreground`: `#f3efe8` → `38 25% 93%`
+- `--secondary-foreground`: `#b9b1a5` → `32 12% 68%`
+- `--muted-foreground`: `#7f7a73` → `30 5% 47%`
+- `--border`: `0 0% 100% / 0.10` (rgba-baserad)
+- `--glass-border`: `0 0% 100% / 0.06`
+- `--sidebar-background`: `#0b0e14`
+- `--glass`: `220 28% 6% / 0.88`
+
+Nya CSS-variabler som alla teman får:
+- `--glow-intensity`: styr amber-glow multiplicator (0–1)
+- `--nn-fjord`: `#6f8fa8`, `--nn-ice`: `#a8bcc9`, `--nn-moss`: `#748b6f`, `--nn-lavender`: `#8c7aa8`, `--nn-linen`: `#d8c7a8`
+- `--amber-soft`: `rgba(215,163,93,0.18)` som separat token
+
+Nordic Noir sätter default accent till `#d7a35d` (amber).
+
+### Intelligent defaults per tema
+
+När ett tema väljs sätts "rekommenderade" värden för customColors om användaren inte har overridat dem. Detta görs genom att `useThemeEffect` först applicerar hela temaletten, sedan lägger custom overrides ovanpå — precis som idag, men med fler tokens.
+
+---
+
+## 2. Utökad `CustomColors` i `types.ts`
+
+```ts
+export interface CustomColors {
+  buttonColor?: string;
+  sliderColor?: string;
+  bgColor?: string;
+  menuColor?: string;
+  cardColor?: string;
+  textColor?: string;
+  sceneOverlayColor?: string;
+  glassOpacity?: number;    // 0.2–1.0
+  borderOpacity?: number;   // 0–0.5
+  glowIntensity?: number;   // 0–1.0 (ny)
+  recentColors?: string[];
+}
+```
+
+`SavedTheme` utökas med `theme: string` så man vet vilken bas den bygger på.
+
+---
+
+## 3. Ombyggd ThemeCard — premium kontrollcenter
+
+Hela `ThemeCard.tsx` byggs om med tydlig hierarki:
+
+### Sektion A: Bas-tema (alltid synlig)
+- 4 presets som kort med liten färgpreview (inte bara text)
+- Nordic Noir får en premium-badge/markering
+- Sparade teman listas här som extra kort med X-knapp
+
+### Sektion B: Scen-bakgrund
+- 3D-vy / Gradient / Enfärgad (som idag men renare)
+- Enfärgad visar color picker
+
+### Sektion C: "Anpassa" — expanderbar
+Omorganiserat i logiska grupper med tydliga rubriker:
+
+**Färger:**
+- Accent (ikoner, aktiva element) — presets + custom picker
+- Ytor (kort, paneler) — color picker
+- Meny — color picker
+- Text — color picker
+- Knappar — color picker
+- Slider-spår — color picker
+
+**Material & känsla:**
+- Transparens (slider 20–100%)
+- Border-synlighet (slider 0–50%)
+- Glow-intensitet (slider 0–100%) — ny
+
+**Senast använda färger** — rad med max 6 cirklar, klick applicerar på senaste aktiva fält
+
+**Spara tema** — knapp + namnfält
+
+**Återställ** — tydlig knapp längst ner
+
+### Förbättringar i UX:
+- Varje färg-picker committar på blur (som idag men fixat)
+- Sliders uppdaterar direkt utan debounce-problem (de är redan snabba)
+- Labels är tydligare — inga "developer"-termer
+- Bättre spacing och visuell hierarki med section dividers
+
+---
+
+## 4. Glow-intensitet i `useThemeEffect.ts`
+
+Ny logik: om `customColors.glowIntensity` finns, skala `--amber-glow` och `--warm-glow`:
+```ts
+const glow = customColors.glowIntensity ?? 0.5;
+root.style.setProperty('--amber-glow', `${hsl} / ${(0.15 * glow * 2).toFixed(3)}`);
+```
+
+---
+
+## 5. Border-logik — fix
+
+Nuvarande formel är trasig. Ny approach:
+- Border-variabeln byter till rgba-stil: `0 0% 100% / {opacity}`
+- `borderOpacity` (0–0.5) styr direkt alpha
+- Enklare, mer förutsägbar, och funkar med alla teman
+
+---
+
+## 6. SavedTheme utökas
+
+```ts
+export interface SavedTheme {
+  id: string;
+  name: string;
+  theme: string;        // bas-temat (ny)
+  accentColor: string;
+  customColors: CustomColors;
+}
+```
+
+Vid laddning sätts även `profile.theme` till det sparade bas-temat.
+
+---
+
+## Filer som ändras
+
+| Fil | Ändring |
+|-----|---------|
+| `src/store/types.ts` | `CustomColors` += `glowIntensity`, `SavedTheme` += `theme` |
+| `src/hooks/useThemeEffect.ts` | Nordic Noir-palett ombyggd med rätt tokens, glow-logik, border-fix, fler CSS-variabler |
+| `src/components/home/cards/ThemeCard.tsx` | Helt ombyggd layout — premium kontrollcenter med grupper, glow-slider, bättre UX |
+| `src/index.css` | Nya CSS-variabler i `:root` (nn-fjord, nn-ice, etc., glow-intensity) |
+
