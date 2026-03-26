@@ -12,6 +12,7 @@ import {
   Fan, PanelTop, Clapperboard, ArrowUp, ArrowDown, StopCircle,
   SkipBack, SkipForward, Tv, MapPin, Wind, Ruler, Clock, AlertTriangle,
   ShieldAlert, Droplets, Bell, Grip, Trees, Speaker, Music, Info,
+  Bot,
 } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 
