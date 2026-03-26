@@ -127,9 +127,11 @@ function hexToHsl(hex: string): string {
 }
 
 export function useThemeEffect() {
-  const theme = useAppStore((s) => s.profile.theme);
-  const accentColor = useAppStore((s) => s.profile.accentColor);
-  const customColors = useAppStore((s) => s.profile.customColors);
+  const { theme, accentColor, customColors } = useAppStore((s) => ({
+    theme: s.profile.theme,
+    accentColor: s.profile.accentColor,
+    customColors: s.profile.customColors,
+  }));
 
   useEffect(() => {
     const root = document.documentElement;
