@@ -87,9 +87,16 @@ const kindCategory: Record<DeviceKind, string> = {
 const LIGHT_KINDS: Set<DeviceKind> = new Set(['light', 'switch', 'power-outlet', 'light-fixture', 'smart-outlet']);
 
 /* ── Info widget cards (TID, UTE, ENERGI, KOMFORT) ── */
-function InfoCard({ label, value, detail }: { label: string; value: string; detail: string }) {
+function InfoCard({ label, value, detail, onClick, accent }: { label: string; value: string; detail: string; onClick?: () => void; accent?: string }) {
   return (
-    <div className="nn-widget p-4 flex flex-col gap-1">
+    <div
+      className={cn(
+        'nn-widget p-4 flex flex-col gap-1 transition-all',
+        onClick && 'cursor-pointer hover:ring-1 hover:ring-primary/20 hover:scale-[1.02]',
+      )}
+      style={accent ? { borderLeft: `3px solid ${accent}` } : undefined}
+      onClick={onClick}
+    >
       <span className="label-micro">{label}</span>
       <span className="text-xl font-bold text-foreground font-display tracking-tight">{value}</span>
       <span className="text-[10px] text-muted-foreground/40 font-medium">{detail}</span>
@@ -275,17 +282,7 @@ function HomeCategory() {
 
   return (
     <div className="space-y-5">
-      {/* Header — edit controls */}
-      <div className="flex items-center justify-end gap-2">
-        <Button size="sm" variant="ghost" className="h-8 text-[11px]"
-          onClick={() => setShowManager(!showManager)}>
-          {showManager ? 'Stäng' : 'Hantera kategorier'}
-        </Button>
-        <Button size="sm" variant={editMode ? 'default' : 'ghost'} className="h-8 text-[11px] gap-1"
-          onClick={() => setEditMode(!editMode)}>
-          {editMode ? <><X size={11} /> Klar</> : <><Pencil size={11} /> Redigera</>}
-        </Button>
-      </div>
+      {/* Header removed — buttons moved to filter row */}
 
       {showManager && <CategoryManager />}
 
@@ -293,9 +290,9 @@ function HomeCategory() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-5">
         {/* Row 1: Info cards */}
         <InfoCard label="TID" value={timeStr} detail={dateStr} />
-        <InfoCard label="UTE" value={`${Math.round(weather.temperature)}°`} detail={weather.condition || 'Klart'} />
-        <InfoCard label="ENERGI" value={`${wattage} W`} detail={wattage > 50 ? 'Hög förbrukning' : 'Normal'} />
-        <InfoCard label="KOMFORT" value="21.5°" detail="Optimal" />
+        <InfoCard label="UTE" value={`${Math.round(weather.temperature)}°`} detail={weather.condition || 'Klart'} onClick={() => setDashCategory('weather')} accent="hsl(210, 40%, 50%)" />
+        <InfoCard label="ENERGI" value={`${wattage} W`} detail={wattage > 50 ? 'Hög förbrukning' : 'Normal'} onClick={() => setDashCategory('energy')} accent="hsl(36, 80%, 50%)" />
+        <InfoCard label="KOMFORT" value="21.5°" detail="Optimal" onClick={() => setDashCategory('climate')} accent="hsl(150, 40%, 45%)" />
 
         {/* Row 2: 3D hero + Aktivt rum */}
         <div className="col-span-2 md:col-span-3">
@@ -337,7 +334,7 @@ function HomeCategory() {
           />
         </div>
 
-        {/* Filter tabs — full width */}
+        {/* Filter tabs + edit controls — full width */}
         <div className="col-span-2 md:col-span-4 flex items-center gap-2 overflow-x-auto pb-1">
           {deviceFilters.map(({ key, label }) => (
             <button
@@ -353,6 +350,17 @@ function HomeCategory() {
               {label}
             </button>
           ))}
+          {/* Edit controls — right side */}
+          <div className="ml-auto flex items-center gap-2 shrink-0">
+            <Button size="sm" variant="ghost" className="h-8 text-[11px]"
+              onClick={() => setShowManager(!showManager)}>
+              {showManager ? 'Stäng' : 'Hantera kategorier'}
+            </Button>
+            <Button size="sm" variant={editMode ? 'default' : 'ghost'} className="h-8 text-[11px] gap-1"
+              onClick={() => setEditMode(!editMode)}>
+              {editMode ? <><X size={11} /> Klar</> : <><Pencil size={11} /> Redigera</>}
+            </Button>
+          </div>
         </div>
 
         {/* Room/category cards — span 2 cols each */}
