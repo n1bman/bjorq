@@ -192,17 +192,16 @@ export default function HomeView({ longPressDeviceId, onDismissLongPress, fpsAct
         </div>
       )}
 
-      {/* ── Individual device widgets ── */}
+      {/* ── Individual device widgets — unified cards ── */}
       {!homeLayoutEditMode && selectedMarkers.length > 0 && (visibleWidgets?.devices !== false) && selectedMarkers.map((m, idx) => {
         const devicePos = widgetLayout[m.id]
           ? { x: Math.max(1, Math.min(92, widgetLayout[m.id].x ?? 3)), y: Math.max(1, Math.min(92, widgetLayout[m.id].y ?? (70 + idx * 6))) }
           : { x: 3 + idx * 12, y: 82 };
         const isOn = getDeviceIsOn(m.id);
         const canToggle = TOGGLEABLE_KINDS.has(m.kind);
-        const isExpanded = expandedPillId === m.id;
-        const hasExpand = m.kind === 'vacuum' || m.kind === 'climate' || m.kind === 'media_screen' || m.kind === 'light' || m.kind === 'fan' || m.kind === 'speaker' || m.kind === 'soundbar';
         const Icon = KIND_ICONS[m.kind] || Power;
         const entityId = m.ha?.entityId;
+        const name = m.name || m.kind;
 
         const callSvc = (domain: string, service: string, data: Record<string, unknown> = {}) => {
           if (entityId) {
@@ -215,69 +214,90 @@ export default function HomeView({ longPressDeviceId, onDismissLongPress, fpsAct
           }
         };
 
-        return (
-          <div
-            key={m.id}
-            className="absolute z-10 pointer-events-auto"
-            style={{ left: `${devicePos.x}%`, top: `${devicePos.y}%` }}
-          >
-            <button
-              className={cn(
-                'glass-panel rounded-2xl px-4 py-3 flex items-center gap-3 backdrop-blur-xl transition-all min-w-[120px]',
-                'border border-[hsl(var(--glass-border)/0.15)] shadow-lg',
-                isOn && 'border-[hsl(var(--primary)/0.25)]',
-                isExpanded && 'ring-1 ring-primary/30',
-                canToggle && !hasExpand && 'active:scale-95 cursor-pointer',
-              )}
-              onClick={() => {
-                if (hasExpand) {
-                  setExpandedPillId(isExpanded ? null : m.id);
-                } else if (canToggle) {
-                  toggleDeviceState(m.id);
-                }
-              }}
-              onPointerDown={() => handlePointerDown(m.id)}
-              onPointerUp={handlePointerUp}
-              onPointerCancel={handlePointerCancel}
-              onPointerLeave={handlePointerCancel}
-            >
-              <Icon size={16} className={cn(isOn ? 'text-primary' : 'text-muted-foreground')} />
-              <span className="text-[13px] font-medium text-foreground truncate max-w-[100px]">{m.name || m.kind}</span>
-              {hasExpand && (
-                <ChevronDown size={12} className={cn('text-muted-foreground transition-transform ml-auto', isExpanded && 'rotate-180')} />
-              )}
-              {canToggle && !hasExpand && (
-                <span className={cn(
-                  'w-2.5 h-2.5 rounded-full shrink-0 ml-auto transition-colors',
-                  isOn ? 'bg-primary shadow-[0_0_8px_hsl(var(--amber-glow))]' : 'bg-muted-foreground/30'
-                )} />
-              )}
-            </button>
+        const btnCls = 'flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-colors';
+        const btnPrimary = `${btnCls} bg-primary/15 text-primary hover:bg-primary/25`;
+        const btnSurface = `${btnCls} bg-[hsl(var(--surface-elevated)/0.5)] text-foreground hover:bg-[hsl(var(--surface-elevated)/0.7)]`;
 
-            {/* Inline expand panel */}
-            {isExpanded && m.kind === 'vacuum' && (
-              <div className="glass-panel rounded-2xl p-3 mt-2 flex flex-wrap gap-2 animate-in fade-in slide-in-from-top-2 duration-150 backdrop-blur-xl border border-[hsl(var(--glass-border)/0.15)] min-w-[200px]">
-                <button onClick={() => callSvc('vacuum', 'start')} className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-primary/15 text-primary text-xs font-medium hover:bg-primary/25 transition-colors">
-                  <Play size={12} /> Städa
-                </button>
-                <button onClick={() => callSvc('vacuum', 'pause')} className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[hsl(var(--surface-elevated)/0.5)] text-foreground text-xs font-medium hover:bg-[hsl(var(--surface-elevated)/0.7)] transition-colors">
-                  <Pause size={12} /> Paus
-                </button>
-                <button onClick={() => callSvc('vacuum', 'stop')} className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[hsl(var(--surface-elevated)/0.5)] text-foreground text-xs font-medium hover:bg-[hsl(var(--surface-elevated)/0.7)] transition-colors">
-                  <Square size={12} /> Stopp
-                </button>
-                <button onClick={() => callSvc('vacuum', 'return_to_base')} className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[hsl(var(--surface-elevated)/0.5)] text-foreground text-xs font-medium hover:bg-[hsl(var(--surface-elevated)/0.7)] transition-colors">
-                  <HomeIcon size={12} /> Docka
-                </button>
-              </div>
-            )}
-
-            {isExpanded && m.kind === 'climate' && (() => {
+        const renderControls = () => {
+          switch (m.kind) {
+            case 'vacuum': {
+              const vacData = deviceStates[m.id]?.data as any;
+              const battery = vacData?.battery ?? null;
+              const status = vacData?.status ?? (isOn ? 'Städar' : 'Dockad');
+              return (
+                <>
+                  <div className="flex items-center gap-2 px-3 pb-1">
+                    <span className="text-[11px] text-muted-foreground">{status}</span>
+                    {battery !== null && <span className="text-[11px] text-muted-foreground ml-auto">🔋 {battery}%</span>}
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 px-3 pb-3">
+                    <button onClick={() => callSvc('vacuum', 'start')} className={btnPrimary}><Play size={12} /> Städa</button>
+                    <button onClick={() => callSvc('vacuum', 'pause')} className={btnSurface}><Pause size={12} /> Paus</button>
+                    <button onClick={() => callSvc('vacuum', 'stop')} className={btnSurface}><Square size={12} /> Stopp</button>
+                    <button onClick={() => callSvc('vacuum', 'return_to_base')} className={btnSurface}><HomeIcon size={12} /> Docka</button>
+                  </div>
+                </>
+              );
+            }
+            case 'media_screen': {
+              const mediaData = deviceStates[m.id]?.data as any;
+              const title = mediaData?.media_title ?? '';
+              return (
+                <>
+                  {title && <p className="text-[11px] text-muted-foreground truncate px-3 pb-1">{title}</p>}
+                  <div className="flex flex-wrap gap-1.5 px-3 pb-3">
+                    <button onClick={() => callSvc('media_player', 'media_previous_track')} className={btnSurface}>⏮</button>
+                    <button onClick={() => callSvc('media_player', isOn ? 'media_pause' : 'media_play')} className={btnPrimary}>
+                      {isOn ? <Pause size={12} /> : <Play size={12} />}
+                    </button>
+                    <button onClick={() => callSvc('media_player', 'media_next_track')} className={btnSurface}>⏭</button>
+                    <button onClick={() => callSvc('media_player', 'media_stop')} className={btnSurface}><Square size={12} /></button>
+                  </div>
+                </>
+              );
+            }
+            case 'speaker':
+            case 'soundbar': {
+              const mediaData = deviceStates[m.id]?.data as any;
+              const rawVol = mediaData?.volume ?? 0.5;
+              const volPct = Math.round(typeof rawVol === 'number' && rawVol <= 1 ? rawVol * 100 : rawVol);
+              const title = mediaData?.media_title ?? '';
+              return (
+                <>
+                  {title && <p className="text-[11px] text-muted-foreground truncate px-3 pb-1">{title}</p>}
+                  <div className="flex items-center gap-2 px-3 pb-3">
+                    <button onClick={() => callSvc('media_player', isOn ? 'media_pause' : 'media_play')} className={btnPrimary}>
+                      {isOn ? <Pause size={12} /> : <Play size={12} />}
+                    </button>
+                    <button onClick={() => callSvc('media_player', 'volume_set', { volume_level: Math.max(0, (volPct - 10) / 100) })} className="w-7 h-7 rounded-lg bg-[hsl(var(--surface-elevated)/0.5)] flex items-center justify-center text-foreground hover:bg-[hsl(var(--surface-elevated)/0.7)] transition-colors">
+                      <Minus size={12} />
+                    </button>
+                    <span className="text-sm font-bold text-foreground min-w-[3ch] text-center">{volPct}%</span>
+                    <button onClick={() => callSvc('media_player', 'volume_set', { volume_level: Math.min(1, (volPct + 10) / 100) })} className="w-7 h-7 rounded-lg bg-[hsl(var(--surface-elevated)/0.5)] flex items-center justify-center text-foreground hover:bg-[hsl(var(--surface-elevated)/0.7)] transition-colors">
+                      <Plus size={12} />
+                    </button>
+                  </div>
+                </>
+              );
+            }
+            case 'light': {
+              const lightData = deviceStates[m.id]?.data as any;
+              const brightness = lightData?.brightness ?? 255;
+              return (
+                <div className="flex items-center gap-3 px-3 pb-3">
+                  <input type="range" min={0} max={255} value={brightness}
+                    onChange={(e) => callSvc('light', 'turn_on', { brightness: +e.target.value })}
+                    className="flex-1 accent-[hsl(var(--primary))] h-1.5" />
+                  <button onClick={() => { isOn ? callSvc('light', 'turn_off') : callSvc('light', 'turn_on'); toggleDeviceState(m.id); }}
+                    className={`${btnPrimary} px-2.5 py-1.5`}>{isOn ? 'Av' : 'På'}</button>
+                </div>
+              );
+            }
+            case 'climate': {
               const climateData = deviceStates[m.id]?.data as any;
               const temp = climateData?.temperature ?? 22;
               return (
-                <div className="glass-panel rounded-2xl p-3 mt-2 flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-150 backdrop-blur-xl border border-[hsl(var(--glass-border)/0.15)]">
-                  <span className="text-xs text-muted-foreground">Temp</span>
+                <div className="flex items-center gap-3 px-3 pb-3">
                   <button onClick={() => callSvc('climate', 'set_temperature', { temperature: temp - 0.5 })} className="w-8 h-8 rounded-xl bg-[hsl(var(--surface-elevated)/0.5)] flex items-center justify-center text-foreground hover:bg-[hsl(var(--surface-elevated)/0.7)] transition-colors">
                     <Minus size={14} />
                   </button>
@@ -287,98 +307,52 @@ export default function HomeView({ longPressDeviceId, onDismissLongPress, fpsAct
                   </button>
                 </div>
               );
-            })()}
-
-            {isExpanded && m.kind === 'media_screen' && (
-              <div className="glass-panel rounded-2xl p-3 mt-2 flex flex-wrap gap-2 animate-in fade-in slide-in-from-top-2 duration-150 backdrop-blur-xl border border-[hsl(var(--glass-border)/0.15)]">
-                <button onClick={() => callSvc('media_player', isOn ? 'media_pause' : 'media_play')} className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-primary/15 text-primary text-xs font-medium hover:bg-primary/25 transition-colors">
-                  {isOn ? <Pause size={12} /> : <Play size={12} />}
-                  {isOn ? 'Paus' : 'Spela'}
-                </button>
-              </div>
-            )}
-
-            {/* Light — brightness slider + on/off */}
-            {isExpanded && m.kind === 'light' && (() => {
-              const lightData = deviceStates[m.id]?.data as any;
-              const brightness = lightData?.brightness ?? 255;
+            }
+            case 'fan':
               return (
-                <div className="glass-panel rounded-2xl p-3 mt-2 flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-150 backdrop-blur-xl border border-[hsl(var(--glass-border)/0.15)]">
-                  <span className="text-xs text-muted-foreground shrink-0">Ljus</span>
-                  <input
-                    type="range"
-                    min={0}
-                    max={255}
-                    value={brightness}
-                    onChange={(e) => callSvc('light', 'turn_on', { brightness: +e.target.value })}
-                    className="flex-1 accent-[hsl(var(--primary))] h-1.5"
-                  />
-                  <button
-                    onClick={() => {
-                      if (isOn) callSvc('light', 'turn_off');
-                      else callSvc('light', 'turn_on');
-                      toggleDeviceState(m.id);
-                    }}
-                    className="px-3 py-2 rounded-xl bg-primary/15 text-primary text-xs font-medium hover:bg-primary/25 transition-colors"
-                  >
-                    {isOn ? 'Av' : 'På'}
-                  </button>
+                <div className="flex flex-wrap gap-1.5 px-3 pb-3">
+                  <button onClick={() => callSvc('fan', 'set_percentage', { percentage: 33 })} className={btnSurface}>Låg</button>
+                  <button onClick={() => callSvc('fan', 'set_percentage', { percentage: 66 })} className={btnSurface}>Medium</button>
+                  <button onClick={() => callSvc('fan', 'set_percentage', { percentage: 100 })} className={btnSurface}>Hög</button>
+                  <button onClick={() => { isOn ? callSvc('fan', 'turn_off') : callSvc('fan', 'turn_on'); toggleDeviceState(m.id); }}
+                    className={btnPrimary}>{isOn ? 'Av' : 'På'}</button>
                 </div>
               );
-            })()}
+            default:
+              return null;
+          }
+        };
 
-            {/* Fan — speed presets + on/off */}
-            {isExpanded && m.kind === 'fan' && (
-              <div className="glass-panel rounded-2xl p-3 mt-2 flex flex-wrap gap-2 animate-in fade-in slide-in-from-top-2 duration-150 backdrop-blur-xl border border-[hsl(var(--glass-border)/0.15)]">
-                <button onClick={() => callSvc('fan', 'set_percentage', { percentage: 33 })} className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[hsl(var(--surface-elevated)/0.5)] text-foreground text-xs font-medium hover:bg-[hsl(var(--surface-elevated)/0.7)] transition-colors">
-                  Låg
-                </button>
-                <button onClick={() => callSvc('fan', 'set_percentage', { percentage: 66 })} className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[hsl(var(--surface-elevated)/0.5)] text-foreground text-xs font-medium hover:bg-[hsl(var(--surface-elevated)/0.7)] transition-colors">
-                  Medium
-                </button>
-                <button onClick={() => callSvc('fan', 'set_percentage', { percentage: 100 })} className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[hsl(var(--surface-elevated)/0.5)] text-foreground text-xs font-medium hover:bg-[hsl(var(--surface-elevated)/0.7)] transition-colors">
-                  Hög
-                </button>
-                <button
-                  onClick={() => {
-                    if (isOn) callSvc('fan', 'turn_off');
-                    else callSvc('fan', 'turn_on');
-                    toggleDeviceState(m.id);
-                  }}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-primary/15 text-primary text-xs font-medium hover:bg-primary/25 transition-colors"
-                >
-                  {isOn ? 'Av' : 'På'}
-                </button>
-              </div>
+        const hasControls = ['vacuum', 'media_screen', 'speaker', 'soundbar', 'light', 'climate', 'fan'].includes(m.kind);
+
+        return (
+          <div key={m.id} className="absolute z-10 pointer-events-auto" style={{ left: `${devicePos.x}%`, top: `${devicePos.y}%` }}>
+            <div className={cn(
+              'glass-panel rounded-2xl backdrop-blur-xl border border-[hsl(var(--glass-border)/0.15)] shadow-lg',
+              hasControls ? 'min-w-[180px] max-w-[260px]' : 'min-w-[120px]',
+              isOn && 'border-[hsl(var(--primary)/0.25)]',
             )}
-
-            {/* Speaker / Soundbar — volume + play/pause */}
-            {isExpanded && (m.kind === 'speaker' || m.kind === 'soundbar') && (() => {
-              const mediaData = deviceStates[m.id]?.data as any;
-              const volume = mediaData?.volume ?? 50;
-              return (
-                <div className="glass-panel rounded-2xl p-3 mt-2 flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-150 backdrop-blur-xl border border-[hsl(var(--glass-border)/0.15)]">
-                  <button
-                    onClick={() => callSvc('media_player', isOn ? 'media_pause' : 'media_play')}
-                    className="px-3 py-2 rounded-xl bg-primary/15 text-primary text-xs font-medium hover:bg-primary/25 transition-colors"
-                  >
-                    {isOn ? <Pause size={12} /> : <Play size={12} />}
-                  </button>
-                  <span className="text-xs text-muted-foreground">Vol</span>
-                  <button onClick={() => callSvc('media_player', 'volume_set', { volume_level: Math.max(0, (volume - 10) / 100) })} className="w-7 h-7 rounded-lg bg-[hsl(var(--surface-elevated)/0.5)] flex items-center justify-center text-foreground hover:bg-[hsl(var(--surface-elevated)/0.7)] transition-colors">
-                    <Minus size={12} />
-                  </button>
-                  <span className="text-sm font-bold text-foreground min-w-[3ch] text-center">{volume}%</span>
-                  <button onClick={() => callSvc('media_player', 'volume_set', { volume_level: Math.min(1, (volume + 10) / 100) })} className="w-7 h-7 rounded-lg bg-[hsl(var(--surface-elevated)/0.5)] flex items-center justify-center text-foreground hover:bg-[hsl(var(--surface-elevated)/0.7)] transition-colors">
-                    <Plus size={12} />
-                  </button>
-                </div>
-              );
-            })()}
+              onPointerDown={() => handlePointerDown(m.id)}
+              onPointerUp={handlePointerUp}
+              onPointerCancel={handlePointerCancel}
+              onPointerLeave={handlePointerCancel}
+            >
+              {/* Header */}
+              <div className={cn('flex items-center gap-2.5 px-3 py-2.5', !hasControls && canToggle && 'cursor-pointer active:scale-95')}
+                onClick={() => { if (!hasControls && canToggle) toggleDeviceState(m.id); }}>
+                <Icon size={16} className={cn(isOn ? 'text-primary' : 'text-muted-foreground')} />
+                <span className="text-[13px] font-semibold text-foreground truncate flex-1">{name}</span>
+                <span className={cn(
+                  'w-2.5 h-2.5 rounded-full shrink-0 transition-colors',
+                  isOn ? 'bg-primary shadow-[0_0_8px_hsl(var(--amber-glow))]' : 'bg-muted-foreground/30'
+                )} />
+              </div>
+              {/* Type-specific controls — always visible */}
+              {renderControls()}
+            </div>
           </div>
         );
       })}
-
       {/* ── Device visibility picker — top right ── */}
       {!homeLayoutEditMode && markers.length > 0 && (() => {
         const KINDS_WITH_3D_MODELS = new Set<DeviceKind>([
