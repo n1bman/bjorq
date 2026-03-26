@@ -153,15 +153,24 @@ export function useThemeEffect() {
         const menuHsl = hexToHsl(customColors.menuColor);
         root.style.setProperty('--sidebar-background', menuHsl);
       }
+      if (customColors.cardColor && customColors.cardColor.startsWith('#') && customColors.cardColor.length >= 7) {
+        const cardHsl = hexToHsl(customColors.cardColor);
+        root.style.setProperty('--card', cardHsl);
+        root.style.setProperty('--popover', cardHsl);
+      }
+      if (customColors.textColor && customColors.textColor.startsWith('#') && customColors.textColor.length >= 7) {
+        const textHsl = hexToHsl(customColors.textColor);
+        root.style.setProperty('--foreground', textHsl);
+        root.style.setProperty('--card-foreground', textHsl);
+        root.style.setProperty('--popover-foreground', textHsl);
+      }
       if (customColors.glassOpacity !== undefined) {
-        // Re-apply glass with custom opacity
         const basePalette = palette['--glass'] || '222 16% 15% / 0.72';
         const hslPart = basePalette.split('/')[0].trim();
         root.style.setProperty('--glass', `${hslPart} / ${customColors.glassOpacity}`);
       }
       if (customColors.borderOpacity !== undefined) {
         const borderBase = palette['--border'] || '222 12% 21%';
-        // Parse the HSL and adjust lightness based on opacity
         const newL = Math.round(21 * (0.5 + customColors.borderOpacity * 2));
         const parts = borderBase.split(' ');
         if (parts.length >= 3) {
