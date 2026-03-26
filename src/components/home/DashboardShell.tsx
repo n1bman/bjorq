@@ -71,7 +71,7 @@ export default function DashboardShell() {
       <div className="fixed inset-0 flex flex-col bg-background">
         {/* Content */}
         <div className="flex-1 min-h-0 overflow-y-auto">
-          <div className="p-4 pb-24">
+          <div className="p-5 pb-24">
             <Content />
           </div>
         </div>
@@ -98,7 +98,7 @@ export default function DashboardShell() {
                   style={active && accent ? { color: `hsl(${accent})` } : undefined}
                 >
                   <Icon size={20} strokeWidth={active ? 2.2 : 1.5} />
-                  <span className="text-[9px] font-medium">{cat.label}</span>
+                  <span className="text-[10px] font-medium">{cat.label}</span>
                 </button>
               );
             })}
@@ -113,7 +113,7 @@ export default function DashboardShell() {
               )}
             >
               <MoreHorizontal size={20} />
-              <span className="text-[9px] font-medium">Mer</span>
+              <span className="text-[10px] font-medium">Mer</span>
             </button>
           </div>
 
@@ -121,7 +121,7 @@ export default function DashboardShell() {
           {moreOpen && (
             <div className="absolute bottom-16 left-2 right-2 nn-widget p-4 max-h-[60vh] overflow-y-auto shadow-2xl animate-in slide-in-from-bottom-4 duration-200 z-50">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-3">Alla menyer</p>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-3 gap-3">
                 {categories.map(({ key, label, icon: Icon }) => {
                   const active = activeCategory === key;
                   return (
@@ -129,14 +129,14 @@ export default function DashboardShell() {
                       key={key}
                       onClick={() => handleCategoryClick(key)}
                       className={cn(
-                        'flex flex-col items-center gap-1.5 p-3 rounded-xl transition-all',
+                        'flex flex-col items-center gap-1.5 p-4 rounded-xl transition-all min-h-[52px]',
                         active
                           ? 'bg-primary/15 text-primary'
                           : 'text-muted-foreground hover:text-foreground hover:bg-surface-elevated/50'
                       )}
                     >
                       <Icon size={20} />
-                      <span className="text-[10px] font-medium">{label}</span>
+                      <span className="text-xs font-medium">{label}</span>
                     </button>
                   );
                 })}
@@ -208,7 +208,7 @@ export default function DashboardShell() {
                 )} />
               )}
               {!collapsed && (
-                <p className="px-4 py-2 text-[9px] font-semibold uppercase tracking-[0.25em] text-muted-foreground/25">
+                <p className="px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.25em] text-muted-foreground/25">
                   {group.label}
                 </p>
               )}
@@ -226,9 +226,9 @@ export default function DashboardShell() {
                     key={key}
                     onClick={() => handleCategoryClick(key)}
                     className={cn(
-                      'relative flex items-center w-full rounded-xl text-[12px] font-medium transition-all select-none',
+                      'relative flex items-center w-full rounded-xl text-[13px] font-medium transition-all select-none',
                       collapsed
-                        ? 'justify-center px-2 py-3'
+                        ? 'justify-center px-2 py-3.5'
                         : 'gap-3 px-4 py-3 text-left',
                       active && !accent
                         ? 'text-primary bg-[hsl(var(--nav-active-glow))] border-l-[3px] border-primary shadow-[-4px_0_16px_hsl(var(--amber-glow))]'
@@ -264,8 +264,8 @@ export default function DashboardShell() {
           <button
             onClick={() => setAppMode('home')}
             className={cn(
-              'flex items-center w-full rounded-xl text-[12px] font-medium text-[hsl(var(--sidebar-foreground)/0.4)] hover:text-[hsl(var(--sidebar-foreground)/0.7)] hover:bg-[hsl(var(--sidebar-accent)/0.2)] transition-all border-l-[3px] border-transparent',
-              collapsed ? 'justify-center px-2 py-3' : 'gap-3 px-4 py-3'
+              'flex items-center w-full rounded-xl text-[13px] font-medium text-[hsl(var(--sidebar-foreground)/0.4)] hover:text-[hsl(var(--sidebar-foreground)/0.7)] hover:bg-[hsl(var(--sidebar-accent)/0.2)] transition-all border-l-[3px] border-transparent',
+              collapsed ? 'justify-center px-2 py-3.5' : 'gap-3 px-4 py-3'
             )}
             title={collapsed ? 'Hemvy' : undefined}
           >
@@ -275,8 +275,8 @@ export default function DashboardShell() {
           <button
             onClick={() => setAppMode('build')}
             className={cn(
-              'flex items-center w-full rounded-xl text-[12px] font-medium text-[hsl(var(--sidebar-foreground)/0.4)] hover:text-[hsl(var(--sidebar-foreground)/0.7)] hover:bg-[hsl(var(--sidebar-accent)/0.2)] transition-all border-l-[3px] border-transparent',
-              collapsed ? 'justify-center px-2 py-3' : 'gap-3 px-4 py-3'
+              'flex items-center w-full rounded-xl text-[13px] font-medium text-[hsl(var(--sidebar-foreground)/0.4)] hover:text-[hsl(var(--sidebar-foreground)/0.7)] hover:bg-[hsl(var(--sidebar-accent)/0.2)] transition-all border-l-[3px] border-transparent',
+              collapsed ? 'justify-center px-2 py-3.5' : 'gap-3 px-4 py-3'
             )}
             title={collapsed ? 'Design' : undefined}
           >
@@ -289,7 +289,7 @@ export default function DashboardShell() {
       {/* ── Main Content ── */}
       <div className="flex-1 min-w-0 flex flex-col overflow-hidden bg-background">
         <div className="flex-1 min-h-0 overflow-y-auto">
-          <div className="p-6 md:p-8 lg:p-10 pb-12 max-w-[1400px]">
+          <div className="p-6 md:p-10 lg:p-12 pb-12 max-w-[1400px]">
             <Content />
           </div>
         </div>

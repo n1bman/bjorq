@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Play, Plus, Trash2, Moon, Sun, Lightbulb, Tv, Film, Snowflake, Flame, Power, Coffee, PartyPopper, Sunset, Sparkles, Home, Eye, X, ChevronDown, Clock, Zap } from 'lucide-react';
+import { Play, Plus, Trash2, Moon, Sun, Lightbulb, Tv, Film, Snowflake, Flame, Power, Coffee, Sunset, Sparkles, Home, Eye, X, ChevronDown, Clock, Zap } from 'lucide-react';
 import { useAppStore } from '../../../store/useAppStore';
 import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
@@ -22,7 +22,7 @@ const sceneIconOptions = [
   { key: 'Film', icon: Film, label: 'Film' },
   { key: 'Snowflake', icon: Snowflake, label: 'Kyla' },
   { key: 'Flame', icon: Flame, label: 'Värme' },
-  { key: 'PartyPopper', icon: PartyPopper, label: 'Fest' },
+  { key: 'PartyPopper', icon: Sparkles, label: 'Fest' },
   { key: 'Sparkles', icon: Sparkles, label: 'Mysig' },
   { key: 'Home', icon: Home, label: 'Hem' },
   { key: 'Eye', icon: Eye, label: 'Fokus' },

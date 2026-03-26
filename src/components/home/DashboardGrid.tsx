@@ -60,15 +60,15 @@ export const categories: { key: DashCategory; label: string; icon: typeof Home }
   { key: 'profile', label: 'Profil', icon: User },
 ];
 
-const deviceFilters: { key: DeviceKind | 'all'; label: string; emoji: string }[] = [
-  { key: 'all', label: 'Alla', emoji: '🏠' },
-  { key: 'light', label: 'Ljus', emoji: '💡' },
-  { key: 'light-fixture', label: 'Armaturer', emoji: '💡' },
-  { key: 'climate', label: 'Klimat', emoji: '❄️' },
-  { key: 'media_screen', label: 'Media', emoji: '📺' },
-  { key: 'vacuum', label: 'Robot', emoji: '🤖' },
-  { key: 'door-lock', label: 'Lås', emoji: '🔒' },
-  { key: 'sensor', label: 'Sensor', emoji: '🌡️' },
+const deviceFilters: { key: DeviceKind | 'all'; label: string }[] = [
+  { key: 'all', label: 'Alla' },
+  { key: 'light', label: 'Ljus' },
+  { key: 'light-fixture', label: 'Armaturer' },
+  { key: 'climate', label: 'Klimat' },
+  { key: 'media_screen', label: 'Media' },
+  { key: 'vacuum', label: 'Robot' },
+  { key: 'door-lock', label: 'Lås' },
+  { key: 'sensor', label: 'Sensor' },
 ];
 
 const kindCategory: Record<DeviceKind, string> = {
@@ -118,7 +118,7 @@ function InfoCard({ label, value, detail, onClick, accent, sparkData, sparkColor
   return (
     <div
       className={cn(
-        'nn-widget p-4 flex items-center gap-3 transition-all',
+        'nn-widget p-4 md:p-5 flex items-center gap-3 transition-all',
         onClick && 'cursor-pointer hover:ring-1 hover:ring-primary/20 hover:scale-[1.02]',
       )}
       style={accent ? { borderLeft: `3px solid ${accent}` } : undefined}
@@ -127,7 +127,7 @@ function InfoCard({ label, value, detail, onClick, accent, sparkData, sparkColor
       <div className="flex flex-col gap-1 flex-1 min-w-0">
         <span className="label-micro">{label}</span>
         <span className="text-xl font-bold text-foreground font-display tracking-tight">{value}</span>
-        <span className="text-[10px] text-muted-foreground/40 font-medium">{detail}</span>
+        <span className="text-xs text-muted-foreground/40 font-medium">{detail}</span>
       </div>
       {sparkData && sparkColor && <MiniSparkline data={sparkData} color={sparkColor} />}
     </div>
@@ -158,7 +158,7 @@ function QuickScenesWidget() {
   };
 
   return (
-    <div className="nn-widget p-5 flex flex-col gap-4 h-[240px] md:h-[300px]">
+    <div className="nn-widget p-5 flex flex-col gap-4 h-[220px] md:h-[320px] lg:h-[360px]">
       <span className="label-micro">SCENER</span>
 
       {allScenes.length === 0 ? (
@@ -183,7 +183,7 @@ function QuickScenesWidget() {
                     {LIcon ? (
                       <LIcon size={20} className="text-foreground/60 group-hover:text-primary transition-colors" />
                     ) : (
-                      <span className="text-xl">{scene.icon || '💡'}</span>
+                      <span className="text-xl"><Sparkles size={20} className="text-foreground/60" /></span>
                     )}
                   </div>
                   <span className="text-[10px] text-muted-foreground/70 text-center truncate w-16 group-hover:text-foreground transition-colors">
@@ -265,12 +265,12 @@ function HomeCategory() {
         const devices = cat.deviceIds
           .map((id) => markers.find((m) => m.id === id))
           .filter(Boolean) as DeviceMarker[];
-        return { key: cat.id, label: `${cat.icon} ${cat.name}`, catId: cat.id, devices };
+        return { key: cat.id, label: cat.name, catId: cat.id, devices };
       })
       .filter((e) => e.devices.length > 0 || editMode);
     const uncategorized = markers.filter((m) => !categorizedIds.has(m.id));
     if (uncategorized.length > 0) {
-      entries.push({ key: 'uncategorized', label: '⚙️ Övrigt', devices: uncategorized });
+      entries.push({ key: 'uncategorized', label: 'Övrigt', devices: uncategorized });
     }
   } else {
     const lightsByRoom: Record<string, DeviceMarker[]> = {};
@@ -278,7 +278,7 @@ function HomeCategory() {
     for (const m of markers) {
       if (LIGHT_KINDS.has(m.kind)) {
         const roomName = m.roomId ? (roomNameMap[m.roomId] || 'Rum') : 'Övrigt';
-        const key = `💡 ${roomName}`;
+        const key = roomName;
         if (!lightsByRoom[key]) lightsByRoom[key] = [];
         lightsByRoom[key].push(m);
       } else {
@@ -318,7 +318,7 @@ function HomeCategory() {
       {/* Header removed — buttons moved to filter row */}
 
       {/* ── FREE GRID — everything lives here ── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-5">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
         {/* Row 1: Info cards */}
         <InfoCard label="TID" value={timeStr} detail={dateStr} />
         <InfoCard label="UTE" value={`${Math.round(weather.temperature)}°`} detail={weather.condition || 'Klart'} onClick={() => setDashCategory('weather')} accent="hsl(210, 40%, 50%)" sparkData={demoSparkData.weather} sparkColor="hsl(210, 60%, 55%)" />
@@ -328,7 +328,7 @@ function HomeCategory() {
         {/* Row 2: 3D hero + Aktivt rum */}
         <div className="col-span-2 md:col-span-3">
           <div
-            className="nn-widget rounded-[24px] overflow-hidden h-[240px] md:h-[300px] relative cursor-pointer"
+            className="nn-widget rounded-[24px] overflow-hidden h-[220px] md:h-[320px] lg:h-[360px] relative cursor-pointer"
             onDoubleClick={() => setShowSaveView(true)}
           >
             <DashboardPreview3D className="absolute inset-0" cameraStateRef={previewCamRef} />
@@ -361,13 +361,13 @@ function HomeCategory() {
         </div>
 
         {/* Filter tabs + edit controls — full width */}
-        <div className="col-span-2 md:col-span-4 flex items-center gap-2 overflow-x-auto pb-1">
+        <div className="col-span-2 md:col-span-4 flex items-center gap-2 md:gap-3 overflow-x-auto pb-1">
           {deviceFilters.map(({ key, label }) => (
             <button
               key={key}
               onClick={() => setKindFilter(key === 'all' ? null : key as DeviceKind)}
               className={cn(
-                'px-4 py-2 rounded-full text-[12px] font-medium transition-all shrink-0 border',
+                'px-4 py-2.5 md:px-5 md:py-3 rounded-full text-xs md:text-sm font-medium transition-all shrink-0 border',
                 (key === 'all' && !kindFilter) || kindFilter === key
                   ? 'bg-foreground/8 text-foreground border-[hsl(var(--border)/0.25)]'
                   : 'text-muted-foreground/50 hover:text-foreground border-transparent hover:border-[hsl(var(--border)/0.12)]'
@@ -378,11 +378,11 @@ function HomeCategory() {
           ))}
           {/* Edit controls — right side */}
           <div className="ml-auto flex items-center gap-2 shrink-0">
-            <Button size="sm" variant="ghost" className="h-8 text-[11px]"
+            <Button size="sm" variant="ghost" className="h-9 text-xs"
               onClick={() => setShowManager(!showManager)}>
               {showManager ? 'Stäng' : 'Hantera kategorier'}
             </Button>
-            <Button size="sm" variant={editMode ? 'default' : 'ghost'} className="h-8 text-[11px] gap-1"
+            <Button size="sm" variant={editMode ? 'default' : 'ghost'} className="h-9 text-xs gap-1"
               onClick={() => setEditMode(!editMode)}>
               {editMode ? <><X size={11} /> Klar</> : <><Pencil size={11} /> Redigera</>}
             </Button>
@@ -450,13 +450,13 @@ function DevicesCategory() {
   const [kindFilter, setKindFilter] = useState<DeviceKind | null>(null);
   return (
     <div className="space-y-3">
-      <div className="flex gap-1 overflow-x-auto pb-1">
-        {deviceFilters.map(({ key, label, emoji }) => (
+      <div className="flex gap-1.5 overflow-x-auto pb-1">
+        {deviceFilters.map(({ key, label }) => (
           <Button key={key} size="sm"
             variant={(key === 'all' && !kindFilter) || kindFilter === key ? 'default' : 'outline'}
-            className="h-7 text-[10px] gap-1 shrink-0"
+            className="h-9 text-xs gap-1 shrink-0"
             onClick={() => setKindFilter(key === 'all' ? null : key as DeviceKind)}>
-            <span>{emoji}</span>{label}
+            {label}
           </Button>
         ))}
       </div>

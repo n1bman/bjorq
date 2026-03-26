@@ -1,5 +1,5 @@
 import { useAppStore } from '../../../store/useAppStore';
-import { Sun, Compass, ArrowUp, Lightbulb, CloudRain, Cloud, Droplets, Wind } from 'lucide-react';
+import { Sun, Compass, ArrowUp, Lightbulb, CloudRain, Cloud, Droplets, Wind, Snowflake, CloudSun, Ban } from 'lucide-react';
 import { Slider } from '../../ui/slider';
 import { Switch } from '../../ui/switch';
 import { Button } from '../../ui/button';
@@ -8,18 +8,18 @@ import { ChevronRight } from 'lucide-react';
 import React from 'react';
 import type { PrecipitationOverride, WeatherCondition } from '../../../store/types';
 
-const weatherOptions: { key: WeatherCondition; label: string; emoji: string }[] = [
-  { key: 'clear', label: 'Klart', emoji: '☀️' },
-  { key: 'cloudy', label: 'Mulet', emoji: '☁️' },
-  { key: 'rain', label: 'Regn', emoji: '🌧️' },
-  { key: 'snow', label: 'Snö', emoji: '❄️' },
+const weatherOptions: { key: WeatherCondition; label: string; icon: typeof Sun }[] = [
+  { key: 'clear', label: 'Klart', icon: Sun },
+  { key: 'cloudy', label: 'Mulet', icon: Cloud },
+  { key: 'rain', label: 'Regn', icon: CloudRain },
+  { key: 'snow', label: 'Snö', icon: Snowflake },
 ];
 
-const precipOptions: { key: PrecipitationOverride; label: string; emoji: string }[] = [
-  { key: 'auto', label: 'Auto', emoji: '🌤️' },
-  { key: 'rain', label: 'Regn', emoji: '🌧️' },
-  { key: 'snow', label: 'Snö', emoji: '❄️' },
-  { key: 'off', label: 'Av', emoji: '🚫' },
+const precipOptions: { key: PrecipitationOverride; label: string; icon: typeof Sun }[] = [
+  { key: 'auto', label: 'Auto', icon: CloudSun },
+  { key: 'rain', label: 'Regn', icon: CloudRain },
+  { key: 'snow', label: 'Snö', icon: Snowflake },
+  { key: 'off', label: 'Av', icon: Ban },
 ];
 
 const CollapsibleSection = React.forwardRef<HTMLDivElement, { title: string; icon: typeof Sun; children: React.ReactNode }>(
@@ -109,7 +109,7 @@ export default function SunWeatherPanel() {
         <div className="flex items-center justify-between">
           <span className="text-xs text-muted-foreground">Aktuellt</span>
           <span className="text-xs font-medium text-foreground">
-            {weather.condition === 'clear' ? '☀️ Klart' : weather.condition === 'cloudy' ? '☁️ Mulet' : weather.condition === 'rain' ? '🌧️ Regn' : '❄️ Snö'}
+            {weather.condition === 'clear' ? 'Klart' : weather.condition === 'cloudy' ? 'Mulet' : weather.condition === 'rain' ? 'Regn' : 'Snö'}
             {weather.temperature !== undefined && ` · ${weather.temperature}°C`}
           </span>
         </div>
@@ -130,12 +130,12 @@ export default function SunWeatherPanel() {
         <div className="space-y-2">
           <span className="text-xs font-medium text-muted-foreground">Manuellt väder</span>
           <div className="flex gap-1">
-            {weatherOptions.map(({ key, label, emoji }) => (
+            {weatherOptions.map(({ key, label, icon: WIcon }) => (
               <Button key={key} size="sm"
                 variant={weather.condition === key ? 'default' : 'outline'}
-                className="flex-1 h-8 text-[10px] gap-1"
+                className="flex-1 h-9 text-xs gap-1.5"
                 onClick={() => setWeather(key)}>
-                <span>{emoji}</span>{label}
+                <WIcon size={14} />{label}
               </Button>
             ))}
           </div>
@@ -146,12 +146,12 @@ export default function SunWeatherPanel() {
       <div className="space-y-2">
         <span className="text-xs font-medium text-muted-foreground">Nederbördseffekt i 3D</span>
         <div className="flex gap-1">
-          {precipOptions.map(({ key, label, emoji }) => (
+          {precipOptions.map(({ key, label, icon: PIcon }) => (
             <Button key={key} size="sm"
               variant={precipOverride === key ? 'default' : 'outline'}
-              className="flex-1 h-8 text-[10px] gap-1"
+              className="flex-1 h-9 text-xs gap-1.5"
               onClick={() => setPrecipitationOverride(key)}>
-              <span>{emoji}</span>{label}
+              <PIcon size={14} />{label}
             </Button>
           ))}
         </div>
