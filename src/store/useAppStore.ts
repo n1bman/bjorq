@@ -1669,6 +1669,21 @@ export const useAppStore = create<AppState>()(
     {
       name: 'hometwin-store',
       version: 16,
+      storage: {
+        getItem: (name) => {
+          const str = localStorage.getItem(name);
+          return str ? JSON.parse(str) : null;
+        },
+        setItem: (name, value) => {
+          try {
+            localStorage.setItem(name, JSON.stringify(value));
+          } catch (e) {
+            // QuotaExceededError — silently skip persist to avoid crash
+            console.warn('[hometwin-store] localStorage quota exceeded, skipping persist');
+          }
+        },
+        removeItem: (name) => localStorage.removeItem(name),
+      },
       migrate: (persisted: any, _version: number) => {
         // v15→v16: BuildTab rename
         if (persisted && persisted.build?.tab) {
