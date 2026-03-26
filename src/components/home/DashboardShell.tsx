@@ -71,7 +71,7 @@ export default function DashboardShell() {
       <div className="fixed inset-0 flex flex-col bg-background">
         {/* Content */}
         <div className="flex-1 min-h-0 overflow-y-auto">
-          <div className="p-4 pb-24">
+          <div className="p-5 pb-24">
             <Content />
           </div>
         </div>
@@ -264,8 +264,8 @@ export default function DashboardShell() {
           <button
             onClick={() => setAppMode('home')}
             className={cn(
-              'flex items-center w-full rounded-xl text-[12px] font-medium text-[hsl(var(--sidebar-foreground)/0.4)] hover:text-[hsl(var(--sidebar-foreground)/0.7)] hover:bg-[hsl(var(--sidebar-accent)/0.2)] transition-all border-l-[3px] border-transparent',
-              collapsed ? 'justify-center px-2 py-3' : 'gap-3 px-4 py-3'
+              'flex items-center w-full rounded-xl text-[13px] font-medium text-[hsl(var(--sidebar-foreground)/0.4)] hover:text-[hsl(var(--sidebar-foreground)/0.7)] hover:bg-[hsl(var(--sidebar-accent)/0.2)] transition-all border-l-[3px] border-transparent',
+              collapsed ? 'justify-center px-2 py-3.5' : 'gap-3 px-4 py-3'
             )}
             title={collapsed ? 'Hemvy' : undefined}
           >
@@ -275,8 +275,8 @@ export default function DashboardShell() {
           <button
             onClick={() => setAppMode('build')}
             className={cn(
-              'flex items-center w-full rounded-xl text-[12px] font-medium text-[hsl(var(--sidebar-foreground)/0.4)] hover:text-[hsl(var(--sidebar-foreground)/0.7)] hover:bg-[hsl(var(--sidebar-accent)/0.2)] transition-all border-l-[3px] border-transparent',
-              collapsed ? 'justify-center px-2 py-3' : 'gap-3 px-4 py-3'
+              'flex items-center w-full rounded-xl text-[13px] font-medium text-[hsl(var(--sidebar-foreground)/0.4)] hover:text-[hsl(var(--sidebar-foreground)/0.7)] hover:bg-[hsl(var(--sidebar-accent)/0.2)] transition-all border-l-[3px] border-transparent',
+              collapsed ? 'justify-center px-2 py-3.5' : 'gap-3 px-4 py-3'
             )}
             title={collapsed ? 'Design' : undefined}
           >
