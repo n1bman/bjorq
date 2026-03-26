@@ -182,8 +182,8 @@ export default function CategoryCard({
 
             const isRgbMode = (state?.data as any)?.colorMode === 'rgb';
             const barBg = isRgbMode && (state?.data as any)?.rgbColor
-              ? `linear-gradient(90deg, rgba(${barColor}, 0.18) 0%, rgba(${barColor}, 0.06) ${pct}%, transparent ${pct + 15}%)`
-              : `linear-gradient(90deg, hsl(${barColor} / 0.18) 0%, hsl(${barColor} / 0.06) ${pct}%, transparent ${pct + 15}%)`;
+              ? `linear-gradient(90deg, rgba(${barColor}, 0.25) 0%, rgba(${barColor}, 0.15) ${pct}%, transparent ${Math.min(pct + 5, 100)}%)`
+              : `linear-gradient(90deg, hsl(${barColor} / 0.25) 0%, hsl(${barColor} / 0.15) ${pct}%, transparent ${Math.min(pct + 5, 100)}%)`;
 
             return (
               <div
