@@ -14,7 +14,7 @@ import {
   ShieldAlert, Droplets, Bell, Grip, Trees, Speaker, Music, Info,
 } from 'lucide-react';
 import { cn } from '../../../lib/utils';
-import ColorWheel from './ColorWheel';
+
 interface Props { marker: DeviceMarker; compact?: boolean }
 type UpdateFn = (id: string, partial: Record<string, unknown>) => void;
 
@@ -323,14 +323,49 @@ function LightControl({ id, data, update }: { id: string; data: LightState; upda
         </div>
       )}
       {data.on && data.colorMode === 'rgb' && (
-        <div className="space-y-2">
+        <div className="space-y-3">
           <p className="text-[10px] text-muted-foreground">Färg</p>
-          <ColorWheel
-            rgb={data.rgbColor ?? [255, 255, 255]}
-            onChange={(rgb) => update(id, { rgbColor: rgb })}
-            size={140}
-            disabled={!data.on}
-          />
+          <div className="flex items-start gap-3">
+            <div className="flex-1 space-y-2">
+              {(['R', 'G', 'B'] as const).map((ch, i) => {
+                const rgb = data.rgbColor ?? [255, 255, 255];
+                const colors = [
+                  ['#1a0000', '#ff0000'],
+                  ['#001a00', '#00ff00'],
+                  ['#00001a', '#0000ff'],
+                ];
+                return (
+                  <div key={ch} className="space-y-0.5">
+                    <div className="flex justify-between">
+                      <span className="text-[9px] text-muted-foreground font-medium">{ch}</span>
+                      <span className="text-[9px] text-muted-foreground font-mono">{rgb[i]}</span>
+                    </div>
+                    <div className="relative h-5">
+                      <div
+                        className="absolute inset-0 rounded-full"
+                        style={{ background: `linear-gradient(to right, ${colors[i][0]}, ${colors[i][1]})`, opacity: 0.35 }}
+                      />
+                      <Slider
+                        value={[rgb[i]]}
+                        min={0}
+                        max={255}
+                        step={1}
+                        onValueChange={([v]) => {
+                          const next: [number, number, number] = [...rgb] as [number, number, number];
+                          next[i] = v;
+                          update(id, { rgbColor: next });
+                        }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div
+              className="w-10 h-10 rounded-lg border border-border/30 shrink-0 mt-2"
+              style={{ backgroundColor: `rgb(${(data.rgbColor ?? [255,255,255]).join(',')})` }}
+            />
+          </div>
         </div>
       )}
     </div>
