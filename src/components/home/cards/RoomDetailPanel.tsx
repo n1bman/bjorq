@@ -1,6 +1,11 @@
 import { useAppStore } from '../../../store/useAppStore';
-import { X, Lightbulb, Play, Zap, DoorOpen } from 'lucide-react';
+import { X, Lightbulb, Play, Zap, DoorOpen, Power, Moon, Sun, Sunset, Coffee, Tv, Film, Snowflake, Flame, Sparkles, Home, Eye, Palette } from 'lucide-react';
 import { cn } from '../../../lib/utils';
+
+const sceneIconMap: Record<string, typeof Power> = {
+  Power, Moon, Sun, Sunset, Lightbulb, Coffee, Tv, Film, Snowflake, Flame,
+  PartyPopper: Sparkles, Sparkles, Home, Eye, Palette,
+};
 
 interface Props {
   roomId: string;
@@ -70,16 +75,19 @@ export default function RoomDetailPanel({ roomId, onClose }: Props) {
       {roomScenes.length > 0 && (
         <div className="space-y-1">
           <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Scener</span>
-          {roomScenes.map((sc) => (
-            <button
-              key={sc.id}
-              onClick={() => activateScene(sc.id)}
-              className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left hover:bg-secondary/30 transition-colors"
-            >
-              <Play size={12} className="text-primary" />
-              <span className="text-[11px] flex-1 truncate">{sc.icon} {sc.name}</span>
-            </button>
-          ))}
+          {roomScenes.map((sc) => {
+            const ScIcon = sceneIconMap[sc.icon] || Play;
+            return (
+              <button
+                key={sc.id}
+                onClick={() => activateScene(sc.id)}
+                className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left hover:bg-secondary/30 transition-colors"
+              >
+                <ScIcon size={12} style={sc.iconColor ? { color: sc.iconColor } : undefined} className={sc.iconColor ? '' : 'text-primary'} />
+                <span className="text-[11px] flex-1 truncate">{sc.name}</span>
+              </button>
+            );
+          })}
         </div>
       )}
 

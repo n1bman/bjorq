@@ -148,8 +148,8 @@ function QuickScenesWidget() {
 
   // Combine BjorQ scenes + HA scenes (max 6)
   const allScenes = [
-    ...savedScenes.map((s) => ({ id: s.id, name: s.name, icon: s.icon, type: 'bjorq' as const })),
-    ...haScenes.map((s) => ({ id: s.entity.entityId, name: s.entity.friendlyName, icon: '', type: 'ha' as const })),
+    ...savedScenes.map((s) => ({ id: s.id, name: s.name, icon: s.icon, iconColor: s.iconColor, type: 'bjorq' as const })),
+    ...haScenes.map((s) => ({ id: s.entity.entityId, name: s.entity.friendlyName, icon: '', iconColor: undefined as string | undefined, type: 'ha' as const })),
   ].slice(0, 6);
 
   const getLucideIcon = (iconStr: string) => {
@@ -181,9 +181,9 @@ function QuickScenesWidget() {
                 >
                   <div className="w-14 h-14 rounded-full border border-[hsl(var(--border)/0.2)] bg-[hsl(var(--surface-elevated)/0.5)] flex items-center justify-center transition-all group-hover:bg-primary/15 group-hover:border-primary/30 group-active:scale-95">
                     {LIcon ? (
-                      <LIcon size={20} className="text-foreground/60 group-hover:text-primary transition-colors" />
+                      <LIcon size={20} style={scene.iconColor ? { color: scene.iconColor } : undefined} className={scene.iconColor ? '' : 'text-foreground/60 group-hover:text-primary transition-colors'} />
                     ) : (
-                      <span className="text-xl"><Sparkles size={20} className="text-foreground/60" /></span>
+                      <span className="text-xl"><Sparkles size={20} style={scene.iconColor ? { color: scene.iconColor } : undefined} className={scene.iconColor ? '' : 'text-foreground/60'} /></span>
                     )}
                   </div>
                   <span className="text-[10px] text-muted-foreground/70 text-center truncate w-16 group-hover:text-foreground transition-colors">
