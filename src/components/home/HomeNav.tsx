@@ -10,7 +10,11 @@ const modes: { key: AppMode; label: string; icon: typeof Home }[] = [
   { key: 'build', label: 'Design', icon: PenTool },
 ];
 
-export default function HomeNav() {
+interface HomeNavProps {
+  style?: React.CSSProperties;
+}
+
+export default function HomeNav({ style }: HomeNavProps) {
   const appMode = useAppStore((s) => s.appMode);
   const setAppMode = useAppStore((s) => s.setAppMode);
   const [expanded, setExpanded] = useState(false);
@@ -38,19 +42,17 @@ export default function HomeNav() {
 
   const handleSelect = useCallback((key: AppMode) => {
     setAppMode(key);
-    // Auto-collapse after selection with slight delay
     collapseTimer.current = setTimeout(() => setExpanded(false), 300);
   }, [setAppMode]);
 
-  // Current mode icon
   const currentMode = modes.find((m) => m.key === appMode) || modes[0];
   const CurrentIcon = currentMode.icon;
 
   return (
-    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
+    <div className="absolute z-50" style={style}>
       {showAdminTips && (
         <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-64 glass-panel rounded-xl p-3 space-y-1 text-[10px] text-muted-foreground animate-in fade-in slide-in-from-bottom-2">
-          <p className="text-xs font-semibold text-foreground">🔓 Admin / Exit-tips</p>
+          <p className="text-xs font-semibold text-foreground">Admin / Exit-tips</p>
           <p><kbd className="bg-secondary px-1 rounded text-foreground">ESC</kbd> — Lämna browser fullscreen</p>
           <p><kbd className="bg-secondary px-1 rounded text-foreground">Alt+F4</kbd> — Stäng kiosk (Linux)</p>
           <p><kbd className="bg-secondary px-1 rounded text-foreground">Ctrl+Alt+Del</kbd> — Windows kiosk</p>
@@ -63,7 +65,6 @@ export default function HomeNav() {
         </div>
       )}
 
-      {/* Expanded mode buttons — radial-ish spring expand */}
       {expanded && (
         <div
           className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 flex gap-2 animate-in fade-in zoom-in-90 duration-200"
@@ -89,7 +90,6 @@ export default function HomeNav() {
         </div>
       )}
 
-      {/* Center FAB button */}
       <button
         onClick={handleToggle}
         className={cn(

@@ -11,7 +11,11 @@ const presets: { key: CameraPreset | 'saved'; label: string; icon: typeof Camera
   { key: 'front', label: 'Fram', icon: Square },
 ];
 
-export default function CameraFab() {
+interface CameraFabProps {
+  style?: React.CSSProperties;
+}
+
+export default function CameraFab({ style }: CameraFabProps) {
   const cameraPreset = useAppStore((s) => s.homeView.cameraPreset);
   const setCameraPreset = useAppStore((s) => s.setCameraPreset);
   const customStartPos = useAppStore((s) => s.homeView.customStartPos);
@@ -27,9 +31,7 @@ export default function CameraFab() {
 
   const handleSelect = (key: CameraPreset | 'saved') => {
     if (key === 'saved' && customStartPos && customStartTarget) {
-      // Re-trigger the saved position by re-setting the same values
       setCameraPreset('free');
-      // Slight delay to ensure preset change propagates, then re-apply saved coords
       setTimeout(() => {
         saveHomeStartCamera([...customStartPos], [...customStartTarget]);
       }, 50);
@@ -40,7 +42,7 @@ export default function CameraFab() {
   };
 
   return (
-    <div className="fixed bottom-20 right-4 z-50 flex flex-col items-end gap-2">
+    <div className="absolute z-50 flex flex-col items-end gap-2" style={style}>
       {open && (
         <div className="glass-panel rounded-xl p-1.5 flex flex-col gap-1 animate-in fade-in slide-in-from-bottom-2 duration-200">
           {allPresets.map(({ key, label, icon: Icon }) => (

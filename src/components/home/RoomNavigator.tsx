@@ -1,11 +1,15 @@
 import { useState } from 'react';
 import { useAppStore } from '../../store/useAppStore';
-import { DoorOpen, X } from 'lucide-react';
+import { DoorOpen, X, Camera } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { flyTo, cameraForPolygon } from '../../lib/cameraRef';
 import RoomDetailPanel from './cards/RoomDetailPanel';
 
-export default function RoomNavigator() {
+interface RoomNavigatorProps {
+  style?: React.CSSProperties;
+}
+
+export default function RoomNavigator({ style }: RoomNavigatorProps) {
   const floors = useAppStore((s) => s.layout.floors);
   const markers = useAppStore((s) => s.devices.markers);
   const [open, setOpen] = useState(false);
@@ -39,7 +43,7 @@ export default function RoomNavigator() {
   };
 
   return (
-    <div className="fixed bottom-20 right-20 z-50 flex flex-col items-end gap-2">
+    <div className="absolute z-50 flex flex-col items-end gap-2" style={style}>
       {selectedRoomId && (
         <RoomDetailPanel roomId={selectedRoomId} onClose={() => setSelectedRoomId(null)} />
       )}
@@ -70,7 +74,7 @@ export default function RoomNavigator() {
                   </p>
                 </div>
                 {room.cameraPreset && (
-                  <span className="text-[9px] text-muted-foreground/50">📷</span>
+                  <Camera size={10} className="text-muted-foreground/50 shrink-0" />
                 )}
               </button>
             );
