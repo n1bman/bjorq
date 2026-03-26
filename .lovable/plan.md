@@ -1,51 +1,69 @@
 
-Mål: få layoutläget att faktiskt fungera igen så att alla hemvy-element kan dras fritt (inkl. Navigering/Kamera/Rum), utan att menyer hoppar fel eller att andra overlays blockerar drag.
 
-1) Rotorsak jag ser i nuvarande kod
-- `HomeLayoutEditor.tsx`: drag-labeln har `pointer-events-none` och ligger delvis utanför widget-boxen. Det gör att “grepp”-ytan visuellt ser dragbar ut men inte tar emot drag.
-- `HomeView.tsx`: i layoutläge renderas fortfarande live-komponenter (`HomeNav`, `CameraFab`, `RoomNavigator`, device-pill-rad, action-rad, visibility picker) ovanpå/utanför editorn. De stjäl pointer-events, särskilt på högersidan.
-- Resultat: användaren upplever att “inget går att flytta” eller att höger-element beter sig off.
+# Fix: Menyer flyter utanför skärmen + knappen förflyttas vid klick
 
-2) Planerad fix (utan att göra om temasystem/UI-koncept)
-- Gör layoutläge till ett “exklusivt interaktionsläge”:
-  - När `homeLayoutEditMode === true` visas bara layout-editor + dess draggable previews.
-  - Dölj live-HUD (nav/kamera/rum, bottenrader, marker-picker) tills man klickar “Klar”.
-- Gör drag-handtaget verkligt dragbart:
-  - Ta bort `pointer-events-none` från label/handle.
-  - Koppla `onPointerDown` på handle också (inte bara wrappern).
-  - Lägg `touch-action: none` + `select-none` på draggable item för stabil touch-drag.
-- Behåll drag från hela widgeten, men gör handle till primär och tydlig trigger.
+## Rotorsak
 
-3) Stabilitet för höger-element (Navigering/Kamera/Rum)
-- Säkerställ att bara editorns placeholders används i edit-läge.
-- Live-versionerna (`HomeNav`/`CameraFab`/`RoomNavigator`) renderas endast utanför edit-läge.
-- Då försvinner “dubbel-rendering” och felaktig lagerordning.
+1. **Knappen flyttas vid klick**: `flex-col-reverse` gör att när menyn öppnas tar den plats i flex-flödet, vilket skjuter knappen nedåt. Positionen `top: 78%` + flex-content ovanför = knappen hamnar utanför skärmen.
 
-4) Synlighet/defaults så inget “försvinner”
-- Sätt robust fallback för `visibleWidgets` i HomeView/LayoutEditor:
-  - Om `camera/rooms/nav` saknas i sparad state → behandla som synliga default i editorn.
-- Detta minskar problem från äldre persistad data där nya nycklar saknas.
+2. **Menyn flyter utanför**: Inga gränser på popup-positionering. Menyn renderas relativt i flex-flödet utan hänsyn till viewport-kanter.
 
-5) Verifiering efter implementation (detta körs punkt för punkt)
-- Gå in i layoutläge och dra:
-  - Klocka, Väder, Temperatur, Energi
-  - Navigering, Kamera, Rum
-- Dra via både label/handle och widgetkropp.
-- Verifiera att höger-element inte längre “hoppar” eller öppnar fel meny i edit-läge.
-- Avsluta layoutläge och kontrollera att normala menyer (kamera/rum/nav) fungerar som tidigare.
+3. **Drag-gränser saknas**: Elementen kan dras till 95%/92% men deras innehåll (widget-bredd/höjd) gör att de går utanför viewport.
 
-Tekniska detaljer (berörda filer)
-- `src/components/home/HomeView.tsx`
-  - Gating: rendera endast layout-editor-relaterat UI i edit-läge.
-  - Flytta villkor så bottenrader + nav/kamera/rum + picker inte kan blockera drag i edit-läge.
-- `src/components/home/HomeLayoutEditor.tsx`
-  - Drag-handle får pointer-events och explicit `onPointerDown`.
-  - Förbättra dragbar yta + touch-stabilitet.
-  - Behåll fri positionering för alla 7 element.
-- (vid behov liten fallback-justering)
-  - `src/store/useAppStore.ts` eller defensiv fallback i komponenterna för `visibleWidgets`-nycklar som saknas.
+## Fix
 
-Förväntat resultat
-- “Kan inte flytta något” försvinner.
-- Navigering/Kamera/Rum blir dragbara på riktigt.
-- Widgets kan placeras fritt som tänkt, utan att andra overlays stör.
+### 1. CameraFab, RoomNavigator, HomeNav — byt från flex-col-reverse till absolut-positionerad popup
+
+Alla tre komponenterna ska:
+- Ha en **enkel wrapper utan flex-direction** — bara `position: relative` + `pointer-events-auto`
+- Knappen sitter i wrappern som enda flow-element
+- Menyn renderas som `position: absolute; bottom: 100%; right: 0` (alltid ovanför knappen)
+- Ingen flex som kan flytta knappens position
+
+Exempel-struktur:
+```
+<div style={style} className="z-50 pointer-events-auto relative">
+  <button>...</button>
+  {open && (
+    <div className="absolute bottom-full right-0 mb-2 ...">
+      ...meny...
+    </div>
+  )}
+</div>
+```
+
+**Filer:** `CameraFab.tsx`, `RoomNavigator.tsx`, `HomeNav.tsx`
+
+### 2. Drag-gränser i HomeLayoutEditor — clampa med element-storlek
+
+**Fil:** `HomeLayoutEditor.tsx` rad 94-95
+
+Ändra max-clamp från `95`/`92` till lägre värden som tar hänsyn till elementstorlek:
+- x: `Math.max(1, Math.min(88, ...))` — ger ~12% marginal höger
+- y: `Math.max(1, Math.min(85, ...))` — ger ~15% marginal botten
+
+### 3. Samma clamp i HomeView för live-positioner
+
+**Fil:** `HomeView.tsx` `getPos()`-funktionen (rad 112-118)
+
+Clampa returnerade positioner så att live-element aldrig renderas utanför viewport:
+```ts
+const getPos = (key) => {
+  const config = widgetLayout[key];
+  return {
+    x: Math.max(1, Math.min(88, config?.x ?? DEFAULT_POSITIONS[key].x)),
+    y: Math.max(1, Math.min(85, config?.y ?? DEFAULT_POSITIONS[key].y)),
+  };
+};
+```
+
+## Filer som ändras
+
+| Fil | Ändring |
+|-----|---------|
+| `src/components/home/CameraFab.tsx` | Byt flex-col-reverse → relative wrapper + absolute popup ovanför |
+| `src/components/home/RoomNavigator.tsx` | Samma |
+| `src/components/home/HomeNav.tsx` | Samma |
+| `src/components/home/HomeLayoutEditor.tsx` | Striktare drag-clamp (88%/85%) |
+| `src/components/home/HomeView.tsx` | Clampa getPos() för live-rendering |
+
