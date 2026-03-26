@@ -200,7 +200,7 @@ export default function HomeView({ longPressDeviceId, onDismissLongPress, fpsAct
         const isOn = getDeviceIsOn(m.id);
         const canToggle = TOGGLEABLE_KINDS.has(m.kind);
         const isExpanded = expandedPillId === m.id;
-        const hasExpand = m.kind === 'vacuum' || m.kind === 'climate' || m.kind === 'media_screen';
+        const hasExpand = m.kind === 'vacuum' || m.kind === 'climate' || m.kind === 'media_screen' || m.kind === 'light' || m.kind === 'fan' || m.kind === 'speaker' || m.kind === 'soundbar';
         const Icon = KIND_ICONS[m.kind] || Power;
         const entityId = m.ha?.entityId;
 
