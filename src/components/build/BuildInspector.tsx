@@ -1194,13 +1194,13 @@ function DeviceInspector({ deviceId, close }: { deviceId: string; close: React.R
   const screenConfig = device.screenConfig ?? { aspectRatio: 16 / 9, uiStyle: 'minimal' as const, showProgress: true };
   const scale = device.scale ?? [1.2, 0.675, 1];
 
-  const lightTypeOptions: { value: LightType; label: string; emoji: string }[] = [
-    { value: 'ceiling', label: 'Tak', emoji: '🔵' },
-    { value: 'ceiling-small', label: 'Tak Liten', emoji: '🔹' },
-    { value: 'strip', label: 'Strip', emoji: '🟢' },
-    { value: 'wall', label: 'Vägg', emoji: '🟡' },
-    { value: 'spot', label: 'Spot', emoji: '⚪' },
-    { value: 'lightbar', label: 'Lightbar', emoji: '▬' },
+  const lightTypeOptions: { value: LightType; label: string; color: string }[] = [
+    { value: 'ceiling', label: 'Tak', color: 'bg-blue-500' },
+    { value: 'ceiling-small', label: 'Tak Liten', color: 'bg-blue-400' },
+    { value: 'strip', label: 'Strip', color: 'bg-green-500' },
+    { value: 'wall', label: 'Vägg', color: 'bg-yellow-500' },
+    { value: 'spot', label: 'Spot', color: 'bg-gray-300' },
+    { value: 'lightbar', label: 'Lightbar', color: 'bg-slate-400' },
   ];
 
   const handleDelete = () => {
@@ -1273,7 +1273,7 @@ function DeviceInspector({ deviceId, close }: { deviceId: string; close: React.R
         <div className="space-y-2">
           <label className="text-muted-foreground text-[10px]">Ljustyp</label>
           <div className="flex gap-1 flex-wrap">
-            {lightTypeOptions.map(({ value, label, emoji }) => (
+            {lightTypeOptions.map(({ value, label, color }) => (
               <button
                 key={value}
                 onClick={() => updateDevice(device.id, { lightType: value })}
@@ -1283,7 +1283,7 @@ function DeviceInspector({ deviceId, close }: { deviceId: string; close: React.R
                     : 'border-border text-muted-foreground hover:border-primary/40'
                 }`}
               >
-                <span>{emoji}</span>{label}
+                <span className={cn('w-2 h-2 rounded-full', color)} />{label}
               </button>
             ))}
           </div>
@@ -1294,11 +1294,11 @@ function DeviceInspector({ deviceId, close }: { deviceId: string; close: React.R
           <label className="text-muted-foreground text-[10px]">Armaturmodell</label>
           <div className="flex gap-1 flex-wrap">
             {([
-              { value: 'led-bulb' as const, label: 'LED Lampa', emoji: '💡' },
-              { value: 'led-bar' as const, label: 'LED Bar', emoji: '▬' },
-              { value: 'led-spot' as const, label: 'LED Spot', emoji: '⚪' },
-              { value: 'led-gu10' as const, label: 'LED Spotlight', emoji: '🔦' },
-            ]).map(({ value, label, emoji }) => (
+              { value: 'led-bulb' as const, label: 'LED Lampa', color: 'bg-yellow-400' },
+              { value: 'led-bar' as const, label: 'LED Bar', color: 'bg-slate-400' },
+              { value: 'led-spot' as const, label: 'LED Spot', color: 'bg-gray-300' },
+              { value: 'led-gu10' as const, label: 'LED Spotlight', color: 'bg-amber-400' },
+            ]).map(({ value, label, color }) => (
               <button
                 key={value}
                 onClick={() => updateDevice(device.id, { fixtureModel: value })}
@@ -1308,7 +1308,7 @@ function DeviceInspector({ deviceId, close }: { deviceId: string; close: React.R
                     : 'border-border text-muted-foreground hover:border-primary/40'
                 }`}
               >
-                <span>{emoji}</span>{label}
+                <span className={cn('w-2 h-2 rounded-full', color)} />{label}
               </button>
             ))}
           </div>
@@ -1613,7 +1613,7 @@ function KitchenFixtureInspector({ floorId, fixtureId, close }: { floorId: strin
     <div className="absolute top-14 right-3 bottom-3 w-56 overflow-y-auto glass-panel rounded-xl p-3 space-y-3 text-xs z-10">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-foreground font-display flex items-center gap-1">
-          🍳 Kök
+          Kök
         </h3>
         {close}
       </div>

@@ -56,15 +56,15 @@ const deviceTools: DeviceToolDef[] = [
 const categoryOrder = ['Ljus', 'Klimat', 'Sensorer', 'Kameror', 'Media', 'Säkerhet', 'Hem', 'Robot', 'Vitvaror'];
 
 const kindLabels: Record<DeviceKind, string> = {
-  light: '💡 Ljus', switch: '🔌 Knapp', sensor: '🌡️ Sensor', climate: '❄️ Klimat',
-  vacuum: '🤖 Dammsugare', camera: '📷 Kamera', fridge: '🧊 Kylskåp', oven: '🍳 Ugn',
-  washer: '🫧 Tvättmaskin', 'garage-door': '🚗 Garageport', 'door-lock': '🔒 Dörrlås',
-  'power-outlet': '🔌 Eluttag', media_screen: '📺 Skärm', fan: '🌀 Fläkt',
-  cover: '🪟 Persienn', scene: '🎬 Scen', alarm: '🚨 Larm', 'water-heater': '🔥 Varmvatten',
-  humidifier: '💧 Luftfuktare', siren: '🔔 Siren', valve: '🔧 Ventil',
-  remote: '📡 Fjärr', 'lawn-mower': '🌿 Gräsklippare', speaker: '🔊 Högtalare', soundbar: '🎵 Soundbar',
-  'light-fixture': '💡 Ljusarmatur', 'smart-outlet': '🔌 Vägguttag',
-  egg: '🥚 Egg',
+  light: 'Ljus', switch: 'Knapp', sensor: 'Sensor', climate: 'Klimat',
+  vacuum: 'Dammsugare', camera: 'Kamera', fridge: 'Kylskåp', oven: 'Ugn',
+  washer: 'Tvättmaskin', 'garage-door': 'Garageport', 'door-lock': 'Dörrlås',
+  'power-outlet': 'Eluttag', media_screen: 'Skärm', fan: 'Fläkt',
+  cover: 'Persienn', scene: 'Scen', alarm: 'Larm', 'water-heater': 'Varmvatten',
+  humidifier: 'Luftfuktare', siren: 'Siren', valve: 'Ventil',
+  remote: 'Fjärr', 'lawn-mower': 'Gräsklippare', speaker: 'Högtalare', soundbar: 'Soundbar',
+  'light-fixture': 'Ljusarmatur', 'smart-outlet': 'Vägguttag',
+  egg: 'Egg',
 };
 
 export default function DevicePlacementTools() {

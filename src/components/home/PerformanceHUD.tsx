@@ -77,7 +77,7 @@ export default function PerformanceHUD() {
           sun ↑{env.sunElevation.toFixed(1)}° az {env.sunAzimuth.toFixed(0)}°
         </div>
         <div className="text-[9px] text-foreground/50">
-          sun⚡{profile.sunIntensity.toFixed(2)} amb⚡{profile.ambientIntensity.toFixed(2)} hemi⚡{profile.hemisphereIntensity.toFixed(2)} fill⚡{profile.indoorFillIntensity.toFixed(2)}
+          sun:{profile.sunIntensity.toFixed(2)} amb:{profile.ambientIntensity.toFixed(2)} hemi:{profile.hemisphereIntensity.toFixed(2)} fill:{profile.indoorFillIntensity.toFixed(2)}
         </div>
       </div>
     </div>

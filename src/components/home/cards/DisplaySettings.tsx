@@ -140,7 +140,7 @@ export default function DisplaySettings() {
               <p className="mt-0.5">Avsluta: <kbd className="bg-secondary px-1 rounded text-foreground">Alt+F4</kbd></p>
             </div>
             <div className="border-t border-border pt-2">
-              <p className="font-semibold text-foreground text-xs mb-1">💡 Admin-tips</p>
+              <p className="font-semibold text-foreground text-xs mb-1">Admin-tips</p>
               <p>Håll nere navigeringsfältet (längst ner) i 5 sekunder för att visa exit-tips i kiosk-läge.</p>
             </div>
           </div>

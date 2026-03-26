@@ -571,7 +571,7 @@ function VacuumControl({ id, data, update }: { id: string; data: VacuumState; up
       {/* Status + battery */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="text-lg">🤖</span>
+          <Bot size={18} className="text-primary" />
           <div>
             <span className={cn('text-sm font-medium', statusColors[data.status] ?? 'text-foreground')}>
               {data.targetRoom && data.status === 'cleaning'
@@ -1030,7 +1030,7 @@ function CompactVacuumControl({ marker, data: vd, update, labels: vacLabels, lab
   return (
     <div className="space-y-1.5">
       <div className="flex items-center gap-2">
-        <span className="text-primary">🤖</span>
+        <Bot size={14} className="text-primary" />
         <span className="text-xs text-foreground truncate flex-1">{label || marker.name || 'Dammsugare'}</span>
         <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
           <Battery size={10} />

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useAppStore } from '../../../store/useAppStore';
 import { Button } from '../../ui/button';
-import { MapPin, Trash2, PenTool, Home as HomeIcon, Edit3, Hash } from 'lucide-react';
+import { MapPin, Trash2, PenTool, Home as HomeIcon, Edit3, Hash, Bot, CheckCircle, Info } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import type { BuildTool } from '../../../store/types';
 
@@ -177,7 +177,7 @@ export default function VacuumMappingTools() {
               <div key={zone.roomId}>
                 <div className="flex items-center justify-between px-2 py-1.5 rounded text-[10px] text-muted-foreground hover:bg-secondary/20 group">
                   <div className="flex items-center gap-1.5 truncate flex-1 min-w-0">
-                    <span className="text-primary/60">🤖</span>
+                    <Bot size={12} className="text-primary/60" />
                     {isEditing ? (
                       <div className="flex-1 min-w-0 flex gap-1">
                         <input
@@ -278,8 +278,8 @@ export default function VacuumMappingTools() {
       {/* HA segment map reference */}
           {Object.keys(vacuumSegmentMap).length > 0 && (
             <div className="mt-2 px-1 hidden lg:block">
-              <p className="text-[8px] text-green-400/70 mb-1">
-                ✅ Segment-ID via roborock.get_maps:
+              <p className="text-[8px] text-green-400/70 mb-1 flex items-center gap-1">
+                <CheckCircle size={10} /> Segment-ID via roborock.get_maps:
               </p>
               <div className="space-y-0.5">
                 {Object.entries(vacuumSegmentMap).map(([name, segId]) => (
@@ -293,8 +293,8 @@ export default function VacuumMappingTools() {
           )}
           {Object.keys(vacuumSegmentMap).length === 0 && (
             <div className="px-1 mt-1 hidden lg:block">
-              <p className="text-[8px] text-muted-foreground/50">
-                💡 Segment-ID krävs för rumsstyrning. Hämta via HA:
+              <p className="text-[8px] text-muted-foreground/50 flex items-center gap-1">
+                <Info size={10} /> Segment-ID krävs för rumsstyrning. Hämta via HA:
               </p>
               <p className="text-[8px] text-muted-foreground/40 mt-0.5">
                 Utvecklarverktyg → Tjänster → roborock.get_maps → Anropa

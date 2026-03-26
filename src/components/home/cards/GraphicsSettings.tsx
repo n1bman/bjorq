@@ -18,7 +18,7 @@ const qualityOptions: { value: QualityLevel; label: string; desc: string }[] = [
 ];
 
 function notify() {
-  toast.success('Ändringar sparade ✅', { description: '3D-scenen laddas om automatiskt.' });
+  toast.success('Ändringar sparade', { description: '3D-scenen laddas om automatiskt.' });
 }
 
 function computeScore(quality: QualityLevel, shadows: boolean, postprocessing: boolean, tabletMode: boolean) {
@@ -376,7 +376,7 @@ export default function GraphicsSettings() {
             _autoDetectedPerformance: false,
           });
           setProfile({ dashboardBg: 'scene3d' });
-          toast.success('Grafikinställningar återställda ✅', { description: '3D-scenen laddas om med standardvärden.' });
+          toast.success('Grafikinställningar återställda', { description: '3D-scenen laddas om med standardvärden.' });
         }}
       >
         <RotateCcw size={14} />

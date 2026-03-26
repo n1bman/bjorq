@@ -398,7 +398,7 @@ function drawVacuumMapping(ctx: CanvasRenderingContext2D, vm: any, rooms: any[],
     const [tx2, ty2] = worldToScreen(cx2, cz2);
     const zoneRoom = rooms.find((r: any) => r.id === zone.roomId || r.name === zone.roomId);
     ctx.fillStyle = zc.text; ctx.font = 'bold 10px DM Sans, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(`🤖 ${zoneRoom?.name ?? zone.roomId}`, tx2, ty2);
+    ctx.fillText(`[R] ${zoneRoom?.name ?? zone.roomId}`, tx2, ty2);
   }
   if (vm.dockPosition) {
     const [dx, dy] = worldToScreen(vm.dockPosition[0], vm.dockPosition[1]);
