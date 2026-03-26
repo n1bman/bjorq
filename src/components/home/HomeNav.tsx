@@ -49,7 +49,7 @@ export default function HomeNav({ style }: HomeNavProps) {
   const CurrentIcon = currentMode.icon;
 
   return (
-    <div className="absolute z-50" style={style}>
+    <div className="z-50 pointer-events-auto" style={style}>
       {showAdminTips && (
         <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-64 glass-panel rounded-xl p-3 space-y-1 text-[10px] text-muted-foreground animate-in fade-in slide-in-from-bottom-2">
           <p className="text-xs font-semibold text-foreground">Admin / Exit-tips</p>

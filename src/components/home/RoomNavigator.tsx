@@ -43,7 +43,7 @@ export default function RoomNavigator({ style }: RoomNavigatorProps) {
   };
 
   return (
-    <div className="absolute z-50 flex flex-col items-end gap-2" style={style}>
+    <div className="z-50 flex flex-col items-end gap-2 pointer-events-auto" style={style}>
       {selectedRoomId && (
         <RoomDetailPanel roomId={selectedRoomId} onClose={() => setSelectedRoomId(null)} />
       )}

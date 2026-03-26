@@ -138,15 +138,15 @@ export default function HomeLayoutEditor() {
               isDragging ? 'cursor-grabbing z-50' : 'cursor-grab',
             )}
             style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
+            onPointerDown={(e) => handlePointerDown(key, e)}
           >
-            {/* Drag handle */}
+            {/* Drag label */}
             <div
               className={cn(
-                'absolute -top-6 left-1/2 -translate-x-1/2 flex items-center gap-1 px-2 py-1 rounded-lg transition-all',
+                'absolute -top-6 left-1/2 -translate-x-1/2 flex items-center gap-1 px-2 py-1 rounded-lg transition-all pointer-events-none',
                 'bg-primary/90 text-primary-foreground text-[9px] font-semibold uppercase tracking-wider',
                 isDragging ? 'opacity-100 scale-105' : 'opacity-70 group-hover:opacity-100',
               )}
-              onPointerDown={(e) => handlePointerDown(key, e)}
             >
               <GripHorizontal size={10} />
               {label}
@@ -169,7 +169,7 @@ export default function HomeLayoutEditor() {
       })}
 
       {/* Config panel — bottom center */}
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[480px] max-w-[calc(100vw-2rem)] z-50">
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[480px] max-w-[calc(100vw-2rem)] z-50">
         <div className="nn-widget p-6 shadow-2xl space-y-5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">

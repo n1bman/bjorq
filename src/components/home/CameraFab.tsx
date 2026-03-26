@@ -42,7 +42,7 @@ export default function CameraFab({ style }: CameraFabProps) {
   };
 
   return (
-    <div className="absolute z-50 flex flex-col items-end gap-2" style={style}>
+    <div className="z-50 flex flex-col items-end gap-2 pointer-events-auto" style={style}>
       {open && (
         <div className="glass-panel rounded-xl p-1.5 flex flex-col gap-1 animate-in fade-in slide-in-from-bottom-2 duration-200">
           {allPresets.map(({ key, label, icon: Icon }) => (
