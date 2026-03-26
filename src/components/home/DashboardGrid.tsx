@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { Home, Cloud, Cpu, Zap, Bell, Video, Settings, Pencil, X, CalendarDays, Bot, Moon, Save, Workflow, Palette, LayoutGrid, Thermometer, Trees, User, Monitor, Database, Link2, Sparkles } from 'lucide-react';
+import { Home, Cloud, Cpu, Zap, Bell, Video, Settings, Pencil, X, CalendarDays, Bot, Moon, Save, Workflow, Palette, LayoutGrid, Thermometer, Trees, User, Monitor, Database, Link2, Sparkles, Sun, Lightbulb, Tv, Film, Snowflake, Flame, Power, Coffee, Sunset, Eye } from 'lucide-react';
 import WeatherHomeImpact from './cards/WeatherHomeImpact';
 import { cn } from '../../lib/utils';
 import { Button } from '../ui/button';
@@ -136,8 +136,8 @@ function InfoCard({ label, value, detail, onClick, accent, sparkData, sparkColor
 
 /* ── Snabbscener widget — cirkulära scenknappar ── */
 const sceneQuickIcons: Record<string, typeof Home> = {
-  'Power': Moon, 'Lightbulb': Sparkles, 'Moon': Moon, 'Sun': Sparkles,
-  'Tv': Monitor, 'Film': Monitor, 'Snowflake': Thermometer, 'Flame': Zap,
+  Power, Moon, Sun, Sunset, Lightbulb, Coffee, Tv, Film, Snowflake, Flame,
+  PartyPopper: Sparkles, Sparkles, Home, Eye,
 };
 
 function QuickScenesWidget() {
