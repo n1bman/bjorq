@@ -31,6 +31,30 @@ const backgrounds = [
   { key: 'solid' as const, label: 'Enfärgad' },
 ];
 
+/* ── Default display colors per theme (hex) for UI pickers ── */
+const themeDisplayDefaults: Record<string, Record<string, string>> = {
+  dark: {
+    buttonColor: '#2a2d36', sliderColor: '#f59e0b', bgColor: '#1a1c23',
+    menuColor: '#1c1f26', cardColor: '#1f2229', textColor: '#e0e4ed',
+    textSecondaryColor: '#7a8094', borderColor: '#2e3140',
+  },
+  midnight: {
+    buttonColor: '#1c2033', sliderColor: '#f59e0b', bgColor: '#0d0f18',
+    menuColor: '#0f1120', cardColor: '#141828', textColor: '#e8eff8',
+    textSecondaryColor: '#7f8bab', borderColor: '#232841',
+  },
+  light: {
+    buttonColor: '#e4e7ed', sliderColor: '#f59e0b', bgColor: '#f0f2f5',
+    menuColor: '#eceef2', cardColor: '#ffffff', textColor: '#1e2530',
+    textSecondaryColor: '#5c6370', borderColor: '#cdd2db',
+  },
+  nordic: {
+    buttonColor: '#1c212b', sliderColor: '#d7a35d', bgColor: '#07090d',
+    menuColor: '#0b0e14', cardColor: '#171b24', textColor: '#f3efe8',
+    textSecondaryColor: '#7f7a73', borderColor: '#222838',
+  },
+};
+
 /* ── helpers ── */
 function addToRecent(recent: string[] | undefined, color: string): string[] {
   const norm = color.toLowerCase();
