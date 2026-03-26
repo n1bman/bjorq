@@ -254,7 +254,9 @@ export default function HomeLayoutEditor() {
                 <Icon size={16} className="text-muted-foreground" />
                 <span className="text-[13px] font-medium text-foreground truncate max-w-[100px]">{m.name || m.kind}</span>
               </div>
-            </div>
+                </div>
+              );
+            })()}
           </div>
         );
       })}
