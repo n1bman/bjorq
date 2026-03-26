@@ -465,7 +465,7 @@ export default function ScenesPanel() {
         </div>
 
         {showAdd && !editingId && <SceneForm onSave={handleSaveNew} onCancel={() => setShowAdd(false)} />}
-        {editingId && <SceneForm scene={savedScenes.find((s) => s.id === editingId)} onSave={handleSaveEdit} onCancel={() => setEditingId(null)} />}
+        {editingId && <SceneForm scene={savedScenes.find((s) => s.id === editingId)} onSave={handleSaveEdit} onCancel={() => setEditingId(null)} onActivate={activateScene} onRemove={(id) => { removeScene(id); setEditingId(null); }} />}
 
         {savedScenes.length === 0 && !showAdd ? (
           <div className="py-8 text-center space-y-3">
@@ -500,23 +500,6 @@ export default function ScenesPanel() {
                   <span className="text-[11px] text-muted-foreground/60 text-center leading-tight truncate w-18 group-hover:text-foreground transition-colors">
                     {scene.name}
                   </span>
-                  {/* Hover: play + delete */}
-                  <div className="absolute -top-1 -right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button
-                      onClick={(e) => { e.stopPropagation(); activateScene(scene.id); }}
-                      className="w-5 h-5 rounded-full bg-primary/80 text-primary-foreground flex items-center justify-center hover:bg-primary"
-                      title="Aktivera"
-                    >
-                      <Play size={10} />
-                    </button>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); removeScene(scene.id); }}
-                      className="w-5 h-5 rounded-full bg-destructive/80 text-destructive-foreground flex items-center justify-center"
-                      title="Ta bort"
-                    >
-                      <Trash2 size={10} />
-                    </button>
-                  </div>
                 </div>
               );
             })}
@@ -526,7 +509,7 @@ export default function ScenesPanel() {
 
       <div className="nn-widget p-4">
         <p className="text-[11px] text-muted-foreground/30 leading-relaxed">
-          Klicka på en scen för att redigera. Hovra och tryck ▶ för att aktivera. Timer och automation kan ställas in per scen.
+          Klicka på en scen för att redigera, aktivera eller ta bort. Timer och automation kan ställas in per scen.
         </p>
       </div>
     </div>
