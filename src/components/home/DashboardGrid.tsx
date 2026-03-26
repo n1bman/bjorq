@@ -328,9 +328,9 @@ function HomeCategory() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-5">
         {/* Row 1: Info cards */}
         <InfoCard label="TID" value={timeStr} detail={dateStr} />
-        <InfoCard label="UTE" value={`${Math.round(weather.temperature)}°`} detail={weather.condition || 'Klart'} onClick={() => setDashCategory('weather')} accent="hsl(210, 40%, 50%)" />
-        <InfoCard label="ENERGI" value={`${wattage} W`} detail={wattage > 50 ? 'Hög förbrukning' : 'Normal'} onClick={() => setDashCategory('energy')} accent="hsl(36, 80%, 50%)" />
-        <InfoCard label="KOMFORT" value="21.5°" detail="Optimal" onClick={() => setDashCategory('climate')} accent="hsl(150, 40%, 45%)" />
+        <InfoCard label="UTE" value={`${Math.round(weather.temperature)}°`} detail={weather.condition || 'Klart'} onClick={() => setDashCategory('weather')} accent="hsl(210, 40%, 50%)" sparkData={demoSparkData.weather} sparkColor="hsl(210, 60%, 55%)" />
+        <InfoCard label="ENERGI" value={`${wattage} W`} detail={wattage > 50 ? 'Hög förbrukning' : 'Normal'} onClick={() => setDashCategory('energy')} accent="hsl(36, 80%, 50%)" sparkData={demoSparkData.energy} sparkColor="hsl(36, 80%, 55%)" />
+        <InfoCard label="KOMFORT" value="21.5°" detail="Optimal" onClick={() => setDashCategory('climate')} accent="hsl(150, 40%, 45%)" sparkData={demoSparkData.comfort} sparkColor="hsl(150, 50%, 50%)" />
 
         {/* Row 2: 3D hero + Aktivt rum */}
         <div className="col-span-2 md:col-span-3">
