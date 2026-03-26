@@ -14,7 +14,7 @@ import {
   ShieldAlert, Droplets, Bell, Grip, Trees, Speaker, Music, Info,
 } from 'lucide-react';
 import { cn } from '../../../lib/utils';
-import ColorWheel from './ColorWheel';
+
 interface Props { marker: DeviceMarker; compact?: boolean }
 type UpdateFn = (id: string, partial: Record<string, unknown>) => void;
 
