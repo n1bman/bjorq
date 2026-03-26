@@ -175,6 +175,7 @@ function ActiveRoomWidget({ selectedRoomId, setSelectedRoomId, rooms, markers }:
 }
 
 function HomeCategory() {
+  const setDashCategory = useAppStore((s) => s.setDashCategory);
   const markers = useAppStore((s) => s.devices.markers);
   const floors = useAppStore((s) => s.layout.floors);
   const customCategories = useAppStore((s) => s.customCategories);
