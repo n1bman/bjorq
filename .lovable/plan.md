@@ -1,55 +1,77 @@
 
+Mål: göra temalogiken förutsägbar så att:
+- Text inte “känns som border”
+- Border faktiskt styr linjerna användaren ser
+- Nordic Noir inte får vit inramning
+- “Färger & ytor” alltid visar aktuella färger när man byter tema
 
-# Fix: Text/Border-mappning är felkopplad + custom accent sparas inte
+## 1) Rätta border-logiken i theme-engine
+**Fil:** `src/hooks/useThemeEffect.ts`
 
-## Problem
+- Ta bort vit fallback (`0 0% 100%`) när `borderOpacity` används utan `borderColor`.
+- Använd istället aktivt temas border-bas som fallback (så Nordic/Dark behåller sin karaktär).
+- Låt `borderColor` styra:
+  - `--border`
+  - `--glass-border`
+  - `--sidebar-border`
+- Säkerställ att `textColor` endast påverkar textvariabler och aldrig border-variabler.
 
-1. **Text 1 ändrar borders istället för text** — `textColor` sätter `--foreground`, men många UI-element använder Tailwind-klassen `border-foreground` (inte `border-border`), så borders följer med.
+**Effekt:** “Text” och “Border” separeras tydligt i praktiken.
 
-2. **Text 2 ändrar text istället för att vara sekundär** — mappningen är korrekt men upplevs som "den riktiga textfärgen" eftersom `--muted-foreground` används brett.
+## 2) Justera Nordic Noir så den inte blir vit runt allt
+**Fil:** `src/hooks/useThemeEffect.ts`
 
-3. **Border-pickern har oklar effekt** — den sätter `--border` med alpha, men eftersom de flesta borders i UI:t använder `border-foreground` syns det knappt.
+- Byt Nordic Noir default för border-relaterade tokens från vit/transparent till mörkare, samma tonalitet som Mörkt (subtil mörk grafit istället för vit linje).
+- Finjustera `--glass-border` och `--sidebar-border` i Nordic Noir till mörk/subtil nivå.
 
-4. **Custom accent sparas inte** — color picker har `onChange={() => {}}` (tom!) och `onBlur` läser `e.target.value` men inputen uppdateras aldrig visuellt under drag.
+**Effekt:** Nordic Noir får mörk premium-inramning i stället för vit “outline”.
 
-## Lösning
+## 3) Gör “Färger & ytor” alltid ifyllda med aktiva temafärger
+**Filer:**  
+- `src/hooks/useThemeEffect.ts`  
+- `src/components/home/cards/ThemeCard.tsx`
 
-### 1. Fix textColor-override i `useThemeEffect.ts`
+- Inför en delad “theme defaults”-karta (hex) för visningsfärger per tema (button, slider, panel, meny, kort, text1, text2, border).
+- I `ThemeCard`: varje färgprick visar **effektiv färg** = `customColors[field] ?? themeDefaults[theme][field]`.
+- Därmed är pickers aldrig “tomma” vid temabyte.
 
-När `textColor` sätts, sätt BARA text-relaterade variabler och sätt EXPLICIT `--border` till temats original-border (inte foreground):
+**Effekt:** användaren ser direkt vilka färger temat faktiskt använder.
 
-```
---foreground, --card-foreground, --popover-foreground → textColor HSL
-```
+## 4) Tydlig logik vid temabyte
+**Fil:** `src/components/home/cards/ThemeCard.tsx`
 
-Samtidigt: om INGEN `borderColor` är satt, force-sätter vi `--border` till temats default-bordervärde efter textColor-overriden. Detta förhindrar att `border-foreground` letar fallback.
+- Vid klick på bas-tema:
+  - sätt `theme`
+  - sätt temaets default-accent
+  - nollställ `customColors` (så temat verkligen laddas rent)
+- Sparade egna teman används för att återställa personliga varianter.
 
-### 2. Fix border-override
+**Effekt:** temabyte blir logiskt och konsekvent; inga gamla overrides “läcker” in.
 
-Utöver `--border` och `--glass-border`, sätt även `--sidebar-border` vid borderColor-override.
+## 5) Förtydliga UI i färgsektionen
+**Fil:** `src/components/home/cards/ThemeCard.tsx`
 
-### 3. Fix custom accent picker i `ThemeCard.tsx`
+- Byt etiketter till:
+  - `Text 1` (primär)
+  - `Text 2` (sekundär)
+  - `Border` (UI-linjer/ramar)
+- Lägg kort hjälprad under Border (ex: “Styr panelramar, sektionlinjer och sidolinjer”).
 
-Byt till samma `CommitColorPicker`-mönster som övriga pickers — `useRef` för att fånga senaste värdet, commit på blur:
+**Effekt:** användaren förstår exakt vad varje kontroll ändrar.
 
-```tsx
-<CommitColorPicker
-  label="Egen"
-  value={profile.accentColor}
-  onCommit={(c) => setAccentColor(c)}
-/>
-```
-
-### 4. Tydligare labels
-
-- "Text 1" → "Text" (primär — rubriker, labels)
-- "Text 2" → "Text sekundär" (dämpad — hjälptext, ikoner)
-- "Border" behåller namn men blir tydligare att den styr panelramar
+## Tekniska detaljer (kort)
+- Behåll `CustomColors` som override-lager, men låt UI visa effektiva värden från tema-defaults när override saknas.
+- Återställningsknappen fortsätter att rensa custom overrides; eftersom UI nu har fallback syns ändå temafärger direkt.
+- Ingen backend/databasändring krävs.
 
 ## Filer som ändras
+- `src/hooks/useThemeEffect.ts`
+- `src/components/home/cards/ThemeCard.tsx`
+- (ev.) `src/store/types.ts` endast om vi behöver kompletterande display-fält, annars oförändrad
 
-| Fil | Ändring |
-|-----|---------|
-| `src/hooks/useThemeEffect.ts` | Force-reset `--border` efter textColor-override om ingen borderColor finns |
-| `src/components/home/cards/ThemeCard.tsx` | Fix custom accent picker (CommitColorPicker), bättre labels |
-
+## Verifiering efter implementation
+1. Byt mellan Mörkt/Midnatt/Ljust/Nordic Noir → “Färger & ytor” visar ifyllda färger direkt.
+2. I Nordic Noir: inga vita ramar runt sektioner/linjer.
+3. Ändra Text 1/Text 2 → text ändras, men border ligger kvar.
+4. Ändra Border → linjer/ramar ändras tydligt.
+5. Spara/ladda eget tema och kontrollera att logiken håller efter reload.
