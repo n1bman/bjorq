@@ -10,18 +10,18 @@ export default function ScenesWidget() {
 
   return (
     <div className="overlay-widget">
-      <div className="flex items-center gap-2 mb-1.5">
+      <div className="flex items-center gap-2 mb-2">
         <Palette size={12} className="text-primary" />
         <span className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground/60">Scener</span>
       </div>
-      <div className="flex gap-1.5 flex-wrap">
-        {savedScenes.slice(0, 4).map((scene) => (
+      <div className="flex gap-2 flex-wrap">
+        {savedScenes.slice(0, 6).map((scene) => (
           <button
             key={scene.id}
             onClick={() => activateScene(scene.id)}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-surface-elevated/60 hover:bg-primary/15 text-foreground transition-all text-[10px] font-medium"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl glass-panel hover:bg-primary/15 text-foreground transition-all text-[11px] font-medium backdrop-blur-xl"
           >
-            <span className="text-xs">{scene.icon}</span>
+            <Play size={10} className="text-primary" />
             <span>{scene.name}</span>
           </button>
         ))}
