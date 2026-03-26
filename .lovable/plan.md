@@ -1,54 +1,92 @@
 
 
-# Fix: Layout-editor centrering, widget-dragning, kamera/rum-positionering, markörer ljusstyrka
+# Fix: Layout-drag, popup-riktning, expanderbara enhets-pills, energi-widget, ljusmatchning
 
 ## Problem
 
-1. **Layout-panelen sitter i botten** — config-panelen i `HomeLayoutEditor.tsx` är `absolute bottom-6 left-1/2`. Ska vara mitt på skärmen.
+1. **Nav/Kamera/Rum kan inte dras** — `setPointerCapture` anropas på `e.target` (ofta ett child-element), men pointer-move/up lyssnas på container-diven. Capture måste sättas på containern.
 
-2. **Widgets kan inte placeras fritt** — Drag-handtaget sitter bara på label-taggen (`-top-6`), inte på hela widgeten. Svårt att greppa. Dessutom renderas samma widgets som i normal vy, men det saknas möjlighet att dra hela elementet (pointer capture sker bara på label).
+2. **Kamera- och Rum-menyer går neråt** — Komponenternas root-div har `style={{ top: '78%' }}` och `flex-col`. Allt flödar nedåt från den punkten — menyn hamnar under knappen istället för ovanför. Fix: ändra layouten så knappen ankras i botten och menyn poppar uppåt.
 
-3. **Kamera och Rum-knapparna är "helt off"** — `CameraFab` och `RoomNavigator` renderas via `style={{ left, top }}` men sitter i en `<div className="pointer-events-auto">` utan `position: absolute`. Elementens `absolute z-50` i sina egna komponenter refererar till närmaste positioned parent, som inte har `position: relative`. Resultatet blir att de hamnar fel.
+3. **Widgets som enhets-pills saknar expand-funktion** — Vacuum/klimat etc hade tidigare alternativ (städa, paus) men nu är pills bara toggle-knappar. Behöver expanderbart kort under pillsen.
 
-4. **Enhetsmarkörer byter ljusstyrka vid toggle** — `LightMarkerLightOnly` (rad 1669) använder `brightness * 5` och `distance: 8`, medan `LightMarker` (rad 91) använder `brightness * cfg.intensity` (4 för ceiling) och `distance: 5`. Dessa ska matcha så att ljuset inte hoppar när man togglar synlighet.
+4. **Energi-widget har gammal sparkline med dots som ser ut som gauge** — `EnergyWidget` expanded visar `EnergySparkline` med peak-dots som ser inkonsistent ut med den kompakta vyn.
+
+5. **LightMarkerLightOnly matchar inte LightMarker** — Strip-typen har `decay: 1.5` i LightOnly men `decay: 2` i LightMarker. Liten skillnad men synlig.
 
 ---
 
-## 1. Centrera layout-panelen
+## 1. Fixa drag i HomeLayoutEditor
 
-**Fil:** `src/components/home/HomeLayoutEditor.tsx` (rad 172)
+**Fil:** `src/components/home/HomeLayoutEditor.tsx`
 
-Byt `absolute bottom-6 left-1/2` till `absolute top-1/2 left-1/2 -translate-y-1/2` så panelen hamnar mitt på skärmen.
+Ändra `handlePointerDown` (rad 79-87): anropa `setPointerCapture` på `containerRef.current` istället för `e.target`:
 
-## 2. Gör hela widgeten dragbar
-
-**Fil:** `src/components/home/HomeLayoutEditor.tsx` (rad 133-168)
-
-Flytta `onPointerDown` från label-diven till hela widget-wrappern. Behåll label som visuell indikator men låt hela elementet vara grip-target.
-
-## 3. Fixa kamera/rum-positionering
-
-**Fil:** `src/components/home/HomeView.tsx` (rad 314-318)
-
-Wrappern `<div className="pointer-events-auto">` saknar `position: relative`. CameraFab, RoomNavigator och HomeNav har alla `className="absolute z-50"` i sina egna komponenter men de behöver en positioned parent. Fix: lägg till `relative` på wrappern, eller bättre — rendera varje komponent i sin egen absolutely-positioned wrapper, likt widgetarna.
-
-Ändra så att varje FAB renderas individuellt med `position: absolute` direkt i home-viewens inset-0 container:
-```tsx
-<CameraFab style={{ position: 'absolute', left: `${cameraPos.x}%`, top: `${cameraPos.y}%` }} />
+```ts
+const handlePointerDown = useCallback((key, e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  setDragging(key);
+  // ...
+  containerRef.current?.setPointerCapture(e.pointerId); // ← fix
+}, [widgetLayout]);
 ```
 
-Och i `CameraFab.tsx`, `RoomNavigator.tsx`, `HomeNav.tsx` — byt `className="absolute z-50"` till att respektera den inkommande `style`-prop:en korrekt (ta bort `absolute` från komponentens egen rot-div om style redan sätter position).
+## 2. Fixa popup-riktning för CameraFab och RoomNavigator
 
-## 4. Matcha ljusstyrka i LightMarkerLightOnly
+**Fil:** `src/components/home/CameraFab.tsx`
 
-**Fil:** `src/components/devices/DeviceMarkers3D.tsx` (rad 1647-1710)
+Problemet: `flex-col` med `top: 78%` → allt flödar neråt. Fix: Byt till `flex-col-reverse` så knappen renderas först (längst ner) och menyn poppar uppåt:
 
-`LightMarkerLightOnly` ska använda samma `cfg`-logik som `LightMarker`:
-- Läs `marker?.lightType` och `marker?.lightConfig`
-- Beräkna intensity med samma defaults-map (rad 78-89)
-- Använd `cfg.distance`, `cfg.angle`, `cfg.penumbra` istället för hårdkodade värden
+```tsx
+<div className="z-50 flex flex-col-reverse items-end gap-2 pointer-events-auto" style={style}>
+  <button>...</button>
+  {open && <div className="glass-panel ...">...</div>}
+</div>
+```
 
-Detta gör att ljuset ser identiskt ut oavsett om markören är synlig eller dold.
+**Fil:** `src/components/home/RoomNavigator.tsx`
+
+Samma fix — `flex-col-reverse` och flytta `<button>` före menu-diven i JSX.
+
+**Fil:** `src/components/home/HomeNav.tsx`
+
+Samma fix — `flex-col-reverse` och flytta expanderbar meny under knappen i JSX-ordning (men renderas ovanför visuellt).
+
+## 3. Expanderbara enhets-pills i hemvyn
+
+**Fil:** `src/components/home/HomeView.tsx`
+
+Lägg till expanderbart beteende på device pills:
+- Klick på pill → om enheten stödjer det (vacuum, media, klimat), visa en expanderbar panel under pillen med snabbåtgärder
+- State: `expandedPillId`
+- Vacuum: "Städa", "Paus", "Docka", "Hem"  
+- Media: Play/Pause, volym-slider
+- Klimat: Temperatur +/-, Mode
+- Övriga: enkel toggle som nu
+
+Expanderad panel renderas som ett kort under pill-raden, ankrat till den aktiva pillen.
+
+## 4. Energi-widget: ta bort sparkline från overlay
+
+**Fil:** `src/components/home/cards/EnergyWidget.tsx`
+
+Problemet: Expanded overlay (rad 104-120) visar `EnergySparkline` med peak-dots som ser ut som en gammal gauge. Fix: ta bort sparkline från overlay-widgeten (den hör hemma i dashboard-panelen, inte i HUD-overlays).
+
+Expanded overlay ska istället visa:
+- Watts + kWh
+- Kostnad idag
+- Ingen sparkline/gauge
+
+## 5. LightMarkerLightOnly decay-fix
+
+**Fil:** `src/components/devices/DeviceMarkers3D.tsx` (rad 1704-1706)
+
+Ändra strip `decay` från `1.5` till `2` för att matcha LightMarker exakt:
+```tsx
+// Rad 1705: decay={1.5} → decay={2}
+<pointLight ... decay={2} />
+```
 
 ---
 
@@ -56,10 +94,11 @@ Detta gör att ljuset ser identiskt ut oavsett om markören är synlig eller dol
 
 | Fil | Ändring |
 |-----|---------|
-| `src/components/home/HomeLayoutEditor.tsx` | Centrera panelen, gör hela widgeten dragbar |
-| `src/components/home/HomeView.tsx` | Fixa FAB-positionering med individuella absolute-wrappers |
-| `src/components/home/CameraFab.tsx` | Ta bort `absolute` från rot-div, låt parent styra position |
-| `src/components/home/RoomNavigator.tsx` | Samma som CameraFab |
-| `src/components/home/HomeNav.tsx` | Samma som CameraFab |
-| `src/components/devices/DeviceMarkers3D.tsx` | `LightMarkerLightOnly` använder samma cfg-logik som `LightMarker` |
+| `src/components/home/HomeLayoutEditor.tsx` | Fix `setPointerCapture` på container |
+| `src/components/home/CameraFab.tsx` | `flex-col-reverse` för uppåt-popup |
+| `src/components/home/RoomNavigator.tsx` | `flex-col-reverse` för uppåt-popup |
+| `src/components/home/HomeNav.tsx` | `flex-col-reverse` för uppåt-popup |
+| `src/components/home/HomeView.tsx` | Expanderbara enhets-pills med snabbåtgärder |
+| `src/components/home/cards/EnergyWidget.tsx` | Ta bort sparkline från overlay expanded |
+| `src/components/devices/DeviceMarkers3D.tsx` | Strip decay 1.5 → 2 |
 
