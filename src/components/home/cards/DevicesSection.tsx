@@ -4,39 +4,39 @@ import type { DeviceKind, DeviceState, DeviceMarker } from '../../../store/types
 import { Switch } from '../../ui/switch';
 import { Slider } from '../../ui/slider';
 import { cn } from '../../../lib/utils';
-import { ChevronDown, Wifi, Link2, Unlink } from 'lucide-react';
+import { ChevronDown, Wifi, Link2, Unlink, Lightbulb, Power, Thermometer, Snowflake, Bot, Camera, Box, Flame, Droplets, Car, Lock, Plug, Monitor, Fan, PanelTop, Play, ShieldAlert, Bell, Settings2, Radio, Leaf, Speaker, Music, Egg } from 'lucide-react';
 import DeviceControlCard from './DeviceControlCard';
 import HAEntityPicker from '../../build/devices/HAEntityPicker';
 
-const kindInfo: Record<DeviceKind, { emoji: string; label: string; category: string }> = {
-  light: { emoji: '💡', label: 'Ljus', category: 'Ljus' },
-  switch: { emoji: '🔌', label: 'Knapp', category: 'Ljus' },
-  sensor: { emoji: '🌡️', label: 'Sensor', category: 'Sensorer' },
-  climate: { emoji: '❄️', label: 'Klimat', category: 'Klimat' },
-  vacuum: { emoji: '🤖', label: 'Dammsugare', category: 'Hem' },
-  camera: { emoji: '📷', label: 'Kamera', category: 'Säkerhet' },
-  fridge: { emoji: '🧊', label: 'Kylskåp', category: 'Vitvaror' },
-  oven: { emoji: '🍳', label: 'Ugn', category: 'Vitvaror' },
-  washer: { emoji: '🫧', label: 'Tvättmaskin', category: 'Vitvaror' },
-  'garage-door': { emoji: '🚗', label: 'Garageport', category: 'Säkerhet' },
-  'door-lock': { emoji: '🔒', label: 'Dörrlås', category: 'Säkerhet' },
-  'power-outlet': { emoji: '🔌', label: 'Eluttag', category: 'Ljus' },
-  media_screen: { emoji: '📺', label: 'Skärm', category: 'Media' },
-  fan: { emoji: '🌀', label: 'Fläkt', category: 'Klimat' },
-  cover: { emoji: '🪟', label: 'Persienn', category: 'Hem' },
-  scene: { emoji: '🎬', label: 'Scen', category: 'Automation' },
-  alarm: { emoji: '🚨', label: 'Larm', category: 'Säkerhet' },
-  'water-heater': { emoji: '🔥', label: 'Varmvatten', category: 'Klimat' },
-  humidifier: { emoji: '💧', label: 'Luftfuktare', category: 'Klimat' },
-  siren: { emoji: '🔔', label: 'Siren', category: 'Säkerhet' },
-  valve: { emoji: '🔧', label: 'Ventil', category: 'Hem' },
-  remote: { emoji: '📡', label: 'Fjärr', category: 'Media' },
-  'lawn-mower': { emoji: '🌿', label: 'Gräsklippare', category: 'Hem' },
-  speaker: { emoji: '🔊', label: 'Högtalare', category: 'Media' },
-  soundbar: { emoji: '🎵', label: 'Soundbar', category: 'Media' },
-  'light-fixture': { emoji: '💡', label: 'Ljusarmatur', category: 'Ljus' },
-  'smart-outlet': { emoji: '🔌', label: 'Vägguttag', category: 'Ljus' },
-  egg: { emoji: '🥚', label: 'Egg', category: 'Hem' },
+const kindInfo: Record<DeviceKind, { icon: typeof Lightbulb; label: string; category: string }> = {
+  light: { icon: Lightbulb, label: 'Ljus', category: 'Ljus' },
+  switch: { icon: Power, label: 'Knapp', category: 'Ljus' },
+  sensor: { icon: Thermometer, label: 'Sensor', category: 'Sensorer' },
+  climate: { icon: Snowflake, label: 'Klimat', category: 'Klimat' },
+  vacuum: { icon: Bot, label: 'Dammsugare', category: 'Hem' },
+  camera: { icon: Camera, label: 'Kamera', category: 'Säkerhet' },
+  fridge: { icon: Box, label: 'Kylskåp', category: 'Vitvaror' },
+  oven: { icon: Flame, label: 'Ugn', category: 'Vitvaror' },
+  washer: { icon: Droplets, label: 'Tvättmaskin', category: 'Vitvaror' },
+  'garage-door': { icon: Car, label: 'Garageport', category: 'Säkerhet' },
+  'door-lock': { icon: Lock, label: 'Dörrlås', category: 'Säkerhet' },
+  'power-outlet': { icon: Plug, label: 'Eluttag', category: 'Ljus' },
+  media_screen: { icon: Monitor, label: 'Skärm', category: 'Media' },
+  fan: { icon: Fan, label: 'Fläkt', category: 'Klimat' },
+  cover: { icon: PanelTop, label: 'Persienn', category: 'Hem' },
+  scene: { icon: Play, label: 'Scen', category: 'Automation' },
+  alarm: { icon: ShieldAlert, label: 'Larm', category: 'Säkerhet' },
+  'water-heater': { icon: Flame, label: 'Varmvatten', category: 'Klimat' },
+  humidifier: { icon: Droplets, label: 'Luftfuktare', category: 'Klimat' },
+  siren: { icon: Bell, label: 'Siren', category: 'Säkerhet' },
+  valve: { icon: Settings2, label: 'Ventil', category: 'Hem' },
+  remote: { icon: Radio, label: 'Fjärr', category: 'Media' },
+  'lawn-mower': { icon: Leaf, label: 'Gräsklippare', category: 'Hem' },
+  speaker: { icon: Speaker, label: 'Högtalare', category: 'Media' },
+  soundbar: { icon: Music, label: 'Soundbar', category: 'Media' },
+  'light-fixture': { icon: Lightbulb, label: 'Ljusarmatur', category: 'Ljus' },
+  'smart-outlet': { icon: Plug, label: 'Vägguttag', category: 'Ljus' },
+  egg: { icon: Egg, label: 'Egg', category: 'Hem' },
 };
 
 function isDeviceOn(state?: DeviceState): boolean {
@@ -135,7 +135,7 @@ export default function DevicesSection({ filter, groupBy = 'room' }: DevicesSect
           <div key={groupName}>
             {/* Group header */}
             <div
-              className="flex items-center justify-between mb-2 cursor-pointer"
+              className="flex items-center justify-between mb-3 cursor-pointer"
               onClick={() => toggleGroup(groupName)}
             >
               <div className="flex items-center gap-2">
@@ -143,15 +143,14 @@ export default function DevicesSection({ filter, groupBy = 'room' }: DevicesSect
                   'text-muted-foreground transition-transform',
                   collapsed && '-rotate-90'
                 )} />
-                <p className="text-xs font-medium text-muted-foreground">{groupName}</p>
-                <span className="text-[10px] text-muted-foreground/60">{onCount}/{devices.length} på</span>
+                <p className="text-sm font-medium text-muted-foreground">{groupName}</p>
+                <span className="text-xs text-muted-foreground/60">{onCount}/{devices.length} på</span>
               </div>
               {groupBy === 'category' && (
                 <div onClick={(e) => e.stopPropagation()}>
                   <Switch
                     checked={allOn}
                     onCheckedChange={(v) => toggleAllInGroup(devices, v)}
-                    className="scale-90"
                   />
                 </div>
               )}
@@ -167,6 +166,7 @@ export default function DevicesSection({ filter, groupBy = 'room' }: DevicesSect
                   const on = isDeviceOn(state);
                   const quickInfo = getQuickInfo(state);
                   const expanded = expandedId === d.id;
+                  const DeviceIcon = info.icon;
 
                   return (
                     <div
@@ -177,11 +177,11 @@ export default function DevicesSection({ filter, groupBy = 'room' }: DevicesSect
                       )}
                     >
                       <div
-                        className="flex items-center justify-between p-3 cursor-pointer"
+                        className="flex items-center justify-between p-3.5 md:p-4 cursor-pointer"
                         onClick={() => setExpandedId(expanded ? null : d.id)}
                       >
-                        <div className="flex items-center gap-2 min-w-0 flex-1">
-                          <span className="text-lg">{info.emoji}</span>
+                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                          <DeviceIcon size={18} strokeWidth={1.5} className="text-muted-foreground shrink-0" />
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-1.5">
                               <p className="text-sm font-medium text-foreground truncate">{d.name || info.label}</p>
@@ -190,7 +190,7 @@ export default function DevicesSection({ filter, groupBy = 'room' }: DevicesSect
                               )}
                             </div>
                             {quickInfo && (
-                              <p className="text-[10px] text-muted-foreground">{quickInfo}</p>
+                              <p className="text-xs text-muted-foreground">{quickInfo}</p>
                             )}
                           </div>
                         </div>
@@ -225,7 +225,7 @@ export default function DevicesSection({ filter, groupBy = 'room' }: DevicesSect
                       </div>
 
                       {expanded && (
-                        <div className="px-3 pb-3 border-t border-border/30 space-y-2">
+                        <div className="px-3.5 md:px-4 pb-3.5 md:pb-4 border-t border-border/30 space-y-2">
                           <DeviceControlCard marker={d} />
                           
                           {/* C1: Edit HA entity mapping */}
@@ -246,7 +246,7 @@ export default function DevicesSection({ filter, groupBy = 'room' }: DevicesSect
                                   }}
                                 />
                                 <button
-                                  className="text-[9px] text-muted-foreground hover:text-foreground transition-colors"
+                                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                                   onClick={() => setMappingId(null)}
                                 >
                                   Stäng
@@ -254,7 +254,7 @@ export default function DevicesSection({ filter, groupBy = 'room' }: DevicesSect
                               </div>
                             ) : (
                               <button
-                                className="flex items-center gap-1.5 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+                                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
                                 onClick={() => setMappingId(d.id)}
                               >
                                 {d.ha?.entityId ? (

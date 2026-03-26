@@ -1,5 +1,5 @@
 import { useAppStore } from '../../../store/useAppStore';
-import { Sun, Compass, ArrowUp, Lightbulb, CloudRain, Cloud, Droplets, Wind } from 'lucide-react';
+import { Sun, Compass, ArrowUp, Lightbulb, CloudRain, Cloud, Droplets, Wind, Snowflake, CloudSun, Ban } from 'lucide-react';
 import { Slider } from '../../ui/slider';
 import { Switch } from '../../ui/switch';
 import { Button } from '../../ui/button';
@@ -8,18 +8,18 @@ import { ChevronRight } from 'lucide-react';
 import React from 'react';
 import type { PrecipitationOverride, WeatherCondition } from '../../../store/types';
 
-const weatherOptions: { key: WeatherCondition; label: string; emoji: string }[] = [
-  { key: 'clear', label: 'Klart', emoji: '☀️' },
-  { key: 'cloudy', label: 'Mulet', emoji: '☁️' },
-  { key: 'rain', label: 'Regn', emoji: '🌧️' },
-  { key: 'snow', label: 'Snö', emoji: '❄️' },
+const weatherOptions: { key: WeatherCondition; label: string; icon: typeof Sun }[] = [
+  { key: 'clear', label: 'Klart', icon: Sun },
+  { key: 'cloudy', label: 'Mulet', icon: Cloud },
+  { key: 'rain', label: 'Regn', icon: CloudRain },
+  { key: 'snow', label: 'Snö', icon: Snowflake },
 ];
 
-const precipOptions: { key: PrecipitationOverride; label: string; emoji: string }[] = [
-  { key: 'auto', label: 'Auto', emoji: '🌤️' },
-  { key: 'rain', label: 'Regn', emoji: '🌧️' },
-  { key: 'snow', label: 'Snö', emoji: '❄️' },
-  { key: 'off', label: 'Av', emoji: '🚫' },
+const precipOptions: { key: PrecipitationOverride; label: string; icon: typeof Sun }[] = [
+  { key: 'auto', label: 'Auto', icon: CloudSun },
+  { key: 'rain', label: 'Regn', icon: CloudRain },
+  { key: 'snow', label: 'Snö', icon: Snowflake },
+  { key: 'off', label: 'Av', icon: Ban },
 ];
 
 const CollapsibleSection = React.forwardRef<HTMLDivElement, { title: string; icon: typeof Sun; children: React.ReactNode }>(

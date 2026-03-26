@@ -113,11 +113,17 @@
   }
 
   .label-micro {
-    font-size: 9px;
+    font-size: 10px;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.22em;
     color: hsl(var(--muted-foreground) / 0.35);
+  }
+
+  @media (min-width: 768px) {
+    .label-micro {
+      font-size: 11px;
+    }
   }
 
   select, option {

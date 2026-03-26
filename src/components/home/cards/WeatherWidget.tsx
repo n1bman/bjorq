@@ -1,13 +1,13 @@
 import { useAppStore } from '../../../store/useAppStore';
-import { Wind, Droplets, Clock } from 'lucide-react';
+import { Wind, Droplets, Clock, Sun, Cloud, CloudRain, Snowflake } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import type { WidgetOverlaySize } from '../../../store/types';
 
-const weatherIcons: Record<string, string> = {
-  clear: '☀️',
-  cloudy: '☁️',
-  rain: '🌧️',
-  snow: '❄️',
+const weatherIcons: Record<string, typeof Sun> = {
+  clear: Sun,
+  cloudy: Cloud,
+  rain: CloudRain,
+  snow: Snowflake,
 };
 
 const conditionLabels: Record<string, string> = {
@@ -44,6 +44,11 @@ function generateHourlyForecast(temp: number, condition: string) {
   });
 }
 
+function WeatherIcon({ condition, size = 24, className }: { condition: string; size?: number; className?: string }) {
+  const Icon = weatherIcons[condition] ?? Sun;
+  return <Icon size={size} strokeWidth={1.5} className={className} />;
+}
+
 export default function WeatherWidget({ expanded: forceExpanded, size = 'normal' }: Props) {
   const condition = useAppStore((s) => s.environment.weather.condition);
   const temperature = useAppStore((s) => s.environment.weather.temperature);
@@ -71,7 +76,7 @@ export default function WeatherWidget({ expanded: forceExpanded, size = 'normal'
       <div className={cn('nn-widget p-5 w-full bg-gradient-to-br', timeGradient)}>
         {/* Hero: Nu-panel */}
         <div className="flex items-center gap-5 mb-4">
-          <span className="text-6xl">{weatherIcons[condition] ?? '☀️'}</span>
+          <WeatherIcon condition={condition} size={48} className="text-[hsl(var(--section-weather))]" />
           <div>
             <div className="flex items-baseline gap-1">
               <span className="text-5xl font-bold font-display text-foreground tracking-tight">{temperature}°</span>
@@ -95,22 +100,22 @@ export default function WeatherWidget({ expanded: forceExpanded, size = 'normal'
         <div className="border-t border-border/20 pt-3">
           <div className="flex items-center gap-1.5 mb-2">
             <Clock size={12} className="text-muted-foreground/50" />
-            <p className="text-[9px] uppercase tracking-wider text-muted-foreground/50 font-semibold">24-timmarsprognos</p>
+            <p className="label-micro">24-timmarsprognos</p>
           </div>
           <div className="flex gap-0 overflow-x-auto pb-1 -mx-1">
             {hourly.map((h, i) => (
                 <div
                   key={i}
                   className={cn(
-                    'flex flex-col items-center gap-0.5 min-w-[36px] px-1 py-1.5 rounded-lg transition-colors',
+                    'flex flex-col items-center gap-0.5 min-w-[36px] md:min-w-[40px] px-1 py-1.5 rounded-lg transition-colors',
                     i === 0 && 'bg-[hsl(var(--section-weather))]/10'
                   )}
                 >
-                <span className="text-[8px] text-muted-foreground/50">
+                <span className="text-[9px] md:text-[10px] text-muted-foreground/50">
                   {i === 0 ? 'Nu' : `${String(h.hour).padStart(2, '0')}`}
                 </span>
-                <span className="text-sm">{weatherIcons[h.condition] ?? '☁️'}</span>
-                <span className="text-[9px] font-semibold text-foreground">{h.temp}°</span>
+                <WeatherIcon condition={h.condition} size={16} className="text-muted-foreground/70" />
+                <span className="text-[10px] md:text-xs font-semibold text-foreground">{h.temp}°</span>
               </div>
             ))}
           </div>
@@ -119,23 +124,23 @@ export default function WeatherWidget({ expanded: forceExpanded, size = 'normal'
         {/* Day forecast */}
         {forecast && forecast.length > 0 && (
           <div className="mt-3 pt-3 border-t border-border/20">
-            <p className="text-[9px] uppercase tracking-wider text-muted-foreground/50 font-semibold mb-2">Dagsprognos</p>
+            <p className="label-micro mb-2">Dagsprognos</p>
             <div className="flex gap-1 overflow-x-auto pb-1">
               {forecast.map((day, i) => (
                 <div
                   key={i}
                   className={cn(
-                    'flex flex-col items-center gap-0.5 min-w-[52px] px-2 py-1.5 rounded-lg',
+                    'flex flex-col items-center gap-0.5 min-w-[52px] md:min-w-[60px] px-2 py-1.5 rounded-lg',
                     i === 0 && 'bg-[hsl(var(--section-weather))]/10'
                   )}
                 >
-                  <span className="text-[10px] font-medium text-muted-foreground">
+                  <span className="text-xs font-medium text-muted-foreground">
                     {i === 0 ? 'Idag' : day.day}
                   </span>
-                  <span className="text-lg">{weatherIcons[day.condition] ?? '☁️'}</span>
+                  <WeatherIcon condition={day.condition} size={20} className="text-muted-foreground/70" />
                   <div className="flex items-center gap-0.5">
-                    <span className="text-[10px] font-semibold text-foreground">{day.maxTemp}°</span>
-                    <span className="text-[10px] text-muted-foreground">{day.minTemp}°</span>
+                    <span className="text-xs font-semibold text-foreground">{day.maxTemp}°</span>
+                    <span className="text-xs text-muted-foreground">{day.minTemp}°</span>
                   </div>
                 </div>
               ))}
@@ -151,7 +156,7 @@ export default function WeatherWidget({ expanded: forceExpanded, size = 'normal'
     return (
       <div className="overlay-widget">
         <div className="flex items-center gap-1.5">
-          <span className="text-sm">{weatherIcons[condition] ?? '☀️'}</span>
+          <WeatherIcon condition={condition} size={16} className="text-[hsl(var(--section-weather))]" />
           <span className="text-lg font-bold font-display text-foreground">{temperature}°</span>
         </div>
       </div>
@@ -163,13 +168,13 @@ export default function WeatherWidget({ expanded: forceExpanded, size = 'normal'
     return (
       <div className="overlay-widget">
         <div className="flex items-center gap-2">
-          <span className="text-lg">{weatherIcons[condition] ?? '☀️'}</span>
+          <WeatherIcon condition={condition} size={20} className="text-[hsl(var(--section-weather))]" />
           <span className="text-xl font-bold font-display text-foreground">{temperature}°</span>
-          <span className="text-[10px] text-muted-foreground/70">{conditionFeeling[condition] ?? condition}</span>
+          <span className="text-xs text-muted-foreground/70">{conditionFeeling[condition] ?? condition}</span>
         </div>
-        <div className="flex items-center gap-3 mt-1.5 text-[9px] text-muted-foreground/60">
-          <span>💨 {windSpeed ?? 3.2} m/s</span>
-          <span>💧 {humidity ?? 62}%</span>
+        <div className="flex items-center gap-3 mt-1.5 text-xs text-muted-foreground/60">
+          <span className="flex items-center gap-1"><Wind size={10} /> {windSpeed ?? 3.2} m/s</span>
+          <span className="flex items-center gap-1"><Droplets size={10} /> {humidity ?? 62}%</span>
         </div>
       </div>
     );
@@ -179,9 +184,9 @@ export default function WeatherWidget({ expanded: forceExpanded, size = 'normal'
   return (
     <div className="overlay-widget">
       <div className="flex items-center gap-2">
-        <span className="text-lg">{weatherIcons[condition] ?? '☀️'}</span>
+        <WeatherIcon condition={condition} size={20} className="text-[hsl(var(--section-weather))]" />
         <span className="text-xl font-bold font-display text-foreground">{temperature}°</span>
-        <span className="text-[10px] text-muted-foreground/70">{conditionLabels[condition] ?? condition}</span>
+        <span className="text-xs text-muted-foreground/70">{conditionLabels[condition] ?? condition}</span>
       </div>
     </div>
   );
