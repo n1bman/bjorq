@@ -31,6 +31,30 @@ const backgrounds = [
   { key: 'solid' as const, label: 'Enfärgad' },
 ];
 
+/* ── Default display colors per theme (hex) for UI pickers ── */
+const themeDisplayDefaults: Record<string, Record<string, string>> = {
+  dark: {
+    buttonColor: '#2a2d36', sliderColor: '#f59e0b', bgColor: '#1a1c23',
+    menuColor: '#1c1f26', cardColor: '#1f2229', textColor: '#e0e4ed',
+    textSecondaryColor: '#7a8094', borderColor: '#2e3140',
+  },
+  midnight: {
+    buttonColor: '#1c2033', sliderColor: '#f59e0b', bgColor: '#0d0f18',
+    menuColor: '#0f1120', cardColor: '#141828', textColor: '#e8eff8',
+    textSecondaryColor: '#7f8bab', borderColor: '#232841',
+  },
+  light: {
+    buttonColor: '#e4e7ed', sliderColor: '#f59e0b', bgColor: '#f0f2f5',
+    menuColor: '#eceef2', cardColor: '#ffffff', textColor: '#1e2530',
+    textSecondaryColor: '#5c6370', borderColor: '#cdd2db',
+  },
+  nordic: {
+    buttonColor: '#1c212b', sliderColor: '#d7a35d', bgColor: '#07090d',
+    menuColor: '#0b0e14', cardColor: '#171b24', textColor: '#f3efe8',
+    textSecondaryColor: '#7f7a73', borderColor: '#222838',
+  },
+};
+
 /* ── helpers ── */
 function addToRecent(recent: string[] | undefined, color: string): string[] {
   const norm = color.toLowerCase();
@@ -96,6 +120,9 @@ export default function ThemeCard() {
     setProfile({ accentColor: color, customColors: { ...custom, recentColors } });
   };
 
+  const defaults = themeDisplayDefaults[profile.theme] || themeDisplayDefaults.dark;
+  const effective = (field: keyof typeof defaults) => (custom as any)[field] || defaults[field];
+
   const resetCustom = () => {
     const defaultAccent = themeDefaultAccent[profile.theme] || '#f59e0b';
     setProfile({ customColors: undefined, accentColor: defaultAccent });
@@ -149,7 +176,7 @@ export default function ThemeCard() {
               )}
               onClick={() => {
                 const defaultAcc = themeDefaultAccent[key] || '#f59e0b';
-                setProfile({ theme: key, accentColor: defaultAcc });
+                setProfile({ theme: key, accentColor: defaultAcc, customColors: undefined });
               }}
             >
               {/* Color preview strip */}
@@ -290,15 +317,16 @@ export default function ThemeCard() {
             <div className="space-y-3">
               <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Färger & ytor</span>
               <div className="grid grid-cols-4 gap-4 px-1">
-                <CommitColorPicker label="Knappar" value={custom.buttonColor} onCommit={(c) => commitCustomColor({ buttonColor: c })} />
-                <CommitColorPicker label="Slider" value={custom.sliderColor} onCommit={(c) => commitCustomColor({ sliderColor: c })} />
-                <CommitColorPicker label="Panel" value={custom.bgColor} onCommit={(c) => commitCustomColor({ bgColor: c })} />
-                <CommitColorPicker label="Meny" value={custom.menuColor} onCommit={(c) => commitCustomColor({ menuColor: c })} />
-                <CommitColorPicker label="Kort" value={custom.cardColor} onCommit={(c) => commitCustomColor({ cardColor: c })} />
-                <CommitColorPicker label="Text" value={custom.textColor} onCommit={(c) => commitCustomColor({ textColor: c })} />
-                <CommitColorPicker label="Text sek." value={custom.textSecondaryColor} onCommit={(c) => commitCustomColor({ textSecondaryColor: c })} />
-                <CommitColorPicker label="Border" value={custom.borderColor} onCommit={(c) => commitCustomColor({ borderColor: c })} />
+                <CommitColorPicker label="Knappar" value={effective('buttonColor')} onCommit={(c) => commitCustomColor({ buttonColor: c })} />
+                <CommitColorPicker label="Slider" value={effective('sliderColor')} onCommit={(c) => commitCustomColor({ sliderColor: c })} />
+                <CommitColorPicker label="Panel" value={effective('bgColor')} onCommit={(c) => commitCustomColor({ bgColor: c })} />
+                <CommitColorPicker label="Meny" value={effective('menuColor')} onCommit={(c) => commitCustomColor({ menuColor: c })} />
+                <CommitColorPicker label="Kort" value={effective('cardColor')} onCommit={(c) => commitCustomColor({ cardColor: c })} />
+                <CommitColorPicker label="Text" value={effective('textColor')} onCommit={(c) => commitCustomColor({ textColor: c })} />
+                <CommitColorPicker label="Text sek." value={effective('textSecondaryColor')} onCommit={(c) => commitCustomColor({ textSecondaryColor: c })} />
+                <CommitColorPicker label="Border" value={effective('borderColor')} onCommit={(c) => commitCustomColor({ borderColor: c })} />
               </div>
+              <p className="text-[9px] text-muted-foreground/60 mt-1">Border styr panelramar, sektionslinjer och sidolinjer</p>
             </div>
 
             {/* ── Material & feel ── */}

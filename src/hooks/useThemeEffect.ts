@@ -92,18 +92,18 @@ const nordicPalette: ThemePalette = {
   '--muted-foreground': '30 5% 47%',   // #7f7a73
   // Text
   '--foreground': '38 25% 93%',        // #f3efe8 warm off-white
-  // Borders: alpha-based for subtlety
-  '--border': '0 0% 100% / 0.10',
+  // Borders: dark graphite (not white) for premium feel
+  '--border': '220 16% 16%',
   '--input': '220 16% 12%',
   // Sidebar
   '--sidebar-background': '220 28% 6%',
   '--sidebar-foreground': '32 12% 68%',
   '--sidebar-accent': '220 16% 12%',
   '--sidebar-accent-foreground': '32 12% 68%',
-  '--sidebar-border': '0 0% 100% / 0.06',
+  '--sidebar-border': '220 16% 14%',
   // Glass
   '--glass': '220 28% 6% / 0.88',
-  '--glass-border': '0 0% 100% / 0.06',
+  '--glass-border': '220 16% 16%',
   // Glow — subtle for Nordic Noir
   '--glow-intensity': '0.35',
   // Nordic Noir semantic accent colors
@@ -217,16 +217,12 @@ export function useThemeEffect() {
       // Border color + opacity
       if (customColors.borderOpacity !== undefined || customColors.borderColor) {
         const alpha = customColors.borderOpacity ?? 0.10;
-        if (customColors.borderColor?.startsWith('#') && customColors.borderColor.length >= 7) {
-          const borderHsl = hexToHsl(customColors.borderColor);
-          root.style.setProperty('--border', `${borderHsl} / ${alpha.toFixed(2)}`);
-          root.style.setProperty('--glass-border', `${borderHsl} / ${Math.max(alpha - 0.04, 0).toFixed(2)}`);
-          root.style.setProperty('--sidebar-border', `${borderHsl} / ${alpha.toFixed(2)}`);
-        } else {
-          root.style.setProperty('--border', `0 0% 100% / ${alpha.toFixed(2)}`);
-          root.style.setProperty('--glass-border', `0 0% 100% / ${Math.max(alpha - 0.04, 0).toFixed(2)}`);
-          root.style.setProperty('--sidebar-border', `0 0% 100% / ${alpha.toFixed(2)}`);
-        }
+        const baseBorderHsl = customColors.borderColor?.startsWith('#') && customColors.borderColor.length >= 7
+          ? hexToHsl(customColors.borderColor)
+          : (palette['--border'] || '222 12% 21%').split('/')[0].trim();
+        root.style.setProperty('--border', `${baseBorderHsl} / ${alpha.toFixed(2)}`);
+        root.style.setProperty('--glass-border', `${baseBorderHsl} / ${Math.max(alpha - 0.04, 0).toFixed(2)}`);
+        root.style.setProperty('--sidebar-border', `${baseBorderHsl} / ${alpha.toFixed(2)}`);
       }
       // Glow intensity
       if (customColors.glowIntensity !== undefined) {
