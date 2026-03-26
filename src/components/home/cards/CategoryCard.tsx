@@ -200,11 +200,14 @@ export default function CategoryCard({
                   editMode && 'cursor-grab'
                 )}
               >
-                {/* Soft fade brightness bar — visible in header area only */}
+                {/* Soft fade brightness bar — covers full header row */}
                 {isLight && on && (
                   <div
-                    className="absolute top-0 left-0 right-0 h-[52px] rounded-t-xl pointer-events-none transition-all duration-500"
-                    style={{ background: barBg }}
+                    className="absolute inset-x-0 top-0 bottom-0 rounded-xl pointer-events-none transition-all duration-500"
+                    style={{
+                      background: barBg,
+                      maxHeight: expanded ? '56px' : undefined,
+                    }}
                   />
                 )}
                 <div
