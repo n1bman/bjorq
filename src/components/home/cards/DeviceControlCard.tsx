@@ -322,52 +322,75 @@ function LightControl({ id, data, update }: { id: string; data: LightState; upda
           <Slider value={[data.colorTemp ?? 300]} min={153} max={500} step={1} onValueChange={([v]) => update(id, { colorTemp: v })} />
         </div>
       )}
-      {data.on && data.colorMode === 'rgb' && (
-        <div className="space-y-3">
-          <p className="text-[10px] text-muted-foreground">Färg</p>
-          <div className="flex items-start gap-3">
-            <div className="flex-1 space-y-2">
-              {(['R', 'G', 'B'] as const).map((ch, i) => {
-                const rgb = data.rgbColor ?? [255, 255, 255];
-                const colors = [
-                  ['#1a0000', '#ff0000'],
-                  ['#001a00', '#00ff00'],
-                  ['#00001a', '#0000ff'],
-                ];
-                return (
-                  <div key={ch} className="space-y-0.5">
-                    <div className="flex justify-between">
-                      <span className="text-[9px] text-muted-foreground font-medium">{ch}</span>
-                      <span className="text-[9px] text-muted-foreground font-mono">{rgb[i]}</span>
-                    </div>
-                    <div className="relative h-5">
-                      <div
-                        className="absolute inset-0 rounded-full"
-                        style={{ background: `linear-gradient(to right, ${colors[i][0]}, ${colors[i][1]})`, opacity: 0.35 }}
-                      />
-                      <Slider
-                        value={[rgb[i]]}
-                        min={0}
-                        max={255}
-                        step={1}
-                        onValueChange={([v]) => {
-                          const next: [number, number, number] = [...rgb] as [number, number, number];
-                          next[i] = v;
-                          update(id, { rgbColor: next });
-                        }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
+      {data.on && data.colorMode === 'rgb' && (() => {
+        const rgb = data.rgbColor ?? [255, 255, 255];
+        const sliderToRgb = (pos: number): [number, number, number] => {
+          // 0-160: hue spectrum, 160-200: fade to white, 200-360: hue spectrum continues
+          if (pos >= 160 && pos <= 200) {
+            const t = (pos - 160) / 40; // 0→1→0
+            const s = t <= 0.5 ? 1 - t * 2 : (t - 0.5) * 2;
+            return [Math.round(255 - (255 - 255) * s), Math.round(255 - (255 - 255) * s), Math.round(255)];
+          }
+          // HSL to RGB with S=1, L=0.5
+          const hue = pos <= 160 ? (pos / 160) * 180 : 180 + ((pos - 200) / 160) * 180;
+          const h = hue / 60;
+          const x = 1 - Math.abs(h % 2 - 1);
+          let r = 0, g = 0, b = 0;
+          if (h < 1) { r = 1; g = x; } else if (h < 2) { r = x; g = 1; }
+          else if (h < 3) { g = 1; b = x; } else if (h < 4) { g = x; b = 1; }
+          else if (h < 5) { r = x; b = 1; } else { r = 1; b = x; }
+          if (pos >= 140 && pos <= 160) {
+            const fade = (160 - pos) / 20;
+            return [Math.round((r * fade + (1 - fade)) * 255), Math.round((g * fade + (1 - fade)) * 255), Math.round((b * fade + (1 - fade)) * 255)];
+          }
+          if (pos >= 200 && pos <= 220) {
+            const fade = (pos - 200) / 20;
+            return [Math.round((r * fade + (1 - fade)) * 255), Math.round((g * fade + (1 - fade)) * 255), Math.round((b * fade + (1 - fade)) * 255)];
+          }
+          return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
+        };
+        const rgbToSlider = (c: number[]): number => {
+          if (c[0] > 240 && c[1] > 240 && c[2] > 240) return 180;
+          // Approximate: find closest hue
+          const max = Math.max(c[0], c[1], c[2]), min = Math.min(c[0], c[1], c[2]);
+          let h = 0;
+          if (max === min) return 180;
+          const d = max - min;
+          if (max === c[0]) h = ((c[1] - c[2]) / d + 6) % 6;
+          else if (max === c[1]) h = (c[2] - c[0]) / d + 2;
+          else h = (c[0] - c[1]) / d + 4;
+          const hue = h * 60;
+          return hue <= 180 ? (hue / 180) * 160 : 200 + ((hue - 180) / 180) * 160;
+        };
+        const pos = rgbToSlider(rgb);
+        return (
+          <div className="space-y-1">
+            <p className="text-[10px] text-muted-foreground">Färg</p>
+            <div className="flex items-center gap-2">
+              <div className="flex-1 relative h-6">
+                <div
+                  className="absolute inset-0 rounded-full"
+                  style={{
+                    background: 'linear-gradient(to right, #ff0000, #ffff00, #00ff00, #00ffff, #ffffff, #00ffff, #0000ff, #ff00ff, #ff0000)',
+                    opacity: 0.5,
+                  }}
+                />
+                <Slider
+                  value={[pos]}
+                  min={0}
+                  max={360}
+                  step={1}
+                  onValueChange={([v]) => update(id, { rgbColor: sliderToRgb(v) })}
+                />
+              </div>
+              <div
+                className="w-6 h-6 rounded-full border border-border/30 shrink-0"
+                style={{ backgroundColor: `rgb(${rgb.join(',')})` }}
+              />
             </div>
-            <div
-              className="w-10 h-10 rounded-lg border border-border/30 shrink-0 mt-2"
-              style={{ backgroundColor: `rgb(${(data.rgbColor ?? [255,255,255]).join(',')})` }}
-            />
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
