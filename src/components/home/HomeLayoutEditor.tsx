@@ -239,12 +239,17 @@ export default function HomeLayoutEditor() {
               {m.name || m.kind}
             </div>
 
-            <div className={cn(
-              'rounded-2xl ring-2 transition-all',
-              isDragging
-                ? 'ring-primary shadow-[0_0_32px_hsl(var(--amber-glow))]'
-                : 'ring-primary/30 group-hover:ring-primary/60',
-            )}>
+            {(() => {
+              const inSafeZone = !isDragging && pos.x > 28 && pos.x < 72 && pos.y > 25 && pos.y < 75;
+              return (
+                <div className={cn(
+                  'rounded-2xl ring-2 transition-all',
+                  inSafeZone
+                    ? 'ring-red-500/50'
+                    : isDragging
+                      ? 'ring-primary shadow-[0_0_32px_hsl(var(--amber-glow))]'
+                      : 'ring-primary/30 group-hover:ring-primary/60',
+                )}>
               <div className="glass-panel rounded-2xl px-4 py-3 flex items-center gap-3 backdrop-blur-xl min-w-[120px]">
                 <Icon size={16} className="text-muted-foreground" />
                 <span className="text-[13px] font-medium text-foreground truncate max-w-[100px]">{m.name || m.kind}</span>
