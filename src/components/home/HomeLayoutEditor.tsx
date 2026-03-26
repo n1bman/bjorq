@@ -166,8 +166,8 @@ export default function HomeLayoutEditor() {
           <div
             key={key}
             className={cn(
-              'absolute z-10 group transition-shadow select-none',
-              isDragging ? 'cursor-grabbing z-50' : 'cursor-grab',
+              'absolute z-20 group transition-shadow select-none',
+              isDragging ? 'cursor-grabbing z-[55]' : 'cursor-grab',
             )}
             style={{ left: `${pos.x}%`, top: `${pos.y}%`, touchAction: 'none' }}
             onPointerDown={(e) => handlePointerDown(key, e)}
@@ -213,8 +213,8 @@ export default function HomeLayoutEditor() {
           <div
             key={m.id}
             className={cn(
-              'absolute z-10 group transition-shadow select-none',
-              isDragging ? 'cursor-grabbing z-50' : 'cursor-grab',
+              'absolute z-20 group transition-shadow select-none',
+              isDragging ? 'cursor-grabbing z-[55]' : 'cursor-grab',
             )}
             style={{ left: `${pos.x}%`, top: `${pos.y}%`, touchAction: 'none' }}
             onPointerDown={(e) => handlePointerDown(m.id, e)}
@@ -246,8 +246,8 @@ export default function HomeLayoutEditor() {
       })}
 
       {/* Config panel — center of screen */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[480px] max-w-[calc(100vw-2rem)] z-50">
-        <div className="nn-widget p-6 shadow-2xl space-y-5">
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[480px] max-w-[calc(100vw-2rem)] z-50 pointer-events-none">
+        <div className="nn-widget p-6 shadow-2xl space-y-5 pointer-events-auto">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <Settings2 size={16} className="text-primary" />
