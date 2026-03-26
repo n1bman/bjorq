@@ -203,7 +203,7 @@ const storeCreator = (set: any, get: any): AppState => ({
 
   homeView: {
     cameraPreset: 'angle',
-    visibleWidgets: { clock: true, weather: true, temperature: true, energy: true, calendar: true },
+    visibleWidgets: { clock: true, weather: true, temperature: true, energy: true, calendar: true, scenes: true, devices: true },
     homeScreenDevices: [],
     showDeviceMarkers: true,
     hiddenMarkerIds: [],
@@ -216,6 +216,8 @@ const storeCreator = (set: any, get: any): AppState => ({
       nav: { position: 'top-left', size: 'normal' },
       camera: { position: 'top-right', size: 'normal' },
       rooms: { position: 'top-right', size: 'normal' },
+      scenes: { position: 'top-left', size: 'normal' },
+      devices: { position: 'top-left', size: 'normal' },
     },
     homeLayoutEditMode: false,
   },

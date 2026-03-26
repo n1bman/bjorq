@@ -8,6 +8,7 @@ import ClockWidget from './cards/ClockWidget';
 import WeatherWidget from './cards/WeatherWidget';
 import EnergyWidget from './cards/EnergyWidget';
 import TemperatureWidget from './cards/TemperatureWidget';
+import ScenesWidget from './cards/ScenesWidget';
 import DeviceControlCard from './cards/DeviceControlCard';
 import { useWeatherSync } from '../../hooks/useWeatherSync';
 import { Eye, EyeOff, Lightbulb, Thermometer, Wind, Camera, Power, Tv, Fan, Shield, Droplets, X, Wifi, Settings2, ChevronDown, Play, Pause, Home as HomeIcon, Square, Plus, Minus } from 'lucide-react';
@@ -38,6 +39,8 @@ const DEFAULT_POSITIONS: Record<HomeWidgetKey, { x: number; y: number }> = {
   weather: { x: 3, y: 14 },
   temperature: { x: 78, y: 4 },
   energy: { x: 78, y: 14 },
+  scenes: { x: 3, y: 78 },
+  devices: { x: 3, y: 85 },
   nav: { x: 46, y: 90 },
   camera: { x: 90, y: 78 },
   rooms: { x: 82, y: 78 },
@@ -100,20 +103,21 @@ export default function HomeView({ longPressDeviceId, onDismissLongPress, fpsAct
 
   if (fpsActive) return null;
 
-  const widgetKeys: HomeWidgetKey[] = ['clock', 'weather', 'temperature', 'energy'];
+  const widgetKeys: HomeWidgetKey[] = ['clock', 'weather', 'temperature', 'energy', 'scenes'];
 
   const widgetComponents: Record<string, (size: string) => React.ReactNode> = {
     clock: (size) => <ClockWidget size={size as any} />,
     weather: (size) => <WeatherWidget size={size as any} />,
     temperature: (size) => <TemperatureWidget size={size as any} />,
     energy: (size) => <EnergyWidget size={size as any} />,
+    scenes: () => <ScenesWidget />,
   };
 
   const getPos = (key: HomeWidgetKey) => {
     const config = widgetLayout[key];
     return {
-      x: Math.max(1, Math.min(88, config?.x ?? DEFAULT_POSITIONS[key].x)),
-      y: Math.max(1, Math.min(85, config?.y ?? DEFAULT_POSITIONS[key].y)),
+      x: Math.max(1, Math.min(92, config?.x ?? DEFAULT_POSITIONS[key].x)),
+      y: Math.max(1, Math.min(92, config?.y ?? DEFAULT_POSITIONS[key].y)),
     };
   };
 
@@ -189,8 +193,11 @@ export default function HomeView({ longPressDeviceId, onDismissLongPress, fpsAct
       )}
 
       {/* ── Device pills at bottom ── */}
-      {!homeLayoutEditMode && selectedMarkers.length > 0 && (
-        <div className="absolute bottom-24 left-4 right-4 z-10 pointer-events-auto">
+      {!homeLayoutEditMode && selectedMarkers.length > 0 && (visibleWidgets?.devices !== false) && (
+        <div
+          className="absolute z-10 pointer-events-auto"
+          style={{ left: `${getPos('devices').x}%`, top: `${getPos('devices').y}%` }}
+        >
           {/* Expanded pill panel */}
           {expandedPillId && (() => {
             const em = selectedMarkers.find((m) => m.id === expandedPillId);
@@ -209,17 +216,17 @@ export default function HomeView({ longPressDeviceId, onDismissLongPress, fpsAct
             };
             if (em.kind === 'vacuum') {
               return (
-                <div className="nn-widget p-3 mb-2 flex flex-wrap gap-2 animate-in fade-in slide-in-from-bottom-2 duration-150">
-                  <button onClick={() => callSvc('vacuum', 'start')} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-primary/15 text-primary text-xs font-medium hover:bg-primary/25 transition-colors">
+                <div className="glass-panel rounded-2xl p-3 mb-2 flex flex-wrap gap-2 animate-in fade-in slide-in-from-bottom-2 duration-150 backdrop-blur-xl">
+                  <button onClick={() => callSvc('vacuum', 'start')} className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-primary/15 text-primary text-xs font-medium hover:bg-primary/25 transition-colors">
                     <Play size={12} /> Städa
                   </button>
-                  <button onClick={() => callSvc('vacuum', 'pause')} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-secondary/50 text-foreground text-xs font-medium hover:bg-secondary/70 transition-colors">
+                  <button onClick={() => callSvc('vacuum', 'pause')} className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-secondary/50 text-foreground text-xs font-medium hover:bg-secondary/70 transition-colors">
                     <Pause size={12} /> Paus
                   </button>
-                  <button onClick={() => callSvc('vacuum', 'stop')} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-secondary/50 text-foreground text-xs font-medium hover:bg-secondary/70 transition-colors">
+                  <button onClick={() => callSvc('vacuum', 'stop')} className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-secondary/50 text-foreground text-xs font-medium hover:bg-secondary/70 transition-colors">
                     <Square size={12} /> Stopp
                   </button>
-                  <button onClick={() => callSvc('vacuum', 'return_to_base')} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-secondary/50 text-foreground text-xs font-medium hover:bg-secondary/70 transition-colors">
+                  <button onClick={() => callSvc('vacuum', 'return_to_base')} className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-secondary/50 text-foreground text-xs font-medium hover:bg-secondary/70 transition-colors">
                     <HomeIcon size={12} /> Docka
                   </button>
                 </div>
@@ -230,13 +237,13 @@ export default function HomeView({ longPressDeviceId, onDismissLongPress, fpsAct
               const climateData = deviceStates[em.id]?.data as any;
               const temp = climateData?.temperature ?? 22;
               return (
-                <div className="nn-widget p-3 mb-2 flex items-center gap-3 animate-in fade-in slide-in-from-bottom-2 duration-150">
+                <div className="glass-panel rounded-2xl p-3 mb-2 flex items-center gap-3 animate-in fade-in slide-in-from-bottom-2 duration-150 backdrop-blur-xl">
                   <span className="text-xs text-muted-foreground">Temp</span>
-                  <button onClick={() => callSvc('climate', 'set_temperature', { temperature: temp - 0.5 })} className="w-8 h-8 rounded-lg bg-secondary/50 flex items-center justify-center text-foreground hover:bg-secondary/70 transition-colors">
+                  <button onClick={() => callSvc('climate', 'set_temperature', { temperature: temp - 0.5 })} className="w-8 h-8 rounded-xl bg-secondary/50 flex items-center justify-center text-foreground hover:bg-secondary/70 transition-colors">
                     <Minus size={14} />
                   </button>
                   <span className="text-sm font-bold text-foreground min-w-[3ch] text-center">{temp}°</span>
-                  <button onClick={() => callSvc('climate', 'set_temperature', { temperature: temp + 0.5 })} className="w-8 h-8 rounded-lg bg-secondary/50 flex items-center justify-center text-foreground hover:bg-secondary/70 transition-colors">
+                  <button onClick={() => callSvc('climate', 'set_temperature', { temperature: temp + 0.5 })} className="w-8 h-8 rounded-xl bg-secondary/50 flex items-center justify-center text-foreground hover:bg-secondary/70 transition-colors">
                     <Plus size={14} />
                   </button>
                 </div>
@@ -245,8 +252,8 @@ export default function HomeView({ longPressDeviceId, onDismissLongPress, fpsAct
 
             if (em.kind === 'media_screen') {
               return (
-                <div className="nn-widget p-3 mb-2 flex flex-wrap gap-2 animate-in fade-in slide-in-from-bottom-2 duration-150">
-                  <button onClick={() => callSvc('media_player', emIsOn ? 'media_pause' : 'media_play')} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-primary/15 text-primary text-xs font-medium hover:bg-primary/25 transition-colors">
+                <div className="glass-panel rounded-2xl p-3 mb-2 flex flex-wrap gap-2 animate-in fade-in slide-in-from-bottom-2 duration-150 backdrop-blur-xl">
+                  <button onClick={() => callSvc('media_player', emIsOn ? 'media_pause' : 'media_play')} className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-primary/15 text-primary text-xs font-medium hover:bg-primary/25 transition-colors">
                     {emIsOn ? <Pause size={12} /> : <Play size={12} />}
                     {emIsOn ? 'Paus' : 'Spela'}
                   </button>
@@ -257,7 +264,7 @@ export default function HomeView({ longPressDeviceId, onDismissLongPress, fpsAct
             return null;
           })()}
 
-          <div className="flex gap-2.5 overflow-x-auto pb-2 px-1 max-md:grid max-md:grid-cols-2 max-md:gap-2">
+          <div className="flex gap-2 overflow-x-auto pb-2 px-1 max-w-[500px]">
             {selectedMarkers.map((m) => {
               const isOn = getDeviceIsOn(m.id);
               const canToggle = TOGGLEABLE_KINDS.has(m.kind);
@@ -270,7 +277,7 @@ export default function HomeView({ longPressDeviceId, onDismissLongPress, fpsAct
                   key={m.id}
                   data-active={isOn ? 'true' : 'false'}
                   className={cn(
-                    'device-pill shrink-0 min-h-[48px]',
+                    'device-pill shrink-0 min-h-[48px] rounded-xl',
                     canToggle && !isMediaOn && !hasExpand && 'cursor-pointer active:scale-95',
                     isExpanded && 'ring-1 ring-primary/40',
                   )}
