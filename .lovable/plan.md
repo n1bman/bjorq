@@ -1,196 +1,91 @@
 
 
-# Full System Audit — BJORQ Dashboard
+# Fix: Rumsbyte för robot + multi-rum städning + emoji-städning
 
-Följer `docs/lovable-system-audit-plan.md` exakt, fas för fas.
+## Problem
 
----
+1. **Rumsbyte fungerar inte** — `handleRoomCleaning` skickar `app_segment_clean` direkt utan att stoppa pågående städning först. Roborock ignorerar nya segment-kommandon om den redan städar.
 
-## Fas 1: Stabiliseringsbas
+2. **Ingen multi-rum-städning** — Idag kan man bara starta ett rum åt gången. Roborock stöder `app_segment_clean` med en array av segment-ID:n + repeat-count (`[segId1, segId2, ...]` + `repeat: N`).
 
-### Steg 1 — Kör alla fyra checks och samla faktiska fel
-
-Kör i ordning:
-1. `npx tsc -p tsconfig.app.json --noEmit` — fånga alla TS-fel
-2. `npm run lint` — samla warnings/errors
-3. `npm test` — verifiera att alla tester passerar
-4. `npm run build` — verifiera att produktionsbygget går igenom
-
-### Steg 2 — Fixa faktiska TypeScript-fel
-
-Audit-planen listar 5 kända blockerare. Min kodgranskning visar att alla 5 ser fixade ut i nuvarande kod:
-- `isHostedSync` importeras redan i `BuildTopToolbar.tsx` (rad 21)
-- `deviceStates` i `DataBackupCard.tsx` är redan `Record<string, DeviceState>` (rad 147)
-- `statusConfig` i `HAConnectionPanel.tsx` har redan `degraded` (rad 30)
-- Alla testfiler har `// @ts-ignore` för server JS-importer
-- `haMenuSelectors.test.ts` använder redan `as unknown as AppState` (rad 58)
-
-**Men** — eftersom tsc fortfarande faller måste vi köra kommandot, läsa exakt output, och fixa de verkliga felen. Möjliga orsaker:
-- Nya filer tillagda utanför Lovable som inte typkollas korrekt
-- Import-/typfel i mindre filer som inte granskats ännu
-- `@types`-paket som saknas eller inte matchar
-
-Varje faktiskt TS-fel fixas med minsta möjliga diff.
-
-### Steg 3 — Bekräfta alla fyra checks gröna innan nästa fas
+3. **Emojis finns kvar i ~19 filer** — bl.a. RobotPanel (`🤖`), VacuumMappingTools (`🤖`, `✅`, `💡`), DevicePlacementTools (alla kindLabels), BuildInspector (ljustyper), BuildCanvas2D, StandbyWeather, DeviceControlCard, GraphicsSettings, DisplaySettings, roomTemplates, roomDetection, PerformanceHUD.
 
 ---
 
-## Fas 2: HA + live-sync audit
+## 1. Rumsbyte: stoppa först, sedan byt
 
-**Filer att verifiera:**
-- `src/hooks/useHomeAssistant.ts`
-- `src/hooks/useHABridge.ts`
-- `src/lib/apiClient.ts`
-- `src/components/home/cards/HAConnectionPanel.tsx`
-- `server/ha/liveHub.js`
-- `server/api/live.js`
+**Fil:** `src/components/home/cards/RobotPanel.tsx`
 
-**Kedjan att verifiera:**
+Ändra `handleRoomCleaning` (rad 588-602):
+- Om `data.status === 'cleaning'`: skicka `vacuum.stop` först, vänta 500ms, sedan skicka `app_segment_clean` med nytt segment
+- Optimistisk state: `status: 'returning'` → kort paus → `status: 'cleaning'` med nytt `targetRoom`
 
-DEV-läge:
-- `connect()` → WS → `auth_required` → `auth_ok` → `get_states` → `subscribe_events` → live updates
-- `callService` → WS `call_service`
-- `onclose` → reconnect med 5s backoff
+```
+const handleRoomCleaning = async (roomName, segmentId, fanPreset) => {
+  if (data.status === 'cleaning') {
+    await sendRobotService('stop', {}, { status: 'idle', targetRoom: undefined });
+    await new Promise(r => setTimeout(r, 800));
+  }
+  // sedan skicka app_segment_clean som vanligt
+};
+```
 
-HOSTED-läge:
-- `useHomeAssistant()` effect → `fetchSnapshot()` → `connectHostedStream()` (EventSource `/api/live/events`)
-- Events: `snapshot`, `entity-update`, `ha-status`, `segment-map`, `ping`
-- Heartbeat: 45s timeout → `startFallback()` → poll var 10s → `scheduleStreamReconnect()`
-- Service calls: `callHAService()` → `POST /api/live/service`
-- `haServiceCaller.current` sätts korrekt i bägge lägen
+## 2. Multi-rum-städning med repeat
 
-**Statusövergångar:**
-`disconnected` → `connecting` → `connected` / `error` / `degraded`
+**Fil:** `src/store/types.ts`
+- Inget nytt type behövs — `app_segment_clean` params stöder redan arrays
 
-**Redan verifierat i kodgranskning:**
-- Ingen WS auto-connect i hosted mode (guarded by `isHostedSync()` check)
-- `applyHostedSnapshot()` sätter entities, liveStates, status, transport, vacuumSegmentMap
-- Throttle via `createThrottledCaller` wired i bägge lägen
+**Fil:** `src/components/home/cards/RobotPanel.tsx`
 
----
+Utöka `RoomZoneCards`:
+- Lägg till checkbox-läge: "Välj flera rum" toggle
+- När aktiv: varje rum-kort får en checkbox + repeat-counter (1-3x)
+- Ny knapp "Städa valda rum" som samlar alla valda segment-ID:n
+- Skicka: `app_segment_clean` med `params: { segments: [id1, id2, ...], repeat: N }`
+- Alternativt Roborock-format: `params: [{"segments": [id1,id2], "repeat": 2}]`
 
-## Fas 3: Vacuum audit
+UI-flow:
+```
+[Toggle: Välj flera rum]
+  ☑ Kök (2x)      ☑ Vardagsrum (1x)      ☐ Sovrum
+  [Städa 2 rum →]
+```
 
-**Filer:**
-- `server/ha/liveHub.js` (`refreshVacuumMap`, `parseVacuumSegmentMap`)
-- `src/hooks/useHomeAssistant.ts` (segment-map event, rad 275-278)
-- `src/components/home/cards/RobotPanel.tsx` (`getZoneSegmentId`, `startRoomCleaning`)
-- `src/components/build/devices/VacuumMappingTools.tsx`
-- `src/store/types.ts` (VacuumZone, VacuumMapping)
+## 3. Emoji-städning — alla kvarvarande filer
 
-**Kedjan att verifiera:**
-1. Server: `liveHub.connect()` → gets states → finds `vacuum.*` → `refreshVacuumMap()` → `roborock.get_maps` → `parseVacuumSegmentMap()` → broadcast `segment-map`
-2. Client: `segment-map` event → `setVacuumSegmentMap()` → `homeAssistant.vacuumSegmentMap`
-3. RobotPanel: `getZoneSegmentId(zone)` → zone.segmentId || vacuumSegmentMap[roomName]
-4. Om segmentId saknas → toast med tydlig feltext (rad 134-138)
-5. `app_segment_clean` med `segments: [segId]`
+Byter alla emojis till Lucide-ikoner eller ren text i dessa filer:
 
-**Redan verifierat i kodgranskning:**
-- `parseVacuumSegmentMap` hanterar both array-of-rooms och object-keyed-rooms (rad 36-54)
-- Namnmatchning är **case-sensitive** — notera som risk men inte kritisk bugg
-- UI visar tydlig varning (`AlertCircle` + "Saknar segment-ID") om segmentId saknas
-- Zone-data persisteras via `floor.vacuumMapping` i `layout` → inkluderat i `partialize` och project sync
-
-**Test att lägga till:** `parseVacuumSegmentMap` har redan tester i `liveHub.test.ts`. Eventuellt utöka med fler edge cases.
-
----
-
-## Fas 4: Persistence & sync audit
-
-**Filer:**
-- `src/store/useAppStore.ts` (partialize rad 1735-1779, syncProfileToServer rad 81-102, initHostedMode rad 1787-1868)
-- `src/lib/apiClient.ts`
-- `src/lib/projectIO.ts`
-- `server/api/profiles.js`, `server/api/projects.js`, `server/api/bootstrap.js`
-
-**Redan verifierat i kodgranskning — alla tre tidlgare buggarna är fixade:**
-- `comfort` finns i `partialize` (rad 1764), `syncProfileToServer` (rad 99), och bootstrap (rad 1833)
-- `performance` finns i `partialize` (rad 1756)
-- `dashboard` finns i `partialize` (rad 1765)
-
-**Sparflöden att verifiera punkt för punkt:**
-
-| Data | DEV (localStorage) | HOSTED (server) |
-|------|-------------------|-----------------|
-| layout, devices, props, homeGeometry, terrain | partialize ✓ | syncProjectToServer ✓ |
-| profile, performance, standby, homeView | partialize ✓ | syncProfileToServer ✓ |
-| environment, customCategories, wifi, energyConfig | partialize ✓ | syncProfileToServer ✓ |
-| calendar, automations, savedScenes, comfort | partialize ✓ | syncProfileToServer ✓ |
-| wizard (url + version only), dashboard | partialize ✓ | syncProfileToServer ✓ |
-| activityLog | partialize ✓ | buildHostedProjectPayload ✓ |
-| homeAssistant (wsUrl + token only) | partialize ✓ | config via bootstrap ✓ |
-
-**Backup/restore:** `ThemeBackupCard` exporterar/importerar tema, `DataBackupCard` hanterar full backup, `ProjectManagerPanel` hanterar projektfiler.
+| Fil | Emojis | Åtgärd |
+|-----|--------|--------|
+| `RobotPanel.tsx` | `🤖` (rad 617) | → `Bot` ikon |
+| `DeviceControlCard.tsx` | `🤖` (rad 574, 1033) | → `Bot` ikon |
+| `VacuumMappingTools.tsx` | `🤖`, `✅`, `💡` (rad 180, 282, 297) | → Lucide `Bot`, `CheckCircle`, `Info` |
+| `BuildCanvas2D.tsx` | `🤖` (rad 401) | → ren text utan emoji |
+| `DevicePlacementTools.tsx` | alla kindLabels (rad 58-68) | → ren text (ta bort emojis, behåll bara namn) |
+| `BuildInspector.tsx` | `🔵🔹🟢🟡⚪💡🔦🍳` (rad 1197-1300, 1616) | → Lucide-ikoner eller färgade dots |
+| `StandbyWeather.tsx` | `☀️☁️🌧️` (rad 3-6) | → Lucide `Sun`, `Cloud`, `CloudRain` |
+| `GraphicsSettings.tsx` | `✅` (rad 21, 379) | → ta bort från toast-text |
+| `DisplaySettings.tsx` | `💡` (rad 143) | → Lucide `Info` eller ren text |
+| `roomTemplates.ts` | `🛏️🍳🛋️🚿` (rad 27-31) | → ren text eller Lucide |
+| `roomDetection.ts` | `⚠️` (rad 444) | → ren text i console.warn |
+| `PerformanceHUD.tsx` | `⚡` (rad 80) | → ren text |
 
 ---
 
-## Fas 5: Dashboard / tema / display / standby audit
+## Filer som ändras
 
-**Filer:**
-- `src/hooks/useThemeEffect.ts`
-- `src/components/home/cards/ThemeCard.tsx`
-- `src/components/home/cards/DisplaySettings.tsx`
-- `src/components/standby/StandbyMode.tsx`
-- `src/components/standby/useIdleTimer.ts`
-
-**Att verifiera:**
-- Tema-paletter (dark/midnight/light/nordic) sätter korrekta CSS-variabler
-- Custom colors (8 st) appliceras och persisteras
-- Saved themes sparas/laddas/tas bort
-- Section accents (energy/climate/weather) renderas korrekt
-- Standby: idle timer → enterStandby → exitStandby → fasövergångar
-- Widget layout persistence
-
----
-
-## Fas 6: Wizard / assets / import audit
-
-**Filer:** `src/lib/wizardClient.ts`, `src/lib/catalogLoader.ts`, `src/lib/assetPipeline.ts`
-
-**Att verifiera:**
-- Wizard connection test → status → catalog fetch
-- Thumbnail loading (URL construction, fallback)
-- Model download → import → base64 persistence (< 4MB)
-- `staleSync` handling
-
----
-
-## Fas 7: Build Mode / 2D / 3D audit
-
-**Filer:** `BuildModeV2.tsx`, `BuildCanvas2D.tsx`, `Props3D.tsx`, `DeviceMarkers3D.tsx`
-
-**Att verifiera:**
-- Wall drawing → room detection → room persistence
-- Props placement → persist → reload
-- Device marker placement → room auto-assignment → HA entity linking
-- Material application
-- Undo/redo
-- Floor management
-- Model import (GLB/GLTF)
-
----
-
-## Fas 8: Slutvalidering
-
-- Alla fyra checks gröna
-- Lista över alla fixade buggar
-- Lista över kvarvarande risker
-- Sammanfattning av verifierade paneler/integrationer
-
----
-
-## Arbetsordning
-
-Faserna är sekventiella. Fas 1 (stabilisering) måste vara grön innan djupare audit. Varje fas levererar konkreta fynd och minsta möjliga fixar.
-
-**Panel-checklista** (verifieras under respektive fas):
-- HAConnectionPanel — datakälla, skrivväg, HOSTED/DEV
-- RobotPanel — segment-ID chain, service calls
-- ThemeCard — custom colors, saved themes, persistens
-- DisplaySettings — all settings affect rendering
-- ProjectManagerPanel — save/export/import
-- DataBackupCard — full backup/restore/reset
-- WizardConnectionPanel — connection + catalog
-- BuildTopToolbar — tools, import, save
+| Fil | Ändring |
+|-----|---------|
+| `src/components/home/cards/RobotPanel.tsx` | Stop-before-switch logik, multi-rum UI med repeat, emoji → Lucide |
+| `src/components/home/cards/DeviceControlCard.tsx` | `🤖` → `Bot` |
+| `src/components/build/devices/VacuumMappingTools.tsx` | Emojis → Lucide |
+| `src/components/build/devices/DevicePlacementTools.tsx` | Emojis → ren text |
+| `src/components/build/BuildInspector.tsx` | Emojis → Lucide/dots |
+| `src/components/build/BuildCanvas2D.tsx` | `🤖` → ren text |
+| `src/components/standby/StandbyWeather.tsx` | Emojis → Lucide |
+| `src/components/home/cards/GraphicsSettings.tsx` | `✅` bort |
+| `src/components/home/cards/DisplaySettings.tsx` | `💡` → Lucide |
+| `src/lib/roomTemplates.ts` | Emojis → ren text |
+| `src/lib/roomDetection.ts` | `⚠️` → ren text |
+| `src/components/home/PerformanceHUD.tsx` | `⚡` → ren text |
 
