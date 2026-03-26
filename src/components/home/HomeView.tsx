@@ -150,7 +150,7 @@ export default function HomeView({ longPressDeviceId, onDismissLongPress, fpsAct
         );
       })}
 
-      {/* ── Layout edit button — top left corner ── */}
+      {/* ── Layout edit button — top left corner (hidden in edit mode) ── */}
       {!homeLayoutEditMode && (
         <button
           onClick={toggleHomeLayoutEditMode}
@@ -189,7 +189,7 @@ export default function HomeView({ longPressDeviceId, onDismissLongPress, fpsAct
       )}
 
       {/* ── Device pills at bottom ── */}
-      {selectedMarkers.length > 0 && (
+      {!homeLayoutEditMode && selectedMarkers.length > 0 && (
         <div className="absolute bottom-24 left-4 right-4 z-10 pointer-events-auto">
           {/* Expanded pill panel */}
           {expandedPillId && (() => {
@@ -309,7 +309,7 @@ export default function HomeView({ longPressDeviceId, onDismissLongPress, fpsAct
       )}
 
       {/* ── Device visibility picker — top right ── */}
-      {markers.length > 0 && (() => {
+      {!homeLayoutEditMode && markers.length > 0 && (() => {
         const KINDS_WITH_3D_MODELS = new Set<DeviceKind>([
           'light-fixture', 'speaker', 'soundbar', 'smart-outlet', 'vacuum',
           'light', 'switch', 'sensor', 'climate',
@@ -390,9 +390,13 @@ export default function HomeView({ longPressDeviceId, onDismissLongPress, fpsAct
         );
       })()}
 
-      <CameraFab style={{ position: 'absolute', left: `${cameraPos.x}%`, top: `${cameraPos.y}%` }} />
-      <RoomNavigator style={{ position: 'absolute', left: `${roomsPos.x}%`, top: `${roomsPos.y}%` }} />
-      <HomeNav style={{ position: 'absolute', left: `${navPos.x}%`, top: `${navPos.y}%` }} />
+      {!homeLayoutEditMode && (
+        <>
+          <CameraFab style={{ position: 'absolute', left: `${cameraPos.x}%`, top: `${cameraPos.y}%` }} />
+          <RoomNavigator style={{ position: 'absolute', left: `${roomsPos.x}%`, top: `${roomsPos.y}%` }} />
+          <HomeNav style={{ position: 'absolute', left: `${navPos.x}%`, top: `${navPos.y}%` }} />
+        </>
+      )}
     </div>
   );
 }

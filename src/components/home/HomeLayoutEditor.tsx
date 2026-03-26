@@ -134,16 +134,16 @@ export default function HomeLayoutEditor() {
           <div
             key={key}
             className={cn(
-              'absolute z-10 group transition-shadow',
+              'absolute z-10 group transition-shadow select-none',
               isDragging ? 'cursor-grabbing z-50' : 'cursor-grab',
             )}
-            style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
+            style={{ left: `${pos.x}%`, top: `${pos.y}%`, touchAction: 'none' }}
             onPointerDown={(e) => handlePointerDown(key, e)}
           >
             {/* Drag label */}
             <div
               className={cn(
-                'absolute -top-6 left-1/2 -translate-x-1/2 flex items-center gap-1 px-2 py-1 rounded-lg transition-all pointer-events-none',
+                'absolute -top-6 left-1/2 -translate-x-1/2 flex items-center gap-1 px-2 py-1 rounded-lg transition-all',
                 'bg-primary/90 text-primary-foreground text-[9px] font-semibold uppercase tracking-wider',
                 isDragging ? 'opacity-100 scale-105' : 'opacity-70 group-hover:opacity-100',
               )}
