@@ -389,14 +389,14 @@ function SceneForm({ scene, onSave, onCancel, onActivate, onRemove }: {
           <Button
             variant="outline"
             className="flex-1 h-10 text-[12px] font-medium gap-2 border-primary/30 text-primary hover:bg-primary/10"
-            onClick={() => { onSave(scene); setTimeout(() => activateScene(scene.id), 100); }}
+            onClick={() => { onSave(scene); setTimeout(() => onActivate?.(scene.id), 100); }}
           >
             <Play size={14} /> Aktivera scen
           </Button>
           <Button
             variant="outline"
             className="h-10 text-[12px] font-medium gap-2 border-destructive/30 text-destructive hover:bg-destructive/10 px-4"
-            onClick={() => { removeScene(scene.id); onCancel(); }}
+            onClick={() => { onRemove?.(scene.id); onCancel(); }}
           >
             <Trash2 size={14} />
           </Button>
