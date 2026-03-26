@@ -200,10 +200,10 @@ export default function CategoryCard({
                   editMode && 'cursor-grab'
                 )}
               >
-                {/* Soft fade brightness bar — only when collapsed */}
-                {isLight && on && !expanded && (
+                {/* Soft fade brightness bar — visible in header area only */}
+                {isLight && on && (
                   <div
-                    className="absolute inset-0 rounded-xl pointer-events-none transition-all duration-500"
+                    className="absolute top-0 left-0 right-0 h-[52px] rounded-t-xl pointer-events-none transition-all duration-500"
                     style={{ background: barBg }}
                   />
                 )}
