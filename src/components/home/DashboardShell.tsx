@@ -6,6 +6,13 @@ import { useWeatherSync } from '../../hooks/useWeatherSync';
 import { categories, categoryContent } from './DashboardGrid';
 import type { DashCategory } from '../../store/types';
 
+// Section-specific accent colors for Energy, Climate, Weather
+const SECTION_ACCENT: Partial<Record<DashCategory, string>> = {
+  energy: 'var(--section-energy)',
+  climate: 'var(--section-climate)',
+  weather: 'var(--section-weather)',
+};
+
 // Group categories for nav
 const NAV_GROUPS = [
   {
@@ -77,14 +84,18 @@ export default function DashboardShell() {
               if (!cat) return null;
               const active = activeCategory === key;
               const Icon = cat.icon;
+              const accent = SECTION_ACCENT[key];
               return (
                 <button
                   key={key}
                   onClick={() => handleCategoryClick(key)}
                   className={cn(
                     'flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all min-w-[56px]',
-                    active ? 'text-primary' : 'text-muted-foreground'
+                    active
+                      ? accent ? '' : 'text-primary'
+                      : 'text-muted-foreground'
                   )}
+                  style={active && accent ? { color: `hsl(${accent.replace('var(', '').replace(')', '')})` } : undefined}
                 >
                   <Icon size={20} strokeWidth={active ? 2.2 : 1.5} />
                   <span className="text-[9px] font-medium">{cat.label}</span>
