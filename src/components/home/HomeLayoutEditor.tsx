@@ -185,16 +185,24 @@ export default function HomeLayoutEditor() {
               {label}
             </div>
 
-            <div className={cn(
-              'rounded-2xl ring-2 transition-all',
-              isDragging
-                ? 'ring-primary shadow-[0_0_32px_hsl(var(--amber-glow))]'
-                : 'ring-primary/30 group-hover:ring-primary/60',
-            )}>
-              {hasSize && widgetRenderers[key]
-                ? widgetRenderers[key]!(size as WidgetOverlaySize)
-                : controlRenderers[key]?.()
-              }
+            {(() => {
+              const inSafeZone = !isDragging && pos.x > 28 && pos.x < 72 && pos.y > 25 && pos.y < 75;
+              return (
+                <div className={cn(
+                  'rounded-2xl ring-2 transition-all',
+                  inSafeZone
+                    ? 'ring-red-500/50'
+                    : isDragging
+                      ? 'ring-primary shadow-[0_0_32px_hsl(var(--amber-glow))]'
+                      : 'ring-primary/30 group-hover:ring-primary/60',
+                )}>
+                  {hasSize && widgetRenderers[key]
+                    ? widgetRenderers[key]!(size as WidgetOverlaySize)
+                    : controlRenderers[key]?.()
+                  }
+                </div>
+              );
+            })()}
             </div>
           </div>
         );
