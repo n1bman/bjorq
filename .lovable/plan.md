@@ -1,92 +1,80 @@
 
 
-# Enhets-widgets som enhetliga kort (inte pill + popup)
+# Fix: Layoutläge för fler element + widget-storlek i layoutläge + ljusbugg vid döljning
 
 ## Problem
 
-Idag renderas enhets-widgets som små pill-knappar med en separat expand-panel under. Användaren vill att de ska se ut som riktiga kort (som i bild 3) — ett enda sammanhängande kort med titel, status, kontroller och extra funktioner direkt synliga.
+1. **Enhetsmarkörer-knappen och Anpassa-knappen saknas i layoutläget** — de har fasta positioner (`fixed top-4 left-4` / `fixed top-5 right-5`) och kan inte dras.
 
-## Lösning
+2. **Enhets-widgets (vacuum, TV, etc.) visas i sin fullstorlek i layoutläget** — men deras representation i `HomeLayoutEditor` är bara en liten pill med ikon+namn. I layoutläget bör de visas i sin riktiga storlek så man ser hur mycket yta de tar.
 
-Ersätt den nuvarande pill + expand-popup-strukturen i `HomeView.tsx` med ett enda kort per enhet. Kortet visar alltid grundinfo och kontroller — inget expand-steg behövs.
+3. **Ljusstyrka ändras vid döljning av markörer** — `LightMarkerLightOnly` rad 1652 har `const isOn = lightData?.on ?? false` (default OFF). `LightMarker` rad 41 har `const isOn = hasState ? (lightData?.on ?? false) : true` (default ON). När man döljer en markör som saknar explicit state byter den från ON → OFF, vilket ändrar ljuset.
 
-### Kort-design per enhetstyp
+---
 
-**TV / media_screen:**
-- Header: ikon + namn + grön dot
-- Rad: media-titel (truncated)
-- Kontroller: prev, pause/play, next, stop — inline rad
+## Fix 1: Lägg till Enhetsmarkörer-knapp och Anpassa-knapp i layoutläget
 
-**Vacuum:**
-- Header: ikon + namn + status (Städar/Dockad) + batteri %
-- Kontroller: Städa, Paus, Stopp, Docka, Hitta — inline rad
-- Rumsval: rumsknappar (från vacuum zones) — inline rad under
+**`HomeLayoutEditor.tsx`**:
+- Lägg till `'markerPicker'` och `'layoutButton'` i `WIDGET_WIDGETS` (eller som separata draggables).
+- Ge dem defaultpositioner: `markerPicker: { x: 90, y: 3 }`, `layoutButton: { x: 2, y: 2 }`.
+- Rendera dem som ikoner (Eye-ikon resp. Settings2-ikon) med drag-label.
 
-**Speaker / Soundbar:**
-- Header: ikon + namn + grön dot
-- Rad: nuvarande låttitel (truncated)
-- Kontroller: pause/play, stop + volym (−/+/%)
+**`HomeView.tsx`**:
+- Enhetsmarkörer-knappen (rad 369) och Anpassa-knappen (rad 159): läs position från `widgetLayout['markerPicker']` / `widgetLayout['layoutButton']` istf. `fixed top-5 right-5` / `fixed top-4 left-4`.
+- Byt till `absolute` med `left: x%`, `top: y%`.
 
-**Light:**
-- Header: ikon + namn + av/på dot
-- Ljusstyrke-slider inline
+**`DEFAULT_POSITIONS`** i båda filer:
+```
+markerPicker: { x: 92, y: 3 },
+layoutButton: { x: 2, y: 2 },
+```
 
-**Climate:**
-- Header: ikon + namn
-- Temp: −/temp/+ inline
+## Fix 2: Visa enhets-widgets i riktig storlek i layoutläget
 
-**Fan:**
-- Header: ikon + namn
-- Knappar: Låg/Medium/Hög/Av
+**`HomeLayoutEditor.tsx`** rad 210-262:
 
-**Övriga (switch, sensor, etc):**
-- Ikon + namn + toggle/status dot (som idag)
-
-### Implementation
-
-**`src/components/home/HomeView.tsx`** — rad 218-378:
-
-Ersätt hela `<button>` + expand-paneler med ett enda `<div>` per enhet:
-
+Idag renderas device-widgets som en pill:
 ```tsx
-<div key={m.id} className="absolute z-10 pointer-events-auto" style={...}>
-  <div className={cn(
-    'glass-panel rounded-2xl backdrop-blur-xl border border-[hsl(var(--glass-border)/0.15)]',
-    'shadow-lg min-w-[180px] max-w-[260px]',
-    isOn && 'border-[hsl(var(--primary)/0.25)]'
-  )}
-    onPointerDown={...} onPointerUp={...} // long-press
-  >
-    {/* Header — always visible */}
-    <div className="flex items-center gap-2 px-3 py-2.5">
-      <Icon size={16} className={isOn ? 'text-primary' : 'text-muted-foreground'} />
-      <span className="text-[13px] font-semibold truncate flex-1">{name}</span>
-      <dot />
-    </div>
-    
-    {/* Type-specific content — always visible, no expand */}
-    {renderDeviceControls(m, ...)}
-  </div>
+<div className="glass-panel rounded-2xl px-4 py-3 flex items-center gap-3 ...">
+  <Icon size={16} /> <span>{m.name}</span>
 </div>
 ```
 
-Varje enhetstyp renderar sina kontroller direkt i kortet via en `renderDeviceControls` helper. Ingen expand/collapse — allt visas.
+Ersätt med att rendera samma kort-design som `HomeView` — med header + typ-specifika kontroller (vacuum-knappar, media-knappar, etc.) men i en icke-interaktiv version (bara visuellt). Alternativt: gör kortet bredare (`min-w-[180px]`) med en extra rad som visar enhetstypen.
 
-- Ta bort `expandedPillId` state och `ChevronDown`-ikonen
-- Ta bort alla separata expand-paneler (`mt-2` divs)
-- Flytta kontrollerna in i samma kort-div
+Enklaste approach: ge kortet samma `min-w-[180px] max-w-[260px]` och lägg till en statusrad per typ:
+- vacuum: "Städa · Paus · Stopp · Docka"
+- media_screen: "⏮ ▶ ⏭ ⏹"
+- speaker: "▶ Vol −/+"
+- light: en grå slider-mock
+- fan: "Låg · Med · Hög"
+- default: "Av/På"
 
-Vacuum-kortet hämtar rumszoner från `vacuumZones` i store och visar dem som knappar (som i bild 3).
+## Fix 3: Ljusbugg — `LightMarkerLightOnly` default isOn
 
-Speaker/media hämtar `liveStates` för att visa aktuell låttitel och volym.
+**`DeviceMarkers3D.tsx`** rad 1648-1652:
 
-### Volym-bugg fix
+Ändra:
+```tsx
+const lightData = state?.kind === 'light' ? state.data : null;
+const isOn = lightData?.on ?? false;
+```
+Till:
+```tsx
+const hasState = state?.kind === 'light';
+const lightData = hasState ? state.data : null;
+const isOn = hasState ? (lightData?.on ?? false) : true;
+```
 
-Volymen visar `0.208331421...%` — volume-värdet är 0-1 men visas rått. Fix: `Math.round(volume * 100)` för display.
+Identisk logik som `LightMarker` (rad 39-41). Nu behåller dolda markörer samma ljus som synliga.
+
+---
 
 ## Filer som ändras
 
 | Fil | Ändring |
 |-----|---------|
-| `src/components/home/HomeView.tsx` | Ersätt pill+expand med enhetliga kort, ta bort expandedPillId |
+| `src/components/home/HomeLayoutEditor.tsx` | Lägg till markerPicker + layoutButton som draggables, gör device-kort större |
+| `src/components/home/HomeView.tsx` | Positionera markerPicker + layoutButton via widgetLayout |
+| `src/components/devices/DeviceMarkers3D.tsx` | Fix `LightMarkerLightOnly` isOn default till `true` |
 
