@@ -1,7 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { Home, Cloud, Cpu, Zap, Bell, Video, Settings, Pencil, X, CalendarDays, Bot, Moon, Save, Workflow, Palette, LayoutGrid, Thermometer, Trees, User, Monitor, Database, Link2, Sparkles } from 'lucide-react';
-import { Switch } from '../ui/switch';
-import { Slider } from '../ui/slider';
 import WeatherHomeImpact from './cards/WeatherHomeImpact';
 import { cn } from '../../lib/utils';
 import { Button } from '../ui/button';
@@ -25,7 +23,6 @@ import CategoryCard from './cards/CategoryCard';
 import CategoryManager from './cards/CategoryManager';
 import CalendarWidget from './cards/CalendarWidget';
 import RobotPanel from './cards/RobotPanel';
-import DeviceControlCard from './cards/DeviceControlCard';
 
 import GraphicsSettings from './cards/GraphicsSettings';
 import SunWeatherPanel from './cards/SunWeatherPanel';
@@ -40,6 +37,8 @@ import DashboardPreview3D from './DashboardPreview3D';
 import type { PreviewCameraState } from './DashboardPreview3D';
 import type { DeviceKind, DeviceMarker, StandbyCameraView } from '../../store/types';
 import { cameraRef } from '../../lib/cameraRef';
+import { getSceneEntityViews } from '../../lib/haMenuSelectors';
+import { haServiceCaller } from '../../hooks/useHomeAssistant';
 
 import type { DashCategory } from '../../store/types';
 
@@ -134,81 +133,74 @@ function InfoCard({ label, value, detail, onClick, accent, sparkData, sparkColor
   );
 }
 
-/* ── Aktivt rum widget — valbart ── */
-function ActiveRoomWidget({ selectedRoomId, setSelectedRoomId, rooms, markers }: {
-  selectedRoomId: string | null;
-  setSelectedRoomId: (id: string | null) => void;
-  rooms: { id: string; name: string }[];
-  markers: DeviceMarker[];
-}) {
-  const deviceStates = useAppStore((s) => s.devices.deviceStates);
-  const updateDeviceState = useAppStore((s) => s.updateDeviceState);
+/* ── Snabbscener widget — cirkulära scenknappar ── */
+const sceneQuickIcons: Record<string, typeof Home> = {
+  'Power': Moon, 'Lightbulb': Sparkles, 'Moon': Moon, 'Sun': Sparkles,
+  'Tv': Monitor, 'Film': Monitor, 'Snowflake': Thermometer, 'Flame': Zap,
+};
 
-  const room = rooms.find((r) => r.id === selectedRoomId);
-  const roomDevices = selectedRoomId
-    ? markers.filter((m) => m.roomId === selectedRoomId)
-    : [];
+function QuickScenesWidget() {
+  const savedScenes = useAppStore((s) => s.savedScenes);
+  const activateScene = useAppStore((s) => s.activateScene);
+  const setDashCategory = useAppStore((s) => s.setDashCategory);
+  const { scenes: haScenes } = useAppStore(getSceneEntityViews);
+
+  // Combine BjorQ scenes + HA scenes (max 6)
+  const allScenes = [
+    ...savedScenes.map((s) => ({ id: s.id, name: s.name, icon: s.icon, type: 'bjorq' as const })),
+    ...haScenes.map((s) => ({ id: s.entity.entityId, name: s.entity.friendlyName, icon: '', type: 'ha' as const })),
+  ].slice(0, 6);
+
+  const getLucideIcon = (iconStr: string) => {
+    if (sceneQuickIcons[iconStr]) return sceneQuickIcons[iconStr];
+    return null;
+  };
 
   return (
-    <div className="nn-widget p-5 flex flex-col gap-3 h-[240px] md:h-[300px]">
-      <div className="flex items-center justify-between gap-2">
-        <span className="label-micro">AKTIVT RUM</span>
-      </div>
-      {/* Room selector */}
-      <select
-        value={selectedRoomId ?? ''}
-        onChange={(e) => setSelectedRoomId(e.target.value || null)}
-        className="bg-[hsl(var(--surface))] text-foreground text-sm rounded-xl px-3 py-2.5 border border-[hsl(var(--border)/0.2)] focus:outline-none focus:ring-1 focus:ring-primary/30 font-display font-semibold"
-      >
-        <option value="">Välj rum…</option>
-        {rooms.map((r) => (
-          <option key={r.id} value={r.id}>{r.name}</option>
-        ))}
-      </select>
-      {roomDevices.length === 0 && selectedRoomId && (
-        <p className="text-[11px] text-muted-foreground/30 mt-1">Inga enheter i detta rum</p>
-      )}
-      {!selectedRoomId && (
-        <p className="text-[11px] text-muted-foreground/30 mt-1">Välj ett rum för att se enheter</p>
-      )}
-      <div className="space-y-0.5 flex-1 overflow-y-auto">
-        {roomDevices.map((d) => {
-          const state = deviceStates[d.id];
-          const on = state && 'on' in state.data ? (state.data as any).on : false;
-          const isLight = state?.kind === 'light';
-          const brightness = isLight && on ? (state.data as any).brightness ?? 200 : 0;
-          const pct = Math.round((brightness / 255) * 100);
+    <div className="nn-widget p-5 flex flex-col gap-4 h-[240px] md:h-[300px]">
+      <span className="label-micro">SCENER</span>
 
-          return (
-            <div key={d.id} className={cn(
-              'flex items-center justify-between py-3 px-3.5 rounded-xl transition-all',
-              on ? 'bg-primary/4' : 'opacity-40'
-            )}>
-              <div className="min-w-0 flex-1">
-                <span className="text-[13px] text-foreground block truncate">{d.name || d.kind}</span>
-              </div>
-              {isLight && on && (
-                <div className="w-16 shrink-0 mx-2" onClick={(e) => e.stopPropagation()}>
-                  <Slider
-                    value={[brightness]}
-                    min={1}
-                    max={255}
-                    step={1}
-                    onValueChange={([v]) => updateDeviceState(d.id, { brightness: v })}
-                    className="h-5"
-                  />
-                </div>
-              )}
-              {state && 'on' in state.data && (
-                <Switch
-                  checked={on}
-                  onCheckedChange={(v) => updateDeviceState(d.id, { on: v })}
-                />
-              )}
-            </div>
-          );
-        })}
-      </div>
+      {allScenes.length === 0 ? (
+        <div className="flex-1 flex flex-col items-center justify-center gap-3">
+          <div className="w-14 h-14 rounded-full border border-[hsl(var(--border)/0.15)] flex items-center justify-center">
+            <Palette size={20} className="text-muted-foreground/30" />
+          </div>
+          <p className="text-[11px] text-muted-foreground/40 text-center">Skapa scener under Scener-menyn</p>
+        </div>
+      ) : (
+        <div className="flex-1 flex flex-col gap-4">
+          <div className="grid grid-cols-3 gap-3 justify-items-center">
+            {allScenes.map((scene) => {
+              const LIcon = getLucideIcon(scene.icon);
+              return (
+                <button
+                  key={scene.id}
+                  onClick={() => scene.type === 'bjorq' ? activateScene(scene.id) : haServiceCaller.current?.('scene', 'turn_on', { entity_id: scene.id })}
+                  className="flex flex-col items-center gap-2 group"
+                >
+                  <div className="w-14 h-14 rounded-full border border-[hsl(var(--border)/0.2)] bg-[hsl(var(--surface-elevated)/0.5)] flex items-center justify-center transition-all group-hover:bg-primary/15 group-hover:border-primary/30 group-active:scale-95">
+                    {LIcon ? (
+                      <LIcon size={20} className="text-foreground/60 group-hover:text-primary transition-colors" />
+                    ) : (
+                      <span className="text-xl">{scene.icon || '💡'}</span>
+                    )}
+                  </div>
+                  <span className="text-[10px] text-muted-foreground/70 text-center truncate w-16 group-hover:text-foreground transition-colors">
+                    {scene.name}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      <button
+        onClick={() => setDashCategory('scenes')}
+        className="flex items-center justify-center gap-2 py-2.5 border-t border-[hsl(var(--border)/0.1)] text-[11px] text-muted-foreground/50 hover:text-foreground transition-colors"
+      >
+        Alla scener <span className="text-[10px]">→</span>
+      </button>
     </div>
   );
 }
@@ -228,7 +220,7 @@ function HomeCategory() {
   const [draggingCatIndex, setDraggingCatIndex] = useState<number | null>(null);
   const [showSaveView, setShowSaveView] = useState(false);
   const [kindFilter, setKindFilter] = useState<DeviceKind | null>(null);
-  const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
+  
   const [time, setTime] = useState(new Date());
   const previewCamRef = useRef<PreviewCameraState>({ position: [10, 12, 10], target: [0, 0, 0] });
 
@@ -318,7 +310,7 @@ function HomeCategory() {
     setDraggingCatIndex(null);
   };
 
-  const density = useAppStore((s) => s.dashboard.density ?? 'balance');
+  
 
   return (
     <div className="space-y-5">
@@ -362,14 +354,9 @@ function HomeCategory() {
           </div>
         </div>
 
-        {/* Aktivt rum widget */}
+        {/* Snabbscener widget */}
         <div className="col-span-2 md:col-span-1">
-          <ActiveRoomWidget
-            selectedRoomId={selectedRoomId}
-            setSelectedRoomId={setSelectedRoomId}
-            rooms={allRooms}
-            markers={markers}
-          />
+          <QuickScenesWidget />
         </div>
 
         {/* Filter tabs + edit controls — full width */}
@@ -410,11 +397,7 @@ function HomeCategory() {
 
         {/* Room/category cards — span 2 cols each */}
         {filteredEntries.map((entry, index) => (
-          <div key={entry.key} className="col-span-1 md:col-span-2" onClick={() => {
-            // If entry devices have a roomId, select that room
-            const roomId = entry.devices[0]?.roomId;
-            if (roomId) setSelectedRoomId(roomId);
-          }}>
+          <div key={entry.key} className="col-span-1 md:col-span-2">
             <CategoryCard
               category={entry.label}
               categoryId={entry.catId}
