@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Palette, Play, Plus, Trash2 } from 'lucide-react';
+import { Play, Plus, Trash2, Moon, Sun, Lightbulb, Tv, Film, Snowflake, Flame, Power, Coffee, PartyPopper, Sunset, Sparkles, Home, Eye } from 'lucide-react';
 import { useAppStore } from '../../../store/useAppStore';
 import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
@@ -8,7 +8,30 @@ import type { SavedScene, SceneSnapshot } from '../../../store/types';
 import { getSceneEntityViews } from '../../../lib/haMenuSelectors';
 import { haServiceCaller } from '../../../hooks/useHomeAssistant';
 
-const sceneIcons = ['🌅', '🌙', '🎬', '🎉', '💡', '🏠', '🌊', '❄️', '🔥', '☀️'];
+const sceneIconOptions = [
+  { key: 'Power', icon: Power, label: 'Av' },
+  { key: 'Moon', icon: Moon, label: 'Natt' },
+  { key: 'Sun', icon: Sun, label: 'Dag' },
+  { key: 'Sunset', icon: Sunset, label: 'Kväll' },
+  { key: 'Lightbulb', icon: Lightbulb, label: 'Ljus' },
+  { key: 'Coffee', icon: Coffee, label: 'Morgon' },
+  { key: 'Tv', icon: Tv, label: 'TV' },
+  { key: 'Film', icon: Film, label: 'Film' },
+  { key: 'Snowflake', icon: Snowflake, label: 'Kyla' },
+  { key: 'Flame', icon: Flame, label: 'Värme' },
+  { key: 'PartyPopper', icon: PartyPopper, label: 'Fest' },
+  { key: 'Sparkles', icon: Sparkles, label: 'Mysig' },
+  { key: 'Home', icon: Home, label: 'Hem' },
+  { key: 'Eye', icon: Eye, label: 'Fokus' },
+];
+
+const iconMap: Record<string, typeof Power> = Object.fromEntries(
+  sceneIconOptions.map((o) => [o.key, o.icon])
+);
+
+function getSceneIcon(iconStr: string) {
+  return iconMap[iconStr] || Lightbulb;
+}
 
 export default function ScenesPanel() {
   const savedScenes = useAppStore((s) => s.savedScenes);
@@ -23,7 +46,7 @@ export default function ScenesPanel() {
   const allRooms = floors.flatMap((floor) => floor.rooms ?? []);
   const [showAdd, setShowAdd] = useState(false);
   const [newName, setNewName] = useState('');
-  const [newIcon, setNewIcon] = useState('🌅');
+  const [newIcon, setNewIcon] = useState('Lightbulb');
   const [selectedDevices, setSelectedDevices] = useState<string[]>([]);
   const [selectedRooms, setSelectedRooms] = useState<string[]>([]);
 
@@ -55,121 +78,180 @@ export default function ScenesPanel() {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="glass-panel rounded-2xl p-4">
-        <div className="mb-3 flex items-center gap-2">
-          <Palette size={16} className="text-primary" />
-          <h4 className="text-sm font-semibold text-foreground">Home Assistant-scener</h4>
-          <span className="text-[10px] text-muted-foreground">({scenes.length + scripts.length})</span>
-        </div>
-        {scenes.length + scripts.length === 0 ? (
-          <p className="text-[11px] text-muted-foreground/70">Inga scene.* eller script.* hittades i HA ännu.</p>
-        ) : (
-          <div className="grid grid-cols-2 gap-2">
-            {[...scenes, ...scripts].map(({ entity, linked, marker }) => (
-              <div key={entity.entityId} className="relative rounded-lg border border-border/50 bg-secondary/20 p-3">
-                <div className="space-y-1">
-                  <p className="truncate text-xs font-medium text-foreground">{entity.friendlyName}</p>
-                  <p className="truncate text-[9px] text-muted-foreground">{entity.entityId}</p>
-                  <p className="text-[9px] text-muted-foreground">{linked && marker ? `Lankad till ${marker.name}` : 'Ej länkad i design'}</p>
+    <div className="space-y-6">
+      {/* ── HA Scenes & Scripts ── */}
+      {(scenes.length + scripts.length > 0) && (
+        <div className="nn-widget p-5 space-y-4">
+          <div className="flex items-center justify-between">
+            <span className="label-micro">HOME ASSISTANT</span>
+            <span className="text-[10px] text-muted-foreground/40">{scenes.length + scripts.length} scener</span>
+          </div>
+          <div className="grid grid-cols-3 sm:grid-cols-4 gap-4">
+            {[...scenes, ...scripts].map(({ entity }) => (
+              <button
+                key={entity.entityId}
+                onClick={() => callService(entity.domain as 'scene' | 'script', entity.entityId)}
+                className="flex flex-col items-center gap-2.5 group"
+              >
+                <div className="w-16 h-16 rounded-full border border-[hsl(var(--border)/0.15)] bg-[hsl(var(--surface-elevated)/0.4)] flex items-center justify-center transition-all group-hover:bg-primary/15 group-hover:border-primary/30 group-active:scale-95">
+                  <Play size={20} className="text-foreground/50 group-hover:text-primary transition-colors" />
                 </div>
-                <div className="mt-3 flex gap-2">
-                  <Button size="sm" variant="outline" className="h-7 flex-1 gap-1 text-[10px]" onClick={() => callService(entity.domain as 'scene' | 'script', entity.entityId)}>
-                    <Play size={10} /> Aktivera
-                  </Button>
-                </div>
-              </div>
+                <span className="text-[11px] text-muted-foreground/60 text-center leading-tight w-18 truncate group-hover:text-foreground transition-colors">
+                  {entity.friendlyName}
+                </span>
+              </button>
             ))}
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
-      <div className="glass-panel rounded-2xl p-4">
-        <div className="mb-3 flex items-center justify-between">
+      {/* ── BjorQ Scenes ── */}
+      <div className="nn-widget p-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <span className="label-micro">BJORQ-SCENER</span>
           <div className="flex items-center gap-2">
-            <Palette size={16} className="text-primary" />
-            <h4 className="text-sm font-semibold text-foreground">BjorQ-scener</h4>
-            <span className="text-[10px] text-muted-foreground">({savedScenes.length})</span>
+            <span className="text-[10px] text-muted-foreground/40">{savedScenes.length} scener</span>
+            <button
+              onClick={() => setShowAdd((v) => !v)}
+              className={cn(
+                'w-8 h-8 rounded-full flex items-center justify-center transition-all',
+                showAdd
+                  ? 'bg-primary/20 text-primary'
+                  : 'border border-[hsl(var(--border)/0.2)] text-muted-foreground/50 hover:text-foreground hover:border-[hsl(var(--border)/0.3)]'
+              )}
+            >
+              <Plus size={16} />
+            </button>
           </div>
-          <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => setShowAdd((v) => !v)}>
-            <Plus size={14} />
-          </Button>
         </div>
 
+        {/* Add scene form */}
         {showAdd && (
-          <div className="mb-4 space-y-3 rounded-lg bg-secondary/30 p-3">
-            <Input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Scennamn..." className="h-7 text-xs" />
+          <div className="space-y-4 p-4 rounded-2xl bg-[hsl(var(--surface)/0.5)] border border-[hsl(var(--border)/0.1)]">
+            <Input
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              placeholder="Namn på scen..."
+              className="h-10 text-sm bg-[hsl(var(--surface-elevated)/0.3)] border-[hsl(var(--border)/0.15)]"
+            />
 
-            <div className="space-y-1">
-              <p className="text-[10px] font-medium text-muted-foreground">Ikon</p>
-              <div className="flex flex-wrap gap-1">
-                {sceneIcons.map((icon) => (
-                  <button key={icon} className={cn('flex h-7 w-7 items-center justify-center rounded-md text-sm', newIcon === icon ? 'bg-primary/20 ring-1 ring-primary' : 'bg-secondary/30 hover:bg-secondary/50')} onClick={() => setNewIcon(icon)}>
-                    {icon}
+            {/* Icon picker */}
+            <div className="space-y-2">
+              <span className="text-[10px] text-muted-foreground/50 uppercase tracking-wider">Välj ikon</span>
+              <div className="grid grid-cols-7 gap-2">
+                {sceneIconOptions.map(({ key, icon: Icon }) => (
+                  <button
+                    key={key}
+                    onClick={() => setNewIcon(key)}
+                    className={cn(
+                      'w-10 h-10 rounded-full flex items-center justify-center transition-all',
+                      newIcon === key
+                        ? 'bg-primary/20 border border-primary/40 text-primary'
+                        : 'border border-[hsl(var(--border)/0.12)] text-muted-foreground/40 hover:text-foreground hover:border-[hsl(var(--border)/0.25)]'
+                    )}
+                  >
+                    <Icon size={16} />
                   </button>
                 ))}
               </div>
             </div>
 
-            <div className="space-y-1">
-              <p className="text-[10px] font-medium text-muted-foreground">Inkludera enheter</p>
-              <div className="max-h-32 space-y-1 overflow-y-auto">
+            {/* Device selection */}
+            <div className="space-y-2">
+              <span className="text-[10px] text-muted-foreground/50 uppercase tracking-wider">Inkludera enheter</span>
+              <div className="max-h-40 space-y-1 overflow-y-auto rounded-xl bg-[hsl(var(--surface-elevated)/0.2)] p-2">
                 {markers.map((marker) => (
-                  <label key={marker.id} className="flex cursor-pointer items-center gap-2">
-                    <input type="checkbox" checked={selectedDevices.includes(marker.id)} onChange={() => setSelectedDevices((prev) => prev.includes(marker.id) ? prev.filter((id) => id !== marker.id) : [...prev, marker.id])} className="rounded border-border" />
-                    <span className="text-[10px] text-foreground">{marker.name || marker.kind}</span>
+                  <label key={marker.id} className="flex cursor-pointer items-center gap-3 px-2 py-2 rounded-lg hover:bg-[hsl(var(--surface-elevated)/0.3)] transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={selectedDevices.includes(marker.id)}
+                      onChange={() => setSelectedDevices((prev) => prev.includes(marker.id) ? prev.filter((id) => id !== marker.id) : [...prev, marker.id])}
+                      className="rounded border-[hsl(var(--border)/0.3)] accent-[hsl(var(--primary))]"
+                    />
+                    <span className="text-[12px] text-foreground/80">{marker.name || marker.kind}</span>
                   </label>
                 ))}
+                {markers.length === 0 && (
+                  <p className="text-[11px] text-muted-foreground/30 py-3 text-center">Inga enheter placerade ännu</p>
+                )}
               </div>
             </div>
 
+            {/* Room linking */}
             {allRooms.length > 0 && (
-              <div className="space-y-1">
-                <p className="text-[10px] font-medium text-muted-foreground">Lanka till rum (valfritt)</p>
-                <div className="max-h-24 space-y-1 overflow-y-auto">
+              <div className="space-y-2">
+                <span className="text-[10px] text-muted-foreground/50 uppercase tracking-wider">Lanka till rum (valfritt)</span>
+                <div className="max-h-28 space-y-1 overflow-y-auto rounded-xl bg-[hsl(var(--surface-elevated)/0.2)] p-2">
                   {allRooms.map((room) => (
-                    <label key={room.id} className="flex cursor-pointer items-center gap-2">
-                      <input type="checkbox" checked={selectedRooms.includes(room.id)} onChange={() => setSelectedRooms((prev) => prev.includes(room.id) ? prev.filter((id) => id !== room.id) : [...prev, room.id])} className="rounded border-border" />
-                      <span className="text-[10px] text-foreground">{room.name}</span>
+                    <label key={room.id} className="flex cursor-pointer items-center gap-3 px-2 py-2 rounded-lg hover:bg-[hsl(var(--surface-elevated)/0.3)] transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={selectedRooms.includes(room.id)}
+                        onChange={() => setSelectedRooms((prev) => prev.includes(room.id) ? prev.filter((id) => id !== room.id) : [...prev, room.id])}
+                        className="rounded border-[hsl(var(--border)/0.3)] accent-[hsl(var(--primary))]"
+                      />
+                      <span className="text-[12px] text-foreground/80">{room.name}</span>
                     </label>
                   ))}
                 </div>
               </div>
             )}
 
-            <Button size="sm" className="h-7 w-full text-[10px]" onClick={handleAdd} disabled={!newName.trim() || selectedDevices.length === 0}>
+            <Button
+              className="w-full h-10 text-[12px] font-medium"
+              onClick={handleAdd}
+              disabled={!newName.trim() || selectedDevices.length === 0}
+            >
               Spara scen ({selectedDevices.length} enheter)
             </Button>
           </div>
         )}
 
+        {/* Scene grid — circular buttons like smart home apps */}
         {savedScenes.length === 0 ? (
-          <p className="py-4 text-center text-[10px] text-muted-foreground/60">Inga BjorQ-scener ännu. Klicka + for att spara nuvarande lagen.</p>
+          <div className="py-8 text-center space-y-3">
+            <div className="w-16 h-16 rounded-full border border-[hsl(var(--border)/0.1)] flex items-center justify-center mx-auto">
+              <Sparkles size={24} className="text-muted-foreground/20" />
+            </div>
+            <p className="text-[12px] text-muted-foreground/40">Inga scener ännu</p>
+            <p className="text-[11px] text-muted-foreground/25">Klicka + för att spara nuvarande enhetslägen som en scen</p>
+          </div>
         ) : (
-          <div className="grid grid-cols-2 gap-2">
-            {savedScenes.map((scene) => (
-              <div key={scene.id} className="group relative rounded-lg border border-border/50 bg-secondary/20 p-3 transition-all hover:bg-secondary/30">
-                <button onClick={() => activateScene(scene.id)} className="w-full space-y-1 text-left">
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg">{scene.icon}</span>
-                    <div className="min-w-0">
-                      <p className="truncate text-xs font-medium text-foreground">{scene.name}</p>
-                      <p className="text-[9px] text-muted-foreground">{scene.snapshots.length} enheter</p>
-                    </div>
-                  </div>
-                </button>
-                <div className="absolute right-1 top-1 flex gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
-                  <button onClick={() => activateScene(scene.id)} className="rounded p-1 text-primary hover:bg-primary/20" title="Aktivera">
-                    <Play size={10} />
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-5">
+            {savedScenes.map((scene) => {
+              const SceneIcon = getSceneIcon(scene.icon);
+              return (
+                <div key={scene.id} className="flex flex-col items-center gap-2.5 group relative">
+                  <button
+                    onClick={() => activateScene(scene.id)}
+                    className="w-16 h-16 rounded-full border border-[hsl(var(--border)/0.15)] bg-[hsl(var(--surface-elevated)/0.4)] flex items-center justify-center transition-all group-hover:bg-primary/15 group-hover:border-primary/30 group-active:scale-95"
+                  >
+                    <SceneIcon size={22} className="text-foreground/50 group-hover:text-primary transition-colors" />
                   </button>
-                  <button onClick={() => removeScene(scene.id)} className="rounded p-1 text-muted-foreground hover:bg-destructive/20" title="Ta bort">
+                  <span className="text-[11px] text-muted-foreground/60 text-center leading-tight truncate w-18 group-hover:text-foreground transition-colors">
+                    {scene.name}
+                  </span>
+                  {/* Delete on hover */}
+                  <button
+                    onClick={(e) => { e.stopPropagation(); removeScene(scene.id); }}
+                    className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-destructive/80 text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    title="Ta bort"
+                  >
                     <Trash2 size={10} />
                   </button>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
+      </div>
+
+      {/* ── Quick tips ── */}
+      <div className="nn-widget p-4">
+        <p className="text-[11px] text-muted-foreground/30 leading-relaxed">
+          Scener sparar aktuella enhetslägen (ljus, färg, styrka) och återställer dem med ett tryck.
+          Länka till rum för att begränsa scenens påverkan.
+        </p>
       </div>
     </div>
   );
