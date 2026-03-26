@@ -103,20 +103,21 @@ export default function HomeView({ longPressDeviceId, onDismissLongPress, fpsAct
 
   if (fpsActive) return null;
 
-  const widgetKeys: HomeWidgetKey[] = ['clock', 'weather', 'temperature', 'energy'];
+  const widgetKeys: HomeWidgetKey[] = ['clock', 'weather', 'temperature', 'energy', 'scenes'];
 
   const widgetComponents: Record<string, (size: string) => React.ReactNode> = {
     clock: (size) => <ClockWidget size={size as any} />,
     weather: (size) => <WeatherWidget size={size as any} />,
     temperature: (size) => <TemperatureWidget size={size as any} />,
     energy: (size) => <EnergyWidget size={size as any} />,
+    scenes: () => <ScenesWidget />,
   };
 
   const getPos = (key: HomeWidgetKey) => {
     const config = widgetLayout[key];
     return {
-      x: Math.max(1, Math.min(88, config?.x ?? DEFAULT_POSITIONS[key].x)),
-      y: Math.max(1, Math.min(85, config?.y ?? DEFAULT_POSITIONS[key].y)),
+      x: Math.max(1, Math.min(92, config?.x ?? DEFAULT_POSITIONS[key].x)),
+      y: Math.max(1, Math.min(92, config?.y ?? DEFAULT_POSITIONS[key].y)),
     };
   };
 
