@@ -13,6 +13,8 @@ import { useWeatherSync } from '../../hooks/useWeatherSync';
 import { Eye, EyeOff, Lightbulb, Thermometer, Wind, Camera, Power, Tv, Fan, Shield, Droplets, X, Wifi, Settings2, ChevronDown, Play, Pause, Home as HomeIcon, Square, Plus, Minus } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Switch } from '../ui/switch';
+import { callHAService, isHostedSync } from '../../lib/apiClient';
+import { haServiceCaller } from '../../hooks/useHomeAssistant';
 import type { DeviceKind, HomeWidgetKey } from '../../store/types';
 
 const TOGGLEABLE_KINDS = new Set(['light', 'switch', 'climate', 'vacuum', 'media_screen', 'power-outlet', 'camera', 'fridge', 'oven', 'washer', 'light-fixture', 'smart-outlet']);
@@ -194,8 +196,17 @@ export default function HomeView({ longPressDeviceId, onDismissLongPress, fpsAct
             const em = selectedMarkers.find((m) => m.id === expandedPillId);
             if (!em) return null;
             const emIsOn = getDeviceIsOn(em.id);
-            const callService = useAppStore.getState().callDeviceService;
-
+            const entityId = em.ha?.entityId;
+            const callSvc = (domain: string, service: string, data: Record<string, unknown> = {}) => {
+              if (entityId) {
+                const payload = { entity_id: entityId, ...data };
+                if (isHostedSync()) {
+                  callHAService(domain, service, payload).catch(console.warn);
+                } else {
+                  haServiceCaller.current?.(domain, service, payload);
+                }
+              }
+            };
             if (em.kind === 'vacuum') {
               return (
                 <div className="nn-widget p-3 mb-2 flex flex-wrap gap-2 animate-in fade-in slide-in-from-bottom-2 duration-150">
