@@ -305,7 +305,6 @@ function LightControl({ id, data, update }: { id: string; data: LightState; upda
     <div className="space-y-4 pt-2">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-xs text-muted-foreground"><Sun size={16} /><span>Ljusstyrka {pct}%</span></div>
-        <Switch checked={data.on} onCheckedChange={(v) => update(id, { on: v })} />
       </div>
       <Slider value={[data.brightness]} max={255} step={1} onValueChange={([v]) => update(id, { brightness: v })} disabled={!data.on} />
       <div className="flex gap-1">

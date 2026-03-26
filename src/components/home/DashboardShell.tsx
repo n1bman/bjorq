@@ -265,8 +265,6 @@ export default function DashboardShell() {
             <PenTool size={18} strokeWidth={1.4} className="shrink-0" />
             {!collapsed && <span>Design</span>}
           </button>
-          {/* Hemstatus */}
-          <NavHomeStatus collapsed={collapsed} />
         </div>
       </nav>
 
@@ -283,29 +281,3 @@ export default function DashboardShell() {
 }
 
 
-/* ── Nav Home Status ── */
-function NavHomeStatus({ collapsed }: { collapsed: boolean }) {
-  const markers = useAppStore((s) => s.devices.markers);
-  const deviceStates = useAppStore((s) => s.devices.deviceStates);
-  const activeCount = markers.filter((m) => {
-    const st = deviceStates[m.id];
-    if (!st) return false;
-    if ('on' in st.data) return (st.data as any).on;
-    return false;
-  }).length;
-
-  return (
-    <div className={cn(
-      'flex items-center gap-2 rounded-xl px-3 py-2 mt-1',
-      'bg-[hsl(var(--surface-sunken))] border border-[hsl(var(--border)/0.08)]'
-    )}>
-      <span className={cn('w-2 h-2 rounded-full shrink-0', activeCount > 0 ? 'bg-green-400' : 'bg-muted-foreground/30')} />
-      {!collapsed && (
-        <div className="flex flex-col min-w-0">
-          <span className="text-[9px] font-semibold uppercase tracking-[0.2em] text-muted-foreground/30">Hemstatus</span>
-          <span className="text-[11px] text-foreground/60">{activeCount} aktiva</span>
-        </div>
-      )}
-    </div>
-  );
-}

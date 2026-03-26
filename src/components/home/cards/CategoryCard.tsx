@@ -194,14 +194,14 @@ export default function CategoryCard({
                 onTouchStart={editMode ? () => handleDeviceTouchStart(d.id) : undefined}
                 onTouchEnd={editMode ? handleDeviceTouchEnd : undefined}
                 className={cn(
-                  'rounded-xl transition-all relative overflow-hidden',
+                  'rounded-xl transition-all relative overflow-hidden border border-[hsl(var(--border)/0.15)]',
                   expanded && 'ring-1 ring-primary/10',
                   isDragging && 'opacity-50 scale-95',
                   editMode && 'cursor-grab'
                 )}
               >
-                {/* Soft fade brightness bar */}
-                {isLight && on && (
+                {/* Soft fade brightness bar — only when collapsed */}
+                {isLight && on && !expanded && (
                   <div
                     className="absolute inset-0 rounded-xl pointer-events-none transition-all duration-500"
                     style={{ background: barBg }}
@@ -217,9 +217,7 @@ export default function CategoryCard({
                   {editMode && <GripVertical size={10} className="text-muted-foreground/30 shrink-0" />}
                   <div className="flex-1 min-w-0">
                     <span className="text-[13px] text-foreground block truncate">{d.name || d.kind}</span>
-                    {isLight && on && toneLabel && (
-                      <span className="text-[10px] text-muted-foreground/40">{pct}% · {toneLabel}</span>
-                    )}
+                    {/* tone label removed — info shown in expanded DeviceControlCard */}
                     {!isLight && !on && (
                       <span className="text-[10px] text-muted-foreground/30">
                         {state?.kind === 'vacuum' ? (state.data as any).status === 'docked' ? 'Dockad' : (state.data as any).status : ''}
