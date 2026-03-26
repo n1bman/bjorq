@@ -52,7 +52,7 @@ export default function ThemeBackupCard() {
           accentColor: data.accentColor || profile.accentColor,
           dashboardBg: data.dashboardBg as any,
           customColors: data.customColors ? { ...data.customColors, recentColors: profile.customColors?.recentColors } : profile.customColors,
-          savedThemes: mergedSaved.length > 0 ? mergedSaved : undefined,
+          savedThemes: mergedSaved.length > 0 ? mergedSaved as any : undefined,
         });
       } catch {
         alert('Ogiltig temafil.');
