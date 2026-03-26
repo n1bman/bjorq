@@ -1,68 +1,79 @@
 
 
-# Redigera scener med per-enhet åtgärder (on/off, ljusstyrka, färg)
+# BJORQ — 4 fixar: brightness-bar, scen-klick → redigera, timer, automation i scener
 
-## Problem idag
-- Scener kan bara skapas, inte redigeras efteråt
-- `SceneSnapshot` sparar enbart en kopia av `state` — men man kan inte ställa in *vad* scenen ska göra per enhet (t.ex. "dra ner till 50%", "stäng av", "sätt på med rosa färg")
-- Ingen `updateScene`-action i store
+## 1. Brightness-bar saknar fyllnad (CategoryCard.tsx)
 
-## Vad som behövs
+**Problem:** Gradienten slutar lite för tidigt — `transparent ${pct + 15}%` skapar ett gap.
 
-### 1. Store: lägg till `updateScene`
+**Fix:** Ändra gradient från fade-out till solid fill upp till `pct%`:
+- Rad 185-186: Byt `${pct + 15}%` → `${pct}%` och öka opaciteten så baren känns fylld fram till brightness-nivån. Gör gradientens slut mjukare med `${pct}%` → `transparent ${Math.min(pct + 5, 100)}%` istället för +15.
 
-**`src/store/types.ts`:**
-- Lägg till `updateScene: (id: string, changes: Partial<SavedScene>) => void` i AppState-interfacet
+## 2. Klick på scen → redigera (ScenesPanel.tsx)
 
-**`src/store/useAppStore.ts`:**
-- Implementera `updateScene` som mergar ändringar på rätt scen och synkar till server
+**Problem:** Klick på scen-knappen (rad 437) kör `activateScene(scene.id)`. Användaren vill att klick = redigera.
 
-### 2. SceneSnapshot: utöka med explicit action-typ
+**Fix:**
+- Byt `onClick` på scen-knappen (rad 437) till `setEditingId(scene.id)` istället för `activateScene`
+- Lägg till en separat "Aktivera"-knapp (Play-ikon) i hover-overlay (rad 446-461) bredvid pennan
+- Ta bort pennan från hover (den behövs inte om klick = redigera)
+- Så: **klick = redigera**, **play-knapp = aktivera**
 
-**`src/store/types.ts` — utöka `SceneSnapshot`:**
+## 3. Timer-lösning för scener (ScenesPanel.tsx + types.ts)
+
+Lägg till möjlighet att schemalägga en scen med timer/tidsstyrning.
+
+**types.ts — utöka `SavedScene`:**
+```ts
+timer?: {
+  enabled: boolean;
+  activateAt?: string;   // "HH:MM" — tidpunkt att aktivera
+  deactivateAfter?: number; // minuter — stäng av efter X min
+  repeat?: 'once' | 'daily' | 'weekdays' | 'weekends';
+};
 ```
-interface SceneSnapshot {
-  deviceId: string;
-  state: Record<string, unknown>;
-  action: 'on' | 'off' | 'set';  // ny — vad ska hända
-}
+
+**ScenesPanel.tsx — i SceneForm:**
+- Lägg till en "Timer"-sektion efter rumslänkning:
+  - Switch: "Aktivera på tid"
+  - Om på: tidväljare (input type="time") + repeat-val (engång/dagligen/vardagar/helger)
+  - Switch: "Avaktivera efter" + minutslider (5–120 min)
+- Spara i scen-objektet
+
+**Notera:** Faktisk timer-exekvering hanteras inte nu (kräver bakgrundsprocess), men inställningarna sparas och visas. En liten klock-ikon visas på scen-knappen om timer är aktiv.
+
+## 4. Automation inbakat i scener (ScenesPanel.tsx)
+
+Lägg till en "Automation"-sektion i SceneForm som kopplar scen-aktivering till triggers.
+
+**I SceneForm, ny sektion efter Timer:**
+- Rubrik: "Automation (valfritt)"
+- Trigger-typ dropdown: `Tid` / `Enhetstillstånd` / `Händelse`
+  - Tid: tidväljare
+  - Enhetstillstånd: välj enhet + tillstånd (på/av)
+  - Händelse: fritext
+- Om automation är inställd, skapas/uppdateras en `Automation` i store som har `scene_activate` som action
+- Visa en liten blixt-ikon på scen-knappen om automation finns kopplad
+
+**types.ts — utöka `SavedScene`:**
+```ts
+automation?: {
+  enabled: boolean;
+  trigger: AutomationTrigger;
+};
 ```
-- `on` = sätt på med angivna inställningar (brightness, färg etc.)
-- `off` = stäng av enheten
-- `set` = ställ in specifika värden (t.ex. brightness 50%)
 
-### 3. `activateScene` — respektera action
+**useAppStore.ts:**
+- Vid spara/uppdatera scen: om `scene.automation?.enabled`, synka en automation-entry i `automations[]` med `action: { type: 'scene_activate', sceneId: scene.id }`
 
-**`src/store/useAppStore.ts`:**
-- Om `snap.action === 'off'` → uppdatera enheten till `{ on: false }`
-- Om `snap.action === 'on'` → uppdatera med `{ on: true, ...snap.state }`
-- Om `snap.action === 'set'` → uppdatera med `snap.state` (som idag)
-
-### 4. ScenesPanel: redigera-läge + per-enhet kontroller
-
-**`src/components/home/cards/ScenesPanel.tsx`:**
-
-**Redigera befintlig scen:**
-- Klick på en scen öppnar ett redigerings-formulär (samma form som "skapa", men förfyllt)
-- Kan ändra namn, ikon, rumslänkning
-- Per enhet i scenen: visa en rad med:
-  - Enhetsnamn
-  - Action-dropdown: `På` / `Av` / `Ställ in`
-  - Om `På` eller `Ställ in`: brightness-slider (0–100%)
-  - Om enheten är ljus: färg-slider (samma spektrum-slider som DeviceControlCard)
-  - Ta bort enhet från scen
-- Kan lägga till fler enheter
-- Spara-knapp → `updateScene(id, changes)`
-
-**Scen-grid:**
-- Lång-tryck eller redigera-ikon → öppna redigering
-- Kort tryck → aktivera scen (som idag)
+---
 
 ## Filer som ändras
 
 | Fil | Ändring |
 |-----|---------|
-| `src/store/types.ts` | `SceneSnapshot.action`, `updateScene` i AppState |
-| `src/store/useAppStore.ts` | `updateScene` implementation, `activateScene` respekterar action |
-| `src/components/home/cards/ScenesPanel.tsx` | Redigera-formulär med per-enhet action/brightness/färg |
+| `CategoryCard.tsx` | Brightness-bar gradient — ta bort +15 gap |
+| `ScenesPanel.tsx` | Klick = redigera, play = aktivera, timer-sektion, automation-sektion |
+| `types.ts` | `SavedScene.timer` + `SavedScene.automation` |
+| `useAppStore.ts` | Synka automation vid scen-sparning |
 
