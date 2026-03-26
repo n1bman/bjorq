@@ -155,7 +155,7 @@ export default function ThemeCard() {
           <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
             {/* Accent color */}
             <div className="space-y-2">
-              <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Accentfärg</span>
+              <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Accentfärg (ikoner & aktiva element)</span>
               <div className="flex gap-2 flex-wrap">
                 {accents.map(({ color, label }) => (
                   <button
@@ -185,7 +185,10 @@ export default function ThemeCard() {
                   <input
                     type="color"
                     value={profile.accentColor}
-                    onChange={(e) => setProfile({ accentColor: e.target.value })}
+                    onChange={(e) => {
+                      cancelAnimationFrame((window as any).__accentRaf || 0);
+                      (window as any).__accentRaf = requestAnimationFrame(() => setProfile({ accentColor: e.target.value }));
+                    }}
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                   />
                 </label>
@@ -197,7 +200,7 @@ export default function ThemeCard() {
               <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Färger</span>
               <div className="flex justify-between px-2">
                 <ColorPickerDot label="Knappar" value={custom.buttonColor} onChange={(c) => updateCustom({ buttonColor: c })} />
-                <ColorPickerDot label="Slider" value={custom.sliderColor} onChange={(c) => updateCustom({ sliderColor: c })} />
+                <ColorPickerDot label="Slider-spår" value={custom.sliderColor} onChange={(c) => updateCustom({ sliderColor: c })} />
                 <ColorPickerDot label="Bakgrund" value={custom.bgColor} onChange={(c) => updateCustom({ bgColor: c })} />
               </div>
               <div className="flex justify-between px-2">
@@ -218,8 +221,8 @@ export default function ThemeCard() {
                   {Math.round((custom.glassOpacity ?? 0.72) * 100)}%
                 </span>
               </div>
-              <Slider
-                min={50}
+                <Slider
+                min={20}
                 max={100}
                 step={1}
                 value={[Math.round((custom.glassOpacity ?? 0.72) * 100)]}
@@ -237,7 +240,7 @@ export default function ThemeCard() {
               </div>
               <Slider
                 min={0}
-                max={30}
+                max={50}
                 step={1}
                 value={[Math.round((custom.borderOpacity ?? 0.15) * 100)]}
                 onValueChange={([v]) => updateCustom({ borderOpacity: v / 100 })}

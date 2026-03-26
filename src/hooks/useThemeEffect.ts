@@ -171,11 +171,14 @@ export function useThemeEffect() {
       }
       if (customColors.borderOpacity !== undefined) {
         const borderBase = palette['--border'] || '222 12% 21%';
-        const newL = Math.round(21 * (0.5 + customColors.borderOpacity * 2));
         const parts = borderBase.split(' ');
         if (parts.length >= 3) {
-          root.style.setProperty('--border', `${parts[0]} ${parts[1]} ${newL}%`);
-          root.style.setProperty('--glass-border', `${parts[0]} ${parts[1]} ${Math.min(newL + 5, 40)}%`);
+          const baseL = parseInt(parts[2]) || 16;
+          // Scale: 0 = invisible (0%), 0.5 = normal, 1.0 = very visible (baseL*3)
+          const opacity = customColors.borderOpacity;
+          const newL = Math.round(baseL * (opacity / 0.5));
+          root.style.setProperty('--border', `${parts[0]} ${parts[1]} ${Math.min(newL, 50)}%`);
+          root.style.setProperty('--glass-border', `${parts[0]} ${parts[1]} ${Math.min(newL + 4, 55)}%`);
         }
       }
     }
