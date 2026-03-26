@@ -960,6 +960,7 @@ export interface ComfortState {
 export interface SceneSnapshot {
   deviceId: string;
   state: Record<string, unknown>;
+  action: 'on' | 'off' | 'set';
 }
 
 export interface SavedScene {
@@ -1117,6 +1118,7 @@ export interface AppState {
   // Scene actions
   addScene: (scene: SavedScene) => void;
   removeScene: (id: string) => void;
+  updateScene: (id: string, changes: Partial<SavedScene>) => void;
   activateScene: (id: string) => void;
 
   // Standby actions
