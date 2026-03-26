@@ -87,20 +87,49 @@ const kindCategory: Record<DeviceKind, string> = {
 /** Light-type device kinds that should be grouped by room */
 const LIGHT_KINDS: Set<DeviceKind> = new Set(['light', 'switch', 'power-outlet', 'light-fixture', 'smart-outlet']);
 
+/* ── Sparkline helper ── */
+function MiniSparkline({ data, color, width = 60, height = 24 }: { data: number[]; color: string; width?: number; height?: number }) {
+  if (!data.length) return null;
+  const min = Math.min(...data);
+  const max = Math.max(...data);
+  const range = max - min || 1;
+  const points = data.map((v, i) =>
+    `${(i / (data.length - 1)) * width},${height - ((v - min) / range) * (height - 4) - 2}`
+  ).join(' ');
+  return (
+    <svg width={width} height={height} className="shrink-0 opacity-70">
+      <polyline fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" points={points} />
+    </svg>
+  );
+}
+
+// Demo sparkline data generators
+const demoSparkData = {
+  weather: Array.from({ length: 12 }, (_, i) => 14 + Math.sin(i * 0.5) * 3 + Math.random()),
+  energy: Array.from({ length: 8 }, (_, i) => 200 + Math.sin(i * 0.8) * 80 + Math.random() * 30),
+  comfort: Array.from({ length: 20 }, (_, i) => 21 + Math.sin(i * 0.3) * 1.5 + Math.random() * 0.5),
+};
+
 /* ── Info widget cards (TID, UTE, ENERGI, KOMFORT) ── */
-function InfoCard({ label, value, detail, onClick, accent }: { label: string; value: string; detail: string; onClick?: () => void; accent?: string }) {
+function InfoCard({ label, value, detail, onClick, accent, sparkData, sparkColor }: {
+  label: string; value: string; detail: string; onClick?: () => void; accent?: string;
+  sparkData?: number[]; sparkColor?: string;
+}) {
   return (
     <div
       className={cn(
-        'nn-widget p-4 flex flex-col gap-1 transition-all',
+        'nn-widget p-4 flex items-center gap-3 transition-all',
         onClick && 'cursor-pointer hover:ring-1 hover:ring-primary/20 hover:scale-[1.02]',
       )}
       style={accent ? { borderLeft: `3px solid ${accent}` } : undefined}
       onClick={onClick}
     >
-      <span className="label-micro">{label}</span>
-      <span className="text-xl font-bold text-foreground font-display tracking-tight">{value}</span>
-      <span className="text-[10px] text-muted-foreground/40 font-medium">{detail}</span>
+      <div className="flex flex-col gap-1 flex-1 min-w-0">
+        <span className="label-micro">{label}</span>
+        <span className="text-xl font-bold text-foreground font-display tracking-tight">{value}</span>
+        <span className="text-[10px] text-muted-foreground/40 font-medium">{detail}</span>
+      </div>
+      {sparkData && sparkColor && <MiniSparkline data={sparkData} color={sparkColor} />}
     </div>
   );
 }

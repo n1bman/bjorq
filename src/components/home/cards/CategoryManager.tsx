@@ -2,11 +2,29 @@ import { useState } from 'react';
 import { useAppStore } from '../../../store/useAppStore';
 import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
-import { Plus, Trash2, ChevronRight, ArrowRight } from 'lucide-react';
+import { Plus, Trash2, ChevronRight, ArrowRight, Home, Lightbulb, Snowflake, Lock, Tv, Bot, Zap, Thermometer, Camera, Box } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import type { DeviceCategory, DeviceMarker } from '../../../store/types';
 
-const defaultEmojis = ['🏠', '💡', '❄️', '🔒', '📺', '🤖', '⚡', '🌡️', '📷', '🧊'];
+const categoryIcons = [
+  { name: 'Home', Icon: Home },
+  { name: 'Lightbulb', Icon: Lightbulb },
+  { name: 'Snowflake', Icon: Snowflake },
+  { name: 'Lock', Icon: Lock },
+  { name: 'Tv', Icon: Tv },
+  { name: 'Bot', Icon: Bot },
+  { name: 'Zap', Icon: Zap },
+  { name: 'Thermometer', Icon: Thermometer },
+  { name: 'Camera', Icon: Camera },
+  { name: 'Box', Icon: Box },
+] as const;
+
+function getCategoryIcon(icon: string) {
+  const found = categoryIcons.find((i) => i.name === icon);
+  if (found) return <found.Icon size={14} className="text-foreground/70" />;
+  // fallback for old emoji icons
+  return <span className="text-sm">{icon}</span>;
+}
 
 export default function CategoryManager() {
   const customCategories = useAppStore((s) => s.customCategories);
@@ -40,11 +58,11 @@ export default function CategoryManager() {
 
       {/* Create new */}
       <div className="flex gap-2">
-        <div className="flex gap-1">
-          {defaultEmojis.slice(0, 5).map((e) => (
-            <button key={e} onClick={() => setNewIcon(e)}
-              className={cn('w-7 h-7 rounded text-sm', newIcon === e ? 'bg-primary/20 ring-1 ring-primary' : 'bg-secondary/30')}>
-              {e}
+        <div className="flex gap-1 flex-wrap">
+          {categoryIcons.map(({ name, Icon }) => (
+            <button key={name} onClick={() => setNewIcon(name)}
+              className={cn('w-7 h-7 rounded flex items-center justify-center', newIcon === name ? 'bg-primary/20 ring-1 ring-primary' : 'bg-secondary/30')}>
+              <Icon size={14} className="text-foreground/70" />
             </button>
           ))}
         </div>
@@ -64,7 +82,7 @@ export default function CategoryManager() {
           )} onClick={() => setSelectedCatId(selectedCatId === cat.id ? null : cat.id)}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="text-sm">{cat.icon}</span>
+                {getCategoryIcon(cat.icon)}
                 <span className="text-xs font-medium text-foreground">{cat.name}</span>
                 <span className="text-[10px] text-muted-foreground">{cat.deviceIds.length} enheter</span>
               </div>
