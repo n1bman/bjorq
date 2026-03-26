@@ -1,11 +1,12 @@
 import { useState, useCallback } from 'react';
-import { Play, Plus, Trash2, Moon, Sun, Lightbulb, Tv, Film, Snowflake, Flame, Power, Coffee, PartyPopper, Sunset, Sparkles, Home, Eye, Pencil, X, ChevronDown } from 'lucide-react';
+import { Play, Plus, Trash2, Moon, Sun, Lightbulb, Tv, Film, Snowflake, Flame, Power, Coffee, PartyPopper, Sunset, Sparkles, Home, Eye, X, ChevronDown, Clock, Zap, Timer } from 'lucide-react';
 import { useAppStore } from '../../../store/useAppStore';
 import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
 import { Slider } from '../../ui/slider';
+import { Switch } from '../../ui/switch';
 import { cn } from '../../../lib/utils';
-import type { SavedScene, SceneSnapshot } from '../../../store/types';
+import type { SavedScene, SceneSnapshot, SceneTimer, SceneAutomation } from '../../../store/types';
 import { getSceneEntityViews } from '../../../lib/haMenuSelectors';
 import { haServiceCaller } from '../../../hooks/useHomeAssistant';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
@@ -35,7 +36,7 @@ function getSceneIcon(iconStr: string) {
   return iconMap[iconStr] || Lightbulb;
 }
 
-/* ── Spectrum slider helpers (same as DeviceControlCard) ── */
+/* ── Spectrum slider helpers ── */
 function hueToRgb(h: number): [number, number, number] {
   const s = 1, l = 0.5;
   const c = (1 - Math.abs(2 * l - 1)) * s;
@@ -65,7 +66,7 @@ function sliderToRgb(pos: number): [number, number, number] {
   ];
 }
 
-/* ── Snapshot editor for a single device in a scene ── */
+/* ── Snapshot editor ── */
 function SnapshotEditor({ snap, onChange, onRemove, deviceName, isLight }: {
   snap: SceneSnapshot;
   onChange: (s: SceneSnapshot) => void;
@@ -85,12 +86,7 @@ function SnapshotEditor({ snap, onChange, onRemove, deviceName, isLight }: {
           <Trash2 size={13} />
         </button>
       </div>
-
-      {/* Action selector */}
-      <Select
-        value={snap.action}
-        onValueChange={(v) => onChange({ ...snap, action: v as 'on' | 'off' | 'set' })}
-      >
+      <Select value={snap.action} onValueChange={(v) => onChange({ ...snap, action: v as 'on' | 'off' | 'set' })}>
         <SelectTrigger className="h-8 text-[11px] bg-[hsl(var(--surface)/0.5)] border-[hsl(var(--border)/0.15)]">
           <SelectValue />
         </SelectTrigger>
@@ -100,47 +96,155 @@ function SnapshotEditor({ snap, onChange, onRemove, deviceName, isLight }: {
           <SelectItem value="set">Ställ in</SelectItem>
         </SelectContent>
       </Select>
-
-      {/* Brightness slider — only for on/set + light devices */}
       {snap.action !== 'off' && isLight && (
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">
             <span className="text-[10px] text-muted-foreground/50">Ljusstyrka</span>
             <span className="text-[10px] text-muted-foreground/50">{Math.round((brightness / 255) * 100)}%</span>
           </div>
-          <Slider
-            min={1} max={255} step={1}
-            value={[brightness]}
-            onValueChange={([v]) => onChange({ ...snap, state: { ...snap.state, brightness: v } })}
-            className="h-5"
-          />
+          <Slider min={1} max={255} step={1} value={[brightness]} onValueChange={([v]) => onChange({ ...snap, state: { ...snap.state, brightness: v } })} className="h-5" />
         </div>
       )}
-
-      {/* Color slider — only for on/set + light devices */}
       {snap.action !== 'off' && isLight && (
         <div className="space-y-1.5">
           <div className="flex items-center gap-2">
             <span className="text-[10px] text-muted-foreground/50">Färg</span>
-            {colorPreview && (
-              <div className="w-4 h-4 rounded-full border border-[hsl(var(--border)/0.2)]" style={{ background: colorPreview }} />
-            )}
+            {colorPreview && <div className="w-4 h-4 rounded-full border border-[hsl(var(--border)/0.2)]" style={{ background: colorPreview }} />}
           </div>
           <div className="relative h-6 rounded-full overflow-hidden">
-            <div
-              className="absolute inset-0 rounded-full"
-              style={{ background: 'linear-gradient(to right, #ff0000, #ffff00, #00ff00, #00ffff, #ffffff, #00ffff, #0000ff, #ff00ff, #ff0000)' }}
-            />
-            <input
-              type="range" min={0} max={360} step={1}
-              value={180}
-              onChange={(e) => {
-                const rgb = sliderToRgb(Number(e.target.value));
-                onChange({ ...snap, state: { ...snap.state, rgbColor: rgb, colorMode: 'rgb' } });
-              }}
-              className="absolute inset-0 w-full opacity-0 cursor-pointer"
+            <div className="absolute inset-0 rounded-full" style={{ background: 'linear-gradient(to right, #ff0000, #ffff00, #00ff00, #00ffff, #ffffff, #00ffff, #0000ff, #ff00ff, #ff0000)' }} />
+            <input type="range" min={0} max={360} step={1} value={180} onChange={(e) => { const rgb = sliderToRgb(Number(e.target.value)); onChange({ ...snap, state: { ...snap.state, rgbColor: rgb, colorMode: 'rgb' } }); }} className="absolute inset-0 w-full opacity-0 cursor-pointer" />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Timer section ── */
+function TimerSection({ timer, onChange }: { timer?: SceneTimer; onChange: (t?: SceneTimer) => void }) {
+  const t = timer ?? { enabled: false };
+  return (
+    <div className="space-y-3 p-3 rounded-xl bg-[hsl(var(--surface-elevated)/0.15)] border border-[hsl(var(--border)/0.08)]">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Clock size={14} className="text-muted-foreground/50" />
+          <span className="text-[11px] text-foreground/70 font-medium">Timer</span>
+        </div>
+        <Switch checked={t.enabled} onCheckedChange={(v) => onChange({ ...t, enabled: v })} />
+      </div>
+      {t.enabled && (
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <span className="text-[10px] text-muted-foreground/50">Aktivera kl.</span>
+            <Input
+              type="time"
+              value={t.activateAt ?? ''}
+              onChange={(e) => onChange({ ...t, activateAt: e.target.value })}
+              className="h-8 text-[11px] bg-[hsl(var(--surface)/0.5)] border-[hsl(var(--border)/0.15)]"
             />
           </div>
+          <div className="space-y-1.5">
+            <span className="text-[10px] text-muted-foreground/50">Upprepa</span>
+            <Select value={t.repeat ?? 'once'} onValueChange={(v) => onChange({ ...t, repeat: v as SceneTimer['repeat'] })}>
+              <SelectTrigger className="h-8 text-[11px] bg-[hsl(var(--surface)/0.5)] border-[hsl(var(--border)/0.15)]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="once">Engång</SelectItem>
+                <SelectItem value="daily">Dagligen</SelectItem>
+                <SelectItem value="weekdays">Vardagar</SelectItem>
+                <SelectItem value="weekends">Helger</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] text-muted-foreground/50">Avaktivera efter</span>
+              <span className="text-[10px] text-muted-foreground/50">{t.deactivateAfter ?? 0} min</span>
+            </div>
+            <Slider
+              min={0} max={120} step={5}
+              value={[t.deactivateAfter ?? 0]}
+              onValueChange={([v]) => onChange({ ...t, deactivateAfter: v || undefined })}
+              className="h-5"
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Automation section ── */
+function AutomationSection({ automation, onChange }: { automation?: SceneAutomation; onChange: (a?: SceneAutomation) => void }) {
+  const a = automation ?? { enabled: false, trigger: { type: 'time' as const, config: {} } };
+  return (
+    <div className="space-y-3 p-3 rounded-xl bg-[hsl(var(--surface-elevated)/0.15)] border border-[hsl(var(--border)/0.08)]">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Zap size={14} className="text-muted-foreground/50" />
+          <span className="text-[11px] text-foreground/70 font-medium">Automation</span>
+        </div>
+        <Switch checked={a.enabled} onCheckedChange={(v) => onChange({ ...a, enabled: v })} />
+      </div>
+      {a.enabled && (
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <span className="text-[10px] text-muted-foreground/50">Trigger-typ</span>
+            <Select value={a.trigger.type} onValueChange={(v) => onChange({ ...a, trigger: { type: v as 'time' | 'device_state' | 'event', config: {} } })}>
+              <SelectTrigger className="h-8 text-[11px] bg-[hsl(var(--surface)/0.5)] border-[hsl(var(--border)/0.15)]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="time">Tid</SelectItem>
+                <SelectItem value="device_state">Enhetstillstånd</SelectItem>
+                <SelectItem value="event">Händelse</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          {a.trigger.type === 'time' && (
+            <div className="space-y-1.5">
+              <span className="text-[10px] text-muted-foreground/50">Tid</span>
+              <Input
+                type="time"
+                value={(a.trigger.config.time as string) ?? ''}
+                onChange={(e) => onChange({ ...a, trigger: { ...a.trigger, config: { ...a.trigger.config, time: e.target.value } } })}
+                className="h-8 text-[11px] bg-[hsl(var(--surface)/0.5)] border-[hsl(var(--border)/0.15)]"
+              />
+            </div>
+          )}
+          {a.trigger.type === 'device_state' && (
+            <div className="space-y-1.5">
+              <span className="text-[10px] text-muted-foreground/50">Enhet + tillstånd</span>
+              <Input
+                placeholder="entity_id"
+                value={(a.trigger.config.entityId as string) ?? ''}
+                onChange={(e) => onChange({ ...a, trigger: { ...a.trigger, config: { ...a.trigger.config, entityId: e.target.value } } })}
+                className="h-8 text-[11px] bg-[hsl(var(--surface)/0.5)] border-[hsl(var(--border)/0.15)]"
+              />
+              <Select value={(a.trigger.config.state as string) ?? 'on'} onValueChange={(v) => onChange({ ...a, trigger: { ...a.trigger, config: { ...a.trigger.config, state: v } } })}>
+                <SelectTrigger className="h-8 text-[11px] bg-[hsl(var(--surface)/0.5)] border-[hsl(var(--border)/0.15)]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="on">På</SelectItem>
+                  <SelectItem value="off">Av</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          {a.trigger.type === 'event' && (
+            <div className="space-y-1.5">
+              <span className="text-[10px] text-muted-foreground/50">Händelse</span>
+              <Input
+                placeholder="T.ex. solnedgång, hem..."
+                value={(a.trigger.config.event as string) ?? ''}
+                onChange={(e) => onChange({ ...a, trigger: { ...a.trigger, config: { ...a.trigger.config, event: e.target.value } } })}
+                className="h-8 text-[11px] bg-[hsl(var(--surface)/0.5)] border-[hsl(var(--border)/0.15)]"
+              />
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -160,11 +264,11 @@ function SceneForm({ scene, onSave, onCancel }: {
 
   const [name, setName] = useState(scene?.name ?? '');
   const [icon, setIcon] = useState(scene?.icon ?? 'Lightbulb');
-  const [snapshots, setSnapshots] = useState<SceneSnapshot[]>(
-    scene?.snapshots ?? []
-  );
+  const [snapshots, setSnapshots] = useState<SceneSnapshot[]>(scene?.snapshots ?? []);
   const [selectedRooms, setSelectedRooms] = useState<string[]>(scene?.linkedRoomIds ?? []);
   const [showAddDevice, setShowAddDevice] = useState(false);
+  const [sceneTimer, setSceneTimer] = useState<SceneTimer | undefined>(scene?.timer);
+  const [sceneAutomation, setSceneAutomation] = useState<SceneAutomation | undefined>(scene?.automation);
 
   const includedDeviceIds = new Set(snapshots.map((s) => s.deviceId));
   const availableDevices = markers.filter((m) => !includedDeviceIds.has(m.id));
@@ -197,14 +301,12 @@ function SceneForm({ scene, onSave, onCancel }: {
       createdAt: scene?.createdAt ?? new Date().toISOString(),
       linkedRoomIds: selectedRooms.length > 0 ? selectedRooms : undefined,
       scope: selectedRooms.length === 0 ? 'global' : selectedRooms.length === 1 ? 'room' : 'custom',
+      timer: sceneTimer?.enabled ? sceneTimer : undefined,
+      automation: sceneAutomation?.enabled ? sceneAutomation : undefined,
     });
   };
 
-  const isLight = (deviceId: string) => {
-    const s = deviceStates[deviceId];
-    return s?.kind === 'light';
-  };
-
+  const isLight = (deviceId: string) => deviceStates[deviceId]?.kind === 'light';
   const getDeviceName = (deviceId: string) => {
     const m = markers.find((mk) => mk.id === deviceId);
     return m?.name || m?.kind || deviceId;
@@ -212,84 +314,44 @@ function SceneForm({ scene, onSave, onCancel }: {
 
   return (
     <div className="space-y-4 p-4 rounded-2xl bg-[hsl(var(--surface)/0.5)] border border-[hsl(var(--border)/0.1)]">
-      {/* Header */}
       <div className="flex items-center justify-between">
-        <span className="text-[12px] font-medium text-foreground/70">
-          {scene ? 'Redigera scen' : 'Ny scen'}
-        </span>
-        <button onClick={onCancel} className="text-muted-foreground/40 hover:text-foreground transition-colors">
-          <X size={16} />
-        </button>
+        <span className="text-[12px] font-medium text-foreground/70">{scene ? 'Redigera scen' : 'Ny scen'}</span>
+        <button onClick={onCancel} className="text-muted-foreground/40 hover:text-foreground transition-colors"><X size={16} /></button>
       </div>
 
-      {/* Name */}
-      <Input
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        placeholder="Namn på scen..."
-        className="h-10 text-sm bg-[hsl(var(--surface-elevated)/0.3)] border-[hsl(var(--border)/0.15)]"
-      />
+      <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Namn på scen..." className="h-10 text-sm bg-[hsl(var(--surface-elevated)/0.3)] border-[hsl(var(--border)/0.15)]" />
 
       {/* Icon picker */}
       <div className="space-y-2">
         <span className="text-[10px] text-muted-foreground/50 uppercase tracking-wider">Ikon</span>
         <div className="grid grid-cols-7 gap-2">
           {sceneIconOptions.map(({ key, icon: Icon }) => (
-            <button
-              key={key}
-              onClick={() => setIcon(key)}
-              className={cn(
-                'w-10 h-10 rounded-full flex items-center justify-center transition-all',
-                icon === key
-                  ? 'bg-primary/20 border border-primary/40 text-primary'
-                  : 'border border-[hsl(var(--border)/0.12)] text-muted-foreground/40 hover:text-foreground hover:border-[hsl(var(--border)/0.25)]'
-              )}
-            >
+            <button key={key} onClick={() => setIcon(key)} className={cn('w-10 h-10 rounded-full flex items-center justify-center transition-all', icon === key ? 'bg-primary/20 border border-primary/40 text-primary' : 'border border-[hsl(var(--border)/0.12)] text-muted-foreground/40 hover:text-foreground hover:border-[hsl(var(--border)/0.25)]')}>
               <Icon size={16} />
             </button>
           ))}
         </div>
       </div>
 
-      {/* Per-device snapshot editors */}
+      {/* Snapshot editors */}
       <div className="space-y-2">
-        <span className="text-[10px] text-muted-foreground/50 uppercase tracking-wider">
-          Enheter ({snapshots.length})
-        </span>
+        <span className="text-[10px] text-muted-foreground/50 uppercase tracking-wider">Enheter ({snapshots.length})</span>
         <div className="space-y-2 max-h-60 overflow-y-auto">
           {snapshots.map((snap, idx) => (
-            <SnapshotEditor
-              key={snap.deviceId}
-              snap={snap}
-              onChange={(s) => updateSnapshot(idx, s)}
-              onRemove={() => removeSnapshot(idx)}
-              deviceName={getDeviceName(snap.deviceId)}
-              isLight={isLight(snap.deviceId)}
-            />
+            <SnapshotEditor key={snap.deviceId} snap={snap} onChange={(s) => updateSnapshot(idx, s)} onRemove={() => removeSnapshot(idx)} deviceName={getDeviceName(snap.deviceId)} isLight={isLight(snap.deviceId)} />
           ))}
         </div>
-
-        {/* Add device button */}
         {availableDevices.length > 0 && (
           <div>
-            <button
-              onClick={() => setShowAddDevice((v) => !v)}
-              className="flex items-center gap-1.5 text-[11px] text-primary/70 hover:text-primary transition-colors"
-            >
-              <Plus size={14} />
-              <span>Lägg till enhet</span>
+            <button onClick={() => setShowAddDevice((v) => !v)} className="flex items-center gap-1.5 text-[11px] text-primary/70 hover:text-primary transition-colors">
+              <Plus size={14} /><span>Lägg till enhet</span>
               <ChevronDown size={12} className={cn('transition-transform', showAddDevice && 'rotate-180')} />
             </button>
             {showAddDevice && (
               <div className="mt-2 max-h-32 overflow-y-auto space-y-1 rounded-xl bg-[hsl(var(--surface-elevated)/0.2)] p-2">
                 {availableDevices.map((marker) => (
-                  <button
-                    key={marker.id}
-                    onClick={() => { addDevice(marker.id); }}
-                    className="flex w-full items-center gap-2 px-2 py-2 rounded-lg text-[12px] text-foreground/70 hover:bg-[hsl(var(--surface-elevated)/0.3)] transition-colors"
-                  >
-                    <Plus size={12} className="text-primary/50" />
-                    {marker.name || marker.kind}
+                  <button key={marker.id} onClick={() => addDevice(marker.id)} className="flex w-full items-center gap-2 px-2 py-2 rounded-lg text-[12px] text-foreground/70 hover:bg-[hsl(var(--surface-elevated)/0.3)] transition-colors">
+                    <Plus size={12} className="text-primary/50" />{marker.name || marker.kind}
                   </button>
                 ))}
               </div>
@@ -305,12 +367,7 @@ function SceneForm({ scene, onSave, onCancel }: {
           <div className="max-h-28 space-y-1 overflow-y-auto rounded-xl bg-[hsl(var(--surface-elevated)/0.2)] p-2">
             {allRooms.map((room) => (
               <label key={room.id} className="flex cursor-pointer items-center gap-3 px-2 py-2 rounded-lg hover:bg-[hsl(var(--surface-elevated)/0.3)] transition-colors">
-                <input
-                  type="checkbox"
-                  checked={selectedRooms.includes(room.id)}
-                  onChange={() => setSelectedRooms((prev) => prev.includes(room.id) ? prev.filter((id) => id !== room.id) : [...prev, room.id])}
-                  className="rounded border-[hsl(var(--border)/0.3)] accent-[hsl(var(--primary))]"
-                />
+                <input type="checkbox" checked={selectedRooms.includes(room.id)} onChange={() => setSelectedRooms((prev) => prev.includes(room.id) ? prev.filter((id) => id !== room.id) : [...prev, room.id])} className="rounded border-[hsl(var(--border)/0.3)] accent-[hsl(var(--primary))]" />
                 <span className="text-[12px] text-foreground/80">{room.name}</span>
               </label>
             ))}
@@ -318,12 +375,14 @@ function SceneForm({ scene, onSave, onCancel }: {
         </div>
       )}
 
+      {/* Timer */}
+      <TimerSection timer={sceneTimer} onChange={setSceneTimer} />
+
+      {/* Automation */}
+      <AutomationSection automation={sceneAutomation} onChange={setSceneAutomation} />
+
       {/* Save */}
-      <Button
-        className="w-full h-10 text-[12px] font-medium"
-        onClick={handleSave}
-        disabled={!name.trim() || snapshots.length === 0}
-      >
+      <Button className="w-full h-10 text-[12px] font-medium" onClick={handleSave} disabled={!name.trim() || snapshots.length === 0}>
         {scene ? 'Spara ändringar' : `Spara scen (${snapshots.length} enheter)`}
       </Button>
     </div>
@@ -346,19 +405,12 @@ export default function ScenesPanel() {
     haServiceCaller.current?.(domain, 'turn_on', { entity_id: entityId });
   };
 
-  const handleSaveNew = (scene: SavedScene) => {
-    addScene(scene);
-    setShowAdd(false);
-  };
-
-  const handleSaveEdit = (scene: SavedScene) => {
-    updateScene(scene.id, scene);
-    setEditingId(null);
-  };
+  const handleSaveNew = (scene: SavedScene) => { addScene(scene); setShowAdd(false); };
+  const handleSaveEdit = (scene: SavedScene) => { updateScene(scene.id, scene); setEditingId(null); };
 
   return (
     <div className="space-y-6">
-      {/* ── HA Scenes & Scripts ── */}
+      {/* HA Scenes */}
       {(scenes.length + scripts.length > 0) && (
         <div className="nn-widget p-5 space-y-4">
           <div className="flex items-center justify-between">
@@ -367,58 +419,32 @@ export default function ScenesPanel() {
           </div>
           <div className="grid grid-cols-3 sm:grid-cols-4 gap-4">
             {[...scenes, ...scripts].map(({ entity }) => (
-              <button
-                key={entity.entityId}
-                onClick={() => callService(entity.domain as 'scene' | 'script', entity.entityId)}
-                className="flex flex-col items-center gap-2.5 group"
-              >
+              <button key={entity.entityId} onClick={() => callService(entity.domain as 'scene' | 'script', entity.entityId)} className="flex flex-col items-center gap-2.5 group">
                 <div className="w-16 h-16 rounded-full border border-[hsl(var(--border)/0.15)] bg-[hsl(var(--surface-elevated)/0.4)] flex items-center justify-center transition-all group-hover:bg-primary/15 group-hover:border-primary/30 group-active:scale-95">
                   <Play size={20} className="text-foreground/50 group-hover:text-primary transition-colors" />
                 </div>
-                <span className="text-[11px] text-muted-foreground/60 text-center leading-tight w-18 truncate group-hover:text-foreground transition-colors">
-                  {entity.friendlyName}
-                </span>
+                <span className="text-[11px] text-muted-foreground/60 text-center leading-tight w-18 truncate group-hover:text-foreground transition-colors">{entity.friendlyName}</span>
               </button>
             ))}
           </div>
         </div>
       )}
 
-      {/* ── BjorQ Scenes ── */}
+      {/* BjorQ Scenes */}
       <div className="nn-widget p-5 space-y-4">
         <div className="flex items-center justify-between">
           <span className="label-micro">BJORQ-SCENER</span>
           <div className="flex items-center gap-2">
             <span className="text-[10px] text-muted-foreground/40">{savedScenes.length} scener</span>
-            <button
-              onClick={() => { setShowAdd((v) => !v); setEditingId(null); }}
-              className={cn(
-                'w-8 h-8 rounded-full flex items-center justify-center transition-all',
-                showAdd
-                  ? 'bg-primary/20 text-primary'
-                  : 'border border-[hsl(var(--border)/0.2)] text-muted-foreground/50 hover:text-foreground hover:border-[hsl(var(--border)/0.3)]'
-              )}
-            >
+            <button onClick={() => { setShowAdd((v) => !v); setEditingId(null); }} className={cn('w-8 h-8 rounded-full flex items-center justify-center transition-all', showAdd ? 'bg-primary/20 text-primary' : 'border border-[hsl(var(--border)/0.2)] text-muted-foreground/50 hover:text-foreground hover:border-[hsl(var(--border)/0.3)]')}>
               <Plus size={16} />
             </button>
           </div>
         </div>
 
-        {/* Create form */}
-        {showAdd && !editingId && (
-          <SceneForm onSave={handleSaveNew} onCancel={() => setShowAdd(false)} />
-        )}
+        {showAdd && !editingId && <SceneForm onSave={handleSaveNew} onCancel={() => setShowAdd(false)} />}
+        {editingId && <SceneForm scene={savedScenes.find((s) => s.id === editingId)} onSave={handleSaveEdit} onCancel={() => setEditingId(null)} />}
 
-        {/* Edit form */}
-        {editingId && (
-          <SceneForm
-            scene={savedScenes.find((s) => s.id === editingId)}
-            onSave={handleSaveEdit}
-            onCancel={() => setEditingId(null)}
-          />
-        )}
-
-        {/* Scene grid */}
         {savedScenes.length === 0 && !showAdd ? (
           <div className="py-8 text-center space-y-3">
             <div className="w-16 h-16 rounded-full border border-[hsl(var(--border)/0.1)] flex items-center justify-center mx-auto">
@@ -431,25 +457,35 @@ export default function ScenesPanel() {
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-5">
             {savedScenes.map((scene) => {
               const SceneIcon = getSceneIcon(scene.icon);
+              const hasTimer = scene.timer?.enabled;
+              const hasAutomation = scene.automation?.enabled;
               return (
                 <div key={scene.id} className="flex flex-col items-center gap-2.5 group relative">
+                  {/* Click = edit */}
                   <button
-                    onClick={() => activateScene(scene.id)}
-                    className="w-16 h-16 rounded-full border border-[hsl(var(--border)/0.15)] bg-[hsl(var(--surface-elevated)/0.4)] flex items-center justify-center transition-all group-hover:bg-primary/15 group-hover:border-primary/30 group-active:scale-95"
+                    onClick={() => { setEditingId(scene.id); setShowAdd(false); }}
+                    className="w-16 h-16 rounded-full border border-[hsl(var(--border)/0.15)] bg-[hsl(var(--surface-elevated)/0.4)] flex items-center justify-center transition-all group-hover:bg-primary/15 group-hover:border-primary/30 group-active:scale-95 relative"
                   >
                     <SceneIcon size={22} className="text-foreground/50 group-hover:text-primary transition-colors" />
+                    {/* Timer/automation indicators */}
+                    {(hasTimer || hasAutomation) && (
+                      <div className="absolute -bottom-0.5 flex gap-0.5">
+                        {hasTimer && <Clock size={8} className="text-primary/60" />}
+                        {hasAutomation && <Zap size={8} className="text-primary/60" />}
+                      </div>
+                    )}
                   </button>
                   <span className="text-[11px] text-muted-foreground/60 text-center leading-tight truncate w-18 group-hover:text-foreground transition-colors">
                     {scene.name}
                   </span>
-                  {/* Edit + delete on hover */}
+                  {/* Hover: play + delete */}
                   <div className="absolute -top-1 -right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
-                      onClick={(e) => { e.stopPropagation(); setEditingId(scene.id); setShowAdd(false); }}
-                      className="w-5 h-5 rounded-full bg-[hsl(var(--surface-elevated)/0.8)] border border-[hsl(var(--border)/0.2)] text-foreground/60 flex items-center justify-center hover:text-primary"
-                      title="Redigera"
+                      onClick={(e) => { e.stopPropagation(); activateScene(scene.id); }}
+                      className="w-5 h-5 rounded-full bg-primary/80 text-primary-foreground flex items-center justify-center hover:bg-primary"
+                      title="Aktivera"
                     >
-                      <Pencil size={10} />
+                      <Play size={10} />
                     </button>
                     <button
                       onClick={(e) => { e.stopPropagation(); removeScene(scene.id); }}
@@ -466,10 +502,9 @@ export default function ScenesPanel() {
         )}
       </div>
 
-      {/* ── Quick tips ── */}
       <div className="nn-widget p-4">
         <p className="text-[11px] text-muted-foreground/30 leading-relaxed">
-          Scener sparar per-enhet åtgärder (på/av/ställ in) med ljusstyrka och färg. Tryck på en scen för att aktivera, eller på pennan för att redigera.
+          Klicka på en scen för att redigera. Hovra och tryck ▶ för att aktivera. Timer och automation kan ställas in per scen.
         </p>
       </div>
     </div>
