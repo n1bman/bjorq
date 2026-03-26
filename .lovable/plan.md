@@ -1,51 +1,62 @@
 
 
-# Fix: Ljusbugg vid döljning av markörer + Scenikon-färgväljare
+# Scenikon-färg synk + Projektgranskning + Release v1.10.0
 
-## Problem 1: Ljuset ändras vid döljning/visning av markörer
+## Del 1: Scenikon-färg synkas till alla vyer
 
-**Rotorsak:** `LightMarkerLightOnly` (rad 1658-1659) har en annan `lightColor`-logik än `LightMarker` (rad 48-50):
+`iconColor` sparas i `SavedScene` och renderas i `ScenesPanel` + `ScenesWidget`, men saknas i:
 
-- **LightMarker:** `if (!isOn) → grey; if (!lightData) → warm yellow (#f5c542)`
-- **LightMarkerLightOnly:** `if (!lightData || !isOn) → grey (#555555)`
+1. **`DashboardGrid.tsx` — `QuickScenesWidget`** (rad 150-192)
+   - `allScenes`-mappen kopierar inte `iconColor` — lägg till `iconColor: s.iconColor`
+   - Ikonens `<LIcon>` och fallback-ikonen saknar `style={{ color: scene.iconColor }}` — applicera om satt
 
-När `isOn=true` men `lightData=null` (ingen explicit state), ger LightMarker varmt gult ljus men LightMarkerLightOnly ger grått. Resultat: döljning → ljuset slocknar/ändras.
+2. **`RoomDetailPanel.tsx`** (rad 73-81)
+   - Scenraden visar `<Play>` med `text-primary` istället för rätt scenikon med rätt färg
+   - Ändra: läs scenikon via `iconMap`, applicera `style={{ color: sc.iconColor }}`
 
-**Fix:** Synka `lightColor`-logiken i `LightMarkerLightOnly` med `LightMarker` — exakt samma useMemo:
+3. **`AutomationsPanel.tsx`** (rad 177)
+   - Scenväljaren visar `{scene.icon} {scene.name}` som text — ingen ikon renderas
+   - Mindre prioritet, men ikonnamnet bör bytas mot scennamnet enbart
 
-```tsx
-// rad 1658-1666, ändra till:
-const lightColor = useMemo(() => {
-  if (!isOn) return new THREE.Color('#555555');
-  if (!lightData) return new THREE.Color('#f5c542'); // warm preview — same as LightMarker
-  if (lightData.colorMode === 'rgb' && lightData.rgbColor) {
-    return new THREE.Color(lightData.rgbColor[0] / 255, lightData.rgbColor[1] / 255, lightData.rgbColor[2] / 255);
-  }
-  if (lightData.colorMode === 'temp' && lightData.colorTemp) {
-    return miredsToColor(lightData.colorTemp);
-  }
-  return new THREE.Color('#f5c542');
-}, [lightData?.colorMode, lightData?.rgbColor?.[0], lightData?.rgbColor?.[1], lightData?.rgbColor?.[2], lightData?.colorTemp, isOn, hasState]);
-```
+## Del 2: Projektgranskning — identifierade problem
 
----
+### localStorage quota exceeded (console-loggar)
+- `Props3D.tsx` rad 145 anropar `updateProp` vid varje prop-uppdatering, triggar persist
+- Store:n partialize:ar hela `props`-arrayen varje gång — med många props och texturer blir det >5MB
+- **Fix:** Exkludera tunga fält från partialize, t.ex. strippa `props` model-data eller begränsa prop-serialisering
 
-## Problem 2: Ingen färgväljare för scenikoner
+### Synk-problem
+- `partialize` exkluderar `terrain` (träd, gräs) — inte synkat till localStorage
+  - Kontrollera om `terrain` finns i partialize → om inte, lägg till (eller notera som känt)
+- `widgetLayout` synkas via `homeView` — verifieras OK
 
-Användaren vill välja egen färg på den valda scenikonen för bättre visuell identitet.
+### Prestanda
+- `DashboardPreview3D` skapar sin egen `<Canvas>` → dubbel WebGL-kontext om den monteras samtidigt som `PersistentScene3D`
+  - Notera som känd begränsning
 
-**Fix:**
-1. Lägg till `iconColor?: string` i `SavedScene` (types.ts)
-2. I `SceneForm` (ScenesPanel.tsx):
-   - Lägg till `iconColor` state
-   - Under ikonväljaren, lägg till en rad med 8-10 färgcirklar + en input type="color" för fri färg
-   - Spara `iconColor` i scene-objektet
-3. Överallt scenikonen renderas, applicera `style={{ color: scene.iconColor }}` om satt
+## Del 3: Dokumentation + Release v1.10.0
 
-**Färgval-rad under ikonväljaren:**
-```
-○ vit  ○ guld  ○ röd  ○ blå  ○ grön  ○ lila  ○ rosa  ○ [custom picker]
-```
+### Version bump
+- `package.json` → `1.10.0`
+- `server/package.json` → `1.10.0`
+- `bjorq_dashboard/config.yaml` → `1.10.0`
+
+### Nya/uppdaterade filer
+- `CHANGELOG.md` — ny [1.10.0]-post
+- `docs/patchnotes-v1.10.0.md` — ny patchnotes
+- `README.md` — version badge 1.10.0
+
+### Patchnotes-innehåll (sammanfattning av allt sedan 1.9.1)
+- Enhets-widgets som fria, individuella kort med inline-kontroller (vacuum, TV, speaker, light, climate, fan)
+- Fritt positionerbart layoutläge med Anpassa/Markörer/Scener som draggables
+- Scen-ikonsfärgväljare + synk till alla vyer
+- Nordic Noir som default-tema
+- Border-opacity-bugg fixad
+- Drag-hopp vid första rörelsen fixat
+- Återställ-knapp i layoutläge
+- Safezone-varning
+- LightMarkerLightOnly ljussynk fixad
+- localStorage quota-hantering förbättrad
 
 ---
 
@@ -53,7 +64,14 @@ Användaren vill välja egen färg på den valda scenikonen för bättre visuell
 
 | Fil | Ändring |
 |-----|---------|
-| `src/components/devices/DeviceMarkers3D.tsx` | Synka lightColor-logiken i LightMarkerLightOnly med LightMarker |
-| `src/store/types.ts` | Lägg till `iconColor?: string` i SavedScene |
-| `src/components/home/cards/ScenesPanel.tsx` | Färgväljare under ikonväljaren, spara/läs iconColor |
+| `src/components/home/DashboardGrid.tsx` | Propagera iconColor till scenikoner |
+| `src/components/home/cards/RoomDetailPanel.tsx` | Scenikon + iconColor istf. Play-ikon |
+| `src/store/useAppStore.ts` | Strippa tunga prop-fält i partialize för att minska localStorage |
+| `package.json` | Version → 1.10.0 |
+| `server/package.json` | Version → 1.10.0 |
+| `bjorq_dashboard/config.yaml` | Version → 1.10.0 |
+| `CHANGELOG.md` | Ny [1.10.0]-sektion |
+| `docs/patchnotes-v1.10.0.md` | Ny patchnotes-fil |
+| `docs/patchnotes-next.md` | Rensa till "inga osläppta" |
+| `README.md` | Badge → 1.10.0 |
 
