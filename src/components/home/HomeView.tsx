@@ -288,7 +288,7 @@ export default function HomeView({ longPressDeviceId, onDismissLongPress, fpsAct
                   <input type="range" min={0} max={255} value={brightness}
                     onChange={(e) => callSvc('light', 'turn_on', { brightness: +e.target.value })}
                     className="flex-1 accent-[hsl(var(--primary))] h-1.5" />
-                  <button onClick={() => { isOn ? callSvc('light', 'turn_off') : callSvc('light', 'turn_on'); toggleDeviceState(m.id); }}
+                  <button onClick={() => { if (isOn) callSvc('light', 'turn_off'); else callSvc('light', 'turn_on'); toggleDeviceState(m.id); }}
                     className={`${btnPrimary} px-2.5 py-1.5`}>{isOn ? 'Av' : 'På'}</button>
                 </div>
               );
@@ -314,7 +314,7 @@ export default function HomeView({ longPressDeviceId, onDismissLongPress, fpsAct
                   <button onClick={() => callSvc('fan', 'set_percentage', { percentage: 33 })} className={btnSurface}>Låg</button>
                   <button onClick={() => callSvc('fan', 'set_percentage', { percentage: 66 })} className={btnSurface}>Medium</button>
                   <button onClick={() => callSvc('fan', 'set_percentage', { percentage: 100 })} className={btnSurface}>Hög</button>
-                  <button onClick={() => { isOn ? callSvc('fan', 'turn_off') : callSvc('fan', 'turn_on'); toggleDeviceState(m.id); }}
+                  <button onClick={() => { if (isOn) callSvc('fan', 'turn_off'); else callSvc('fan', 'turn_on'); toggleDeviceState(m.id); }}
                     className={btnPrimary}>{isOn ? 'Av' : 'På'}</button>
                 </div>
               );
