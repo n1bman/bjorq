@@ -220,7 +220,7 @@ function HomeCategory() {
   const [draggingCatIndex, setDraggingCatIndex] = useState<number | null>(null);
   const [showSaveView, setShowSaveView] = useState(false);
   const [kindFilter, setKindFilter] = useState<DeviceKind | null>(null);
-  const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
+  
   const [time, setTime] = useState(new Date());
   const previewCamRef = useRef<PreviewCameraState>({ position: [10, 12, 10], target: [0, 0, 0] });
 
