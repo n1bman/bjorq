@@ -295,8 +295,6 @@ function HomeCategory() {
     <div className="space-y-5">
       {/* Header removed — buttons moved to filter row */}
 
-      {showManager && <CategoryManager />}
-
       {/* ── FREE GRID — everything lives here ── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-5">
         {/* Row 1: Info cards */}
@@ -373,6 +371,13 @@ function HomeCategory() {
             </Button>
           </div>
         </div>
+
+        {/* CategoryManager — renders under filter row */}
+        {showManager && (
+          <div className="col-span-2 md:col-span-4">
+            <CategoryManager />
+          </div>
+        )}
 
         {/* Room/category cards — span 2 cols each */}
         {filteredEntries.map((entry, index) => (
