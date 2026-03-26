@@ -1,97 +1,47 @@
 
 
-# Semantiska färgidentiteter för Energi, Klimat & Väder + Energi-redesign
+# Nav-menyerna ska använda sektionsfärg + flytta Play/Delete till scen-editorn
 
-## Översikt
+## 1. Nav rail: sektionsspecifik accent för Energi, Klimat, Väder
 
-Ingen ändring av temasystemet. Istället läggs tre lokala accentfärger ovanpå det aktiva temat via CSS-variabler och komponentuppdateringar.
+**Fil:** `src/components/home/DashboardShell.tsx`
 
-**Färgidentiteter:**
-- Energi: amber / warm gold (`36 75% 55%`)
-- Klimat: mossgrön / sval grön (`140 20% 45%`)
-- Väder: fjordblå / ice blue (`207 30% 55%`)
+**Nu:** Alla aktiva menyval använder `text-primary` + `border-primary` + `amber-glow` (rad 218-219).
 
----
+**Fix:** Lägg till en map som kopplar category-key till section-token:
 
-## 1. CSS-variabler i `src/index.css`
-
-Lägg till under `:root` (inom `@layer base`):
-```css
---section-energy: 36 75% 55%;
---section-climate: 140 20% 45%;
---section-weather: 207 30% 55%;
+```ts
+const sectionAccent: Partial<Record<DashCategory, string>> = {
+  energy: 'var(--section-energy)',
+  climate: 'var(--section-climate)',
+  weather: 'var(--section-weather)',
+};
 ```
 
-Dessa är fasta semantiska tokens — de påverkas inte av temabyte men fungerar ovanpå vilken bakgrund/panel som helst.
+När `active` och category har en sectionAccent, använd den istället för `--primary` / `--amber-glow` för:
+- `text-[hsl(...)]` istället för `text-primary`
+- `border-[hsl(...)]` istället för `border-primary`
+- `bg-[hsl(.../0.08)]` och `shadow` med sektionsfärgen
+
+Övriga kategorier behåller `text-primary` som idag.
+
+Gäller även mobilens bottom-tabs (rad 78-80) — samma logik.
 
 ---
 
-## 2. Energi-redesign (`EnergyDeviceList.tsx` + `EnergyWidget.tsx`)
+## 2. Scener: flytta Play + Delete från hover till scen-editorn
 
-**Nuläge:** Stor cirkulär ring som huvudfokus, sparkline sekundär.
+**Fil:** `src/components/home/cards/ScenesPanel.tsx`
 
-**Nytt layout i `EnergyCategory` (DashboardGrid.tsx) / `EnergyDeviceList.tsx`:**
+**Nu (rad 481-497):** Play och Trash2 visas i en hover-overlay (`opacity-0 group-hover:opacity-100`) — fungerar inte på touch.
 
-### a) KPI-rad (4 kort i grid)
-- **Nu:** live watt med pulsande ikon
-- **Idag:** kWh förbrukning
-- **Kostnad:** kronor idag
-- **Peak:** högsta watt-värde idag
-
-Varje KPI-kort använder `border-[hsl(var(--section-energy))]` subtilt, och värdet i `text-[hsl(var(--section-energy))]`.
-
-### b) Huvudgraf — area chart
-- Byt fokus från cirkelring till en `AreaChart` (recharts, redan installerat) som huvudvisual.
-- Amber gradient fill, amber linje, current-point markering.
-- 24h tidsaxel.
-
-### c) Fördelning — enhetsranking
-- Befintliga ranking-bars i `EnergyDeviceList` — byt `bg-primary` till `bg-[hsl(var(--section-energy))]`.
-
-### d) Ring/gauge
-- Behåll som liten sekundär komponent (bredvid KPI-raden eller under grafen), inte som hero.
-- Byt `stroke: hsl(var(--primary))` → `hsl(var(--section-energy))`.
-
-### e) Sparkline (`EnergySparkline.tsx`)
-- Byt `hsl(var(--primary))` → `hsl(var(--section-energy))` för linje, fill-gradient och pulsande punkt.
-
----
-
-## 3. Klimat-identitet (`ClimateTab.tsx`, `ClimateTrendLine.tsx`, `ClimateRoomComparison.tsx`)
-
-- **Hero-sektionen** (medeltemperatur): byt `text-primary` ikoner till `text-[hsl(var(--section-climate))]`.
-- **Komfortstatus** (`Activity` ikon, aktiva regler): `text-primary` → `text-[hsl(var(--section-climate))]`.
-- **Trendlinjer** (`ClimateTrendLine`): byt `stroke: hsl(var(--primary))` till `hsl(var(--section-climate))` för target-linjer och pulsande punkt.
-- **Rumsjämförelse** (`ClimateRoomComparison`): byt `bg-primary/60` standardbar → `bg-[hsl(var(--section-climate))]/60`. Behåll orange/blå för avvikelse.
-- **Regelkort** (`RuleCard`): aktiv-indikator `border-primary/20` → `border-[hsl(var(--section-climate))]/20`.
-
----
-
-## 4. Väder-identitet (`WeatherWidget.tsx`, `WeatherHomeImpact.tsx`)
-
-- **Hero-temperatur**: behåll vit/foreground, men lägg till en subtil `border-l-2 border-[hsl(var(--section-weather))]` på vänsterkant eller ändra 24h-prognos highlight `bg-primary/10` → `bg-[hsl(var(--section-weather))]/10`.
-- **24h-prognos "Nu"**: markera med `bg-[hsl(var(--section-weather))]/10`.
-- **Dagsprognos "Idag"**: samma fjordblå accent.
-- **WeatherHomeImpact**: ikon `text-primary` → `text-[hsl(var(--section-weather))]` för rubrik-ikonen.
-- **SunWeatherPanel**: rubrikikon kan byta till `text-[hsl(var(--section-weather))]`.
-
----
-
-## 5. DashboardGrid kategori-wrapper
-
-I `DashboardGrid.tsx`, ge varje kategoris wrapper en subtil top-accent:
-
-```tsx
-function EnergyCategory() {
-  return (
-    <div className="space-y-3" style={{ '--section-accent': 'var(--section-energy)' } as any}>
-      ...
-    </div>
-  );
-}
-```
-
-Detta gör det möjligt att i framtiden använda `var(--section-accent)` i delade widgets.
+**Fix:**
+- **Ta bort** hela hover-overlay-blocket (rad 481-497).
+- **Ta bort** hjälptexten "Hovra och tryck..." (rad 507).
+- **Lägg till** Play- och Delete-knappar **inuti SceneForm** (edit-läget, rad 446-area), t.ex. som en footer-rad i editorn:
+  - "Aktivera scen" (Play-knapp) — kör `activateScene(scene.id)`
+  - "Ta bort scen" (Trash2-knapp, destructive) — kör `removeScene(scene.id)` + stäng editor
+- Uppdatera hjälptexten till: "Klicka på en scen för att redigera, aktivera eller ta bort."
 
 ---
 
@@ -99,14 +49,6 @@ Detta gör det möjligt att i framtiden använda `var(--section-accent)` i delad
 
 | Fil | Ändring |
 |-----|---------|
-| `src/index.css` | 3 nya CSS-variabler (section-energy/climate/weather) |
-| `src/components/home/cards/EnergyDeviceList.tsx` | Ny layout: KPI-rad + area chart som hero, ring sekundär, amber accent |
-| `src/components/home/cards/EnergyWidget.tsx` | Amber accent på Zap-ikon och watt-display |
-| `src/components/home/cards/EnergySparkline.tsx` | Byt primary → section-energy |
-| `src/components/home/cards/ClimateTab.tsx` | Mossgrön accent på hero, status, regelkort |
-| `src/components/home/cards/ClimateTrendLine.tsx` | Mossgrön target-linje och pulse-punkt |
-| `src/components/home/cards/ClimateRoomComparison.tsx` | Mossgrön default-bar |
-| `src/components/home/cards/WeatherWidget.tsx` | Fjordblå accent på prognos-highlights |
-| `src/components/home/cards/WeatherHomeImpact.tsx` | Fjordblå rubrikikon |
-| `src/components/home/DashboardGrid.tsx` | Minimal: eventuellt section-accent CSS-variabel per kategori |
+| `src/components/home/DashboardShell.tsx` | Sektionsfärg för Energi/Klimat/Väder i nav rail + mobil-tabs |
+| `src/components/home/cards/ScenesPanel.tsx` | Flytta Play/Delete från hover till SceneForm, ta bort hover-overlay |
 
