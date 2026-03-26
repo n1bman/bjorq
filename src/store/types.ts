@@ -825,6 +825,8 @@ export interface VisibleWidgets {
   nav?: boolean;
   camera?: boolean;
   rooms?: boolean;
+  scenes?: boolean;
+  devices?: boolean;
 }
 
 export type MarkerSize = 'small' | 'medium' | 'large';
