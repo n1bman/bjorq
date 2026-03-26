@@ -10,6 +10,11 @@ Detailed release notes for each shipped version should also be added as
 
 ## [Unreleased]
 
+## [1.10.1] - 2026-03-26
+
+### Fixed
+- **Scenikoner ur synk mellan vyer** — DashboardGrid använde en separat ikonmapp som mappade fel ikoner. Nu används samma mappning som ScenesPanel och ScenesWidget överallt.
+
 ## [1.10.0] - 2026-03-26
 
 ### Added
