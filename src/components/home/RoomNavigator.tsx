@@ -43,7 +43,7 @@ export default function RoomNavigator({ style }: RoomNavigatorProps) {
   };
 
   return (
-    <div className="z-50 flex flex-col-reverse items-end gap-2 pointer-events-auto" style={style}>
+    <div className="z-50 pointer-events-auto relative" style={style}>
       <button
         onClick={() => { if (open) handleClose(); else setOpen(true); }}
         className={cn(
@@ -55,11 +55,13 @@ export default function RoomNavigator({ style }: RoomNavigatorProps) {
       </button>
 
       {selectedRoomId && (
-        <RoomDetailPanel roomId={selectedRoomId} onClose={() => setSelectedRoomId(null)} />
+        <div className="absolute bottom-full right-0 mb-2">
+          <RoomDetailPanel roomId={selectedRoomId} onClose={() => setSelectedRoomId(null)} />
+        </div>
       )}
 
       {open && !selectedRoomId && (
-        <div className="glass-panel rounded-xl p-3 w-64 max-h-80 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200 space-y-1">
+        <div className="absolute bottom-full right-0 mb-2 glass-panel rounded-xl p-3 w-64 max-h-80 overflow-y-auto animate-in fade-in slide-in-from-bottom-2 duration-200 space-y-1">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-semibold text-foreground">Rum</span>
             <button onClick={handleClose} className="text-muted-foreground hover:text-foreground">

@@ -91,8 +91,8 @@ export default function HomeLayoutEditor() {
     const rect = containerRef.current.getBoundingClientRect();
     const dx = ((e.clientX - dragStartRef.current.startX) / rect.width) * 100;
     const dy = ((e.clientY - dragStartRef.current.startY) / rect.height) * 100;
-    const newX = Math.max(0, Math.min(95, dragStartRef.current.origX + dx));
-    const newY = Math.max(0, Math.min(92, dragStartRef.current.origY + dy));
+    const newX = Math.max(1, Math.min(88, dragStartRef.current.origX + dx));
+    const newY = Math.max(1, Math.min(85, dragStartRef.current.origY + dy));
     setWidgetLayout(dragging, { x: Math.round(newX * 10) / 10, y: Math.round(newY * 10) / 10 });
   }, [dragging, setWidgetLayout]);
 
