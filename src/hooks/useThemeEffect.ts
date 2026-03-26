@@ -194,6 +194,12 @@ export function useThemeEffect() {
         root.style.setProperty('--foreground', textHsl);
         root.style.setProperty('--card-foreground', textHsl);
         root.style.setProperty('--popover-foreground', textHsl);
+        // Force-reset border to theme default so it doesn't follow foreground
+        if (!customColors.borderColor) {
+          const defaultBorder = palette['--border'] || '222 12% 21%';
+          root.style.setProperty('--border', defaultBorder);
+          root.style.setProperty('--sidebar-border', palette['--sidebar-border'] || defaultBorder);
+        }
       }
       // Glass opacity
       if (customColors.glassOpacity !== undefined) {
@@ -215,9 +221,11 @@ export function useThemeEffect() {
           const borderHsl = hexToHsl(customColors.borderColor);
           root.style.setProperty('--border', `${borderHsl} / ${alpha.toFixed(2)}`);
           root.style.setProperty('--glass-border', `${borderHsl} / ${Math.max(alpha - 0.04, 0).toFixed(2)}`);
+          root.style.setProperty('--sidebar-border', `${borderHsl} / ${alpha.toFixed(2)}`);
         } else {
           root.style.setProperty('--border', `0 0% 100% / ${alpha.toFixed(2)}`);
           root.style.setProperty('--glass-border', `0 0% 100% / ${Math.max(alpha - 0.04, 0).toFixed(2)}`);
+          root.style.setProperty('--sidebar-border', `0 0% 100% / ${alpha.toFixed(2)}`);
         }
       }
       // Glow intensity
