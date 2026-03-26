@@ -260,26 +260,11 @@ export default function ThemeCard() {
                   />
                 ))}
                 {/* Custom accent picker */}
-                <label className="relative cursor-pointer group">
-                  <div
-                    className={cn(
-                      'w-8 h-8 rounded-full border-2 border-dashed border-muted-foreground/30 flex items-center justify-center transition-all group-hover:scale-110',
-                      !accents.some(a => a.color === profile.accentColor) && 'border-foreground scale-110'
-                    )}
-                    style={!accents.some(a => a.color === profile.accentColor) ? { backgroundColor: profile.accentColor } : undefined}
-                  >
-                    {accents.some(a => a.color === profile.accentColor) && (
-                      <span className="text-[9px] text-muted-foreground">+</span>
-                    )}
-                  </div>
-                  <input
-                    type="color"
-                    value={profile.accentColor}
-                    onChange={() => {}}
-                    onBlur={(e) => setAccentColor(e.target.value)}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                  />
-                </label>
+                <CommitColorPicker
+                  label="Egen"
+                  value={!accents.some(a => a.color === profile.accentColor) ? profile.accentColor : undefined}
+                  onCommit={(c) => setAccentColor(c)}
+                />
               </div>
             </div>
 
@@ -310,8 +295,8 @@ export default function ThemeCard() {
                 <CommitColorPicker label="Panel" value={custom.bgColor} onCommit={(c) => commitCustomColor({ bgColor: c })} />
                 <CommitColorPicker label="Meny" value={custom.menuColor} onCommit={(c) => commitCustomColor({ menuColor: c })} />
                 <CommitColorPicker label="Kort" value={custom.cardColor} onCommit={(c) => commitCustomColor({ cardColor: c })} />
-                <CommitColorPicker label="Text 1" value={custom.textColor} onCommit={(c) => commitCustomColor({ textColor: c })} />
-                <CommitColorPicker label="Text 2" value={custom.textSecondaryColor} onCommit={(c) => commitCustomColor({ textSecondaryColor: c })} />
+                <CommitColorPicker label="Text" value={custom.textColor} onCommit={(c) => commitCustomColor({ textColor: c })} />
+                <CommitColorPicker label="Text sek." value={custom.textSecondaryColor} onCommit={(c) => commitCustomColor({ textSecondaryColor: c })} />
                 <CommitColorPicker label="Border" value={custom.borderColor} onCommit={(c) => commitCustomColor({ borderColor: c })} />
               </div>
             </div>
