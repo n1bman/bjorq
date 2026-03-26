@@ -60,6 +60,15 @@
     --card-hover-glow: 36 60% 48% / 0.04;
     --nav-active-glow: 36 75% 50% / 0.10;
     --glow-amber-subtle: 36 75% 50% / 0.06;
+    --glow-intensity: 0.5;
+
+    /* Nordic Noir semantic colors (set by theme engine, defaults here) */
+    --nn-fjord: 207 22% 55%;
+    --nn-ice: 207 20% 72%;
+    --nn-moss: 108 11% 49%;
+    --nn-lavender: 268 17% 57%;
+    --nn-linen: 34 28% 75%;
+    --nn-amber-soft: 36 55% 60% / 0.18;
 
     /* Widget tokens */
     --widget-radius: 1.25rem;
