@@ -95,7 +95,7 @@ export default function DashboardShell() {
                       ? accent ? '' : 'text-primary'
                       : 'text-muted-foreground'
                   )}
-                  style={active && accent ? { color: `hsl(${accent.replace('var(', '').replace(')', '')})` } : undefined}
+                  style={active && accent ? { color: `hsl(${accent})` } : undefined}
                 >
                   <Icon size={20} strokeWidth={active ? 2.2 : 1.5} />
                   <span className="text-[9px] font-medium">{cat.label}</span>
@@ -217,6 +217,10 @@ export default function DashboardShell() {
                 if (!cat) return null;
                 const active = activeCategory === key;
                 const Icon = cat.icon;
+                const accent = SECTION_ACCENT[key];
+                const accentStyle = active && accent
+                  ? { color: `hsl(${accent})`, borderLeftColor: `hsl(${accent})`, backgroundColor: `hsl(${accent} / 0.08)`, boxShadow: `inset 3px 0 12px -4px hsl(${accent} / 0.3)` } as React.CSSProperties
+                  : undefined;
                 return (
                   <button
                     key={key}
@@ -226,10 +230,13 @@ export default function DashboardShell() {
                       collapsed
                         ? 'justify-center px-2 py-3'
                         : 'gap-3 px-4 py-3 text-left',
-                      active
+                      active && !accent
                         ? 'text-primary bg-[hsl(var(--nav-active-glow))] border-l-[3px] border-primary shadow-[-4px_0_16px_hsl(var(--amber-glow))]'
-                        : 'text-[hsl(var(--sidebar-foreground)/0.4)] hover:text-[hsl(var(--sidebar-foreground)/0.7)] hover:bg-[hsl(var(--sidebar-accent)/0.2)] border-l-[3px] border-transparent'
+                        : active && accent
+                          ? 'border-l-[3px]'
+                          : 'text-[hsl(var(--sidebar-foreground)/0.4)] hover:text-[hsl(var(--sidebar-foreground)/0.7)] hover:bg-[hsl(var(--sidebar-accent)/0.2)] border-l-[3px] border-transparent'
                     )}
+                    style={accentStyle}
                     title={collapsed ? cat.label : undefined}
                   >
                     <Icon size={18} strokeWidth={active ? 2.2 : 1.4} className="shrink-0" />

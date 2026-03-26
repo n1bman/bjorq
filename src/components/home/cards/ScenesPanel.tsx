@@ -381,6 +381,26 @@ function SceneForm({ scene, onSave, onCancel }: {
       {/* Automation */}
       <AutomationSection automation={sceneAutomation} onChange={setSceneAutomation} />
 
+      {/* Action buttons for existing scene */}
+      {scene && (
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            className="flex-1 h-10 text-[12px] font-medium gap-2 border-primary/30 text-primary hover:bg-primary/10"
+            onClick={() => { onSave(scene); setTimeout(() => activateScene(scene.id), 100); }}
+          >
+            <Play size={14} /> Aktivera scen
+          </Button>
+          <Button
+            variant="outline"
+            className="h-10 text-[12px] font-medium gap-2 border-destructive/30 text-destructive hover:bg-destructive/10 px-4"
+            onClick={() => { removeScene(scene.id); onCancel(); }}
+          >
+            <Trash2 size={14} />
+          </Button>
+        </div>
+      )}
+
       {/* Save */}
       <Button className="w-full h-10 text-[12px] font-medium" onClick={handleSave} disabled={!name.trim() || snapshots.length === 0}>
         {scene ? 'Spara ändringar' : `Spara scen (${snapshots.length} enheter)`}
