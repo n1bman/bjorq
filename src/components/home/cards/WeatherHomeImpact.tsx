@@ -10,17 +10,14 @@ export default function WeatherHomeImpact() {
   const windSpeed = useAppStore((s) => s.environment.weather.windSpeed);
   const floors = useAppStore((s) => s.layout.floors);
 
-  // Determine sun direction
   const directions = ['N', 'NO', 'O', 'SO', 'S', 'SV', 'V', 'NV'];
   const dirIdx = Math.round(((sunAzimuth % 360) + 360) % 360 / 45) % 8;
   const sunDirection = directions[dirIdx];
 
-  // Count rooms with windows facing sun direction
   const totalWindows = floors.reduce((sum, f) =>
     sum + f.walls.reduce((ws, w) => ws + w.openings.filter((o) => o.type === 'window').length, 0), 0
   );
 
-  // Build impact messages
   const impacts: { icon: typeof Sun; text: string; severity: 'info' | 'warn' | 'good' }[] = [];
 
   if (sunElevation > 10) {
@@ -45,45 +42,25 @@ export default function WeatherHomeImpact() {
   }
 
   if (condition === 'rain') {
-    impacts.push({
-      icon: CloudRain,
-      text: 'Regn pågår — överväg att stänga fönster',
-      severity: 'warn',
-    });
+    impacts.push({ icon: CloudRain, text: 'Regn pågår — överväg att stänga fönster', severity: 'warn' });
   } else if (condition === 'snow') {
-    impacts.push({
-      icon: CloudRain,
-      text: 'Snöfall — kontrollera uppvärmning',
-      severity: 'warn',
-    });
+    impacts.push({ icon: CloudRain, text: 'Snöfall — kontrollera uppvärmning', severity: 'warn' });
   }
 
   if (windSpeed && windSpeed > 8) {
-    impacts.push({
-      icon: Wind,
-      text: `Kraftig vind (${windSpeed} m/s) — drag vid fönster möjligt`,
-      severity: 'warn',
-    });
+    impacts.push({ icon: Wind, text: `Kraftig vind (${windSpeed} m/s) — drag vid fönster möjligt`, severity: 'warn' });
   }
 
   if (temperature < 5) {
-    impacts.push({
-      icon: Thermometer,
-      text: `Kallt ute (${temperature}°C) — öka uppvärmning rekommenderas`,
-      severity: 'warn',
-    });
+    impacts.push({ icon: Thermometer, text: `Kallt ute (${temperature}°C) — öka uppvärmning rekommenderas`, severity: 'warn' });
   } else if (temperature > 28) {
-    impacts.push({
-      icon: Thermometer,
-      text: `Varmt ute (${temperature}°C) — ventilation rekommenderas`,
-      severity: 'warn',
-    });
+    impacts.push({ icon: Thermometer, text: `Varmt ute (${temperature}°C) — ventilation rekommenderas`, severity: 'warn' });
   }
 
   return (
     <div className="nn-widget p-4 space-y-3">
       <div className="flex items-center gap-2">
-        <Home size={14} className="text-primary" />
+        <Home size={14} className="text-[hsl(var(--section-weather))]" />
         <h4 className="text-xs font-semibold text-foreground">Påverkan på hemmet</h4>
       </div>
       <div className="space-y-2">

@@ -77,6 +77,11 @@
     /* Spacing tokens */
     --space-panel: 1.25rem;
     --space-section: 2rem;
+
+    /* Section semantic accents — fixed identity colors */
+    --section-energy: 36 75% 55%;
+    --section-climate: 140 20% 45%;
+    --section-weather: 207 30% 55%;
   }
 }
 
