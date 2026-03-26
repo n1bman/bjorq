@@ -120,6 +120,9 @@ export default function ThemeCard() {
     setProfile({ accentColor: color, customColors: { ...custom, recentColors } });
   };
 
+  const defaults = themeDisplayDefaults[profile.theme] || themeDisplayDefaults.dark;
+  const effective = (field: keyof typeof defaults) => (custom as any)[field] || defaults[field];
+
   const resetCustom = () => {
     const defaultAccent = themeDefaultAccent[profile.theme] || '#f59e0b';
     setProfile({ customColors: undefined, accentColor: defaultAccent });
