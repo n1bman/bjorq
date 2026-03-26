@@ -1,53 +1,55 @@
 
 
-# Fix: Borders följer textfärg + lägg till borderfärg + Text 1/Text 2
+# Fix: Text/Border-mappning är felkopplad + custom accent sparas inte
 
 ## Problem
 
-1. **Borders ändras med textfärg** — `textColor` sätter `--foreground`, och många UI-element använder `border-foreground` (Tailwind) i stället för `border-border`. Därför ändras borders visuellt till samma färg som texten.
+1. **Text 1 ändrar borders istället för text** — `textColor` sätter `--foreground`, men många UI-element använder Tailwind-klassen `border-foreground` (inte `border-border`), så borders följer med.
 
-2. **Ingen kontroll över border-färg** — `borderOpacity` styr bara genomskinligheten och använder alltid `0 0% 100%` (vit). Användaren kan inte välja en annan border-färg.
+2. **Text 2 ändrar text istället för att vara sekundär** — mappningen är korrekt men upplevs som "den riktiga textfärgen" eftersom `--muted-foreground` används brett.
 
-3. **Bara en textfärg** — men temasystemet har två toner: `--foreground` (huvudtext) och `--muted-foreground` (sekundär, dämpad text). Användaren bör kunna styra båda.
+3. **Border-pickern har oklar effekt** — den sätter `--border` med alpha, men eftersom de flesta borders i UI:t använder `border-foreground` syns det knappt.
 
----
+4. **Custom accent sparas inte** — color picker har `onChange={() => {}}` (tom!) och `onBlur` läser `e.target.value` men inputen uppdateras aldrig visuellt under drag.
 
-## Ändringar
+## Lösning
 
-### 1. `src/store/types.ts` — utöka CustomColors
+### 1. Fix textColor-override i `useThemeEffect.ts`
 
-Lägg till tre nya fält:
+När `textColor` sätts, sätt BARA text-relaterade variabler och sätt EXPLICIT `--border` till temats original-border (inte foreground):
 
-- `borderColor?: string` — valfri hex för border-färg
-- `textSecondaryColor?: string` — sekundär textfärg (`--muted-foreground`)
+```
+--foreground, --card-foreground, --popover-foreground → textColor HSL
+```
 
-Byt namn internt (label i UI) från "Text" till "Text (primär)" och lägg till "Text (sekundär)".
+Samtidigt: om INGEN `borderColor` är satt, force-sätter vi `--border` till temats default-bordervärde efter textColor-overriden. Detta förhindrar att `border-foreground` letar fallback.
 
-### 2. `src/hooks/useThemeEffect.ts` — applicera nya overrides
+### 2. Fix border-override
 
-**Border-färg:**
-- Om `borderColor` finns: konvertera till HSL och använd den som bas för `--border` och `--glass-border` (med alpha från `borderOpacity`)
-- Om `borderColor` saknas: behåll nuvarande beteende (vit med alpha)
+Utöver `--border` och `--glass-border`, sätt även `--sidebar-border` vid borderColor-override.
 
-**Sekundär text:**
-- Om `textSecondaryColor` finns: sätter `--muted-foreground`, `--secondary-foreground`, `--sidebar-foreground`
+### 3. Fix custom accent picker i `ThemeCard.tsx`
 
-### 3. `src/components/home/cards/ThemeCard.tsx` — uppdatera UI
+Byt till samma `CommitColorPicker`-mönster som övriga pickers — `useRef` för att fånga senaste värdet, commit på blur:
 
-Under "Färger & ytor":
-- Byt "Text" → "Text 1" (primär)
-- Lägg till "Text 2" (sekundär) → `textSecondaryColor`
-- Lägg till "Border" → `borderColor`
+```tsx
+<CommitColorPicker
+  label="Egen"
+  value={profile.accentColor}
+  onCommit={(c) => setAccentColor(c)}
+/>
+```
 
-Det ger nu 8 färgprickar i gridet: Knappar, Slider, Panel, Meny, Kort, Text 1, Text 2, Border.
+### 4. Tydligare labels
 
----
+- "Text 1" → "Text" (primär — rubriker, labels)
+- "Text 2" → "Text sekundär" (dämpad — hjälptext, ikoner)
+- "Border" behåller namn men blir tydligare att den styr panelramar
 
 ## Filer som ändras
 
 | Fil | Ändring |
 |-----|---------|
-| `src/store/types.ts` | `CustomColors` += `borderColor`, `textSecondaryColor` |
-| `src/hooks/useThemeEffect.ts` | Applicera borderColor + textSecondaryColor overrides |
-| `src/components/home/cards/ThemeCard.tsx` | Lägg till 2 nya color pickers (Text 2, Border), byt label Text→Text 1 |
+| `src/hooks/useThemeEffect.ts` | Force-reset `--border` efter textColor-override om ingen borderColor finns |
+| `src/components/home/cards/ThemeCard.tsx` | Fix custom accent picker (CommitColorPicker), bättre labels |
 
