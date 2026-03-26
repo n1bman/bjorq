@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { Home, Cloud, Cpu, Zap, Bell, Video, Settings, Pencil, X, CalendarDays, Bot, Moon, Save, Workflow, Palette, LayoutGrid, Thermometer, Trees, User, Monitor, Database, Link2, Sparkles } from 'lucide-react';
 import { Switch } from '../ui/switch';
+import { Slider } from '../ui/slider';
 import WeatherHomeImpact from './cards/WeatherHomeImpact';
 import { cn } from '../../lib/utils';
 import { Button } from '../ui/button';
@@ -120,7 +121,7 @@ function ActiveRoomWidget({ selectedRoomId, setSelectedRoomId, rooms, markers }:
     : [];
 
   return (
-    <div className="nn-widget p-6 flex flex-col gap-4 min-h-[260px]">
+    <div className="nn-widget p-5 flex flex-col gap-3 h-[240px] md:h-[300px]">
       <div className="flex items-center justify-between gap-2">
         <span className="label-micro">AKTIVT RUM</span>
       </div>
@@ -156,10 +157,19 @@ function ActiveRoomWidget({ selectedRoomId, setSelectedRoomId, rooms, markers }:
             )}>
               <div className="min-w-0 flex-1">
                 <span className="text-[13px] text-foreground block truncate">{d.name || d.kind}</span>
-                {isLight && on && (
-                  <span className="text-[10px] text-muted-foreground/35">{pct}%</span>
-                )}
               </div>
+              {isLight && on && (
+                <div className="w-16 shrink-0 mx-2" onClick={(e) => e.stopPropagation()}>
+                  <Slider
+                    value={[brightness]}
+                    min={1}
+                    max={255}
+                    step={1}
+                    onValueChange={([v]) => updateDeviceState(d.id, { brightness: v })}
+                    className="h-5"
+                  />
+                </div>
+              )}
               {state && 'on' in state.data && (
                 <Switch
                   checked={on}
