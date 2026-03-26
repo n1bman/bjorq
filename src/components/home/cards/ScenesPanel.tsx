@@ -266,6 +266,7 @@ function SceneForm({ scene, onSave, onCancel, onActivate, onRemove }: {
 
   const [name, setName] = useState(scene?.name ?? '');
   const [icon, setIcon] = useState(scene?.icon ?? 'Lightbulb');
+  const [iconColor, setIconColor] = useState(scene?.iconColor ?? '');
   const [snapshots, setSnapshots] = useState<SceneSnapshot[]>(scene?.snapshots ?? []);
   const [selectedRooms, setSelectedRooms] = useState<string[]>(scene?.linkedRoomIds ?? []);
   const [showAddDevice, setShowAddDevice] = useState(false);
@@ -299,6 +300,7 @@ function SceneForm({ scene, onSave, onCancel, onActivate, onRemove }: {
       id: scene?.id ?? Math.random().toString(36).slice(2, 10),
       name: name.trim(),
       icon,
+      iconColor: iconColor || undefined,
       snapshots,
       createdAt: scene?.createdAt ?? new Date().toISOString(),
       linkedRoomIds: selectedRooms.length > 0 ? selectedRooms : undefined,
