@@ -154,19 +154,27 @@ export default function HomeView({ longPressDeviceId, onDismissLongPress, fpsAct
         );
       })}
 
-      {/* ── Layout edit button — top left corner (hidden in edit mode) ── */}
-      {!homeLayoutEditMode && (
-        <button
-          onClick={toggleHomeLayoutEditMode}
-          className="fixed top-4 left-4 z-20 pointer-events-auto w-10 h-10 rounded-full flex items-center justify-center transition-all
-            bg-[hsl(var(--surface)/0.5)] backdrop-blur-xl border border-[hsl(var(--glass-border)/0.2)]
-            hover:border-[hsl(var(--primary)/0.3)] hover:shadow-[0_0_24px_hsl(var(--amber-glow))]
-            text-muted-foreground hover:text-primary"
-          title="Anpassa hemvy"
-        >
-          <Settings2 size={16} />
-        </button>
-      )}
+      {/* ── Layout edit button — freely positionable ── */}
+      {!homeLayoutEditMode && (() => {
+        const layoutBtnPos = {
+          x: Math.max(1, Math.min(92, widgetLayout['layoutButton']?.x ?? 2)),
+          y: Math.max(1, Math.min(92, widgetLayout['layoutButton']?.y ?? 2)),
+        };
+        return (
+          <div className="absolute z-20 pointer-events-auto" style={{ left: `${layoutBtnPos.x}%`, top: `${layoutBtnPos.y}%` }}>
+            <button
+              onClick={toggleHomeLayoutEditMode}
+              className="w-10 h-10 rounded-full flex items-center justify-center transition-all
+                bg-[hsl(var(--surface)/0.5)] backdrop-blur-xl border border-[hsl(var(--glass-border)/0.2)]
+                hover:border-[hsl(var(--primary)/0.3)] hover:shadow-[0_0_24px_hsl(var(--amber-glow))]
+                text-muted-foreground hover:text-primary"
+              title="Anpassa hemvy"
+            >
+              <Settings2 size={16} />
+            </button>
+          </div>
+        );
+      })()}
 
       {/* ── Long-press popup for device control ── */}
       {longPressDeviceId && longPressMarker && (
@@ -353,7 +361,7 @@ export default function HomeView({ longPressDeviceId, onDismissLongPress, fpsAct
           </div>
         );
       })}
-      {/* ── Device visibility picker — top right ── */}
+      {/* ── Device visibility picker — freely positionable ── */}
       {!homeLayoutEditMode && markers.length > 0 && (() => {
         const KINDS_WITH_3D_MODELS = new Set<DeviceKind>([
           'light-fixture', 'speaker', 'soundbar', 'smart-outlet', 'vacuum',
@@ -365,8 +373,13 @@ export default function HomeView({ longPressDeviceId, onDismissLongPress, fpsAct
 
         if (toggleableMarkers.length === 0) return null;
 
+        const markerPickerPos = {
+          x: Math.max(1, Math.min(92, widgetLayout['markerPicker']?.x ?? 92)),
+          y: Math.max(1, Math.min(92, widgetLayout['markerPicker']?.y ?? 2)),
+        };
+
         return (
-          <div className="fixed top-5 right-5 z-50 pointer-events-auto">
+          <div className="absolute z-50 pointer-events-auto" style={{ left: `${markerPickerPos.x}%`, top: `${markerPickerPos.y}%` }}>
             <button
               onClick={() => setPickerOpen(!pickerOpen)}
               className={cn(
