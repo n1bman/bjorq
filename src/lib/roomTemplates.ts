@@ -25,8 +25,8 @@ export const templateCategoryLabels: Record<RoomTemplate['category'], string> = 
 };
 
 export const templateCategoryIcons: Record<RoomTemplate['category'], string> = {
-  bedroom: '🛏️',
-  kitchen: '🍳',
-  livingroom: '🛋️',
-  bathroom: '🚿',
+  bedroom: 'Bed',
+  kitchen: 'Kitchen',
+  livingroom: 'Sofa',
+  bathroom: 'Bath',
 };

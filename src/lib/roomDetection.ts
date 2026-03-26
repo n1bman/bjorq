@@ -441,7 +441,7 @@ export function detectRooms(walls: WallSegment[], existingRooms?: Room[]): Room[
   if (cycles.length === 0 && nodeCount > 0) {
     console.warn('[detectRooms] No cycles found! Graph dump:');
     for (const [key, node] of Object.entries(graph)) {
-      const status = node.neighbors.length < 2 ? ' ⚠️ DEAD-END' : '';
+      const status = node.neighbors.length < 2 ? ' DEAD-END' : '';
       // For dead-ends, find nearest other node to help debug
       let nearestInfo = '';
       if (node.neighbors.length < 2) {

@@ -8,10 +8,12 @@ import { Progress } from '../../ui/progress';
 import {
   Battery, Play, Square, Home as HomeIcon, MapPin, AlertTriangle,
   Clock, Ruler, Wind, Pause, History, Info, AlertCircle, Bug,
+  Bot, CheckSquare, Minus, Plus,
 } from 'lucide-react';
 import { toast } from '../../../hooks/use-toast';
 import { cn } from '../../../lib/utils';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { Checkbox } from '../../ui/checkbox';
 import { getRobotEntityViews } from '../../../lib/haMenuSelectors';
 import { haServiceCaller } from '../../../hooks/useHomeAssistant';
 import { setFromHA } from '../../../hooks/useHABridge';
@@ -98,20 +100,25 @@ function FanSpeedSelector({
 }
 
 /** Room zone cards for targeted cleaning */
+/** Room zone cards for targeted cleaning — supports multi-room selection with repeat */
 function RoomZoneCards({
   marker,
   data,
   onStartRoomCleaning,
+  onStartMultiRoomCleaning,
 }: {
   marker: DeviceMarker;
   data: VacuumState;
   onStartRoomCleaning: (roomName: string, segmentId: number, fanPreset?: string) => void;
+  onStartMultiRoomCleaning: (rooms: { roomName: string; segmentId: number; repeat: number }[]) => void;
 }) {
   const floors = useAppStore((s) => s.layout.floors);
   const floor = floors.find((f) => f.id === marker.floorId);
   const rooms = floor?.rooms ?? [];
   const mapping = floor?.vacuumMapping;
   const zones = mapping?.zones ?? [];
+  const [multiMode, setMultiMode] = useState(false);
+  const [selected, setSelected] = useState<Record<string, number>>({}); // roomId → repeat count
 
   if (zones.length === 0) return null;
 
@@ -141,12 +148,49 @@ function RoomZoneCards({
     onStartRoomCleaning(roomName, segId, (useAppStore.getState().devices.deviceStates[marker.id] as any)?.data?.fanSpeedPreset);
   };
 
-  const startAllRooms = () => {
-    if (zones.length > 0) {
-      const firstName = getZoneName(zones[0].roomId);
-      startRoomCleaning(firstName, zones[0]);
-    }
+  const toggleRoom = (roomId: string) => {
+    setSelected((prev) => {
+      const next = { ...prev };
+      if (next[roomId]) {
+        delete next[roomId];
+      } else {
+        next[roomId] = 1;
+      }
+      return next;
+    });
   };
+
+  const adjustRepeat = (roomId: string, delta: number) => {
+    setSelected((prev) => {
+      const current = prev[roomId] ?? 1;
+      const next = Math.max(1, Math.min(3, current + delta));
+      return { ...prev, [roomId]: next };
+    });
+  };
+
+  const startMulti = () => {
+    const items: { roomName: string; segmentId: number; repeat: number }[] = [];
+    for (const zone of zones) {
+      const repeat = selected[zone.roomId];
+      if (!repeat) continue;
+      const segId = getZoneSegmentId(zone);
+      if (!segId) {
+        toast({
+          title: 'Segment-ID saknas',
+          description: `Rummet "${getZoneName(zone.roomId)}" saknar segment-ID.`,
+          variant: 'destructive',
+        });
+        return;
+      }
+      items.push({ roomName: getZoneName(zone.roomId), segmentId: segId, repeat });
+    }
+    if (items.length === 0) return;
+    onStartMultiRoomCleaning(items);
+    setSelected({});
+    setMultiMode(false);
+  };
+
+  const selectedCount = Object.keys(selected).length;
 
   return (
     <div className="space-y-2">
@@ -154,19 +198,54 @@ function RoomZoneCards({
         <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
           Rum ({zones.length})
         </p>
-        {zones.length > 1 && (
-          <Button size="sm" variant="outline" className="h-6 text-[9px] px-2 gap-1"
-            onClick={startAllRooms}>
-            <Play size={10} /> Städa alla rum
-          </Button>
-        )}
+        <Button size="sm" variant={multiMode ? 'default' : 'outline'} className="h-6 text-[9px] px-2 gap-1"
+          onClick={() => { setMultiMode(!multiMode); setSelected({}); }}>
+          <CheckSquare size={10} /> {multiMode ? 'Avbryt' : 'Välj flera'}
+        </Button>
       </div>
+
       <div className="grid grid-cols-2 gap-2">
         {zones.map((zone, i) => {
           const name = getZoneName(zone.roomId);
           const zc = ZONE_COLORS[i % ZONE_COLORS.length];
           const isActive = data.status === 'cleaning' && data.currentRoom?.toLowerCase() === name.toLowerCase();
           const hasSegId = !!getZoneSegmentId(zone);
+          const isSelected = !!selected[zone.roomId];
+          const repeat = selected[zone.roomId] ?? 1;
+
+          if (multiMode) {
+            return (
+              <div
+                key={zone.roomId}
+                className={cn(
+                  'relative rounded-xl border p-3 transition-all',
+                  isSelected
+                    ? `${zc.bg} ${zc.border} ring-1 ring-primary/30`
+                    : 'bg-secondary/30 border-border/50'
+                )}
+              >
+                <div className="flex items-center gap-2 mb-1.5">
+                  <Checkbox
+                    checked={isSelected}
+                    onCheckedChange={() => toggleRoom(zone.roomId)}
+                  />
+                  <span className="text-xs font-medium text-foreground truncate">{name}</span>
+                  {!hasSegId && <AlertCircle size={12} className="text-yellow-500 flex-shrink-0" />}
+                </div>
+                {isSelected && (
+                  <div className="flex items-center gap-1.5">
+                    <button onClick={() => adjustRepeat(zone.roomId, -1)} className="w-5 h-5 rounded bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground">
+                      <Minus size={10} />
+                    </button>
+                    <span className="text-[10px] font-medium text-foreground min-w-[20px] text-center">{repeat}x</span>
+                    <button onClick={() => adjustRepeat(zone.roomId, 1)} className="w-5 h-5 rounded bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground">
+                      <Plus size={10} />
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          }
 
           return (
             <button
@@ -200,6 +279,12 @@ function RoomZoneCards({
           );
         })}
       </div>
+
+      {multiMode && selectedCount > 0 && (
+        <Button size="sm" className="w-full h-9 text-xs gap-1" onClick={startMulti}>
+          <Play size={12} /> Städa {selectedCount} rum
+        </Button>
+      )}
     </div>
   );
 }
@@ -585,7 +670,12 @@ function VacuumCard({ marker, data, update }: { marker: DeviceMarker; data: Vacu
     { fan_speed: presetName },
     { fanSpeed: speed, fanSpeedPreset: presetName }
   );
-  const handleRoomCleaning = (roomName: string, segmentId: number, fanPreset?: string) => {
+  const handleRoomCleaning = async (roomName: string, segmentId: number, fanPreset?: string) => {
+    // If already cleaning, stop first then switch
+    if (data.status === 'cleaning') {
+      await sendRobotService('stop', {}, { status: 'idle', targetRoom: undefined });
+      await new Promise((r) => setTimeout(r, 800));
+    }
     const existing = data.cleaningLog ?? [];
     const logEntry: CleaningLogEntry = { room: roomName, startedAt: new Date().toISOString(), fanPreset };
     void sendRobotService(
@@ -596,6 +686,29 @@ function VacuumCard({ marker, data, update }: { marker: DeviceMarker; data: Vacu
         status: 'cleaning',
         currentRoom: roomName,
         targetRoom: roomName,
+        cleaningLog: [...existing, logEntry],
+      }
+    );
+  };
+
+  const handleMultiRoomCleaning = async (rooms: { roomName: string; segmentId: number; repeat: number }[]) => {
+    if (data.status === 'cleaning') {
+      await sendRobotService('stop', {}, { status: 'idle', targetRoom: undefined });
+      await new Promise((r) => setTimeout(r, 800));
+    }
+    const segments = rooms.map((r) => r.segmentId);
+    const maxRepeat = Math.max(...rooms.map((r) => r.repeat));
+    const roomNames = rooms.map((r) => r.roomName).join(', ');
+    const existing = data.cleaningLog ?? [];
+    const logEntry: CleaningLogEntry = { room: roomNames, startedAt: new Date().toISOString() };
+    void sendRobotService(
+      'send_command',
+      { command: 'app_segment_clean', params: { segments, repeat: maxRepeat } },
+      {
+        on: true,
+        status: 'cleaning',
+        currentRoom: rooms[0].roomName,
+        targetRoom: roomNames,
         cleaningLog: [...existing, logEntry],
       }
     );
@@ -613,7 +726,7 @@ function VacuumCard({ marker, data, update }: { marker: DeviceMarker; data: Vacu
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className={cn('w-10 h-10 rounded-full flex items-center justify-center bg-secondary', statusColor)}>
-            {data.status === 'error' ? <AlertTriangle size={20} /> : <span className="text-lg">🤖</span>}
+            {data.status === 'error' ? <AlertTriangle size={20} /> : <Bot size={20} />}
           </div>
           <div>
             <h3 className="text-sm font-semibold text-foreground">{marker.name || 'Robotdammsugare'}</h3>
@@ -680,7 +793,7 @@ function VacuumCard({ marker, data, update }: { marker: DeviceMarker; data: Vacu
       </div>
 
       {/* Room zone cards */}
-      <RoomZoneCards marker={marker} data={data} onStartRoomCleaning={handleRoomCleaning} />
+      <RoomZoneCards marker={marker} data={data} onStartRoomCleaning={handleRoomCleaning} onStartMultiRoomCleaning={handleMultiRoomCleaning} />
 
       {/* Locate */}
       <Button size="sm" variant="outline" className="w-full h-11 text-xs gap-1"
