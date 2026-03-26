@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
-import { Settings2, Check, GripHorizontal, Home, Camera as CameraIcon, DoorOpen, Palette, Cpu, Lightbulb, Thermometer, Wind, Camera, Power, Tv, Fan, Shield, Droplets, RotateCcw } from 'lucide-react';
+import { Settings2, Check, GripHorizontal, Home, Camera as CameraIcon, DoorOpen, Palette, Lightbulb, Thermometer, Wind, Camera, Power, Tv, Fan, Shield, Droplets, RotateCcw, Eye, Play, Pause, Square, Home as HomeIcon, Minus, Plus } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { cn } from '../../lib/utils';
 import type { HomeWidgetKey, WidgetOverlaySize, DeviceKind } from '../../store/types';
@@ -25,6 +25,11 @@ const WIDGET_WIDGETS: { key: HomeWidgetKey; label: string; hasSize: boolean }[] 
   { key: 'rooms', label: 'Rum', hasSize: false },
 ];
 
+const UTILITY_WIDGETS: { key: string; label: string; icon: typeof Settings2 }[] = [
+  { key: 'layoutButton', label: 'Anpassa', icon: Settings2 },
+  { key: 'markerPicker', label: 'Markörer', icon: Eye },
+];
+
 const DEFAULT_POSITIONS: Record<string, { x: number; y: number }> = {
   clock: { x: 3, y: 4 },
   weather: { x: 3, y: 14 },
@@ -35,6 +40,8 @@ const DEFAULT_POSITIONS: Record<string, { x: number; y: number }> = {
   nav: { x: 46, y: 90 },
   camera: { x: 90, y: 78 },
   rooms: { x: 82, y: 78 },
+  layoutButton: { x: 2, y: 2 },
+  markerPicker: { x: 92, y: 2 },
 };
 
 const widgetRenderers: Partial<Record<HomeWidgetKey, (size: WidgetOverlaySize) => React.ReactNode>> = {
@@ -79,6 +86,53 @@ const KIND_ICONS: Partial<Record<DeviceKind, typeof Lightbulb>> = {
   fan: Fan,
   alarm: Shield,
   humidifier: Droplets,
+};
+
+/** Mock control labels per device kind for layout preview */
+const DEVICE_MOCK_CONTROLS: Partial<Record<DeviceKind, React.ReactNode>> = {
+  vacuum: (
+    <div className="flex flex-wrap gap-1 px-3 pb-2.5">
+      <span className="px-2 py-1 rounded-lg bg-primary/10 text-primary text-[10px]">Städa</span>
+      <span className="px-2 py-1 rounded-lg bg-[hsl(var(--surface-elevated)/0.5)] text-muted-foreground text-[10px]">Paus</span>
+      <span className="px-2 py-1 rounded-lg bg-[hsl(var(--surface-elevated)/0.5)] text-muted-foreground text-[10px]">Stopp</span>
+      <span className="px-2 py-1 rounded-lg bg-[hsl(var(--surface-elevated)/0.5)] text-muted-foreground text-[10px]">Docka</span>
+    </div>
+  ),
+  media_screen: (
+    <div className="flex items-center gap-2 px-3 pb-2.5">
+      <span className="text-muted-foreground text-xs">⏮</span>
+      <span className="text-primary text-xs">▶</span>
+      <span className="text-muted-foreground text-xs">⏭</span>
+      <span className="text-muted-foreground text-xs">⏹</span>
+    </div>
+  ),
+  speaker: (
+    <div className="flex items-center gap-2 px-3 pb-2.5">
+      <span className="text-primary text-xs">▶</span>
+      <span className="text-muted-foreground text-[10px]">Vol −/+</span>
+    </div>
+  ),
+  light: (
+    <div className="px-3 pb-2.5">
+      <div className="h-1.5 rounded-full bg-[hsl(var(--surface-elevated)/0.5)] w-full">
+        <div className="h-full rounded-full bg-primary/40 w-2/3" />
+      </div>
+    </div>
+  ),
+  climate: (
+    <div className="flex items-center gap-2 px-3 pb-2.5">
+      <span className="text-muted-foreground text-xs">−</span>
+      <span className="text-foreground text-xs font-bold">22°</span>
+      <span className="text-muted-foreground text-xs">+</span>
+    </div>
+  ),
+  fan: (
+    <div className="flex gap-1 px-3 pb-2.5">
+      <span className="px-2 py-1 rounded-lg bg-[hsl(var(--surface-elevated)/0.5)] text-muted-foreground text-[10px]">Låg</span>
+      <span className="px-2 py-1 rounded-lg bg-[hsl(var(--surface-elevated)/0.5)] text-muted-foreground text-[10px]">Med</span>
+      <span className="px-2 py-1 rounded-lg bg-[hsl(var(--surface-elevated)/0.5)] text-muted-foreground text-[10px]">Hög</span>
+    </div>
+  ),
 };
 
 const ALWAYS_VISIBLE: Set<HomeWidgetKey> = new Set(['nav']);
@@ -207,7 +261,7 @@ export default function HomeLayoutEditor() {
         );
       })}
 
-      {/* Draggable device widgets */}
+      {/* Draggable device widgets — real size cards */}
       {selectedMarkers.map((m, idx) => {
         const defPos = getDefaultPos(m.id, idx);
         const config = widgetLayout[m.id];
@@ -217,6 +271,8 @@ export default function HomeLayoutEditor() {
         };
         const isDragging = dragging === m.id;
         const Icon = KIND_ICONS[m.kind] || Power;
+        const mockControls = DEVICE_MOCK_CONTROLS[m.kind as DeviceKind] ?? null;
+        const hasControls = !!mockControls;
 
         return (
           <div
@@ -250,10 +306,67 @@ export default function HomeLayoutEditor() {
                       ? 'ring-primary shadow-[0_0_32px_hsl(var(--amber-glow))]'
                       : 'ring-primary/30 group-hover:ring-primary/60',
                 )}>
-              <div className="glass-panel rounded-2xl px-4 py-3 flex items-center gap-3 backdrop-blur-xl min-w-[120px]">
-                <Icon size={16} className="text-muted-foreground" />
-                <span className="text-[13px] font-medium text-foreground truncate max-w-[100px]">{m.name || m.kind}</span>
-              </div>
+                  <div className={cn(
+                    'glass-panel rounded-2xl backdrop-blur-xl',
+                    hasControls ? 'min-w-[180px] max-w-[260px]' : 'min-w-[120px]',
+                  )}>
+                    <div className="flex items-center gap-2.5 px-3 py-2.5">
+                      <Icon size={16} className="text-primary" />
+                      <span className="text-[13px] font-semibold text-foreground truncate flex-1">{m.name || m.kind}</span>
+                      <span className="w-2.5 h-2.5 rounded-full bg-primary/50 shrink-0" />
+                    </div>
+                    {mockControls}
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        );
+      })}
+
+      {/* Draggable utility buttons (Anpassa + Markörer) */}
+      {UTILITY_WIDGETS.map(({ key, label, icon: UtilIcon }) => {
+        const config = widgetLayout[key];
+        const pos = {
+          x: config?.x ?? DEFAULT_POSITIONS[key]?.x ?? 50,
+          y: config?.y ?? DEFAULT_POSITIONS[key]?.y ?? 50,
+        };
+        const isDragging = dragging === key;
+
+        return (
+          <div
+            key={key}
+            className={cn(
+              'absolute z-20 group transition-shadow select-none',
+              isDragging ? 'cursor-grabbing z-[55]' : 'cursor-grab',
+            )}
+            style={{ left: `${pos.x}%`, top: `${pos.y}%`, touchAction: 'none' }}
+            onPointerDown={(e) => handlePointerDown(key, e)}
+          >
+            <div
+              className={cn(
+                'absolute -top-6 left-1/2 -translate-x-1/2 flex items-center gap-1 px-2 py-1 rounded-lg transition-all',
+                'bg-primary/90 text-primary-foreground text-[9px] font-semibold uppercase tracking-wider whitespace-nowrap',
+                isDragging ? 'opacity-100 scale-105' : 'opacity-70 group-hover:opacity-100',
+              )}
+            >
+              <GripHorizontal size={10} />
+              {label}
+            </div>
+            {(() => {
+              const inSafeZone = !isDragging && pos.x > 28 && pos.x < 72 && pos.y > 25 && pos.y < 75;
+              return (
+                <div className={cn(
+                  'rounded-full ring-2 transition-all',
+                  inSafeZone
+                    ? 'ring-red-500/50'
+                    : isDragging
+                      ? 'ring-primary shadow-[0_0_32px_hsl(var(--amber-glow))]'
+                      : 'ring-primary/30 group-hover:ring-primary/60',
+                )}>
+                  <div className="w-11 h-11 rounded-full glass-panel flex items-center justify-center text-muted-foreground">
+                    <UtilIcon size={16} />
+                  </div>
                 </div>
               );
             })()}
