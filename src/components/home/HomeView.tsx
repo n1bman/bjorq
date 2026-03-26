@@ -210,16 +210,16 @@ export default function HomeView({ longPressDeviceId, onDismissLongPress, fpsAct
             if (em.kind === 'vacuum') {
               return (
                 <div className="nn-widget p-3 mb-2 flex flex-wrap gap-2 animate-in fade-in slide-in-from-bottom-2 duration-150">
-                  <button onClick={() => callService?.(em.id, 'start')} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-primary/15 text-primary text-xs font-medium hover:bg-primary/25 transition-colors">
+                  <button onClick={() => callSvc('vacuum', 'start')} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-primary/15 text-primary text-xs font-medium hover:bg-primary/25 transition-colors">
                     <Play size={12} /> Städa
                   </button>
-                  <button onClick={() => callService?.(em.id, 'pause')} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-secondary/50 text-foreground text-xs font-medium hover:bg-secondary/70 transition-colors">
+                  <button onClick={() => callSvc('vacuum', 'pause')} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-secondary/50 text-foreground text-xs font-medium hover:bg-secondary/70 transition-colors">
                     <Pause size={12} /> Paus
                   </button>
-                  <button onClick={() => callService?.(em.id, 'stop')} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-secondary/50 text-foreground text-xs font-medium hover:bg-secondary/70 transition-colors">
+                  <button onClick={() => callSvc('vacuum', 'stop')} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-secondary/50 text-foreground text-xs font-medium hover:bg-secondary/70 transition-colors">
                     <Square size={12} /> Stopp
                   </button>
-                  <button onClick={() => callService?.(em.id, 'return_to_base')} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-secondary/50 text-foreground text-xs font-medium hover:bg-secondary/70 transition-colors">
+                  <button onClick={() => callSvc('vacuum', 'return_to_base')} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-secondary/50 text-foreground text-xs font-medium hover:bg-secondary/70 transition-colors">
                     <HomeIcon size={12} /> Docka
                   </button>
                 </div>
@@ -232,11 +232,11 @@ export default function HomeView({ longPressDeviceId, onDismissLongPress, fpsAct
               return (
                 <div className="nn-widget p-3 mb-2 flex items-center gap-3 animate-in fade-in slide-in-from-bottom-2 duration-150">
                   <span className="text-xs text-muted-foreground">Temp</span>
-                  <button onClick={() => callService?.(em.id, 'set_temperature', { temperature: temp - 0.5 })} className="w-8 h-8 rounded-lg bg-secondary/50 flex items-center justify-center text-foreground hover:bg-secondary/70 transition-colors">
+                  <button onClick={() => callSvc('climate', 'set_temperature', { temperature: temp - 0.5 })} className="w-8 h-8 rounded-lg bg-secondary/50 flex items-center justify-center text-foreground hover:bg-secondary/70 transition-colors">
                     <Minus size={14} />
                   </button>
                   <span className="text-sm font-bold text-foreground min-w-[3ch] text-center">{temp}°</span>
-                  <button onClick={() => callService?.(em.id, 'set_temperature', { temperature: temp + 0.5 })} className="w-8 h-8 rounded-lg bg-secondary/50 flex items-center justify-center text-foreground hover:bg-secondary/70 transition-colors">
+                  <button onClick={() => callSvc('climate', 'set_temperature', { temperature: temp + 0.5 })} className="w-8 h-8 rounded-lg bg-secondary/50 flex items-center justify-center text-foreground hover:bg-secondary/70 transition-colors">
                     <Plus size={14} />
                   </button>
                 </div>
@@ -246,7 +246,7 @@ export default function HomeView({ longPressDeviceId, onDismissLongPress, fpsAct
             if (em.kind === 'media_screen') {
               return (
                 <div className="nn-widget p-3 mb-2 flex flex-wrap gap-2 animate-in fade-in slide-in-from-bottom-2 duration-150">
-                  <button onClick={() => callService?.(em.id, emIsOn ? 'media_pause' : 'media_play')} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-primary/15 text-primary text-xs font-medium hover:bg-primary/25 transition-colors">
+                  <button onClick={() => callSvc('media_player', emIsOn ? 'media_pause' : 'media_play')} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-primary/15 text-primary text-xs font-medium hover:bg-primary/25 transition-colors">
                     {emIsOn ? <Pause size={12} /> : <Play size={12} />}
                     {emIsOn ? 'Paus' : 'Spela'}
                   </button>
