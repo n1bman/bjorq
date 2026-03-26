@@ -83,7 +83,7 @@ export default function HomeLayoutEditor() {
     const config = widgetLayout[key];
     const pos = { x: config?.x ?? DEFAULT_POSITIONS[key].x, y: config?.y ?? DEFAULT_POSITIONS[key].y };
     dragStartRef.current = { startX: e.clientX, startY: e.clientY, origX: pos.x, origY: pos.y };
-    (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+    containerRef.current?.setPointerCapture(e.pointerId);
   }, [widgetLayout]);
 
   const handlePointerMove = useCallback((e: React.PointerEvent) => {

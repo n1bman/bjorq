@@ -1702,7 +1702,7 @@ function LightMarkerLightOnly({ position, id, onSelect }: { position: [number, n
         <pointLight color={lightColor} intensity={intensity} distance={cfg.distance} decay={2} />
       )}
       {lightType === 'strip' && (
-        <pointLight color={lightColor} intensity={intensity} distance={cfg.distance} decay={1.5} />
+        <pointLight color={lightColor} intensity={intensity} distance={cfg.distance} decay={2} />
       )}
       {lightType === 'lightbar' && (
         <>

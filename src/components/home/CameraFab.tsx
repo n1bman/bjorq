@@ -42,9 +42,19 @@ export default function CameraFab({ style }: CameraFabProps) {
   };
 
   return (
-    <div className="z-50 flex flex-col items-end gap-2 pointer-events-auto" style={style}>
+    <div className="z-50 flex flex-col-reverse items-end gap-2 pointer-events-auto" style={style}>
+      <button
+        onClick={() => setOpen(!open)}
+        className={cn(
+          'w-14 h-14 rounded-full glass-panel flex items-center justify-center transition-all',
+          open ? 'text-primary amber-glow' : 'text-muted-foreground hover:text-foreground'
+        )}
+      >
+        <Camera size={20} />
+      </button>
+
       {open && (
-        <div className="glass-panel rounded-xl p-1.5 flex flex-col gap-1 animate-in fade-in slide-in-from-bottom-2 duration-200">
+        <div className="glass-panel rounded-xl p-1.5 flex flex-col gap-1 animate-in fade-in slide-in-from-top-2 duration-200">
           {allPresets.map(({ key, label, icon: Icon }) => (
             <button
               key={key}
@@ -62,16 +72,6 @@ export default function CameraFab({ style }: CameraFabProps) {
           ))}
         </div>
       )}
-
-      <button
-        onClick={() => setOpen(!open)}
-        className={cn(
-          'w-14 h-14 rounded-full glass-panel flex items-center justify-center transition-all',
-          open ? 'text-primary amber-glow' : 'text-muted-foreground hover:text-foreground'
-        )}
-      >
-        <Camera size={20} />
-      </button>
     </div>
   );
 }
