@@ -994,6 +994,8 @@ export interface CustomColors {
   sliderColor?: string;
   bgColor?: string;
   menuColor?: string;
+  cardColor?: string;
+  textColor?: string;
   glassOpacity?: number;    // 0.5-1.0
   borderOpacity?: number;   // 0-0.3
 }

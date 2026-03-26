@@ -3,6 +3,7 @@ import { Button } from '../../ui/button';
 import { cn } from '../../../lib/utils';
 import { Monitor, Palette, Paintbrush, RotateCcw, Sliders } from 'lucide-react';
 import { Slider } from '../../ui/slider';
+import { useRef, useCallback } from 'react';
 import type { CustomColors } from '../../../store/types';
 
 const themes = [
@@ -33,6 +34,13 @@ interface ColorPickerDotProps {
 }
 
 function ColorPickerDot({ label, value, onChange }: ColorPickerDotProps) {
+  const rafRef = useRef<number>(0);
+
+  const debouncedChange = useCallback((hex: string) => {
+    cancelAnimationFrame(rafRef.current);
+    rafRef.current = requestAnimationFrame(() => onChange(hex));
+  }, [onChange]);
+
   return (
     <div className="flex flex-col items-center gap-1">
       <label className="relative cursor-pointer group">
@@ -43,7 +51,7 @@ function ColorPickerDot({ label, value, onChange }: ColorPickerDotProps) {
         <input
           type="color"
           value={value || '#1a1a2e'}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={(e) => debouncedChange(e.target.value)}
           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
         />
       </label>
@@ -66,11 +74,12 @@ export default function ThemeCard() {
   };
 
   const hasCustom = !!(custom.buttonColor || custom.sliderColor || custom.bgColor || custom.menuColor ||
+    custom.cardColor || custom.textColor ||
     custom.glassOpacity !== undefined || custom.borderOpacity !== undefined);
 
   return (
     <div className="glass-panel rounded-2xl p-[var(--space-panel)] space-y-4">
-      {/* Theme */}
+      {/* ── Färdiga teman ── */}
       <div className="space-y-2">
         <div className="flex items-center gap-2">
           <Monitor size={14} className="text-muted-foreground" />
@@ -91,7 +100,7 @@ export default function ThemeCard() {
         </div>
       </div>
 
-      {/* Accent color */}
+      {/* ── Accentfärg ── */}
       <div className="space-y-2">
         <div className="flex items-center gap-2">
           <Palette size={14} className="text-muted-foreground" />
@@ -113,7 +122,7 @@ export default function ThemeCard() {
         </div>
       </div>
 
-      {/* Background */}
+      {/* ── Bakgrund ── */}
       <div className="space-y-2">
         <span className="text-xs font-semibold text-foreground">Bakgrund</span>
         <div className="flex gap-2">
@@ -131,12 +140,12 @@ export default function ThemeCard() {
         </div>
       </div>
 
-      {/* Custom colors */}
+      {/* ── Eget tema / Anpassat ── */}
       <div className="space-y-3 border-t border-border pt-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Paintbrush size={14} className="text-muted-foreground" />
-            <span className="text-xs font-semibold text-foreground">Anpassat</span>
+            <span className="text-xs font-semibold text-foreground">Eget tema</span>
           </div>
           {hasCustom && (
             <button
@@ -150,12 +159,18 @@ export default function ThemeCard() {
           )}
         </div>
 
-        {/* Color pickers */}
+        {/* Color pickers row 1 */}
         <div className="flex justify-between px-2">
           <ColorPickerDot label="Knappar" value={custom.buttonColor} onChange={(c) => updateCustom({ buttonColor: c })} />
           <ColorPickerDot label="Slider" value={custom.sliderColor} onChange={(c) => updateCustom({ sliderColor: c })} />
           <ColorPickerDot label="Bakgrund" value={custom.bgColor} onChange={(c) => updateCustom({ bgColor: c })} />
+        </div>
+
+        {/* Color pickers row 2 */}
+        <div className="flex justify-between px-2">
           <ColorPickerDot label="Meny" value={custom.menuColor} onChange={(c) => updateCustom({ menuColor: c })} />
+          <ColorPickerDot label="Kort" value={custom.cardColor} onChange={(c) => updateCustom({ cardColor: c })} />
+          <ColorPickerDot label="Text" value={custom.textColor} onChange={(c) => updateCustom({ textColor: c })} />
         </div>
 
         {/* Transparency slider */}

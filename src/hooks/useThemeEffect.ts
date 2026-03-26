@@ -74,25 +74,25 @@ const lightPalette: ThemePalette = {
 
 const nordicPalette: ThemePalette = {
   '--background': '225 20% 7%',
-  '--foreground': '40 15% 90%',
-  '--card': '225 18% 10%',
-  '--card-foreground': '40 15% 90%',
-  '--popover': '225 18% 10%',
-  '--popover-foreground': '40 15% 90%',
-  '--secondary': '225 14% 14%',
-  '--secondary-foreground': '40 12% 78%',
-  '--muted': '225 12% 12%',
-  '--muted-foreground': '220 8% 48%',
-  '--border': '30 8% 18%',
-  '--input': '225 14% 15%',
+  '--foreground': '38 18% 88%',
+  '--card': '220 15% 9%',
+  '--card-foreground': '38 18% 88%',
+  '--popover': '220 15% 9%',
+  '--popover-foreground': '38 18% 88%',
+  '--secondary': '30 12% 16%',
+  '--secondary-foreground': '40 20% 82%',
+  '--muted': '25 10% 13%',
+  '--muted-foreground': '35 10% 50%',
+  '--border': '30 12% 20%',
+  '--input': '30 10% 15%',
   '--sidebar-background': '225 22% 6%',
-  '--sidebar-foreground': '40 12% 78%',
-  '--sidebar-accent': '225 14% 11%',
-  '--sidebar-accent-foreground': '40 12% 78%',
+  '--sidebar-foreground': '40 20% 82%',
+  '--sidebar-accent': '30 10% 13%',
+  '--sidebar-accent-foreground': '40 20% 82%',
   '--sidebar-border': '30 8% 15%',
-  '--surface': '225 16% 11%',
-  '--glass': '225 20% 9% / 0.88',
-  '--glass-border': '30 10% 20%',
+  '--surface': '25 12% 11%',
+  '--glass': '225 18% 8% / 0.88',
+  '--glass-border': '30 12% 22%',
 };
 
 const palettes: Record<string, ThemePalette> = {
@@ -153,15 +153,24 @@ export function useThemeEffect() {
         const menuHsl = hexToHsl(customColors.menuColor);
         root.style.setProperty('--sidebar-background', menuHsl);
       }
+      if (customColors.cardColor && customColors.cardColor.startsWith('#') && customColors.cardColor.length >= 7) {
+        const cardHsl = hexToHsl(customColors.cardColor);
+        root.style.setProperty('--card', cardHsl);
+        root.style.setProperty('--popover', cardHsl);
+      }
+      if (customColors.textColor && customColors.textColor.startsWith('#') && customColors.textColor.length >= 7) {
+        const textHsl = hexToHsl(customColors.textColor);
+        root.style.setProperty('--foreground', textHsl);
+        root.style.setProperty('--card-foreground', textHsl);
+        root.style.setProperty('--popover-foreground', textHsl);
+      }
       if (customColors.glassOpacity !== undefined) {
-        // Re-apply glass with custom opacity
         const basePalette = palette['--glass'] || '222 16% 15% / 0.72';
         const hslPart = basePalette.split('/')[0].trim();
         root.style.setProperty('--glass', `${hslPart} / ${customColors.glassOpacity}`);
       }
       if (customColors.borderOpacity !== undefined) {
         const borderBase = palette['--border'] || '222 12% 21%';
-        // Parse the HSL and adjust lightness based on opacity
         const newL = Math.round(21 * (0.5 + customColors.borderOpacity * 2));
         const parts = borderBase.split(' ');
         if (parts.length >= 3) {
