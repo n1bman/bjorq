@@ -31,12 +31,13 @@ const backgrounds = [
 
 /* ── helpers ── */
 function addToRecent(recent: string[] | undefined, color: string): string[] {
-  const list = (recent || []).filter(c => c !== color);
-  list.unshift(color);
+  const norm = color.toLowerCase();
+  const list = (recent || []).filter(c => c.toLowerCase() !== norm);
+  list.unshift(norm);
   return list.slice(0, 6);
 }
 
-/* ── ColorPickerDot ── */
+/* ── ColorPickerDot — commit-based (only saves on blur/close) ── */
 interface ColorPickerDotProps {
   label: string;
   value: string | undefined;
@@ -44,19 +45,25 @@ interface ColorPickerDotProps {
 }
 
 function ColorPickerDot({ label, value, onChange }: ColorPickerDotProps) {
-  const rafRef = useRef<number>(0);
-  const lastRef = useRef<string>('');
+  const committedRef = useRef(false);
 
   const handleChange = useCallback((hex: string) => {
-    lastRef.current = hex;
-    cancelAnimationFrame(rafRef.current);
-    rafRef.current = requestAnimationFrame(() => onChange(hex));
+    // Live preview via CSS custom property would be ideal but
+    // for simplicity we just track the latest value
+    committedRef.current = false;
+  }, []);
+
+  const handleBlur = useCallback((e: React.FocusEvent<HTMLInputElement>) => {
+    if (!committedRef.current) {
+      committedRef.current = true;
+      onChange(e.target.value);
+    }
   }, [onChange]);
 
-  // Ensure final value is saved on blur
-  const handleBlur = useCallback(() => {
-    if (lastRef.current) onChange(lastRef.current);
-  }, [onChange]);
+  const handleChangeCommit = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    // Native color picker fires onChange on every drag — we only commit on blur
+    // But we store the latest value in a ref so blur can read it
+  }, []);
 
   return (
     <div className="flex flex-col items-center gap-1">
@@ -68,8 +75,32 @@ function ColorPickerDot({ label, value, onChange }: ColorPickerDotProps) {
         <input
           type="color"
           value={value || '#1a1a2e'}
-          onChange={(e) => handleChange(e.target.value)}
+          onChange={handleChangeCommit}
           onBlur={handleBlur}
+          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+        />
+      </label>
+      <span className="text-[9px] text-muted-foreground">{label}</span>
+    </div>
+  );
+}
+
+/* ── Smarter ColorPickerDot that commits final value ── */
+function CommitColorPicker({ label, value, onCommit }: { label: string; value: string | undefined; onCommit: (hex: string) => void }) {
+  const lastRef = useRef(value || '#1a1a2e');
+
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <label className="relative cursor-pointer group">
+        <div
+          className="w-7 h-7 rounded-full border-2 border-border transition-all group-hover:scale-110"
+          style={{ backgroundColor: value || 'hsl(var(--secondary))' }}
+        />
+        <input
+          type="color"
+          value={value || '#1a1a2e'}
+          onChange={(e) => { lastRef.current = e.target.value; }}
+          onBlur={() => onCommit(lastRef.current)}
           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
         />
       </label>
@@ -86,14 +117,14 @@ export default function ThemeCard() {
   const [themeName, setThemeName] = useState('');
   const [showSaveInput, setShowSaveInput] = useState(false);
 
-  const updateCustom = (changes: Partial<CustomColors>) => {
-    setProfile({ customColors: { ...custom, ...changes } });
-  };
-
-  const updateCustomWithRecent = (changes: Partial<CustomColors>) => {
+  const commitCustomColor = (changes: Partial<CustomColors>) => {
     const newColor = Object.values(changes).find(v => typeof v === 'string') as string | undefined;
     const recentColors = newColor ? addToRecent(custom.recentColors, newColor) : custom.recentColors;
     setProfile({ customColors: { ...custom, ...changes, recentColors } });
+  };
+
+  const updateCustom = (changes: Partial<CustomColors>) => {
+    setProfile({ customColors: { ...custom, ...changes } });
   };
 
   const setAccentColor = (color: string) => {
@@ -126,10 +157,6 @@ export default function ThemeCard() {
   const loadTheme = (t: SavedTheme) => {
     setProfile({ accentColor: t.accentColor, customColors: { ...t.customColors, recentColors: custom.recentColors } });
   };
-
-  const hasCustom = !!(custom.buttonColor || custom.sliderColor || custom.bgColor || custom.menuColor ||
-    custom.cardColor || custom.textColor ||
-    custom.glassOpacity !== undefined || custom.borderOpacity !== undefined);
 
   const recentColors = (custom.recentColors || []).filter(Boolean);
 
@@ -184,9 +211,9 @@ export default function ThemeCard() {
         )}
       </div>
 
-      {/* ── Bakgrund ── */}
+      {/* ── Scen-bakgrund (3D) ── */}
       <div className="space-y-2">
-        <span className="text-xs font-semibold text-foreground">Bakgrund</span>
+        <span className="text-xs font-semibold text-foreground">Scen-bakgrund</span>
         <div className="flex gap-2">
           {backgrounds.map(({ key, label }) => (
             <button
@@ -203,6 +230,16 @@ export default function ThemeCard() {
             </button>
           ))}
         </div>
+        {profile.dashboardBg === 'solid' && (
+          <div className="flex items-center gap-3 pt-1">
+            <span className="text-[10px] text-muted-foreground">Scen-overlay färg</span>
+            <CommitColorPicker
+              label=""
+              value={custom.sceneOverlayColor || '#0a0a14'}
+              onCommit={(c) => commitCustomColor({ sceneOverlayColor: c })}
+            />
+          </div>
+        )}
       </div>
 
       {/* ── Eget tema / Anpassat ── */}
@@ -253,7 +290,7 @@ export default function ThemeCard() {
                     onClick={() => setAccentColor(color)}
                   />
                 ))}
-                {/* Custom accent picker */}
+                {/* Custom accent picker — commit on blur */}
                 <label className="relative cursor-pointer group">
                   <div
                     className={cn(
@@ -269,10 +306,7 @@ export default function ThemeCard() {
                   <input
                     type="color"
                     value={profile.accentColor}
-                    onChange={(e) => {
-                      cancelAnimationFrame((window as any).__accentRaf || 0);
-                      (window as any).__accentRaf = requestAnimationFrame(() => setAccentColor(e.target.value));
-                    }}
+                    onChange={() => {/* preview only, commit on blur */}}
                     onBlur={(e) => setAccentColor(e.target.value)}
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                   />
@@ -280,18 +314,18 @@ export default function ThemeCard() {
               </div>
             </div>
 
-            {/* Color pickers */}
+            {/* Color pickers — commit on blur */}
             <div className="space-y-2">
               <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Färger</span>
               <div className="flex justify-between px-2">
-                <ColorPickerDot label="Knappar" value={custom.buttonColor} onChange={(c) => updateCustomWithRecent({ buttonColor: c })} />
-                <ColorPickerDot label="Slider-spår" value={custom.sliderColor} onChange={(c) => updateCustomWithRecent({ sliderColor: c })} />
-                <ColorPickerDot label="Bakgrund" value={custom.bgColor} onChange={(c) => updateCustomWithRecent({ bgColor: c })} />
+                <CommitColorPicker label="Knappar" value={custom.buttonColor} onCommit={(c) => commitCustomColor({ buttonColor: c })} />
+                <CommitColorPicker label="Slider-spår" value={custom.sliderColor} onCommit={(c) => commitCustomColor({ sliderColor: c })} />
+                <CommitColorPicker label="Panel-bg" value={custom.bgColor} onCommit={(c) => commitCustomColor({ bgColor: c })} />
               </div>
               <div className="flex justify-between px-2">
-                <ColorPickerDot label="Meny" value={custom.menuColor} onChange={(c) => updateCustomWithRecent({ menuColor: c })} />
-                <ColorPickerDot label="Kort" value={custom.cardColor} onChange={(c) => updateCustomWithRecent({ cardColor: c })} />
-                <ColorPickerDot label="Text" value={custom.textColor} onChange={(c) => updateCustomWithRecent({ textColor: c })} />
+                <CommitColorPicker label="Meny" value={custom.menuColor} onCommit={(c) => commitCustomColor({ menuColor: c })} />
+                <CommitColorPicker label="Kort" value={custom.cardColor} onCommit={(c) => commitCustomColor({ cardColor: c })} />
+                <CommitColorPicker label="Text" value={custom.textColor} onCommit={(c) => commitCustomColor({ textColor: c })} />
               </div>
             </div>
 
