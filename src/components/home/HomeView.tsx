@@ -297,6 +297,84 @@ export default function HomeView({ longPressDeviceId, onDismissLongPress, fpsAct
                 </button>
               </div>
             )}
+
+            {/* Light — brightness slider + on/off */}
+            {isExpanded && m.kind === 'light' && (() => {
+              const lightData = deviceStates[m.id]?.data as any;
+              const brightness = lightData?.brightness ?? 255;
+              return (
+                <div className="glass-panel rounded-2xl p-3 mt-2 flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-150 backdrop-blur-xl border border-[hsl(var(--glass-border)/0.15)]">
+                  <span className="text-xs text-muted-foreground shrink-0">Ljus</span>
+                  <input
+                    type="range"
+                    min={0}
+                    max={255}
+                    value={brightness}
+                    onChange={(e) => callSvc('light', 'turn_on', { brightness: +e.target.value })}
+                    className="flex-1 accent-[hsl(var(--primary))] h-1.5"
+                  />
+                  <button
+                    onClick={() => {
+                      if (isOn) callSvc('light', 'turn_off');
+                      else callSvc('light', 'turn_on');
+                      toggleDeviceState(m.id);
+                    }}
+                    className="px-3 py-2 rounded-xl bg-primary/15 text-primary text-xs font-medium hover:bg-primary/25 transition-colors"
+                  >
+                    {isOn ? 'Av' : 'På'}
+                  </button>
+                </div>
+              );
+            })()}
+
+            {/* Fan — speed presets + on/off */}
+            {isExpanded && m.kind === 'fan' && (
+              <div className="glass-panel rounded-2xl p-3 mt-2 flex flex-wrap gap-2 animate-in fade-in slide-in-from-top-2 duration-150 backdrop-blur-xl border border-[hsl(var(--glass-border)/0.15)]">
+                <button onClick={() => callSvc('fan', 'set_percentage', { percentage: 33 })} className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[hsl(var(--surface-elevated)/0.5)] text-foreground text-xs font-medium hover:bg-[hsl(var(--surface-elevated)/0.7)] transition-colors">
+                  Låg
+                </button>
+                <button onClick={() => callSvc('fan', 'set_percentage', { percentage: 66 })} className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[hsl(var(--surface-elevated)/0.5)] text-foreground text-xs font-medium hover:bg-[hsl(var(--surface-elevated)/0.7)] transition-colors">
+                  Medium
+                </button>
+                <button onClick={() => callSvc('fan', 'set_percentage', { percentage: 100 })} className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[hsl(var(--surface-elevated)/0.5)] text-foreground text-xs font-medium hover:bg-[hsl(var(--surface-elevated)/0.7)] transition-colors">
+                  Hög
+                </button>
+                <button
+                  onClick={() => {
+                    if (isOn) callSvc('fan', 'turn_off');
+                    else callSvc('fan', 'turn_on');
+                    toggleDeviceState(m.id);
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-primary/15 text-primary text-xs font-medium hover:bg-primary/25 transition-colors"
+                >
+                  {isOn ? 'Av' : 'På'}
+                </button>
+              </div>
+            )}
+
+            {/* Speaker / Soundbar — volume + play/pause */}
+            {isExpanded && (m.kind === 'speaker' || m.kind === 'soundbar') && (() => {
+              const mediaData = deviceStates[m.id]?.data as any;
+              const volume = mediaData?.volume ?? 50;
+              return (
+                <div className="glass-panel rounded-2xl p-3 mt-2 flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-150 backdrop-blur-xl border border-[hsl(var(--glass-border)/0.15)]">
+                  <button
+                    onClick={() => callSvc('media_player', isOn ? 'media_pause' : 'media_play')}
+                    className="px-3 py-2 rounded-xl bg-primary/15 text-primary text-xs font-medium hover:bg-primary/25 transition-colors"
+                  >
+                    {isOn ? <Pause size={12} /> : <Play size={12} />}
+                  </button>
+                  <span className="text-xs text-muted-foreground">Vol</span>
+                  <button onClick={() => callSvc('media_player', 'volume_set', { volume_level: Math.max(0, (volume - 10) / 100) })} className="w-7 h-7 rounded-lg bg-[hsl(var(--surface-elevated)/0.5)] flex items-center justify-center text-foreground hover:bg-[hsl(var(--surface-elevated)/0.7)] transition-colors">
+                    <Minus size={12} />
+                  </button>
+                  <span className="text-sm font-bold text-foreground min-w-[3ch] text-center">{volume}%</span>
+                  <button onClick={() => callSvc('media_player', 'volume_set', { volume_level: Math.min(1, (volume + 10) / 100) })} className="w-7 h-7 rounded-lg bg-[hsl(var(--surface-elevated)/0.5)] flex items-center justify-center text-foreground hover:bg-[hsl(var(--surface-elevated)/0.7)] transition-colors">
+                    <Plus size={12} />
+                  </button>
+                </div>
+              );
+            })()}
           </div>
         );
       })}
