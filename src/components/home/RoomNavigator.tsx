@@ -43,13 +43,23 @@ export default function RoomNavigator({ style }: RoomNavigatorProps) {
   };
 
   return (
-    <div className="z-50 flex flex-col items-end gap-2 pointer-events-auto" style={style}>
+    <div className="z-50 flex flex-col-reverse items-end gap-2 pointer-events-auto" style={style}>
+      <button
+        onClick={() => { if (open) handleClose(); else setOpen(true); }}
+        className={cn(
+          'w-14 h-14 rounded-full glass-panel flex items-center justify-center transition-all',
+          open || selectedRoomId ? 'text-primary amber-glow' : 'text-muted-foreground hover:text-foreground'
+        )}
+      >
+        <DoorOpen size={20} />
+      </button>
+
       {selectedRoomId && (
         <RoomDetailPanel roomId={selectedRoomId} onClose={() => setSelectedRoomId(null)} />
       )}
 
       {open && !selectedRoomId && (
-        <div className="glass-panel rounded-xl p-3 w-64 max-h-80 overflow-y-auto animate-in fade-in slide-in-from-bottom-2 duration-200 space-y-1">
+        <div className="glass-panel rounded-xl p-3 w-64 max-h-80 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200 space-y-1">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-semibold text-foreground">Rum</span>
             <button onClick={handleClose} className="text-muted-foreground hover:text-foreground">
@@ -81,16 +91,6 @@ export default function RoomNavigator({ style }: RoomNavigatorProps) {
           })}
         </div>
       )}
-
-      <button
-        onClick={() => { if (open) handleClose(); else setOpen(true); }}
-        className={cn(
-          'w-14 h-14 rounded-full glass-panel flex items-center justify-center transition-all',
-          open || selectedRoomId ? 'text-primary amber-glow' : 'text-muted-foreground hover:text-foreground'
-        )}
-      >
-        <DoorOpen size={20} />
-      </button>
     </div>
   );
 }

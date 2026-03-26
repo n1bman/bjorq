@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import { getEnergyEntityViews } from '../../../lib/haMenuSelectors';
 import { cn } from '../../../lib/utils';
 import { useAppStore } from '../../../store/useAppStore';
-import EnergySparkline from './EnergySparkline';
+
 import type { WidgetOverlaySize } from '../../../store/types';
 
 interface Props {
@@ -109,11 +109,8 @@ export default function EnergyWidget({ alwaysExpanded = false, size = 'normal' }
           <span className="text-xl font-bold font-display text-foreground whitespace-nowrap">{totalWatts.toLocaleString('sv-SE')} W</span>
           <span className="text-[10px] text-muted-foreground/70">{totalDailyKwh.toFixed(1)} kWh</span>
         </div>
-        <div className="mt-1.5">
-          <EnergySparkline width={120} height={24} totalWatts={totalWatts} />
-        </div>
         <div className="mt-1 text-[9px] text-muted-foreground/50">
-          ~{dailyCost.toFixed(1)} {energyConfig.currency} idag
+          ~{dailyCost.toFixed(1)} {energyConfig.currency} idag · {trackedDevices.length} enheter
         </div>
       </div>
     );

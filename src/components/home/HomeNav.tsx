@@ -49,9 +49,22 @@ export default function HomeNav({ style }: HomeNavProps) {
   const CurrentIcon = currentMode.icon;
 
   return (
-    <div className="z-50 pointer-events-auto" style={style}>
+    <div className="z-50 pointer-events-auto flex flex-col-reverse items-center gap-3" style={style}>
+      <div>
+        <button
+          onClick={handleToggle}
+          className={cn(
+            'w-14 h-14 rounded-full glass-panel flex items-center justify-center transition-all',
+            expanded ? 'text-primary amber-glow rotate-45' : 'text-muted-foreground hover:text-foreground'
+          )}
+        >
+          <CurrentIcon size={22} />
+        </button>
+        <div className="h-[env(safe-area-inset-bottom)]" />
+      </div>
+
       {showAdminTips && (
-        <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-64 glass-panel rounded-xl p-3 space-y-1 text-[10px] text-muted-foreground animate-in fade-in slide-in-from-bottom-2">
+        <div className="w-64 glass-panel rounded-xl p-3 space-y-1 text-[10px] text-muted-foreground animate-in fade-in slide-in-from-top-2">
           <p className="text-xs font-semibold text-foreground">Admin / Exit-tips</p>
           <p><kbd className="bg-secondary px-1 rounded text-foreground">ESC</kbd> — Lämna browser fullscreen</p>
           <p><kbd className="bg-secondary px-1 rounded text-foreground">Alt+F4</kbd> — Stäng kiosk (Linux)</p>
@@ -67,7 +80,7 @@ export default function HomeNav({ style }: HomeNavProps) {
 
       {expanded && (
         <div
-          className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 flex gap-2 animate-in fade-in zoom-in-90 duration-200"
+          className="flex gap-2 animate-in fade-in zoom-in-90 duration-200"
           onPointerDown={handlePointerDown}
           onPointerUp={handlePointerUp}
           onPointerLeave={handlePointerUp}
@@ -89,18 +102,6 @@ export default function HomeNav({ style }: HomeNavProps) {
           ))}
         </div>
       )}
-
-      <button
-        onClick={handleToggle}
-        className={cn(
-          'w-14 h-14 rounded-full glass-panel flex items-center justify-center transition-all',
-          expanded ? 'text-primary amber-glow rotate-45' : 'text-muted-foreground hover:text-foreground'
-        )}
-      >
-        <CurrentIcon size={22} />
-      </button>
-
-      <div className="h-[env(safe-area-inset-bottom)]" />
     </div>
   );
 }
