@@ -963,6 +963,18 @@ export interface SceneSnapshot {
   action: 'on' | 'off' | 'set';
 }
 
+export interface SceneTimer {
+  enabled: boolean;
+  activateAt?: string;        // "HH:MM"
+  deactivateAfter?: number;   // minutes
+  repeat?: 'once' | 'daily' | 'weekdays' | 'weekends';
+}
+
+export interface SceneAutomation {
+  enabled: boolean;
+  trigger: AutomationTrigger;
+}
+
 export interface SavedScene {
   id: string;
   name: string;
@@ -973,6 +985,8 @@ export interface SavedScene {
   scope?: 'global' | 'room' | 'custom';
   cameraMode?: 'none' | 'first-linked-room' | 'custom';
   customCameraPreset?: RoomCameraPreset;
+  timer?: SceneTimer;
+  automation?: SceneAutomation;
 }
 
 export interface UserProfile {
