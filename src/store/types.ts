@@ -984,6 +984,7 @@ export interface SavedScene {
   id: string;
   name: string;
   icon: string;
+  iconColor?: string;
   snapshots: SceneSnapshot[];
   createdAt: string;
   linkedRoomIds?: string[];

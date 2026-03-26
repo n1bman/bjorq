@@ -1656,7 +1656,8 @@ function LightMarkerLightOnly({ position, id, onSelect }: { position: [number, n
   const spotLightRef = useRef<THREE.SpotLight>(null);
 
   const lightColor = useMemo(() => {
-    if (!lightData || !isOn) return new THREE.Color('#555555');
+    if (!isOn) return new THREE.Color('#555555');
+    if (!lightData) return new THREE.Color('#f5c542'); // warm preview — same as LightMarker
     if (lightData.colorMode === 'rgb' && lightData.rgbColor) {
       return new THREE.Color(lightData.rgbColor[0] / 255, lightData.rgbColor[1] / 255, lightData.rgbColor[2] / 255);
     }
@@ -1664,7 +1665,7 @@ function LightMarkerLightOnly({ position, id, onSelect }: { position: [number, n
       return miredsToColor(lightData.colorTemp);
     }
     return new THREE.Color('#f5c542');
-  }, [lightData?.colorMode, lightData?.rgbColor?.[0], lightData?.rgbColor?.[1], lightData?.rgbColor?.[2], lightData?.colorTemp, isOn]);
+  }, [lightData?.colorMode, lightData?.rgbColor?.[0], lightData?.rgbColor?.[1], lightData?.rgbColor?.[2], lightData?.colorTemp, isOn, hasState]);
 
   const cfg = useMemo(() => {
     const defaults: Record<string, { intensity: number; distance: number; angle: number; penumbra: number }> = {
