@@ -1,26 +1,51 @@
 
 
-# Fix: CategoryManager placement + brightness-bar i expanded-läge
+# BJORQ — 3 UI-förbättringar
 
-## 1. CategoryManager ska renderas under filter-raden, inte ovanför
+## 1. Byt ColorWheel till RGB-sliders i LightControl
 
-**Problem:** `showManager && <CategoryManager />` renderas på rad 298, *före* gridet (rad 301). Det hamnar alltså ovanför allt.
+**Nuläge:** `DeviceControlCard.tsx` rad 325-334 renderar `<ColorWheel>` vid RGB-läge.
 
-**Fix i `DashboardGrid.tsx`:**
-- Flytta `{showManager && <CategoryManager />}` till efter filter-raden (efter rad 375), inuti gridet med `col-span-2 md:col-span-4` så den landar under filtren men ovanför rumskorten.
+**Fix:** Ersätt `<ColorWheel>` med tre horisontella sliders (R, G, B) med färgade tracks:
+- Röd slider: track med röd gradient, värde 0-255
+- Grön slider: track med grön gradient, värde 0-255  
+- Blå slider: track med blå gradient, värde 0-255
+- Visa en liten färgpreview-cirkel bredvid (befintlig `rgbColor`)
+- Behåll samma `update(id, { rgbColor: [...] })` logik
 
-## 2. Brightness-bar ska synas även i expanded, men bara på header-raden
+**Fil:** `DeviceControlCard.tsx` — ersätt ColorWheel-blocket (rad 325-334)
 
-**Problem:** Brightness-baren (fade-bakgrunden) döljs helt vid `expanded` (`!expanded` villkor på rad 204). Användaren vill att den fortfarande syns på header-delen, men inte följer med ner i detaljvyn.
+## 2. Stilrenare ikoner i CategoryManager
 
-**Fix i `CategoryCard.tsx`:**
-- Ta bort `!expanded` från villkoret på rad 204 → visa baren alltid när `isLight && on`
-- Men begränsa baren till bara header-höjden: istället för `absolute inset-0` (hela kortet), ge den en fast höjd som matchar headern (`h-[52px]` + `top-0 left-0 right-0`) så den stannar uppe och inte täcker expanded-innehållet
+**Nuläge:** `CategoryManager.tsx` rad 9 använder emoji-ikoner: `['🏠', '💡', '❄️', '🔒', '📺', ...]`
 
-## Filer
+**Fix:** Byt till Lucide-ikoner istället för emojis:
+- Home, Lightbulb, Snowflake, Lock, Tv, Bot, Zap, Thermometer, Camera, Box
+- Rendera som `<Icon size={16}>` i små knappar med samma select-logik
+- Spara ikonnamn (string) istället för emoji
+- Uppdatera rendering i kategorilistan att visa Lucide-ikon istället för emoji
+
+**Fil:** `CategoryManager.tsx`
+
+## 3. Mini-sparklines i InfoCard (UTE/ENERGI/KOMFORT)
+
+**Nuläge:** InfoCard visar label + värde + detalj-text. Ingen visuell mätning.
+
+**Fix:** Lägg till en liten SVG sparkline (ca 60x24px) till höger i varje InfoCard:
+- Generera demo-datapunkter (senaste N timmar) som en enkel polyline
+- **UTE:** 2h historik, blå linje — temperaturtrend
+- **ENERGI:** 1h historik, amber linje — watt-trend  
+- **KOMFORT:** 5h historik, grön linje — temperaturtrend
+- Sparkline renderas som `<svg>` med en `<polyline>` — inga dependencies
+- Layout: flex row med text till vänster, sparkline till höger
+
+**Fil:** `DashboardGrid.tsx` — uppdatera `InfoCard` med optional `sparkData` prop
+
+## Filer som ändras
 
 | Fil | Ändring |
 |-----|---------|
-| `DashboardGrid.tsx` | Flytta `CategoryManager` rendering till efter filter-raden |
-| `CategoryCard.tsx` | Brightness-bar: ta bort `!expanded`, begränsa till header-höjd |
+| `DeviceControlCard.tsx` | Ersätt ColorWheel med 3 RGB-sliders |
+| `CategoryManager.tsx` | Emojis → Lucide-ikoner |
+| `DashboardGrid.tsx` | InfoCard: sparkline till höger |
 
