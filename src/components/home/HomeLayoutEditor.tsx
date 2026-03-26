@@ -203,7 +203,6 @@ export default function HomeLayoutEditor() {
                 </div>
               );
             })()}
-            </div>
           </div>
         );
       })}
