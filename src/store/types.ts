@@ -996,8 +996,16 @@ export interface CustomColors {
   menuColor?: string;
   cardColor?: string;
   textColor?: string;
-  glassOpacity?: number;    // 0.5-1.0
-  borderOpacity?: number;   // 0-0.3
+  glassOpacity?: number;    // 0.2-1.0
+  borderOpacity?: number;   // 0-0.5
+  recentColors?: string[];  // max 6, most recent first
+}
+
+export interface SavedTheme {
+  id: string;
+  name: string;
+  accentColor: string;
+  customColors: CustomColors;
 }
 
 export interface UserProfile {
@@ -1006,6 +1014,7 @@ export interface UserProfile {
   accentColor: string;
   dashboardBg: 'scene3d' | 'gradient' | 'solid';
   customColors?: CustomColors;
+  savedThemes?: SavedTheme[];
 }
 
 // ─── Standby Settings ───
