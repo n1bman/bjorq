@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import { getEnergyEntityViews } from '../../../lib/haMenuSelectors';
 import { cn } from '../../../lib/utils';
 import { useAppStore } from '../../../store/useAppStore';
-import EnergySparkline from './EnergySparkline';
+
 import type { WidgetOverlaySize } from '../../../store/types';
 
 interface Props {
