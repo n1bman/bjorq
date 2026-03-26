@@ -166,7 +166,7 @@ export default function CategoryCard({
             if (isLight && on) {
               const ct = (state.data as any).colorTemp;
               const cm = (state.data as any).colorMode;
-              const rgb = (state.data as any).rgb;
+              const rgb = (state.data as any).rgbColor;
               if (cm === 'rgb' && rgb) {
                 // Use actual RGB color, muted
                 barColor = `${rgb[0]}, ${rgb[1]}, ${rgb[2]}`;
@@ -181,7 +181,7 @@ export default function CategoryCard({
             }
 
             const isRgbMode = (state?.data as any)?.colorMode === 'rgb';
-            const barBg = isRgbMode && (state?.data as any)?.rgb
+            const barBg = isRgbMode && (state?.data as any)?.rgbColor
               ? `linear-gradient(90deg, rgba(${barColor}, 0.18) 0%, rgba(${barColor}, 0.06) ${pct}%, transparent ${pct + 15}%)`
               : `linear-gradient(90deg, hsl(${barColor} / 0.18) 0%, hsl(${barColor} / 0.06) ${pct}%, transparent ${pct + 15}%)`;
 
