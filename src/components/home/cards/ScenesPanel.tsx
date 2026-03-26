@@ -529,8 +529,9 @@ export default function ScenesPanel() {
                   <button
                     onClick={() => { setEditingId(scene.id); setShowAdd(false); }}
                     className="w-16 h-16 rounded-full border border-[hsl(var(--border)/0.15)] bg-[hsl(var(--surface-elevated)/0.4)] flex items-center justify-center transition-all group-hover:bg-primary/15 group-hover:border-primary/30 group-active:scale-95 relative"
+                    style={scene.iconColor ? { borderColor: scene.iconColor + '40' } : undefined}
                   >
-                    <SceneIcon size={22} className="text-foreground/50 group-hover:text-primary transition-colors" />
+                    <SceneIcon size={22} className={cn('transition-colors', scene.iconColor ? '' : 'text-foreground/50 group-hover:text-primary')} style={scene.iconColor ? { color: scene.iconColor } : undefined} />
                     {/* Timer/automation indicators */}
                     {(hasTimer || hasAutomation) && (
                       <div className="absolute -bottom-0.5 flex gap-0.5">
