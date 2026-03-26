@@ -99,13 +99,13 @@ export default function WeatherWidget({ expanded: forceExpanded, size = 'normal'
           </div>
           <div className="flex gap-0 overflow-x-auto pb-1 -mx-1">
             {hourly.map((h, i) => (
-              <div
-                key={i}
-                className={cn(
-                  'flex flex-col items-center gap-0.5 min-w-[36px] px-1 py-1.5 rounded-lg transition-colors',
-                  i === 0 && 'bg-primary/10'
-                )}
-              >
+                <div
+                  key={i}
+                  className={cn(
+                    'flex flex-col items-center gap-0.5 min-w-[36px] px-1 py-1.5 rounded-lg transition-colors',
+                    i === 0 && 'bg-[hsl(var(--section-weather))]/10'
+                  )}
+                >
                 <span className="text-[8px] text-muted-foreground/50">
                   {i === 0 ? 'Nu' : `${String(h.hour).padStart(2, '0')}`}
                 </span>
@@ -126,7 +126,7 @@ export default function WeatherWidget({ expanded: forceExpanded, size = 'normal'
                   key={i}
                   className={cn(
                     'flex flex-col items-center gap-0.5 min-w-[52px] px-2 py-1.5 rounded-lg',
-                    i === 0 && 'bg-primary/10'
+                    i === 0 && 'bg-[hsl(var(--section-weather))]/10'
                   )}
                 >
                   <span className="text-[10px] font-medium text-muted-foreground">

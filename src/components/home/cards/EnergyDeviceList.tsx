@@ -1,6 +1,5 @@
 import { Area, AreaChart, Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { Link2, Settings2, TrendingUp, Zap } from 'lucide-react';
-import EnergySparkline from './EnergySparkline';
 import { useMemo, useState } from 'react';
 import { getEnergyEntityViews } from '../../../lib/haMenuSelectors';
 import { useAppStore } from '../../../store/useAppStore';

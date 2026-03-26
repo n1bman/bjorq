@@ -15,7 +15,7 @@ interface Props {
 
 /** Generate 24h simulated hourly data based on current watts */
 function generateHourlyData(totalWatts: number): number[] {
-  const hour = new Date().getHours();
+  const baseWatts = totalWatts * 0.4;
   const baseWatts = totalWatts * 0.4;
   const data: number[] = [];
   for (let i = 0; i < 24; i++) {
@@ -30,7 +30,7 @@ function generateHourlyData(totalWatts: number): number[] {
   return data;
 }
 
-export default function EnergySparkline({ width = 280, height = 60, totalWatts, dailyGoalKwh, showPeaks = true }: Props) {
+export default function EnergySparkline({ width = 280, height = 60, totalWatts, showPeaks = true }: Props) {
   const data = useMemo(() => generateHourlyData(totalWatts), [totalWatts]);
   const max = Math.max(...data, 1);
   const min = Math.min(...data);

@@ -72,18 +72,18 @@ export default function ClimateTrendLine({ currentTemp, targetTemp, roomName }: 
         className="w-full"
         onMouseLeave={() => setHoverIdx(null)}
       >
-        {/* Target line — solid, prominent */}
+        {/* Target line */}
         <line x1={0} y1={targetY} x2={width} y2={targetY}
-          stroke="hsl(var(--primary))" strokeWidth="1.5" opacity="0.35" />
-        {/* Target label */}
-        <text x={width - 2} y={targetY - 4} textAnchor="end" fill="hsl(var(--primary))" fontSize="7" opacity="0.5">
+          stroke="hsl(var(--section-climate))" strokeWidth="1.5" opacity="0.35" />
+        <text x={width - 2} y={targetY - 4} textAnchor="end" fill="hsl(var(--section-climate))" fontSize="7" opacity="0.5">
           Mål {targetTemp}°
+        </text>
         </text>
         {/* Trend line — animated */}
         <path d={pathD} fill="none" stroke="hsl(var(--foreground))" strokeWidth="1.5" strokeLinecap="round" opacity="0.7" className="sparkline-line" />
         {/* Current point — pulsing */}
-        <circle cx={pts[pts.length - 1].x} cy={pts[pts.length - 1].y} r="4" fill="hsl(var(--primary))" className="sparkline-pulse" />
-        <circle cx={pts[pts.length - 1].x} cy={pts[pts.length - 1].y} r="2" fill="hsl(var(--primary))" />
+        <circle cx={pts[pts.length - 1].x} cy={pts[pts.length - 1].y} r="4" fill="hsl(var(--section-climate))" className="sparkline-pulse" />
+        <circle cx={pts[pts.length - 1].x} cy={pts[pts.length - 1].y} r="2" fill="hsl(var(--section-climate))" />
         {/* Hover hit areas for tooltip */}
         {pts.map((p, i) => (
           <rect
@@ -100,7 +100,7 @@ export default function ClimateTrendLine({ currentTemp, targetTemp, roomName }: 
         {hoverIdx !== null && pts[hoverIdx] && (
           <g>
             <line x1={pts[hoverIdx].x} y1={0} x2={pts[hoverIdx].x} y2={height} stroke="hsl(var(--foreground))" strokeWidth="0.5" opacity="0.3" />
-            <circle cx={pts[hoverIdx].x} cy={pts[hoverIdx].y} r="3" fill="hsl(var(--primary))" />
+            <circle cx={pts[hoverIdx].x} cy={pts[hoverIdx].y} r="3" fill="hsl(var(--section-climate))" />
             <rect x={pts[hoverIdx].x - 28} y={pts[hoverIdx].y - 22} width="56" height="16" rx="4" fill="hsl(var(--card))" stroke="hsl(var(--border))" strokeWidth="0.5" />
             <text x={pts[hoverIdx].x} y={pts[hoverIdx].y - 11} textAnchor="middle" fill="hsl(var(--foreground))" fontSize="8" fontWeight="600">
               {data[hoverIdx].toFixed(1)}° {String(hoverIdx).padStart(2, '0')}:00
@@ -110,7 +110,7 @@ export default function ClimateTrendLine({ currentTemp, targetTemp, roomName }: 
       </svg>
       <div className="flex items-center justify-between text-[9px] text-muted-foreground/50">
         <span>00:00</span>
-        <span className="text-primary text-[10px] font-medium">{currentTemp.toFixed(1)}° nu</span>
+        <span className="text-[hsl(var(--section-climate))] text-[10px] font-medium">{currentTemp.toFixed(1)}° nu</span>
         <span>23:00</span>
       </div>
     </div>
