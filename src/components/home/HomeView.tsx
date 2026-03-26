@@ -8,6 +8,7 @@ import ClockWidget from './cards/ClockWidget';
 import WeatherWidget from './cards/WeatherWidget';
 import EnergyWidget from './cards/EnergyWidget';
 import TemperatureWidget from './cards/TemperatureWidget';
+import ScenesWidget from './cards/ScenesWidget';
 import DeviceControlCard from './cards/DeviceControlCard';
 import { useWeatherSync } from '../../hooks/useWeatherSync';
 import { Eye, EyeOff, Lightbulb, Thermometer, Wind, Camera, Power, Tv, Fan, Shield, Droplets, X, Wifi, Settings2, ChevronDown, Play, Pause, Home as HomeIcon, Square, Plus, Minus } from 'lucide-react';
@@ -38,6 +39,8 @@ const DEFAULT_POSITIONS: Record<HomeWidgetKey, { x: number; y: number }> = {
   weather: { x: 3, y: 14 },
   temperature: { x: 78, y: 4 },
   energy: { x: 78, y: 14 },
+  scenes: { x: 3, y: 78 },
+  devices: { x: 3, y: 85 },
   nav: { x: 46, y: 90 },
   camera: { x: 90, y: 78 },
   rooms: { x: 82, y: 78 },
