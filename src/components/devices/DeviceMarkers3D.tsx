@@ -1665,8 +1665,21 @@ function LightMarkerLightOnly({ position, id, onSelect }: { position: [number, n
     return new THREE.Color('#f5c542');
   }, [lightData?.colorMode, lightData?.rgbColor?.[0], lightData?.rgbColor?.[1], lightData?.rgbColor?.[2], lightData?.colorTemp, isOn]);
 
+  const cfg = useMemo(() => {
+    const defaults: Record<string, { intensity: number; distance: number; angle: number; penumbra: number }> = {
+      'ceiling':       { intensity: 4, distance: 5, angle: Math.PI, penumbra: 0 },
+      'ceiling-small': { intensity: 2, distance: 3, angle: Math.PI, penumbra: 0 },
+      'strip':         { intensity: 2, distance: 6, angle: Math.PI, penumbra: 0 },
+      'lightbar':      { intensity: 5.2, distance: 5, angle: Math.PI / 4, penumbra: 0.5 },
+      'spot':          { intensity: 6, distance: 6, angle: Math.PI / 7, penumbra: 0.4 },
+      'wall':          { intensity: 4.8, distance: 5, angle: Math.PI / 4, penumbra: 0.6 },
+    };
+    const d = defaults[lightType] ?? defaults['ceiling'];
+    return { ...d, ...marker?.lightConfig };
+  }, [lightType, marker?.lightConfig]);
+
   const brightness = isOn ? (lightData?.brightness ?? 200) / 255 : 0;
-  const intensity = isOn ? brightness * 5 : 0;
+  const intensity = isOn ? brightness * cfg.intensity : 0;
   const rot = marker?.rotation ?? [0, 0, 0];
 
   useFrame(() => {
@@ -1682,21 +1695,24 @@ function LightMarkerLightOnly({ position, id, onSelect }: { position: [number, n
 
   return (
     <group position={position} rotation={rot as [number, number, number]}>
-      {(lightType === 'ceiling' || lightType === 'strip') && (
-        <pointLight color={lightColor} intensity={lightType === 'strip' ? intensity * 0.6 : intensity} distance={lightType === 'strip' ? 10 : 8} decay={lightType === 'strip' ? 1.5 : 2} />
+      {lightType === 'ceiling' && (
+        <pointLight color={lightColor} intensity={intensity} distance={cfg.distance} decay={2} />
+      )}
+      {lightType === 'ceiling-small' && (
+        <pointLight color={lightColor} intensity={intensity} distance={cfg.distance} decay={2} />
+      )}
+      {lightType === 'strip' && (
+        <pointLight color={lightColor} intensity={intensity} distance={cfg.distance} decay={1.5} />
+      )}
+      {lightType === 'lightbar' && (
+        <>
+          <spotLight ref={spotLightRef} color={lightColor} intensity={intensity} distance={cfg.distance} angle={cfg.angle} penumbra={cfg.penumbra} decay={2} castShadow />
+          <object3D ref={spotTargetRef} position={[0, -3, 0]} />
+        </>
       )}
       {(lightType === 'spot' || lightType === 'wall') && (
         <>
-          <spotLight
-            ref={spotLightRef}
-            color={lightColor}
-            intensity={lightType === 'spot' ? intensity * 2 : intensity * 1.5}
-            distance={lightType === 'spot' ? 12 : 8}
-            angle={lightType === 'spot' ? Math.PI / 6 : Math.PI / 3}
-            penumbra={lightType === 'spot' ? 0.3 : 0.5}
-            decay={2}
-            castShadow
-          />
+          <spotLight ref={spotLightRef} color={lightColor} intensity={intensity} distance={cfg.distance} angle={cfg.angle} penumbra={cfg.penumbra} decay={2} castShadow />
           <object3D ref={spotTargetRef} position={lightType === 'spot' ? [0, -3, 0] : [0, -1, 1]} />
         </>
       )}

@@ -311,11 +311,9 @@ export default function HomeView({ longPressDeviceId, onDismissLongPress, fpsAct
         );
       })()}
 
-      <div className="pointer-events-auto">
-        <CameraFab style={{ left: `${cameraPos.x}%`, top: `${cameraPos.y}%` }} />
-        <RoomNavigator style={{ left: `${roomsPos.x}%`, top: `${roomsPos.y}%` }} />
-        <HomeNav style={{ left: `${navPos.x}%`, top: `${navPos.y}%` }} />
-      </div>
+      <CameraFab style={{ position: 'absolute', left: `${cameraPos.x}%`, top: `${cameraPos.y}%` }} />
+      <RoomNavigator style={{ position: 'absolute', left: `${roomsPos.x}%`, top: `${roomsPos.y}%` }} />
+      <HomeNav style={{ position: 'absolute', left: `${navPos.x}%`, top: `${navPos.y}%` }} />
     </div>
   );
 }
