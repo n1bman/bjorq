@@ -16,6 +16,7 @@ import ActivityFeed from './cards/ActivityFeed';
 import SurveillancePanel from './cards/SurveillancePanel';
 import ProfilePanel from './cards/ProfilePanel';
 import ThemeCard from './cards/ThemeCard';
+import ThemeBackupCard from './cards/ThemeBackupCard';
 import DataBackupCard from './cards/DataBackupCard';
 import ProjectManagerPanel from './cards/ProjectManagerPanel';
 import SystemStatusCard from './cards/SystemStatusCard';
@@ -751,6 +752,7 @@ function ProfileWorkspaceCategory() {
         <div className="workspace-grid">
           <ProjectManagerPanel />
           <DataBackupCard />
+          <ThemeBackupCard />
         </div>
       </WorkspaceSection>
     </WorkspaceLayout>
