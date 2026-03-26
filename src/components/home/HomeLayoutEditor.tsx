@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
-import { Settings2, Check, GripHorizontal, Home, Camera as CameraIcon, DoorOpen, Palette, Cpu, Lightbulb, Thermometer, Wind, Camera, Power, Tv, Fan, Shield, Droplets } from 'lucide-react';
+import { Settings2, Check, GripHorizontal, Home, Camera as CameraIcon, DoorOpen, Palette, Cpu, Lightbulb, Thermometer, Wind, Camera, Power, Tv, Fan, Shield, Droplets, RotateCcw } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { cn } from '../../lib/utils';
 import type { HomeWidgetKey, WidgetOverlaySize, DeviceKind } from '../../store/types';
@@ -112,19 +112,21 @@ export default function HomeLayoutEditor() {
     e.stopPropagation();
     setDragging(key);
     const config = widgetLayout[key];
-    const defPos = DEFAULT_POSITIONS[key] ?? { x: 50, y: 50 };
+    // Use getDefaultPos which handles both widget and device defaults
+    const defIdx = selectedMarkers.findIndex((m) => m.id === key);
+    const defPos = getDefaultPos(key, defIdx >= 0 ? defIdx : 0);
     const pos = { x: config?.x ?? defPos.x, y: config?.y ?? defPos.y };
     dragStartRef.current = { startX: e.clientX, startY: e.clientY, origX: pos.x, origY: pos.y };
     containerRef.current?.setPointerCapture(e.pointerId);
-  }, [widgetLayout]);
+  }, [widgetLayout, selectedMarkers]);
 
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
     if (!dragging || !containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
     const dx = ((e.clientX - dragStartRef.current.startX) / rect.width) * 100;
     const dy = ((e.clientY - dragStartRef.current.startY) / rect.height) * 100;
-    const newX = Math.max(1, Math.min(92, dragStartRef.current.origX + dx));
-    const newY = Math.max(1, Math.min(92, dragStartRef.current.origY + dy));
+    const newX = Math.max(1, Math.min(95, dragStartRef.current.origX + dx));
+    const newY = Math.max(1, Math.min(95, dragStartRef.current.origY + dy));
     setWidgetLayout(dragging, { x: Math.round(newX * 10) / 10, y: Math.round(newY * 10) / 10 });
   }, [dragging, setWidgetLayout]);
 
@@ -249,19 +251,36 @@ export default function HomeLayoutEditor() {
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[480px] max-w-[calc(100vw-2rem)] z-50 pointer-events-none">
         <div className="nn-widget p-6 shadow-2xl space-y-5 pointer-events-auto">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3">
               <Settings2 size={16} className="text-primary" />
               <div>
                 <h3 className="text-sm font-semibold text-foreground font-display">Layoutläge</h3>
                 <p className="text-[10px] text-muted-foreground/60 mt-0.5">Dra elementen fritt · Välj storlek nedan</p>
               </div>
             </div>
-            <button
-              onClick={toggleHomeLayoutEditMode}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors tracking-wide"
-            >
-              <Check size={13} /> Klar
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  Object.entries(DEFAULT_POSITIONS).forEach(([k, pos]) => {
+                    setWidgetLayout(k, { x: pos.x, y: pos.y });
+                  });
+                  selectedMarkers.forEach((m, idx) => {
+                    const defPos = getDefaultPos(m.id, idx);
+                    setWidgetLayout(m.id, { x: defPos.x, y: defPos.y });
+                  });
+                }}
+                className="px-3 py-2 rounded-xl text-xs font-medium text-muted-foreground hover:text-foreground bg-[hsl(var(--surface-elevated)/0.5)] transition-colors"
+                title="Återställ positioner"
+              >
+                <RotateCcw size={13} />
+              </button>
+              <button
+                onClick={toggleHomeLayoutEditMode}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors tracking-wide"
+              >
+                <Check size={13} /> Klar
+              </button>
+            </div>
           </div>
 
           <div className="space-y-3 max-h-[35vh] overflow-y-auto">
