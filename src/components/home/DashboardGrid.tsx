@@ -1,7 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { Home, Cloud, Cpu, Zap, Bell, Video, Settings, Pencil, X, CalendarDays, Bot, Moon, Save, Workflow, Palette, LayoutGrid, Thermometer, Trees, User, Monitor, Database, Link2, Sparkles } from 'lucide-react';
 import WeatherHomeImpact from './cards/WeatherHomeImpact';
-import WeatherHomeImpact from './cards/WeatherHomeImpact';
 import { cn } from '../../lib/utils';
 import { Button } from '../ui/button';
 import { useAppStore } from '../../store/useAppStore';
@@ -38,6 +37,8 @@ import DashboardPreview3D from './DashboardPreview3D';
 import type { PreviewCameraState } from './DashboardPreview3D';
 import type { DeviceKind, DeviceMarker, StandbyCameraView } from '../../store/types';
 import { cameraRef } from '../../lib/cameraRef';
+import { getSceneEntityViews } from '../../lib/haMenuSelectors';
+import { haServiceCaller } from '../../hooks/useHomeAssistant';
 
 import type { DashCategory } from '../../store/types';
 
