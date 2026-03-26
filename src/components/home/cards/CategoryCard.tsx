@@ -212,7 +212,7 @@ export default function CategoryCard({
                 )}
                 <div
                   className={cn(
-                    'flex items-center gap-3 py-3.5 px-4 cursor-pointer relative z-10',
+                    'flex items-center gap-3 py-3.5 px-4 md:py-4 md:px-5 cursor-pointer relative z-10',
                     !on && 'opacity-40'
                   )}
                   onClick={() => !editMode && setExpandedId(expanded ? null : d.id)}

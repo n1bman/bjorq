@@ -158,7 +158,7 @@ function QuickScenesWidget() {
   };
 
   return (
-    <div className="nn-widget p-5 flex flex-col gap-4 h-[240px] md:h-[300px]">
+    <div className="nn-widget p-5 flex flex-col gap-4 h-[220px] md:h-[320px] lg:h-[360px]">
       <span className="label-micro">SCENER</span>
 
       {allScenes.length === 0 ? (
@@ -318,7 +318,7 @@ function HomeCategory() {
       {/* Header removed — buttons moved to filter row */}
 
       {/* ── FREE GRID — everything lives here ── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-5">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
         {/* Row 1: Info cards */}
         <InfoCard label="TID" value={timeStr} detail={dateStr} />
         <InfoCard label="UTE" value={`${Math.round(weather.temperature)}°`} detail={weather.condition || 'Klart'} onClick={() => setDashCategory('weather')} accent="hsl(210, 40%, 50%)" sparkData={demoSparkData.weather} sparkColor="hsl(210, 60%, 55%)" />
@@ -328,7 +328,7 @@ function HomeCategory() {
         {/* Row 2: 3D hero + Aktivt rum */}
         <div className="col-span-2 md:col-span-3">
           <div
-            className="nn-widget rounded-[24px] overflow-hidden h-[240px] md:h-[300px] relative cursor-pointer"
+            className="nn-widget rounded-[24px] overflow-hidden h-[220px] md:h-[320px] lg:h-[360px] relative cursor-pointer"
             onDoubleClick={() => setShowSaveView(true)}
           >
             <DashboardPreview3D className="absolute inset-0" cameraStateRef={previewCamRef} />
@@ -361,13 +361,13 @@ function HomeCategory() {
         </div>
 
         {/* Filter tabs + edit controls — full width */}
-        <div className="col-span-2 md:col-span-4 flex items-center gap-2 overflow-x-auto pb-1">
+        <div className="col-span-2 md:col-span-4 flex items-center gap-2 md:gap-3 overflow-x-auto pb-1">
           {deviceFilters.map(({ key, label }) => (
             <button
               key={key}
               onClick={() => setKindFilter(key === 'all' ? null : key as DeviceKind)}
               className={cn(
-                'px-4 py-2 rounded-full text-[12px] font-medium transition-all shrink-0 border',
+                'px-4 py-2.5 md:px-5 md:py-3 rounded-full text-xs md:text-sm font-medium transition-all shrink-0 border',
                 (key === 'all' && !kindFilter) || kindFilter === key
                   ? 'bg-foreground/8 text-foreground border-[hsl(var(--border)/0.25)]'
                   : 'text-muted-foreground/50 hover:text-foreground border-transparent hover:border-[hsl(var(--border)/0.12)]'
@@ -378,11 +378,11 @@ function HomeCategory() {
           ))}
           {/* Edit controls — right side */}
           <div className="ml-auto flex items-center gap-2 shrink-0">
-            <Button size="sm" variant="ghost" className="h-8 text-[11px]"
+            <Button size="sm" variant="ghost" className="h-9 text-xs"
               onClick={() => setShowManager(!showManager)}>
               {showManager ? 'Stäng' : 'Hantera kategorier'}
             </Button>
-            <Button size="sm" variant={editMode ? 'default' : 'ghost'} className="h-8 text-[11px] gap-1"
+            <Button size="sm" variant={editMode ? 'default' : 'ghost'} className="h-9 text-xs gap-1"
               onClick={() => setEditMode(!editMode)}>
               {editMode ? <><X size={11} /> Klar</> : <><Pencil size={11} /> Redigera</>}
             </Button>
