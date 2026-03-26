@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
-import { Settings2, Check, GripHorizontal, Home, Camera as CameraIcon, DoorOpen, Palette, Lightbulb, Thermometer, Wind, Camera, Power, Tv, Fan, Shield, Droplets, RotateCcw, Eye, Play, Pause, Square, Home as HomeIcon, Minus, Plus } from 'lucide-react';
+import { Settings2, Check, GripHorizontal, Home, Camera as CameraIcon, DoorOpen, Palette, Lightbulb, Thermometer, Wind, Camera, Power, Tv, Fan, Shield, Droplets, RotateCcw, Eye } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { cn } from '../../lib/utils';
 import type { HomeWidgetKey, WidgetOverlaySize, DeviceKind } from '../../store/types';
