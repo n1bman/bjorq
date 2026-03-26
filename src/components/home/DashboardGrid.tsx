@@ -310,7 +310,7 @@ function HomeCategory() {
     setDraggingCatIndex(null);
   };
 
-  const density = useAppStore((s) => s.dashboard.density ?? 'balance');
+  
 
   return (
     <div className="space-y-5">
@@ -397,11 +397,7 @@ function HomeCategory() {
 
         {/* Room/category cards — span 2 cols each */}
         {filteredEntries.map((entry, index) => (
-          <div key={entry.key} className="col-span-1 md:col-span-2" onClick={() => {
-            // If entry devices have a roomId, select that room
-            const roomId = entry.devices[0]?.roomId;
-            if (roomId) setSelectedRoomId(roomId);
-          }}>
+          <div key={entry.key} className="col-span-1 md:col-span-2">
             <CategoryCard
               category={entry.label}
               categoryId={entry.catId}
