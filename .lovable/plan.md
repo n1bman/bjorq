@@ -1,91 +1,70 @@
 
 
-# Fix: Rumsbyte för robot + multi-rum städning + emoji-städning
+# Hemvy: Gör alla element flyttbara + flytta "Anpassa"-knappen
 
 ## Problem
 
-1. **Rumsbyte fungerar inte** — `handleRoomCleaning` skickar `app_segment_clean` direkt utan att stoppa pågående städning först. Roborock ignorerar nya segment-kommandon om den redan städar.
+1. **HomeNav (center FAB)**, **CameraFab** och **RoomNavigator** kan inte flyttas i layoutläget — bara de 4 widgetarna (klocka, väder, temperatur, energi) är draggable.
+2. **"Anpassa"-knappen** ligger dold bakom/under HomeNav-knappen nere till höger — dålig placering, svår att hitta.
+3. **RoomNavigator har en emoji kvar** (`📷` rad 73).
 
-2. **Ingen multi-rum-städning** — Idag kan man bara starta ett rum åt gången. Roborock stöder `app_segment_clean` med en array av segment-ID:n + repeat-count (`[segId1, segId2, ...]` + `repeat: N`).
+## Plan
 
-3. **Emojis finns kvar i ~19 filer** — bl.a. RobotPanel (`🤖`), VacuumMappingTools (`🤖`, `✅`, `💡`), DevicePlacementTools (alla kindLabels), BuildInspector (ljustyper), BuildCanvas2D, StandbyWeather, DeviceControlCard, GraphicsSettings, DisplaySettings, roomTemplates, roomDetection, PerformanceHUD.
-
----
-
-## 1. Rumsbyte: stoppa först, sedan byt
-
-**Fil:** `src/components/home/cards/RobotPanel.tsx`
-
-Ändra `handleRoomCleaning` (rad 588-602):
-- Om `data.status === 'cleaning'`: skicka `vacuum.stop` först, vänta 500ms, sedan skicka `app_segment_clean` med nytt segment
-- Optimistisk state: `status: 'returning'` → kort paus → `status: 'cleaning'` med nytt `targetRoom`
-
-```
-const handleRoomCleaning = async (roomName, segmentId, fanPreset) => {
-  if (data.status === 'cleaning') {
-    await sendRobotService('stop', {}, { status: 'idle', targetRoom: undefined });
-    await new Promise(r => setTimeout(r, 800));
-  }
-  // sedan skicka app_segment_clean som vanligt
-};
-```
-
-## 2. Multi-rum-städning med repeat
+### 1. Utöka `HomeWidgetKey` med nya element
 
 **Fil:** `src/store/types.ts`
-- Inget nytt type behövs — `app_segment_clean` params stöder redan arrays
 
-**Fil:** `src/components/home/cards/RobotPanel.tsx`
-
-Utöka `RoomZoneCards`:
-- Lägg till checkbox-läge: "Välj flera rum" toggle
-- När aktiv: varje rum-kort får en checkbox + repeat-counter (1-3x)
-- Ny knapp "Städa valda rum" som samlar alla valda segment-ID:n
-- Skicka: `app_segment_clean` med `params: { segments: [id1, id2, ...], repeat: N }`
-- Alternativt Roborock-format: `params: [{"segments": [id1,id2], "repeat": 2}]`
-
-UI-flow:
+Ändra typen:
 ```
-[Toggle: Välj flera rum]
-  ☑ Kök (2x)      ☑ Vardagsrum (1x)      ☐ Sovrum
-  [Städa 2 rum →]
+export type HomeWidgetKey = 'clock' | 'weather' | 'temperature' | 'energy' | 'nav' | 'camera' | 'rooms';
 ```
 
-## 3. Emoji-städning — alla kvarvarande filer
+Lägg till default-positioner i HomeView och HomeLayoutEditor:
+- `nav`: `{ x: 46, y: 90 }` (center bottom, som nu)
+- `camera`: `{ x: 92, y: 80 }` (bottom right, som nu)
+- `rooms`: `{ x: 85, y: 80 }` (near camera, som nu)
 
-Byter alla emojis till Lucide-ikoner eller ren text i dessa filer:
+Dessa tre nya element behöver inte storlekar (de har fast utseende) — layout-editorn visar dem utan storleksväljare.
 
-| Fil | Emojis | Åtgärd |
-|-----|--------|--------|
-| `RobotPanel.tsx` | `🤖` (rad 617) | → `Bot` ikon |
-| `DeviceControlCard.tsx` | `🤖` (rad 574, 1033) | → `Bot` ikon |
-| `VacuumMappingTools.tsx` | `🤖`, `✅`, `💡` (rad 180, 282, 297) | → Lucide `Bot`, `CheckCircle`, `Info` |
-| `BuildCanvas2D.tsx` | `🤖` (rad 401) | → ren text utan emoji |
-| `DevicePlacementTools.tsx` | alla kindLabels (rad 58-68) | → ren text (ta bort emojis, behåll bara namn) |
-| `BuildInspector.tsx` | `🔵🔹🟢🟡⚪💡🔦🍳` (rad 1197-1300, 1616) | → Lucide-ikoner eller färgade dots |
-| `StandbyWeather.tsx` | `☀️☁️🌧️` (rad 3-6) | → Lucide `Sun`, `Cloud`, `CloudRain` |
-| `GraphicsSettings.tsx` | `✅` (rad 21, 379) | → ta bort från toast-text |
-| `DisplaySettings.tsx` | `💡` (rad 143) | → Lucide `Info` eller ren text |
-| `roomTemplates.ts` | `🛏️🍳🛋️🚿` (rad 27-31) | → ren text eller Lucide |
-| `roomDetection.ts` | `⚠️` (rad 444) | → ren text i console.warn |
-| `PerformanceHUD.tsx` | `⚡` (rad 80) | → ren text |
+### 2. Gör HomeNav, CameraFab och RoomNavigator positionerbara
 
----
+**Filer:** `src/components/home/HomeView.tsx`, `src/components/home/HomeNav.tsx`, `src/components/home/CameraFab.tsx`, `src/components/home/RoomNavigator.tsx`
+
+- HomeView skickar `style={{ left, top }}` till varje element baserat på `widgetLayout['nav']`, `widgetLayout['camera']`, `widgetLayout['rooms']`
+- Varje komponent byter från `fixed bottom-X right-X` till att acceptera en `style`-prop med absolut position
+- I layoutläge renderas de i HomeLayoutEditor med drag handles, precis som widgetarna — men utan storleksval
+
+### 3. Lägg till dem i HomeLayoutEditor
+
+**Fil:** `src/components/home/HomeLayoutEditor.tsx`
+
+- Utöka `WIDGETS`-arrayen med `{ key: 'nav', label: 'Navigering' }`, `{ key: 'camera', label: 'Kamera' }`, `{ key: 'rooms', label: 'Rum' }`
+- Dessa renderar sin faktiska komponent inuti drag-ramen
+- Dölj storleksväljaren för dessa tre (de har ingen size-option)
+- Dölj synlighets-toggle för `nav` (den ska alltid vara synlig)
+
+### 4. Flytta "Anpassa"-knappen till övre vänstra hörnet
+
+**Fil:** `src/components/home/HomeView.tsx`
+
+Byt från `absolute bottom-28 right-20` till `fixed top-4 left-4` och gör den till en minimal triangel/hörn-indikator:
+- Liten cirkulär eller triangulär knapp i övre vänstra hörnet
+- Enbart `Settings2`-ikon, ingen text (text visas on hover/tap som tooltip)
+- Subtil glassmorphism-stil som resten av HUD:en
+
+### 5. Emoji-fix i RoomNavigator
+
+**Fil:** `src/components/home/RoomNavigator.tsx`
+- Rad 73: Byt `📷` → Lucide `Camera`-ikon
 
 ## Filer som ändras
 
 | Fil | Ändring |
 |-----|---------|
-| `src/components/home/cards/RobotPanel.tsx` | Stop-before-switch logik, multi-rum UI med repeat, emoji → Lucide |
-| `src/components/home/cards/DeviceControlCard.tsx` | `🤖` → `Bot` |
-| `src/components/build/devices/VacuumMappingTools.tsx` | Emojis → Lucide |
-| `src/components/build/devices/DevicePlacementTools.tsx` | Emojis → ren text |
-| `src/components/build/BuildInspector.tsx` | Emojis → Lucide/dots |
-| `src/components/build/BuildCanvas2D.tsx` | `🤖` → ren text |
-| `src/components/standby/StandbyWeather.tsx` | Emojis → Lucide |
-| `src/components/home/cards/GraphicsSettings.tsx` | `✅` bort |
-| `src/components/home/cards/DisplaySettings.tsx` | `💡` → Lucide |
-| `src/lib/roomTemplates.ts` | Emojis → ren text |
-| `src/lib/roomDetection.ts` | `⚠️` → ren text |
-| `src/components/home/PerformanceHUD.tsx` | `⚡` → ren text |
+| `src/store/types.ts` | `HomeWidgetKey` += `'nav' \| 'camera' \| 'rooms'` |
+| `src/components/home/HomeView.tsx` | Positionera nav/camera/rooms via widgetLayout, flytta Anpassa-knapp till top-left |
+| `src/components/home/HomeNav.tsx` | Acceptera `style`-prop, ta bort `fixed` positionering |
+| `src/components/home/CameraFab.tsx` | Acceptera `style`-prop, ta bort `fixed` positionering |
+| `src/components/home/RoomNavigator.tsx` | Acceptera `style`-prop, ta bort `fixed` positionering, emoji-fix |
+| `src/components/home/HomeLayoutEditor.tsx` | Lägg till nav/camera/rooms som draggable element utan storleksval |
 
