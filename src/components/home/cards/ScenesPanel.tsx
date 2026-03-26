@@ -252,10 +252,12 @@ function AutomationSection({ automation, onChange }: { automation?: SceneAutomat
 }
 
 /* ── Scene form (create + edit) ── */
-function SceneForm({ scene, onSave, onCancel }: {
+function SceneForm({ scene, onSave, onCancel, onActivate, onRemove }: {
   scene?: SavedScene;
   onSave: (scene: SavedScene) => void;
   onCancel: () => void;
+  onActivate?: (id: string) => void;
+  onRemove?: (id: string) => void;
 }) {
   const markers = useAppStore((s) => s.devices.markers);
   const deviceStates = useAppStore((s) => s.devices.deviceStates);
