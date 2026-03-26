@@ -1,64 +1,64 @@
 
 
-# Nytt tema "Nordic Noir" + utökade utseende-inställningar
+# Fix Nordic Noir-tema + förbättra utseende-inställningar
 
-## Vad som görs
+## Problem
 
-### 1. Nytt tema: `nordic` (inspirerat av bild 1)
-En fjärde temapalett med ännu djupare, varmare toner — som bilden visar: nästan svart bakgrund med varm charcoal-ton, amber-tonade kanter, och mjukare kontraster.
+1. **Nordic Noir har fel färger** — knapparna ska ha en varm sand/amber ton, inte kalla blågrå. Bilden visar tydligt varmare, sand-tonade knappar och UI-element mot en djup mörk bakgrund.
+2. **Laggar vid färgändring** — varje color picker-ändring triggar `setProfile` → state-uppdatering → `useEffect` → DOM-manipulation, som skapar massa re-renders.
+3. **Behövs fler anpassningsmöjligheter** — kort-färg, text-färg, m.m.
+4. **Saknar tydlig "Eget tema"-sektion** vs färdiga teman.
 
-**`src/hooks/useThemeEffect.ts`:**
-- Lägg till `nordicPalette` med värden inspirerade av bilden:
-  - `--background`: ~`225 20% 7%` (djup grafit)
-  - `--card`: ~`225 18% 10%` (varm mörk)
-  - `--border`: ~`225 15% 15%` (subtil amber-tint)
-  - `--glass`: hög blur, låg opacity
-  - Generellt varmare undertoner än midnight
+## Ändringar
 
-**`src/store/types.ts`:**
-- Utöka `UserProfile.theme` till `'dark' | 'midnight' | 'light' | 'nordic'`
+### 1. Uppdatera `nordicPalette` i `useThemeEffect.ts`
 
-**`src/components/home/cards/ThemeCard.tsx`:**
-- Lägg till `{ key: 'nordic', label: 'Nordic Noir' }` i themes-arrayen
+Bilden visar varma, sandiga toner. Nuvarande palette har kalla blåtoner (`225 hue`). Fix:
 
-### 2. Utökade utseende-inställningar i ThemeCard
+- `--secondary`: ändra från `225 14% 14%` → `30 12% 16%` (varm sand/charcoal)
+- `--secondary-foreground`: `40 20% 82%` (varm ljus sand)
+- `--muted`: `25 10% 13%`
+- `--muted-foreground`: `35 10% 50%` (varm grå-sand)
+- `--card`: `220 15% 9%` (behåll mörk men lite varmare)
+- `--border`: `30 12% 20%` (varm amber-border)
+- `--sidebar-accent`: `30 10% 13%`
+- `--foreground`: `38 18% 88%` (varm off-white, inte kall)
 
-Bygg ut ThemeCard med fler sektioner för manuell kontroll:
+Behåll djup bakgrund men skifta accent-variablerna åt amber/sand.
 
-- **Knappfärg** — color picker eller förvalda färger för knappar (secondary-variabeln)
-- **Sliderfärg** — separat accent för sliders/progress
-- **Bakgrundsfärg** — custom hex för solid-bg-läge
-- **Menyfärg** — sidebar-background override
-- **Transparens** — slider (0.5–1.0) som styr `--glass` opacity
-- **Border-synlighet** — slider (0–0.3) som styr border opacity
+### 2. Fixa lagg — debounce color picker i `ThemeCard.tsx`
 
-Dessa sparas i `UserProfile` som optional custom overrides:
+Lägg till en lokal `useRef` + `requestAnimationFrame` eller `setTimeout(16ms)` debounce i `ColorPickerDot` så att `setProfile` bara anropas max ~60fps istället för varje pixel-rörelse.
 
+### 3. Utöka `CustomColors` i `types.ts`
+
+Lägg till:
 ```ts
-customColors?: {
-  buttonColor?: string;
-  sliderColor?: string;
-  bgColor?: string;
-  menuColor?: string;
-  glassOpacity?: number;    // 0.5-1.0
-  borderOpacity?: number;   // 0-0.3
-};
+cardColor?: string;      // --card override
+textColor?: string;      // --foreground override  
+accentColor?: string;    // --primary override (separat från profil-accent)
 ```
 
-**`src/hooks/useThemeEffect.ts`:**
-- Efter att tema-paletten applicerats, kolla `profile.customColors` och overrida relevanta CSS-variabler om satta
+### 4. Förbättra `ThemeCard.tsx` layout
 
-**`src/components/home/cards/ThemeCard.tsx`:**
-- Ny sektion "Anpassat" med:
-  - Färgcirklar + color input för knapp/slider/bg/meny
-  - Slider för transparens och border-synlighet
-  - "Återställ"-knapp som rensar `customColors`
+- Separera tydligt: **Färdiga teman** (Mörkt/Midnatt/Ljust/Nordic Noir) i en sektion
+- **Eget tema / Anpassat** i en separat sektion med:
+  - Alla color pickers: Knappar, Slider, Bakgrund, Meny, Kort, Text
+  - Sliders: Transparens, Border-synlighet
+  - Återställ-knapp
+- Applicera nya `cardColor`/`textColor` i `useThemeEffect.ts`
 
-### Filer som ändras
+### 5. Applicera nya overrides i `useThemeEffect.ts`
+
+I custom-blocket, lägg till:
+- `cardColor` → `--card`, `--popover`
+- `textColor` → `--foreground`, `--card-foreground`
+
+## Filer som ändras
 
 | Fil | Ändring |
 |-----|---------|
-| `src/store/types.ts` | `theme` union + `customColors` i UserProfile |
-| `src/hooks/useThemeEffect.ts` | Nordic-palett + applicera customColors overrides |
-| `src/components/home/cards/ThemeCard.tsx` | Nordic-knapp + utökade färg/transparens-inställningar |
+| `src/hooks/useThemeEffect.ts` | Varmare nordicPalette + applicera cardColor/textColor |
+| `src/components/home/cards/ThemeCard.tsx` | Debounce color picker, nya pickers (Kort, Text), tydligare layout |
+| `src/store/types.ts` | `CustomColors` += `cardColor`, `textColor` |
 
