@@ -992,13 +992,14 @@ export interface SavedScene {
 export interface CustomColors {
   buttonColor?: string;
   sliderColor?: string;
-  bgColor?: string;
+  bgColor?: string;          // UI panel background
   menuColor?: string;
   cardColor?: string;
   textColor?: string;
-  glassOpacity?: number;    // 0.2-1.0
-  borderOpacity?: number;   // 0-0.5
-  recentColors?: string[];  // max 6, most recent first
+  sceneOverlayColor?: string; // 3D scene overlay color (for 'solid' dashboardBg)
+  glassOpacity?: number;      // 0.2-1.0
+  borderOpacity?: number;     // 0-0.5
+  recentColors?: string[];    // max 6, most recent first
 }
 
 export interface SavedTheme {
