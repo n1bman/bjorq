@@ -24,6 +24,7 @@ const darkPalette: ThemePalette = {
   '--surface': '222 14% 16%',
   '--glass': '222 16% 15% / 0.72',
   '--glass-border': '222 12% 25%',
+  '--glow-intensity': '0.5',
 };
 
 const midnightPalette: ThemePalette = {
@@ -47,6 +48,7 @@ const midnightPalette: ThemePalette = {
   '--surface': '230 22% 10%',
   '--glass': '230 25% 8% / 0.85',
   '--glass-border': '230 20% 18%',
+  '--glow-intensity': '0.4',
 };
 
 const lightPalette: ThemePalette = {
@@ -70,29 +72,47 @@ const lightPalette: ThemePalette = {
   '--surface': '220 14% 93%',
   '--glass': '0 0% 100% / 0.8',
   '--glass-border': '220 14% 82%',
+  '--glow-intensity': '0.3',
 };
 
+/* ── Nordic Noir — premium warm palette ── */
 const nordicPalette: ThemePalette = {
-  '--background': '225 20% 7%',
-  '--foreground': '38 18% 88%',
-  '--card': '220 15% 9%',
-  '--card-foreground': '38 18% 88%',
-  '--popover': '220 15% 9%',
-  '--popover-foreground': '38 18% 88%',
-  '--secondary': '30 12% 16%',
-  '--secondary-foreground': '40 20% 82%',
-  '--muted': '25 10% 13%',
-  '--muted-foreground': '35 10% 50%',
-  '--border': '30 12% 20%',
-  '--input': '30 10% 15%',
-  '--sidebar-background': '225 22% 6%',
-  '--sidebar-foreground': '40 20% 82%',
-  '--sidebar-accent': '30 10% 13%',
-  '--sidebar-accent-foreground': '40 20% 82%',
-  '--sidebar-border': '30 8% 15%',
-  '--surface': '25 12% 11%',
-  '--glass': '225 18% 8% / 0.88',
-  '--glass-border': '30 12% 22%',
+  // Backgrounds: deep charcoal/graphite
+  '--background': '220 30% 4%',        // #07090d
+  '--surface': '220 28% 6%',           // #0b0e14
+  '--card': '222 20% 11%',             // #171b24
+  '--card-foreground': '38 25% 93%',   // #f3efe8
+  '--popover': '222 20% 11%',
+  '--popover-foreground': '38 25% 93%',
+  // Buttons/secondary: dark warm panels
+  '--secondary': '220 18% 14%',        // #1c212b
+  '--secondary-foreground': '32 12% 68%', // #b9b1a5
+  // Muted
+  '--muted': '220 16% 12%',
+  '--muted-foreground': '30 5% 47%',   // #7f7a73
+  // Text
+  '--foreground': '38 25% 93%',        // #f3efe8 warm off-white
+  // Borders: alpha-based for subtlety
+  '--border': '0 0% 100% / 0.10',
+  '--input': '220 16% 12%',
+  // Sidebar
+  '--sidebar-background': '220 28% 6%',
+  '--sidebar-foreground': '32 12% 68%',
+  '--sidebar-accent': '220 16% 12%',
+  '--sidebar-accent-foreground': '32 12% 68%',
+  '--sidebar-border': '0 0% 100% / 0.06',
+  // Glass
+  '--glass': '220 28% 6% / 0.88',
+  '--glass-border': '0 0% 100% / 0.06',
+  // Glow — subtle for Nordic Noir
+  '--glow-intensity': '0.35',
+  // Nordic Noir semantic accent colors
+  '--nn-fjord': '207 22% 55%',         // #6f8fa8
+  '--nn-ice': '207 20% 72%',           // #a8bcc9
+  '--nn-moss': '108 11% 49%',          // #748b6f
+  '--nn-lavender': '268 17% 57%',      // #8c7aa8
+  '--nn-linen': '34 28% 75%',          // #d8c7a8
+  '--nn-amber-soft': '36 55% 60% / 0.18', // amber soft glow
 };
 
 const palettes: Record<string, ThemePalette> = {
@@ -100,6 +120,14 @@ const palettes: Record<string, ThemePalette> = {
   midnight: midnightPalette,
   light: lightPalette,
   nordic: nordicPalette,
+};
+
+// Default accent per theme
+const themeDefaultAccent: Record<string, string> = {
+  dark: '#f59e0b',
+  midnight: '#f59e0b',
+  light: '#f59e0b',
+  nordic: '#d7a35d', // warm amber
 };
 
 function hexToHsl(hex: string): string {
@@ -126,6 +154,8 @@ function hexToHsl(hex: string): string {
   return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
 }
 
+export { themeDefaultAccent };
+
 export function useThemeEffect() {
   const { theme, accentColor, customColors } = useAppStore((s) => ({
     theme: s.profile.theme,
@@ -137,49 +167,49 @@ export function useThemeEffect() {
     const root = document.documentElement;
     const palette = palettes[theme] || palettes.dark;
 
+    // Apply full palette
     Object.entries(palette).forEach(([prop, value]) => {
       root.style.setProperty(prop, value);
     });
 
     // Apply custom color overrides
     if (customColors) {
-      if (customColors.bgColor && customColors.bgColor.startsWith('#') && customColors.bgColor.length >= 7) {
+      if (customColors.bgColor?.startsWith('#') && customColors.bgColor.length >= 7) {
         root.style.setProperty('--background', hexToHsl(customColors.bgColor));
       }
-      if (customColors.buttonColor && customColors.buttonColor.startsWith('#') && customColors.buttonColor.length >= 7) {
+      if (customColors.buttonColor?.startsWith('#') && customColors.buttonColor.length >= 7) {
         root.style.setProperty('--secondary', hexToHsl(customColors.buttonColor));
       }
-      if (customColors.menuColor && customColors.menuColor.startsWith('#') && customColors.menuColor.length >= 7) {
+      if (customColors.menuColor?.startsWith('#') && customColors.menuColor.length >= 7) {
         const menuHsl = hexToHsl(customColors.menuColor);
         root.style.setProperty('--sidebar-background', menuHsl);
       }
-      if (customColors.cardColor && customColors.cardColor.startsWith('#') && customColors.cardColor.length >= 7) {
+      if (customColors.cardColor?.startsWith('#') && customColors.cardColor.length >= 7) {
         const cardHsl = hexToHsl(customColors.cardColor);
         root.style.setProperty('--card', cardHsl);
         root.style.setProperty('--popover', cardHsl);
       }
-      if (customColors.textColor && customColors.textColor.startsWith('#') && customColors.textColor.length >= 7) {
+      if (customColors.textColor?.startsWith('#') && customColors.textColor.length >= 7) {
         const textHsl = hexToHsl(customColors.textColor);
         root.style.setProperty('--foreground', textHsl);
         root.style.setProperty('--card-foreground', textHsl);
         root.style.setProperty('--popover-foreground', textHsl);
       }
+      // Glass opacity
       if (customColors.glassOpacity !== undefined) {
         const basePalette = palette['--glass'] || '222 16% 15% / 0.72';
         const hslPart = basePalette.split('/')[0].trim();
         root.style.setProperty('--glass', `${hslPart} / ${customColors.glassOpacity}`);
       }
+      // Border opacity — alpha-based approach
       if (customColors.borderOpacity !== undefined) {
-        const borderBase = palette['--border'] || '222 12% 21%';
-        const parts = borderBase.split(' ');
-        if (parts.length >= 3) {
-          const baseL = parseInt(parts[2]) || 16;
-          // Scale: 0 = invisible (0%), 0.5 = normal, 1.0 = very visible (baseL*3)
-          const opacity = customColors.borderOpacity;
-          const newL = Math.round(baseL * (opacity / 0.5));
-          root.style.setProperty('--border', `${parts[0]} ${parts[1]} ${Math.min(newL, 50)}%`);
-          root.style.setProperty('--glass-border', `${parts[0]} ${parts[1]} ${Math.min(newL + 4, 55)}%`);
-        }
+        const alpha = customColors.borderOpacity;
+        root.style.setProperty('--border', `0 0% 100% / ${alpha.toFixed(2)}`);
+        root.style.setProperty('--glass-border', `0 0% 100% / ${Math.max(alpha - 0.04, 0).toFixed(2)}`);
+      }
+      // Glow intensity
+      if (customColors.glowIntensity !== undefined) {
+        root.style.setProperty('--glow-intensity', String(customColors.glowIntensity));
       }
     }
   }, [theme, customColors]);
@@ -189,12 +219,14 @@ export function useThemeEffect() {
     const root = document.documentElement;
     const hsl = hexToHsl(accentColor);
     const customSlider = customColors?.sliderColor;
+    const glowIntensity = customColors?.glowIntensity ?? parseFloat(root.style.getPropertyValue('--glow-intensity') || '0.5');
 
     root.style.setProperty('--primary', hsl);
     root.style.setProperty('--ring', hsl);
     root.style.setProperty('--sidebar-primary', hsl);
     root.style.setProperty('--sidebar-ring', hsl);
-    root.style.setProperty('--amber-glow', `${hsl} / 0.15`);
+    root.style.setProperty('--amber-glow', `${hsl} / ${(0.15 * glowIntensity * 2).toFixed(3)}`);
+    root.style.setProperty('--warm-glow', `${hsl} / ${(0.04 * glowIntensity * 2).toFixed(3)}`);
 
     // Slider color override
     if (customSlider && customSlider.startsWith('#') && customSlider.length >= 7) {
@@ -202,5 +234,5 @@ export function useThemeEffect() {
     } else {
       root.style.setProperty('--slider-accent', hsl);
     }
-  }, [accentColor, customColors?.sliderColor]);
+  }, [accentColor, customColors?.sliderColor, customColors?.glowIntensity]);
 }

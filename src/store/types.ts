@@ -999,12 +999,14 @@ export interface CustomColors {
   sceneOverlayColor?: string; // 3D scene overlay color (for 'solid' dashboardBg)
   glassOpacity?: number;      // 0.2-1.0
   borderOpacity?: number;     // 0-0.5
+  glowIntensity?: number;     // 0-1.0
   recentColors?: string[];    // max 6, most recent first
 }
 
 export interface SavedTheme {
   id: string;
   name: string;
+  theme: string;              // base theme key
   accentColor: string;
   customColors: CustomColors;
 }

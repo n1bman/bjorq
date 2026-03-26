@@ -1,18 +1,21 @@
 import { useAppStore } from '../../../store/useAppStore';
 import { cn } from '../../../lib/utils';
-import { Monitor, Paintbrush, RotateCcw, Sliders, ChevronDown, ChevronUp, Save, X } from 'lucide-react';
+import { Monitor, Paintbrush, RotateCcw, Sliders, ChevronDown, ChevronUp, Save, X, Sparkles, Sun, Palette } from 'lucide-react';
 import { Slider } from '../../ui/slider';
 import { useRef, useCallback, useState } from 'react';
 import type { CustomColors, SavedTheme } from '../../../store/types';
+import { themeDefaultAccent } from '../../../hooks/useThemeEffect';
 
+/* ── Theme presets with preview colors ── */
 const themes = [
-  { key: 'dark' as const, label: 'Mörkt' },
-  { key: 'midnight' as const, label: 'Midnatt' },
-  { key: 'light' as const, label: 'Ljust' },
-  { key: 'nordic' as const, label: 'Nordic Noir' },
+  { key: 'dark' as const, label: 'Mörkt', bg: '#1a1c23', fg: '#e0e4ed', accent: '#f59e0b' },
+  { key: 'midnight' as const, label: 'Midnatt', bg: '#0d0f18', fg: '#e8eff8', accent: '#f59e0b' },
+  { key: 'light' as const, label: 'Ljust', bg: '#f0f2f5', fg: '#1e2530', accent: '#f59e0b' },
+  { key: 'nordic' as const, label: 'Nordic Noir', bg: '#07090d', fg: '#f3efe8', accent: '#d7a35d', premium: true },
 ];
 
 const accents = [
+  { color: '#d7a35d', label: 'Amber' },
   { color: '#f59e0b', label: 'Guld' },
   { color: '#3b82f6', label: 'Blå' },
   { color: '#10b981', label: 'Grön' },
@@ -20,7 +23,6 @@ const accents = [
   { color: '#8b5cf6', label: 'Lila' },
   { color: '#ec4899', label: 'Rosa' },
   { color: '#14b8a6', label: 'Teal' },
-  { color: '#f97316', label: 'Orange' },
 ];
 
 const backgrounds = [
@@ -37,63 +39,15 @@ function addToRecent(recent: string[] | undefined, color: string): string[] {
   return list.slice(0, 6);
 }
 
-/* ── ColorPickerDot — commit-based (only saves on blur/close) ── */
-interface ColorPickerDotProps {
-  label: string;
-  value: string | undefined;
-  onChange: (hex: string) => void;
-}
-
-function ColorPickerDot({ label, value, onChange }: ColorPickerDotProps) {
-  const committedRef = useRef(false);
-
-  const handleChange = useCallback((hex: string) => {
-    // Live preview via CSS custom property would be ideal but
-    // for simplicity we just track the latest value
-    committedRef.current = false;
-  }, []);
-
-  const handleBlur = useCallback((e: React.FocusEvent<HTMLInputElement>) => {
-    if (!committedRef.current) {
-      committedRef.current = true;
-      onChange(e.target.value);
-    }
-  }, [onChange]);
-
-  const handleChangeCommit = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    // Native color picker fires onChange on every drag — we only commit on blur
-    // But we store the latest value in a ref so blur can read it
-  }, []);
-
-  return (
-    <div className="flex flex-col items-center gap-1">
-      <label className="relative cursor-pointer group">
-        <div
-          className="w-7 h-7 rounded-full border-2 border-border transition-all group-hover:scale-110"
-          style={{ backgroundColor: value || 'hsl(var(--secondary))' }}
-        />
-        <input
-          type="color"
-          value={value || '#1a1a2e'}
-          onChange={handleChangeCommit}
-          onBlur={handleBlur}
-          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-        />
-      </label>
-      <span className="text-[9px] text-muted-foreground">{label}</span>
-    </div>
-  );
-}
-
-/* ── Smarter ColorPickerDot that commits final value ── */
+/* ── CommitColorPicker — saves on blur only ── */
 function CommitColorPicker({ label, value, onCommit }: { label: string; value: string | undefined; onCommit: (hex: string) => void }) {
   const lastRef = useRef(value || '#1a1a2e');
 
   return (
-    <div className="flex flex-col items-center gap-1">
+    <div className="flex flex-col items-center gap-1.5">
       <label className="relative cursor-pointer group">
         <div
-          className="w-7 h-7 rounded-full border-2 border-border transition-all group-hover:scale-110"
+          className="w-8 h-8 rounded-full border-2 border-border/50 transition-all group-hover:scale-110 shadow-sm"
           style={{ backgroundColor: value || 'hsl(var(--secondary))' }}
         />
         <input
@@ -104,7 +58,17 @@ function CommitColorPicker({ label, value, onCommit }: { label: string; value: s
           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
         />
       </label>
-      <span className="text-[9px] text-muted-foreground">{label}</span>
+      <span className="text-[9px] text-muted-foreground leading-tight text-center">{label}</span>
+    </div>
+  );
+}
+
+/* ── Section Header ── */
+function SectionHeader({ icon: Icon, label }: { icon: React.ElementType; label: string }) {
+  return (
+    <div className="flex items-center gap-2 pb-1">
+      <Icon size={13} className="text-primary/70" />
+      <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary/70">{label}</span>
     </div>
   );
 }
@@ -133,7 +97,8 @@ export default function ThemeCard() {
   };
 
   const resetCustom = () => {
-    setProfile({ customColors: undefined, accentColor: '#f59e0b' });
+    const defaultAccent = themeDefaultAccent[profile.theme] || '#f59e0b';
+    setProfile({ customColors: undefined, accentColor: defaultAccent });
   };
 
   const saveTheme = () => {
@@ -141,6 +106,7 @@ export default function ThemeCard() {
     const newTheme: SavedTheme = {
       id: crypto.randomUUID(),
       name: themeName.trim(),
+      theme: profile.theme,
       accentColor: profile.accentColor,
       customColors: { ...custom, recentColors: undefined },
     };
@@ -155,43 +121,62 @@ export default function ThemeCard() {
   };
 
   const loadTheme = (t: SavedTheme) => {
-    setProfile({ accentColor: t.accentColor, customColors: { ...t.customColors, recentColors: custom.recentColors } });
+    setProfile({
+      theme: (t.theme || profile.theme) as any,
+      accentColor: t.accentColor,
+      customColors: { ...t.customColors, recentColors: custom.recentColors },
+    });
   };
 
   const recentColors = (custom.recentColors || []).filter(Boolean);
+  const hasCustomizations = !!(custom.buttonColor || custom.sliderColor || custom.bgColor || custom.menuColor || custom.cardColor || custom.textColor || custom.glassOpacity !== undefined || custom.borderOpacity !== undefined || custom.glowIntensity !== undefined);
 
   return (
-    <div className="glass-panel rounded-2xl p-[var(--space-panel)] space-y-4">
-      {/* ── Färdiga teman ── */}
-      <div className="space-y-2">
-        <div className="flex items-center gap-2">
-          <Monitor size={14} className="text-muted-foreground" />
-          <span className="text-xs font-semibold text-foreground">Tema</span>
-        </div>
+    <div className="glass-panel rounded-2xl p-[var(--space-panel)] space-y-5">
+
+      {/* ═══ SECTION A: Bas-tema ═══ */}
+      <div className="space-y-3">
+        <SectionHeader icon={Monitor} label="Tema" />
         <div className="grid grid-cols-2 gap-2">
-          {themes.map(({ key, label }) => (
+          {themes.map(({ key, label, bg, fg, accent, premium }) => (
             <button
               key={key}
               className={cn(
-                'h-9 rounded-lg text-xs font-medium transition-all border',
+                'relative h-14 rounded-xl text-xs font-medium transition-all border overflow-hidden group',
                 profile.theme === key
-                  ? 'bg-secondary text-foreground border-border shadow-sm ring-1 ring-border'
-                  : 'bg-transparent text-muted-foreground border-border/50 hover:bg-secondary/50'
+                  ? 'border-primary/50 ring-1 ring-primary/30 shadow-md'
+                  : 'border-border/40 hover:border-border/70'
               )}
-              onClick={() => setProfile({ theme: key })}
+              onClick={() => {
+                const defaultAcc = themeDefaultAccent[key] || '#f59e0b';
+                setProfile({ theme: key, accentColor: defaultAcc });
+              }}
             >
-              {label}
+              {/* Color preview strip */}
+              <div className="absolute inset-0 flex">
+                <div className="flex-1" style={{ backgroundColor: bg }} />
+                <div className="w-1" style={{ backgroundColor: accent }} />
+                <div className="w-8 flex items-center justify-center" style={{ backgroundColor: bg }}>
+                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: accent }} />
+                </div>
+              </div>
+              <div className="relative z-10 flex items-center justify-between px-3 h-full">
+                <span style={{ color: fg }} className="font-medium">{label}</span>
+                {premium && (
+                  <Sparkles size={11} style={{ color: accent }} />
+                )}
+              </div>
             </button>
           ))}
         </div>
 
         {/* Saved themes */}
         {(profile.savedThemes || []).length > 0 && (
-          <div className="space-y-1.5 pt-1">
+          <div className="space-y-2 pt-1">
             <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Sparade teman</span>
             <div className="flex flex-wrap gap-2">
               {(profile.savedThemes || []).map((t) => (
-                <div key={t.id} className="flex items-center gap-1 bg-secondary/50 rounded-lg border border-border/50 px-2 py-1">
+                <div key={t.id} className="flex items-center gap-1.5 bg-secondary/40 rounded-xl border border-border/40 px-2.5 py-1.5">
                   <button
                     className="text-[11px] text-foreground hover:text-primary transition-colors"
                     onClick={() => loadTheme(t)}
@@ -200,7 +185,7 @@ export default function ThemeCard() {
                   </button>
                   <button
                     onClick={() => deleteTheme(t.id)}
-                    className="text-muted-foreground hover:text-destructive transition-colors ml-1"
+                    className="text-muted-foreground hover:text-destructive transition-colors ml-0.5"
                   >
                     <X size={10} />
                   </button>
@@ -211,18 +196,18 @@ export default function ThemeCard() {
         )}
       </div>
 
-      {/* ── Scen-bakgrund (3D) ── */}
-      <div className="space-y-2">
-        <span className="text-xs font-semibold text-foreground">Scen-bakgrund</span>
+      {/* ═══ SECTION B: Scen-bakgrund ═══ */}
+      <div className="space-y-2 border-t border-border/30 pt-4">
+        <SectionHeader icon={Sun} label="Scen-bakgrund" />
         <div className="flex gap-2">
           {backgrounds.map(({ key, label }) => (
             <button
               key={key}
               className={cn(
-                'flex-1 h-8 rounded-lg text-xs font-medium transition-all border',
+                'flex-1 h-9 rounded-xl text-xs font-medium transition-all border',
                 profile.dashboardBg === key
-                  ? 'bg-secondary text-foreground border-border shadow-sm'
-                  : 'bg-transparent text-muted-foreground border-border/50 hover:bg-secondary/50'
+                  ? 'bg-secondary text-foreground border-primary/30 shadow-sm'
+                  : 'bg-transparent text-muted-foreground border-border/40 hover:bg-secondary/40'
               )}
               onClick={() => setProfile({ dashboardBg: key })}
             >
@@ -232,7 +217,7 @@ export default function ThemeCard() {
         </div>
         {profile.dashboardBg === 'solid' && (
           <div className="flex items-center gap-3 pt-1">
-            <span className="text-[10px] text-muted-foreground">Scen-overlay färg</span>
+            <span className="text-[10px] text-muted-foreground">Overlay-färg</span>
             <CommitColorPicker
               label=""
               value={custom.sceneOverlayColor || '#0a0a14'}
@@ -242,21 +227,63 @@ export default function ThemeCard() {
         )}
       </div>
 
-      {/* ── Eget tema / Anpassat ── */}
-      <div className="space-y-3 border-t border-border pt-3">
+      {/* ═══ SECTION C: Anpassa ═══ */}
+      <div className="space-y-3 border-t border-border/30 pt-4">
         <button
           onClick={() => setShowCustom(!showCustom)}
           className="flex items-center gap-2 text-xs font-semibold text-foreground hover:text-primary transition-colors w-full"
         >
-          <Paintbrush size={14} className="text-muted-foreground" />
-          Anpassa utseende
-          {showCustom ? <ChevronUp size={12} className="ml-auto" /> : <ChevronDown size={12} className="ml-auto" />}
+          <Paintbrush size={14} className="text-primary/60" />
+          <span className="flex-1 text-left">Anpassa utseende</span>
+          {hasCustomizations && <span className="w-1.5 h-1.5 rounded-full bg-primary" />}
+          {showCustom ? <ChevronUp size={13} className="text-muted-foreground" /> : <ChevronDown size={13} className="text-muted-foreground" />}
         </button>
 
         {showCustom && (
-          <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="space-y-5 animate-in fade-in slide-in-from-top-2 duration-200">
 
-            {/* Recent colors */}
+            {/* ── Accent color ── */}
+            <div className="space-y-2">
+              <SectionHeader icon={Palette} label="Accentfärg" />
+              <p className="text-[10px] text-muted-foreground -mt-1">Ikoner, aktiva element, fokusringar</p>
+              <div className="flex gap-2 flex-wrap">
+                {accents.map(({ color, label }) => (
+                  <button
+                    key={color}
+                    title={label}
+                    className={cn(
+                      'w-8 h-8 rounded-full border-2 transition-transform',
+                      profile.accentColor === color ? 'border-foreground scale-110 shadow-md' : 'border-transparent hover:scale-105'
+                    )}
+                    style={{ backgroundColor: color }}
+                    onClick={() => setAccentColor(color)}
+                  />
+                ))}
+                {/* Custom accent picker */}
+                <label className="relative cursor-pointer group">
+                  <div
+                    className={cn(
+                      'w-8 h-8 rounded-full border-2 border-dashed border-muted-foreground/30 flex items-center justify-center transition-all group-hover:scale-110',
+                      !accents.some(a => a.color === profile.accentColor) && 'border-foreground scale-110'
+                    )}
+                    style={!accents.some(a => a.color === profile.accentColor) ? { backgroundColor: profile.accentColor } : undefined}
+                  >
+                    {accents.some(a => a.color === profile.accentColor) && (
+                      <span className="text-[9px] text-muted-foreground">+</span>
+                    )}
+                  </div>
+                  <input
+                    type="color"
+                    value={profile.accentColor}
+                    onChange={() => {}}
+                    onBlur={(e) => setAccentColor(e.target.value)}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  />
+                </label>
+              </div>
+            </div>
+
+            {/* ── Recent colors ── */}
             {recentColors.length > 0 && (
               <div className="space-y-1.5">
                 <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Senast använda</span>
@@ -264,7 +291,7 @@ export default function ThemeCard() {
                   {recentColors.map((c) => (
                     <button
                       key={c}
-                      className="w-6 h-6 rounded-full border border-border/50 hover:scale-110 transition-transform"
+                      className="w-6 h-6 rounded-full border border-border/40 hover:scale-110 transition-transform shadow-sm"
                       style={{ backgroundColor: c }}
                       title={c}
                       onClick={() => setAccentColor(c)}
@@ -274,100 +301,83 @@ export default function ThemeCard() {
               </div>
             )}
 
-            {/* Accent color */}
-            <div className="space-y-2">
-              <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Accentfärg (ikoner & aktiva element)</span>
-              <div className="flex gap-2 flex-wrap">
-                {accents.map(({ color, label }) => (
-                  <button
-                    key={color}
-                    title={label}
-                    className={cn(
-                      'w-7 h-7 rounded-full border-2 transition-transform',
-                      profile.accentColor === color ? 'border-foreground scale-110' : 'border-transparent hover:scale-105'
-                    )}
-                    style={{ backgroundColor: color }}
-                    onClick={() => setAccentColor(color)}
-                  />
-                ))}
-                {/* Custom accent picker — commit on blur */}
-                <label className="relative cursor-pointer group">
-                  <div
-                    className={cn(
-                      'w-7 h-7 rounded-full border-2 border-dashed border-muted-foreground/40 flex items-center justify-center transition-all group-hover:scale-110',
-                      !accents.some(a => a.color === profile.accentColor) && 'border-foreground scale-110'
-                    )}
-                    style={!accents.some(a => a.color === profile.accentColor) ? { backgroundColor: profile.accentColor } : undefined}
-                  >
-                    {accents.some(a => a.color === profile.accentColor) && (
-                      <span className="text-[8px] text-muted-foreground">+</span>
-                    )}
-                  </div>
-                  <input
-                    type="color"
-                    value={profile.accentColor}
-                    onChange={() => {/* preview only, commit on blur */}}
-                    onBlur={(e) => setAccentColor(e.target.value)}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                  />
-                </label>
-              </div>
-            </div>
-
-            {/* Color pickers — commit on blur */}
-            <div className="space-y-2">
-              <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Färger</span>
-              <div className="flex justify-between px-2">
+            {/* ── Surface colors ── */}
+            <div className="space-y-3">
+              <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Färger & ytor</span>
+              <div className="grid grid-cols-3 gap-4 px-1">
                 <CommitColorPicker label="Knappar" value={custom.buttonColor} onCommit={(c) => commitCustomColor({ buttonColor: c })} />
-                <CommitColorPicker label="Slider-spår" value={custom.sliderColor} onCommit={(c) => commitCustomColor({ sliderColor: c })} />
-                <CommitColorPicker label="Panel-bg" value={custom.bgColor} onCommit={(c) => commitCustomColor({ bgColor: c })} />
-              </div>
-              <div className="flex justify-between px-2">
+                <CommitColorPicker label="Slider" value={custom.sliderColor} onCommit={(c) => commitCustomColor({ sliderColor: c })} />
+                <CommitColorPicker label="Panel" value={custom.bgColor} onCommit={(c) => commitCustomColor({ bgColor: c })} />
                 <CommitColorPicker label="Meny" value={custom.menuColor} onCommit={(c) => commitCustomColor({ menuColor: c })} />
                 <CommitColorPicker label="Kort" value={custom.cardColor} onCommit={(c) => commitCustomColor({ cardColor: c })} />
                 <CommitColorPicker label="Text" value={custom.textColor} onCommit={(c) => commitCustomColor({ textColor: c })} />
               </div>
             </div>
 
-            {/* Transparency slider */}
-            <div className="space-y-1">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5">
-                  <Sliders size={11} className="text-muted-foreground" />
-                  <span className="text-[10px] text-muted-foreground">Transparens</span>
+            {/* ── Material & feel ── */}
+            <div className="space-y-3 border-t border-border/20 pt-4">
+              <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Material & känsla</span>
+
+              {/* Transparency */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <Sliders size={11} className="text-muted-foreground" />
+                    <span className="text-[10px] text-muted-foreground">Transparens</span>
+                  </div>
+                  <span className="text-[10px] text-muted-foreground font-mono">
+                    {Math.round((custom.glassOpacity ?? 0.72) * 100)}%
+                  </span>
                 </div>
-                <span className="text-[10px] text-muted-foreground font-mono">
-                  {Math.round((custom.glassOpacity ?? 0.72) * 100)}%
-                </span>
+                <Slider
+                  min={20}
+                  max={100}
+                  step={1}
+                  value={[Math.round((custom.glassOpacity ?? 0.72) * 100)]}
+                  onValueChange={([v]) => updateCustom({ glassOpacity: v / 100 })}
+                />
               </div>
-              <Slider
-                min={20}
-                max={100}
-                step={1}
-                value={[Math.round((custom.glassOpacity ?? 0.72) * 100)]}
-                onValueChange={([v]) => updateCustom({ glassOpacity: v / 100 })}
-              />
+
+              {/* Border visibility */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-muted-foreground">Border-synlighet</span>
+                  <span className="text-[10px] text-muted-foreground font-mono">
+                    {Math.round((custom.borderOpacity ?? 0.10) * 100)}%
+                  </span>
+                </div>
+                <Slider
+                  min={0}
+                  max={50}
+                  step={1}
+                  value={[Math.round((custom.borderOpacity ?? 0.10) * 100)]}
+                  onValueChange={([v]) => updateCustom({ borderOpacity: v / 100 })}
+                />
+              </div>
+
+              {/* Glow intensity */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <Sparkles size={11} className="text-muted-foreground" />
+                    <span className="text-[10px] text-muted-foreground">Glow-intensitet</span>
+                  </div>
+                  <span className="text-[10px] text-muted-foreground font-mono">
+                    {Math.round((custom.glowIntensity ?? 0.5) * 100)}%
+                  </span>
+                </div>
+                <Slider
+                  min={0}
+                  max={100}
+                  step={1}
+                  value={[Math.round((custom.glowIntensity ?? 0.5) * 100)]}
+                  onValueChange={([v]) => updateCustom({ glowIntensity: v / 100 })}
+                />
+              </div>
             </div>
 
-            {/* Border visibility slider */}
-            <div className="space-y-1">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] text-muted-foreground">Border-synlighet</span>
-                <span className="text-[10px] text-muted-foreground font-mono">
-                  {Math.round((custom.borderOpacity ?? 0.15) * 100)}%
-                </span>
-              </div>
-              <Slider
-                min={0}
-                max={50}
-                step={1}
-                value={[Math.round((custom.borderOpacity ?? 0.15) * 100)]}
-                onValueChange={([v]) => updateCustom({ borderOpacity: v / 100 })}
-              />
-            </div>
-
-            {/* Save as theme */}
-            <div className="border-t border-border/50 pt-3 space-y-2">
+            {/* ── Save theme ── */}
+            <div className="border-t border-border/30 pt-3 space-y-2">
               {showSaveInput ? (
                 <div className="flex gap-2">
                   <input
@@ -376,7 +386,7 @@ export default function ThemeCard() {
                     onChange={(e) => setThemeName(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && saveTheme()}
                     placeholder="Temanamn..."
-                    className="flex-1 h-8 rounded-lg bg-secondary/50 border border-border/50 px-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                    className="flex-1 h-8 rounded-lg bg-secondary/40 border border-border/40 px-2.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
                     autoFocus
                   />
                   <button
@@ -404,12 +414,12 @@ export default function ThemeCard() {
               )}
             </div>
 
-            {/* Reset button — always visible, prominent */}
+            {/* ── Reset ── */}
             <button
               onClick={resetCustom}
-              className="flex items-center justify-center gap-2 w-full h-9 rounded-lg border border-destructive/30 text-destructive/80 hover:text-destructive hover:border-destructive/50 hover:bg-destructive/10 text-xs font-medium transition-all"
+              className="flex items-center justify-center gap-2 w-full h-10 rounded-xl border border-destructive/30 text-destructive/80 hover:text-destructive hover:border-destructive/50 hover:bg-destructive/10 text-xs font-medium transition-all"
             >
-              <RotateCcw size={12} />
+              <RotateCcw size={13} />
               Återställ alla anpassningar
             </button>
           </div>
