@@ -450,13 +450,13 @@ function DevicesCategory() {
   const [kindFilter, setKindFilter] = useState<DeviceKind | null>(null);
   return (
     <div className="space-y-3">
-      <div className="flex gap-1 overflow-x-auto pb-1">
-        {deviceFilters.map(({ key, label, emoji }) => (
+      <div className="flex gap-1.5 overflow-x-auto pb-1">
+        {deviceFilters.map(({ key, label }) => (
           <Button key={key} size="sm"
             variant={(key === 'all' && !kindFilter) || kindFilter === key ? 'default' : 'outline'}
-            className="h-7 text-[10px] gap-1 shrink-0"
+            className="h-9 text-xs gap-1 shrink-0"
             onClick={() => setKindFilter(key === 'all' ? null : key as DeviceKind)}>
-            <span>{emoji}</span>{label}
+            {label}
           </Button>
         ))}
       </div>
