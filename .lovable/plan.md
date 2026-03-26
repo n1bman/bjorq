@@ -2,152 +2,195 @@
 
 # Full System Audit — BJORQ Dashboard
 
-## Scope
-
-End-to-end verification of every subsystem: UI → state → API → HA/Wizard → persistence → reload. Work in small, reviewable diffs per phase.
-
-## Pre-condition: Stabilization (Phase 0)
-
-Before any functional audit, get all checks green:
-- `npx tsc -p tsconfig.app.json --noEmit`
-- `npm run lint`
-- `npm test`
-- `npm run build`
-
-Fix any TypeScript errors, lint warnings, and failing tests found. This establishes a clean baseline.
+Följer `docs/lovable-system-audit-plan.md` exakt, fas för fas.
 
 ---
 
-## Phase 1: HA + Live Sync Audit
+## Fas 1: Stabiliseringsbas
 
-**Files:** `src/hooks/useHomeAssistant.ts`, `src/lib/apiClient.ts`, `server/ha/liveHub.js`, `server/api/live.js`, `src/store/useAppStore.ts` (HA slice)
+### Steg 1 — Kör alla fyra checks och samla faktiska fel
 
-**Verify:**
-- DEV mode: direct WebSocket connect → auth → get_states → subscribe_events → live updates
-- HOSTED mode: EventSource `/api/live/events` → snapshot/entity-update/ha-status/segment-map events
-- Fallback polling: heartbeat timeout (45s) → fallback poll (10s) → reconnect stream
-- Service calls: DEV uses WS `call_service`, HOSTED uses `POST /api/live/service`
-- `setHAStatus`, `markHASync`, `setHATransport` — status transitions are correct
-- Reconnect logic (both client WS and server liveHub backoff)
-- `haServiceCaller` throttle is properly wired in both modes
+Kör i ordning:
+1. `npx tsc -p tsconfig.app.json --noEmit` — fånga alla TS-fel
+2. `npm run lint` — samla warnings/errors
+3. `npm test` — verifiera att alla tester passerar
+4. `npm run build` — verifiera att produktionsbygget går igenom
 
-**Known risk:** `initHostedMode` sets transport to `live-stream` but no token — verify no WS auto-connect fires in hosted mode.
+### Steg 2 — Fixa faktiska TypeScript-fel
 
----
+Audit-planen listar 5 kända blockerare. Min kodgranskning visar att alla 5 ser fixade ut i nuvarande kod:
+- `isHostedSync` importeras redan i `BuildTopToolbar.tsx` (rad 21)
+- `deviceStates` i `DataBackupCard.tsx` är redan `Record<string, DeviceState>` (rad 147)
+- `statusConfig` i `HAConnectionPanel.tsx` har redan `degraded` (rad 30)
+- Alla testfiler har `// @ts-ignore` för server JS-importer
+- `haMenuSelectors.test.ts` använder redan `as unknown as AppState` (rad 58)
 
-## Phase 2: Vacuum Audit
+**Men** — eftersom tsc fortfarande faller måste vi köra kommandot, läsa exakt output, och fixa de verkliga felen. Möjliga orsaker:
+- Nya filer tillagda utanför Lovable som inte typkollas korrekt
+- Import-/typfel i mindre filer som inte granskats ännu
+- `@types`-paket som saknas eller inte matchar
 
-**Files:** `server/ha/liveHub.js` (`refreshVacuumMap`, `parseVacuumSegmentMap`), `src/hooks/useHomeAssistant.ts` (segment-map event), `src/components/home/cards/RobotPanel.tsx`, `src/components/build/devices/VacuumMappingTools.tsx`, `src/store/useAppStore.ts` (vacuum actions), `src/store/types.ts` (VacuumZone, VacuumMapping)
+Varje faktiskt TS-fel fixas med minsta möjliga diff.
 
-**Verify the full chain:**
-1. Server: `liveHub.connect()` → gets states → finds `vacuum.*` → calls `roborock.get_maps` → parses segment map → broadcasts `segment-map` event
-2. Client: receives `segment-map` → `setVacuumSegmentMap()` → stored in `homeAssistant.vacuumSegmentMap`
-3. VacuumMappingTools: reads `vacuumSegmentMap`, shows dropdown with segment options per zone
-4. RobotPanel: `getZoneSegmentId()` resolves zone.segmentId → fallback to name lookup in vacuumSegmentMap
-5. Room cleaning: `app_segment_clean` with correct `segments: [segId]`
-
-**Known issues to check:**
-- `parseVacuumSegmentMap` handles both array-of-rooms and object-keyed-rooms formats
-- Name matching between BJORQ rooms and HA room names (case-insensitive?)
-- What happens when segment map is empty (no Roborock service)
-- Zone persistence: `vacuumMapping` is on Floor → saved in project → survives reload?
-- `segmentId` on zone persists through project save/load cycle
+### Steg 3 — Bekräfta alla fyra checks gröna innan nästa fas
 
 ---
 
-## Phase 3: Persistence & Sync Audit
+## Fas 2: HA + live-sync audit
 
-**Files:** `src/store/useAppStore.ts` (partialize, onRehydrate, subscribe auto-sync, initHostedMode), `src/lib/apiClient.ts` (save/fetch functions), `server/api/profiles.js`, `server/api/projects.js`, `server/api/bootstrap.js`, `server/api/backups.js`
+**Filer att verifiera:**
+- `src/hooks/useHomeAssistant.ts`
+- `src/hooks/useHABridge.ts`
+- `src/lib/apiClient.ts`
+- `src/components/home/cards/HAConnectionPanel.tsx`
+- `server/ha/liveHub.js`
+- `server/api/live.js`
 
-**Verify for DEV mode:**
-- `partialize` includes all necessary slices: layout, devices, props, homeGeometry, profile, standby, homeView, environment, calendar, automations, savedScenes, customCategories, wifi, energyConfig, wizard, dashboard, activityLog, comfort
-- Missing from partialize? Check: `comfort`, `dashboard`, `performance` — these may be lost on reload in DEV mode
-- `onRehydrate` migration: media-screen → media_screen, boolean deviceStates → structured
+**Kedjan att verifiera:**
 
-**Verify for HOSTED mode:**
-- `partialize` returns `{}` (no localStorage)
-- `syncProfileToServer()` sends: profile, performance, standby, homeView, environment, customCategories, wifi, energyConfig, calendar, automations, savedScenes, wizard, dashboard
-- Missing from profile sync? Check: `comfort` — comfort rules may not persist in hosted mode!
-- `syncProjectToServer()` triggered by changes to: layout, devices, homeGeometry, props, terrain
-- Missing from project sync? Check: `activityLog` — included in `buildHostedProjectPayload` ✓
-- Bootstrap load: all profile/project fields properly applied
+DEV-läge:
+- `connect()` → WS → `auth_required` → `auth_ok` → `get_states` → `subscribe_events` → live updates
+- `callService` → WS `call_service`
+- `onclose` → reconnect med 5s backoff
 
-**Backup/restore:**
-- Backup envelope includes: config, profiles, projects
-- Restore applies profiles + projects + config correctly
-- Reset clears projects and resets profiles to defaults
+HOSTED-läge:
+- `useHomeAssistant()` effect → `fetchSnapshot()` → `connectHostedStream()` (EventSource `/api/live/events`)
+- Events: `snapshot`, `entity-update`, `ha-status`, `segment-map`, `ping`
+- Heartbeat: 45s timeout → `startFallback()` → poll var 10s → `scheduleStreamReconnect()`
+- Service calls: `callHAService()` → `POST /api/live/service`
+- `haServiceCaller.current` sätts korrekt i bägge lägen
 
----
+**Statusövergångar:**
+`disconnected` → `connecting` → `connected` / `error` / `degraded`
 
-## Phase 4: Dashboard / Theme / Display / Standby Audit
-
-**Files:** `src/hooks/useThemeEffect.ts`, `src/components/home/cards/ThemeCard.tsx`, `src/components/home/DashboardShell.tsx`, `src/components/home/DashboardGrid.tsx`, `src/components/standby/StandbyMode.tsx`, `src/components/standby/useIdleTimer.ts`, `src/components/home/cards/DisplaySettings.tsx`, `src/components/home/cards/GraphicsSettings.tsx`
-
-**Verify:**
-- Theme presets (dark/midnight/light/nordic) apply correct CSS variables
-- Custom colors (8 types) apply and persist: buttonColor, sliderColor, bgColor, menuColor, cardColor, textColor, textSecondaryColor, borderColor
-- `savedThemes` save/load/delete cycle works
-- `dashboardBg` (scene3d/gradient/solid) + `sceneOverlayColor` work
-- Section-specific accents (energy/climate/weather) render correctly
-- Standby: idle timer → enterStandby → exitStandby → phase transitions (standby → vio)
-- Widget layout persistence (position/size for clock/weather/temp/energy)
-- Category order and density persistence
-- All display settings actually affect rendering
+**Redan verifierat i kodgranskning:**
+- Ingen WS auto-connect i hosted mode (guarded by `isHostedSync()` check)
+- `applyHostedSnapshot()` sätter entities, liveStates, status, transport, vacuumSegmentMap
+- Throttle via `createThrottledCaller` wired i bägge lägen
 
 ---
 
-## Phase 5: Wizard / Assets / Import Audit
+## Fas 3: Vacuum audit
 
-**Files:** `src/lib/wizardClient.ts`, `src/lib/catalogLoader.ts`, `src/lib/assetPipeline.ts`, `src/components/build/furnish/FurnishTools.tsx`, `src/components/build/import/ImportTools.tsx`, `src/lib/apiClient.ts` (uploadPropAsset, ingestToCatalog)
+**Filer:**
+- `server/ha/liveHub.js` (`refreshVacuumMap`, `parseVacuumSegmentMap`)
+- `src/hooks/useHomeAssistant.ts` (segment-map event, rad 275-278)
+- `src/components/home/cards/RobotPanel.tsx` (`getZoneSegmentId`, `startRoomCleaning`)
+- `src/components/build/devices/VacuumMappingTools.tsx`
+- `src/store/types.ts` (VacuumZone, VacuumMapping)
 
-**Verify:**
-- Wizard connection test → status update → catalog fetch
-- Thumbnail loading (wizard URL construction, fallback)
+**Kedjan att verifiera:**
+1. Server: `liveHub.connect()` → gets states → finds `vacuum.*` → `refreshVacuumMap()` → `roborock.get_maps` → `parseVacuumSegmentMap()` → broadcast `segment-map`
+2. Client: `segment-map` event → `setVacuumSegmentMap()` → `homeAssistant.vacuumSegmentMap`
+3. RobotPanel: `getZoneSegmentId(zone)` → zone.segmentId || vacuumSegmentMap[roomName]
+4. Om segmentId saknas → toast med tydlig feltext (rad 134-138)
+5. `app_segment_clean` med `segments: [segId]`
+
+**Redan verifierat i kodgranskning:**
+- `parseVacuumSegmentMap` hanterar both array-of-rooms och object-keyed-rooms (rad 36-54)
+- Namnmatchning är **case-sensitive** — notera som risk men inte kritisk bugg
+- UI visar tydlig varning (`AlertCircle` + "Saknar segment-ID") om segmentId saknas
+- Zone-data persisteras via `floor.vacuumMapping` i `layout` → inkluderat i `partialize` och project sync
+
+**Test att lägga till:** `parseVacuumSegmentMap` har redan tester i `liveHub.test.ts`. Eventuellt utöka med fler edge cases.
+
+---
+
+## Fas 4: Persistence & sync audit
+
+**Filer:**
+- `src/store/useAppStore.ts` (partialize rad 1735-1779, syncProfileToServer rad 81-102, initHostedMode rad 1787-1868)
+- `src/lib/apiClient.ts`
+- `src/lib/projectIO.ts`
+- `server/api/profiles.js`, `server/api/projects.js`, `server/api/bootstrap.js`
+
+**Redan verifierat i kodgranskning — alla tre tidlgare buggarna är fixade:**
+- `comfort` finns i `partialize` (rad 1764), `syncProfileToServer` (rad 99), och bootstrap (rad 1833)
+- `performance` finns i `partialize` (rad 1756)
+- `dashboard` finns i `partialize` (rad 1765)
+
+**Sparflöden att verifiera punkt för punkt:**
+
+| Data | DEV (localStorage) | HOSTED (server) |
+|------|-------------------|-----------------|
+| layout, devices, props, homeGeometry, terrain | partialize ✓ | syncProjectToServer ✓ |
+| profile, performance, standby, homeView | partialize ✓ | syncProfileToServer ✓ |
+| environment, customCategories, wifi, energyConfig | partialize ✓ | syncProfileToServer ✓ |
+| calendar, automations, savedScenes, comfort | partialize ✓ | syncProfileToServer ✓ |
+| wizard (url + version only), dashboard | partialize ✓ | syncProfileToServer ✓ |
+| activityLog | partialize ✓ | buildHostedProjectPayload ✓ |
+| homeAssistant (wsUrl + token only) | partialize ✓ | config via bootstrap ✓ |
+
+**Backup/restore:** `ThemeBackupCard` exporterar/importerar tema, `DataBackupCard` hanterar full backup, `ProjectManagerPanel` hanterar projektfiler.
+
+---
+
+## Fas 5: Dashboard / tema / display / standby audit
+
+**Filer:**
+- `src/hooks/useThemeEffect.ts`
+- `src/components/home/cards/ThemeCard.tsx`
+- `src/components/home/cards/DisplaySettings.tsx`
+- `src/components/standby/StandbyMode.tsx`
+- `src/components/standby/useIdleTimer.ts`
+
+**Att verifiera:**
+- Tema-paletter (dark/midnight/light/nordic) sätter korrekta CSS-variabler
+- Custom colors (8 st) appliceras och persisteras
+- Saved themes sparas/laddas/tas bort
+- Section accents (energy/climate/weather) renderas korrekt
+- Standby: idle timer → enterStandby → exitStandby → fasövergångar
+- Widget layout persistence
+
+---
+
+## Fas 6: Wizard / assets / import audit
+
+**Filer:** `src/lib/wizardClient.ts`, `src/lib/catalogLoader.ts`, `src/lib/assetPipeline.ts`
+
+**Att verifiera:**
+- Wizard connection test → status → catalog fetch
+- Thumbnail loading (URL construction, fallback)
 - Model download → import → base64 persistence (< 4MB)
-- Catalog item metadata editing
-- Props placement → persist → reload (base64 reconstitution in Props3D)
-- Hosted mode: server-side asset upload pipeline
-- `wizardMode: 'synced'` → staleSync handling
+- `staleSync` handling
 
 ---
 
-## Phase 6: Build Mode / 2D / 3D Audit
+## Fas 7: Build Mode / 2D / 3D audit
 
-**Files:** `src/components/build/BuildModeV2.tsx`, `src/components/build/BuildCanvas2D.tsx`, `src/components/build/Walls3D.tsx`, `src/components/build/Props3D.tsx`, `src/components/build/BuildInspector.tsx`, `src/components/build/MaterialsPanel.tsx`, `src/components/build/FloorManager.tsx`, `src/components/devices/DeviceMarkers3D.tsx`
+**Filer:** `BuildModeV2.tsx`, `BuildCanvas2D.tsx`, `Props3D.tsx`, `DeviceMarkers3D.tsx`
 
-**Verify:**
+**Att verifiera:**
 - Wall drawing → room detection → room persistence
-- Opening placement and persistence
-- Props placement, movement, rotation, scale — persist through reload
+- Props placement → persist → reload
 - Device marker placement → room auto-assignment → HA entity linking
-- Material application (floor/wall per room)
-- Undo/redo stack
-- Import overlay sync
-- Floor management (add/remove/rename)
-- 2D ↔ 3D mode switch consistency
-- Model import (GLB/GLTF) → persist (base64 or server upload)
+- Material application
+- Undo/redo
+- Floor management
+- Model import (GLB/GLTF)
 
 ---
 
-## Deliverables per phase
+## Fas 8: Slutvalidering
 
-For each phase:
-1. List files inspected
-2. List bugs/broken connections found
-3. Minimal fix diffs
-4. Tests added where regression risk is high
-5. Confirm which save/load flows verified
-6. Note remaining risks
+- Alla fyra checks gröna
+- Lista över alla fixade buggar
+- Lista över kvarvarande risker
+- Sammanfattning av verifierade paneler/integrationer
 
-## Work order
+---
 
-Phases are sequential. Each phase produces a small, reviewable set of changes. No large refactors.
+## Arbetsordning
 
-**Critical early finding from code review:**
-- `comfort` state is NOT included in `syncProfileToServer()` (line 84-99) — comfort rules will be lost in hosted mode on server restart. This needs fixing.
-- `comfort` is also NOT in `partialize` (line 1745-1775) — comfort rules are lost on reload in DEV mode too.
-- `performance` is NOT in `partialize` — performance settings lost on reload in DEV mode (but saved via `syncProfileToServer` in hosted mode).
-- `dashboard` is NOT in `partialize` — dashboard category/density lost on DEV reload.
+Faserna är sekventiella. Fas 1 (stabilisering) måste vara grön innan djupare audit. Varje fas levererar konkreta fynd och minsta möjliga fixar.
 
-These are real bugs that will be fixed in Phase 3.
+**Panel-checklista** (verifieras under respektive fas):
+- HAConnectionPanel — datakälla, skrivväg, HOSTED/DEV
+- RobotPanel — segment-ID chain, service calls
+- ThemeCard — custom colors, saved themes, persistens
+- DisplaySettings — all settings affect rendering
+- ProjectManagerPanel — save/export/import
+- DataBackupCard — full backup/restore/reset
+- WizardConnectionPanel — connection + catalog
+- BuildTopToolbar — tools, import, save
 
