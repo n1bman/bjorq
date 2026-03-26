@@ -1,36 +1,58 @@
 
+Mål: Få färglogiken i Utseende att bli förutsägbar (särskilt accent + senaste använda), separera 3D-bakgrund från UI-bakgrund, och lägga temats export/import i Profil.
 
-# Fix: Accentfärg sparas inte + senast använda färger + spara egna teman + synligare Återställ
+1) Stabilisera färgval och byt färg-popup-logik
+- Fil: `src/components/home/cards/ThemeCard.tsx`
+- Ersätt nuvarande “live-spara på varje drag”-beteende för accent/custom pickers med två steg:
+  - preview (visuell uppdatering medan man drar)
+  - commit (spara slutvärde när man bekräftar/stänger picker)
+- Byt från nuvarande native `type="color"`-flöde till en mer kontrollerad popover-flow för att undvika att sista färgen tappas.
+- Spara alltid både “startfärg” och “slutfärg” vid commit så användaren kan gå tillbaka.
 
-## Problem
-1. **Custom accent sparas inte** — om man väljer en egen färg via color picker och den inte matchar en preset, fungerar det live men vid reload kan den gå tillbaka till default.
-2. **Ingen historik** — om man väljer en färg på knappar/meny/etc. kan man inte enkelt återanvända den på en annan plats.
-3. **Kan inte spara egna teman** — man kan anpassa allt men inte spara som en preset att byta tillbaka till.
-4. **Återställ-knappen** är för liten och osynlig.
+2) Fixa “Senast använda” så den blir praktiskt användbar
+- Fil: `src/components/home/cards/ThemeCard.tsx`
+- Nu floodas listan med nästan identiska blå nyanser (bekräftat av replay-event).
+- Ändra logik så recent-färger uppdateras endast på commit, inte på varje drag-event.
+- Normalisera hex (lowercase), deduplicera, behåll max 6.
+- Låt “Senast använda” kunna appliceras på aktuell färgkontroll (inte bara accent implicit), så den matchar användarens arbetsflöde från popupen.
 
-## Ändringar
+3) Särskilj bakgrundslogiken (3D-scen vs UI)
+- Filer:  
+  - `src/components/home/cards/ThemeCard.tsx`  
+  - `src/pages/Index.tsx` (eller `src/components/home/DashboardShell.tsx`, beroende på var overlay ska ligga)  
+  - `src/store/types.ts`
+- Behåll bakgrundslägena (3D-vy/Gradient/Enfärgad) som “scen-bakgrund”.
+- Döp om nuvarande färgpunkt “Bakgrund” till “Panelbakgrund (UI)” för att undvika sammanblandning.
+- Lägg till separat scenfärg för läget “Enfärgad” (t.ex. `sceneOverlayColor`) så färgen gäller 3D-bilden, inte hela UI:t.
+- Wire:a `profile.dashboardBg` till faktisk rendering via overlay ovanpå 3D-scenen:
+  - `scene3d` = ingen overlay
+  - `gradient` = gradient overlay
+  - `solid` = solid overlay med vald scenfärg
 
-### 1. Fixa accent-sparning (`ThemeCard.tsx`)
-Custom accent-picker anropar `setProfile({ accentColor })` korrekt, men problemet är att den **bara triggar i `requestAnimationFrame`** — sista värdet kanske inte hinner sparas om man stänger snabbt. Byt till att alltid spara det slutliga värdet via `onBlur` / `onChange` utan att förlita sig enbart på rAF.
+4) Lägg temahantering för export/import under Profil
+- Filer:
+  - Ny: `src/components/home/cards/ThemeBackupCard.tsx`
+  - `src/components/home/DashboardGrid.tsx`
+  - ev. `src/store/types.ts` (export payload-typ)
+- Lägg ett nytt kort i Profil → Data: “Teman”.
+- Exportera/importera tema-data separat (utan full installationsbackup):
+  - `theme`, `accentColor`, `dashboardBg`, `customColors`, `savedThemes`
+- Import ska validera JSON-format och merge:a säkert (dedupe på tema-id/namn).
 
-### 2. Senast använda färger (`types.ts` + `ThemeCard.tsx`)
-- Lägg till `recentColors?: string[]` i `CustomColors` (max 6 stycken)
-- Varje gång en färg väljs via ColorPickerDot eller accent-picker, pusha den till `recentColors` (dedup, max 6)
-- Visa en rad "Senast använda" med små cirklar ovanför färgprickarna, om det finns några
+5) Säkerställ kompatibilitet och migrering
+- Fil: `src/store/types.ts` (+ ev. lätt guard i `useAppStore.ts` vid behov)
+- Nya fält görs optional för bakåtkompatibilitet.
+- Existerande sparad data fortsätter fungera utan hård migration.
+- Ingen ändring i full backup-format krävs för att befintliga backups ska fortsätta gå att läsa.
 
-### 3. Spara egna teman (`types.ts` + `ThemeCard.tsx`)
-- Lägg till `savedThemes?: Array<{ name: string; accentColor: string; customColors: CustomColors }>` i `UserProfile`
-- Lägg till en "Spara som tema"-knapp under anpassningssektionen som öppnar en liten namnruta
-- Sparade teman visas som extra knappar under de färdiga temana med en liten X för att ta bort
+Tekniska detaljer (kort)
+- Huvudorsak till “Senast använda funkar inte”: färginput skickar många mellanvärden under drag, och varje värde pushas till recent-listan.
+- Rotfix: commit-baserad persist + recent-lista uppdateras endast vid commit.
+- Bakgrundsförvirring idag: `dashboardBg` visas i UI men är i praktiken inte tydligt kopplad till en separat scen-overlay; samtidigt används `bgColor` för UI-variabler. Dessa två måste separeras tydligt i både namn och rendering.
 
-### 4. Synligare Återställ-knapp (`ThemeCard.tsx`)
-- Flytta ut från inline-positionen, gör den till en tydlig knapp med `border border-destructive/50 text-destructive` styling, placerad längst ner i anpassningssektionen
-- Visa alltid när `showCustom` är öppet (inte bara villkorligt)
-
-## Filer som ändras
-
-| Fil | Ändring |
-|-----|---------|
-| `src/store/types.ts` | `recentColors` i CustomColors, `savedThemes` i UserProfile |
-| `src/components/home/cards/ThemeCard.tsx` | Fix accent save, recent colors, save theme, synligare Återställ |
-
+Filer som ändras
+- `src/components/home/cards/ThemeCard.tsx`
+- `src/store/types.ts`
+- `src/pages/Index.tsx` (alternativt `src/components/home/DashboardShell.tsx`)
+- `src/components/home/DashboardGrid.tsx`
+- `src/components/home/cards/ThemeBackupCard.tsx` (ny)
