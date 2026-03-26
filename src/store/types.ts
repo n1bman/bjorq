@@ -822,6 +822,9 @@ export interface VisibleWidgets {
   temperature: boolean;
   energy: boolean;
   calendar: boolean;
+  nav?: boolean;
+  camera?: boolean;
+  rooms?: boolean;
 }
 
 export type MarkerSize = 'small' | 'medium' | 'large';
