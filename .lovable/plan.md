@@ -1,30 +1,26 @@
 
 
-# Fix: Aktivt rum höjd + brightness-bar RGB-färg
+# Fix: CategoryManager placement + brightness-bar i expanded-läge
 
-## Problem 1: Aktivt rum
-Widgeten har `min-h-[260px]` och ingen max-höjd — den kan bli längre än 3D-vyn. Den ska:
-- Matcha 3D-vyns höjd (240px mobil / 300px desktop)
-- Bara visa enhet med namn + on/off-switch + brightness slider (för ljus) — inte alla enhetsdetaljer
+## 1. CategoryManager ska renderas under filter-raden, inte ovanför
 
-**Fix i `DashboardGrid.tsx` → `ActiveRoomWidget`:**
-- Byt `min-h-[260px]` → `h-[240px] md:h-[300px]` (samma som 3D-vyn)
-- Behåll bara: enhetsnamn, brightness slider (för ljus), on/off switch per enhet
-- Lägg `overflow-y-auto` på listan
+**Problem:** `showManager && <CategoryManager />` renderas på rad 298, *före* gridet (rad 301). Det hamnar alltså ovanför allt.
 
-## Problem 2: Brightness-bar färg matchar inte enhetens ljusfärg
-I `CategoryCard.tsx` rad 169 läses `(state.data as any).rgb` men fältet heter `rgbColor` i `LightState`. Därför faller RGB-färgen aldrig igenom — den visar alltid default amber.
+**Fix i `DashboardGrid.tsx`:**
+- Flytta `{showManager && <CategoryManager />}` till efter filter-raden (efter rad 375), inuti gridet med `col-span-2 md:col-span-4` så den landar under filtren men ovanför rumskorten.
+
+## 2. Brightness-bar ska synas även i expanded, men bara på header-raden
+
+**Problem:** Brightness-baren (fade-bakgrunden) döljs helt vid `expanded` (`!expanded` villkor på rad 204). Användaren vill att den fortfarande syns på header-delen, men inte följer med ner i detaljvyn.
 
 **Fix i `CategoryCard.tsx`:**
-- Rad 169: Byt `const rgb = (state.data as any).rgb;` → `const rgb = (state.data as any).rgbColor;`
-- Rad 183: Byt `const isRgbMode = (state?.data as any)?.colorMode === 'rgb';` OK men kolla även `(state?.data as any)?.rgbColor` istället för `(state?.data as any)?.rgb`
-
----
+- Ta bort `!expanded` från villkoret på rad 204 → visa baren alltid när `isLight && on`
+- Men begränsa baren till bara header-höjden: istället för `absolute inset-0` (hela kortet), ge den en fast höjd som matchar headern (`h-[52px]` + `top-0 left-0 right-0`) så den stannar uppe och inte täcker expanded-innehållet
 
 ## Filer
 
 | Fil | Ändring |
 |-----|---------|
-| `DashboardGrid.tsx` | ActiveRoomWidget: fast höjd, kompakt layout |
-| `CategoryCard.tsx` | Byt `.rgb` → `.rgbColor` på 2 ställen |
+| `DashboardGrid.tsx` | Flytta `CategoryManager` rendering till efter filter-raden |
+| `CategoryCard.tsx` | Brightness-bar: ta bort `!expanded`, begränsa till header-höjd |
 
