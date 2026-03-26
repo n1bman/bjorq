@@ -1754,7 +1754,13 @@ export const useAppStore = create<AppState>()(
           homeGeometry,
           homeView: state.homeView,
           devices: state.devices,
-          props: state.props,
+          props: {
+            ...state.props,
+            items: state.props.items.map((p: any) => {
+              const { _meshRef, _objectRef, ...rest } = p;
+              return rest;
+            }),
+          },
           environment: state.environment,
           activityLog: state.activityLog,
           profile: state.profile,

@@ -10,6 +10,32 @@ Detailed release notes for each shipped version should also be added as
 
 ## [Unreleased]
 
+## [1.10.0] - 2026-03-26
+
+### Added
+- **Fria enhets-widgets** — varje enhet (vacuum, TV, speaker, klimat, lampa, fläkt) renderas som ett eget kort med inline-kontroller, fritt placerbart på hemskärmen.
+- **Scen-widget** — scener visas som en egen draggbar widget på hemskärmen.
+- **Scenikon-färgväljare** — välj egen färg på scenikonen vid skapande/redigering, synkas till alla vyer.
+- **Återställ-knapp i layoutläge** — nollställ alla widgetpositioner till standard.
+- **Safezone-varning** — varning om en widget placeras bakom layoutpanelen.
+- **Enhetsmarkörer och Anpassa-knapp** som draggbara element i layoutläget.
+
+### Changed
+- **Nordic Noir som default-tema** — nya installationer startar med Nordic Noir-temat.
+- **Layoutlägets drag-gränser utökade** — widgets kan nu placeras närmare skärmens kanter (y upp till 92%).
+- **Snyggarescen-pills i hemvyn** — glass-panel-stil med scenikon och färg.
+
+### Fixed
+- **Drag-hopp vid första rörelsen** — device-widgets flög till mitten vid första klick, nu beräknas korrekt offset från faktisk position.
+- **LightMarkerLightOnly ljussynk** — dölja/visa enhetsmarkörer ändrar inte längre ljusinställningar; `LightMarkerLightOnly` synkad med `LightMarker`-logiken.
+- **Border-opacity-bugg** — border-synlighetsreglaget sätter nu explicit `borderColor` istället för bara opacity.
+- **localStorage quota-hantering** — tunga prop-fält strippas från partialize för att undvika QuotaExceededError.
+
+### Verified
+- `npm run build`
+- Widget-placering i layoutläge
+- Scenikon-färg propageras till alla vyer
+
 ## [1.9.1] - 2026-03-23
 
 ### Changed
