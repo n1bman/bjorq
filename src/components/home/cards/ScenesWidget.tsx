@@ -1,6 +1,6 @@
 import { useAppStore } from '../../../store/useAppStore';
 import { Play, Palette } from 'lucide-react';
-import { cn } from '../../../lib/utils';
+
 
 export default function ScenesWidget() {
   const savedScenes = useAppStore((s) => s.savedScenes);
