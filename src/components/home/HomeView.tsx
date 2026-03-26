@@ -11,7 +11,7 @@ import TemperatureWidget from './cards/TemperatureWidget';
 import ScenesWidget from './cards/ScenesWidget';
 import DeviceControlCard from './cards/DeviceControlCard';
 import { useWeatherSync } from '../../hooks/useWeatherSync';
-import { Eye, EyeOff, Lightbulb, Thermometer, Wind, Camera, Power, Tv, Fan, Shield, Droplets, X, Wifi, Settings2, ChevronDown, Play, Pause, Home as HomeIcon, Square, Plus, Minus } from 'lucide-react';
+import { Eye, EyeOff, Lightbulb, Thermometer, Wind, Camera, Power, Tv, Fan, Shield, Droplets, X, Wifi, Settings2, Play, Pause, Home as HomeIcon, Square, Plus, Minus } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Switch } from '../ui/switch';
 import { callHAService, isHostedSync } from '../../lib/apiClient';
