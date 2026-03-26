@@ -1,144 +1,153 @@
 
 
-# UI-kvalitetspass: Ikoner, typografi, responsivitet och systemkonsistens
+# Full System Audit — BJORQ Dashboard
 
-## Översikt
+## Scope
 
-Tre huvudområden + systemgenomgång, utan att röra temasystemet.
+End-to-end verification of every subsystem: UI → state → API → HA/Wizard → persistence → reload. Work in small, reviewable diffs per phase.
 
----
+## Pre-condition: Stabilization (Phase 0)
 
-## 1. Ikoner — bort med emojis, konsekvent Lucide överallt
+Before any functional audit, get all checks green:
+- `npx tsc -p tsconfig.app.json --noEmit`
+- `npm run lint`
+- `npm test`
+- `npm run build`
 
-### Problem
-- `DevicesSection.tsx` (rad 11-39): varje device-kind har `emoji: '💡'` etc., och dessa renderas som `<span className="text-lg">{info.emoji}</span>` (rad 184)
-- `DashboardGrid.tsx` (rad 63-72): `deviceFilters` har emojis
-- `WeatherWidget.tsx` (rad 6-11): `weatherIcons` är emojis (`☀️`, `☁️`, etc.)
-- `SunWeatherPanel.tsx` (rad 11-23): väder- och nederbördsval har emojis
-- `ScenesPanel.tsx` (rad 25): `PartyPopper` ikon finns (fest-känsla)
-- `DashboardGrid.tsx` (rad 186, 273, 281): emojis som `💡`, `⚙️` i kategorinamn
-- `CategoryCard.tsx` (rad 10-16): har redan `KIND_ICONS` med Lucide — men `DevicesSection.tsx` ignorerar den och använder emojis
-
-### Åtgärd
-
-**`src/components/home/cards/DevicesSection.tsx`:**
-- Byt `emoji`-fältet i `kindInfo` till `icon: typeof Lightbulb` med Lucide-ikoner:
-  - light → `Lightbulb`, switch → `Power`, sensor → `Thermometer`, climate → `Snowflake`, vacuum → `Bot`, camera → `Camera`, fridge → `Refrigerator` (finns ej i Lucide, använd `Box`), oven → `Flame`, washer → `WashingMachine` (finns ej, använd `Droplets`), garage-door → `Car`, door-lock → `Lock`, power-outlet → `Plug`, media_screen → `Monitor`, fan → `Fan`, cover → `Blinds` (finns ej, använd `PanelTop`), scene → `Play`, alarm → `ShieldAlert`, water-heater → `Flame`, humidifier → `Droplets`, siren → `Bell`, valve → `Settings2`, remote → `Radio`, lawn-mower → `Leaf`, speaker → `Speaker`, soundbar → `Music`, light-fixture → `Lightbulb`, smart-outlet → `Plug`, egg → `Egg`
-- Rendera `<Icon size={18} className="text-muted-foreground" />` istället för emoji-span
-
-**`src/components/home/DashboardGrid.tsx`:**
-- `deviceFilters` (rad 63-72): ta bort `emoji`-fält, rendera utan emoji i filterchips (bara text)
-- `HomeCategory` (rad 268-273, 281): byt `💡 ${roomName}` och `⚙️ Övrigt` till bara textlabels utan emoji-prefix
-- `QuickScenesWidget` (rad 186): byt fallback `{scene.icon || '💡'}` till en Lucide fallback-ikon
-
-**`src/components/home/cards/WeatherWidget.tsx`:**
-- Byt `weatherIcons` från emojis till Lucide: `Sun`, `Cloud`, `CloudRain`, `Snowflake`
-- Rendera som `<Icon size={...} />` istället för emoji-spans
-
-**`src/components/home/cards/SunWeatherPanel.tsx`:**
-- Byt emojis i `weatherOptions` och `precipOptions` till Lucide-ikoner
-
-**`src/components/home/cards/ScenesPanel.tsx`:**
-- Ta bort `PartyPopper` från `sceneIconOptions`, ersätt med t.ex. `Users` eller `Sparkles` (redan finns)
+Fix any TypeScript errors, lint warnings, and failing tests found. This establishes a clean baseline.
 
 ---
 
-## 2. Typografi och läsbarhet
+## Phase 1: HA + Live Sync Audit
 
-### Problem
-- Många labels är `text-[9px]` eller `text-[10px]` — för litet på tablet
-- `label-micro` i CSS är `font-size: 9px` — svårläst
-- Nav rail labels `text-[9px]` (mobil, rad 101) och `text-[12px]` (desktop, rad 229) — tablet bör vara större
-- InfoCard `text-[10px]` detail (rad 130)
-- Filterchips `text-[10px]` / `text-[12px]` — borde vara minst `text-xs` (12px) på tablet
-- Enhetsrader i DevicesSection: `text-sm` (14px) namn, `text-[10px]` quickInfo
+**Files:** `src/hooks/useHomeAssistant.ts`, `src/lib/apiClient.ts`, `server/ha/liveHub.js`, `server/api/live.js`, `src/store/useAppStore.ts` (HA slice)
 
-### Åtgärd
+**Verify:**
+- DEV mode: direct WebSocket connect → auth → get_states → subscribe_events → live updates
+- HOSTED mode: EventSource `/api/live/events` → snapshot/entity-update/ha-status/segment-map events
+- Fallback polling: heartbeat timeout (45s) → fallback poll (10s) → reconnect stream
+- Service calls: DEV uses WS `call_service`, HOSTED uses `POST /api/live/service`
+- `setHAStatus`, `markHASync`, `setHATransport` — status transitions are correct
+- Reconnect logic (both client WS and server liveHub backoff)
+- `haServiceCaller` throttle is properly wired in both modes
 
-**`src/index.css`:**
-- Öka `label-micro` base till `10px`, med `@media (min-width: 768px)` → `11px`
-- Lägg till utility-klass `.text-body` som är `14px` på mobil, `15px` på tablet
-
-**`src/components/home/DashboardShell.tsx`:**
-- Mobil bottom tab labels: `text-[9px]` → `text-[10px]`
-- Desktop nav items: `text-[12px]` → `text-[13px]`
-- Nav group labels: `text-[9px]` → `text-[10px]`
-- Tablet nav (collapsed icon-rail): öka touch-target `py-3` → `py-3.5`
-
-**`src/components/home/DashboardGrid.tsx`:**
-- InfoCard detail: `text-[10px]` → `text-xs`
-- InfoCard label-micro: redan bra, förbättras via CSS
-- Filterchips: `text-[12px]` → `text-xs md:text-sm`, padding `px-4 py-2` → `px-4 py-2.5 md:px-5 md:py-3`
-- "Hantera kategorier"/"Redigera" knappar: `text-[11px]` → `text-xs`, `h-8` → `h-9`
-
-**`src/components/home/cards/DevicesSection.tsx`:**
-- Device name: behåll `text-sm`
-- QuickInfo: `text-[10px]` → `text-xs`
-- Group header label: `text-xs` → `text-sm` on tablet
-
-**`src/components/home/cards/CategoryCard.tsx`:**
-- Device rows padding: `p-3` → `p-3 md:p-4`
-
-**`src/components/home/cards/EnergyDeviceList.tsx`:**
-- KPI labels och values — säkerställ `text-sm` minimum för läsbarhet
+**Known risk:** `initHostedMode` sets transport to `live-stream` but no token — verify no WS auto-connect fires in hosted mode.
 
 ---
 
-## 3. Responsiv anpassning
+## Phase 2: Vacuum Audit
 
-### Problem
-- Content padding: `p-4 pb-24` (mobil), `p-6 md:p-8 lg:p-10` (desktop) — tablet behöver mer luft
-- InfoCard grid: `grid-cols-2 md:grid-cols-4` — bra, men korten är trånga på tablet
-- 3D preview hero: `h-[240px] md:h-[300px]` — kunde vara lite högre på desktop
-- Filterchips: `overflow-x-auto` — bra för mobil, men spacing tight
-- Mobile "Mer"-sheet: `grid-cols-3 gap-2` — touch-targets ok men tight
-- Bottom tab bar: `h-14` — bra storlek
-- Standby settings select: bör vara touch-friendly storlek
+**Files:** `server/ha/liveHub.js` (`refreshVacuumMap`, `parseVacuumSegmentMap`), `src/hooks/useHomeAssistant.ts` (segment-map event), `src/components/home/cards/RobotPanel.tsx`, `src/components/build/devices/VacuumMappingTools.tsx`, `src/store/useAppStore.ts` (vacuum actions), `src/store/types.ts` (VacuumZone, VacuumMapping)
 
-### Åtgärd
+**Verify the full chain:**
+1. Server: `liveHub.connect()` → gets states → finds `vacuum.*` → calls `roborock.get_maps` → parses segment map → broadcasts `segment-map` event
+2. Client: receives `segment-map` → `setVacuumSegmentMap()` → stored in `homeAssistant.vacuumSegmentMap`
+3. VacuumMappingTools: reads `vacuumSegmentMap`, shows dropdown with segment options per zone
+4. RobotPanel: `getZoneSegmentId()` resolves zone.segmentId → fallback to name lookup in vacuumSegmentMap
+5. Room cleaning: `app_segment_clean` with correct `segments: [segId]`
 
-**`src/components/home/DashboardShell.tsx`:**
-- Mobil content padding: `p-4` → `p-5`
-- Desktop/tablet content: `p-6 md:p-8 lg:p-10` → `p-6 md:p-10 lg:p-12`
-- Mobile "Mer"-sheet: `gap-2` → `gap-3`, `p-3` → `p-4` per item, `min-h-[48px]` touch-target
-- Tablet nav rail touch targets: ensure `min-h-[48px]` per item
-
-**`src/components/home/DashboardGrid.tsx`:**
-- InfoCard: `p-4` → `p-4 md:p-5` för mer luft på tablet
-- 3D hero: `h-[240px] md:h-[300px]` → `h-[220px] md:h-[320px] lg:h-[360px]`
-- FilterChips row: `gap-2` → `gap-2 md:gap-3`
-- Category cards spacing: `gap-4 md:gap-5` → `gap-4 md:gap-6`
-
-**`src/components/home/cards/DevicesSection.tsx`:**
-- Group toggle area: `mb-2` → `mb-3`
-- Device card `p-3` → `p-3.5 md:p-4`
-
-**`src/components/home/cards/ClimateTab.tsx`, `EnergyDeviceList.tsx`, `WeatherWidget.tsx`:**
-- Säkerställ att KPI-rader, prognos-rader och kontroller har `min-h-[44px]` touch-targets
+**Known issues to check:**
+- `parseVacuumSegmentMap` handles both array-of-rooms and object-keyed-rooms formats
+- Name matching between BJORQ rooms and HA room names (case-insensitive?)
+- What happens when segment map is empty (no Roborock service)
+- Zone persistence: `vacuumMapping` is on Floor → saved in project → survives reload?
+- `segmentId` on zone persists through project save/load cycle
 
 ---
 
-## 4. Systemkonsistens
+## Phase 3: Persistence & Sync Audit
 
-- **FilterChips**: `DevicesCategory` (rad 453-461) använder `Button` med emojis + `h-7 text-[10px]` — byt till samma chip-stil som `HomeCategory` (rad 364-378) och ta bort emojis
-- **strokeWidth-konsistens**: Nav rail använder `1.4`/`2.2`, men DashboardGrid tabs använder default. Normalisera till `1.5` default / `2` active
-- **Select-element**: StandbySettings (rad 521-530) och andra `<select>` — säkerställ minst `h-10` och `text-sm` för touch
-- **Switch scale**: `className="scale-90"` i DevicesSection — ta bort, låt switchen vara full-size för touch
+**Files:** `src/store/useAppStore.ts` (partialize, onRehydrate, subscribe auto-sync, initHostedMode), `src/lib/apiClient.ts` (save/fetch functions), `server/api/profiles.js`, `server/api/projects.js`, `server/api/bootstrap.js`, `server/api/backups.js`
+
+**Verify for DEV mode:**
+- `partialize` includes all necessary slices: layout, devices, props, homeGeometry, profile, standby, homeView, environment, calendar, automations, savedScenes, customCategories, wifi, energyConfig, wizard, dashboard, activityLog, comfort
+- Missing from partialize? Check: `comfort`, `dashboard`, `performance` — these may be lost on reload in DEV mode
+- `onRehydrate` migration: media-screen → media_screen, boolean deviceStates → structured
+
+**Verify for HOSTED mode:**
+- `partialize` returns `{}` (no localStorage)
+- `syncProfileToServer()` sends: profile, performance, standby, homeView, environment, customCategories, wifi, energyConfig, calendar, automations, savedScenes, wizard, dashboard
+- Missing from profile sync? Check: `comfort` — comfort rules may not persist in hosted mode!
+- `syncProjectToServer()` triggered by changes to: layout, devices, homeGeometry, props, terrain
+- Missing from project sync? Check: `activityLog` — included in `buildHostedProjectPayload` ✓
+- Bootstrap load: all profile/project fields properly applied
+
+**Backup/restore:**
+- Backup envelope includes: config, profiles, projects
+- Restore applies profiles + projects + config correctly
+- Reset clears projects and resets profiles to defaults
 
 ---
 
-## Filer som ändras
+## Phase 4: Dashboard / Theme / Display / Standby Audit
 
-| Fil | Ändring |
-|-----|---------|
-| `src/index.css` | Öka label-micro base, lägg till responsiv scaling |
-| `src/components/home/DashboardShell.tsx` | Typografi-storlekar, padding, touch-targets |
-| `src/components/home/DashboardGrid.tsx` | Bort med emojis i filters/kategorier, typografi, spacing, responsivitet |
-| `src/components/home/cards/DevicesSection.tsx` | Emojis → Lucide-ikoner, typografi, spacing |
-| `src/components/home/cards/CategoryCard.tsx` | Padding-justeringar |
-| `src/components/home/cards/WeatherWidget.tsx` | Emojis → Lucide-ikoner |
-| `src/components/home/cards/SunWeatherPanel.tsx` | Emojis → Lucide-ikoner |
-| `src/components/home/cards/ScenesPanel.tsx` | Ta bort PartyPopper |
-| `src/components/home/cards/EnergyDeviceList.tsx` | Touch-target sizes |
-| `src/components/home/cards/ClimateTab.tsx` | Touch-target sizes |
+**Files:** `src/hooks/useThemeEffect.ts`, `src/components/home/cards/ThemeCard.tsx`, `src/components/home/DashboardShell.tsx`, `src/components/home/DashboardGrid.tsx`, `src/components/standby/StandbyMode.tsx`, `src/components/standby/useIdleTimer.ts`, `src/components/home/cards/DisplaySettings.tsx`, `src/components/home/cards/GraphicsSettings.tsx`
+
+**Verify:**
+- Theme presets (dark/midnight/light/nordic) apply correct CSS variables
+- Custom colors (8 types) apply and persist: buttonColor, sliderColor, bgColor, menuColor, cardColor, textColor, textSecondaryColor, borderColor
+- `savedThemes` save/load/delete cycle works
+- `dashboardBg` (scene3d/gradient/solid) + `sceneOverlayColor` work
+- Section-specific accents (energy/climate/weather) render correctly
+- Standby: idle timer → enterStandby → exitStandby → phase transitions (standby → vio)
+- Widget layout persistence (position/size for clock/weather/temp/energy)
+- Category order and density persistence
+- All display settings actually affect rendering
+
+---
+
+## Phase 5: Wizard / Assets / Import Audit
+
+**Files:** `src/lib/wizardClient.ts`, `src/lib/catalogLoader.ts`, `src/lib/assetPipeline.ts`, `src/components/build/furnish/FurnishTools.tsx`, `src/components/build/import/ImportTools.tsx`, `src/lib/apiClient.ts` (uploadPropAsset, ingestToCatalog)
+
+**Verify:**
+- Wizard connection test → status update → catalog fetch
+- Thumbnail loading (wizard URL construction, fallback)
+- Model download → import → base64 persistence (< 4MB)
+- Catalog item metadata editing
+- Props placement → persist → reload (base64 reconstitution in Props3D)
+- Hosted mode: server-side asset upload pipeline
+- `wizardMode: 'synced'` → staleSync handling
+
+---
+
+## Phase 6: Build Mode / 2D / 3D Audit
+
+**Files:** `src/components/build/BuildModeV2.tsx`, `src/components/build/BuildCanvas2D.tsx`, `src/components/build/Walls3D.tsx`, `src/components/build/Props3D.tsx`, `src/components/build/BuildInspector.tsx`, `src/components/build/MaterialsPanel.tsx`, `src/components/build/FloorManager.tsx`, `src/components/devices/DeviceMarkers3D.tsx`
+
+**Verify:**
+- Wall drawing → room detection → room persistence
+- Opening placement and persistence
+- Props placement, movement, rotation, scale — persist through reload
+- Device marker placement → room auto-assignment → HA entity linking
+- Material application (floor/wall per room)
+- Undo/redo stack
+- Import overlay sync
+- Floor management (add/remove/rename)
+- 2D ↔ 3D mode switch consistency
+- Model import (GLB/GLTF) → persist (base64 or server upload)
+
+---
+
+## Deliverables per phase
+
+For each phase:
+1. List files inspected
+2. List bugs/broken connections found
+3. Minimal fix diffs
+4. Tests added where regression risk is high
+5. Confirm which save/load flows verified
+6. Note remaining risks
+
+## Work order
+
+Phases are sequential. Each phase produces a small, reviewable set of changes. No large refactors.
+
+**Critical early finding from code review:**
+- `comfort` state is NOT included in `syncProfileToServer()` (line 84-99) — comfort rules will be lost in hosted mode on server restart. This needs fixing.
+- `comfort` is also NOT in `partialize` (line 1745-1775) — comfort rules are lost on reload in DEV mode too.
+- `performance` is NOT in `partialize` — performance settings lost on reload in DEV mode (but saved via `syncProfileToServer` in hosted mode).
+- `dashboard` is NOT in `partialize` — dashboard category/density lost on DEV reload.
+
+These are real bugs that will be fixed in Phase 3.
 
