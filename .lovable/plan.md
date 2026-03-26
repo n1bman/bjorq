@@ -1,77 +1,112 @@
 
-Mål: göra temalogiken förutsägbar så att:
-- Text inte “känns som border”
-- Border faktiskt styr linjerna användaren ser
-- Nordic Noir inte får vit inramning
-- “Färger & ytor” alltid visar aktuella färger när man byter tema
 
-## 1) Rätta border-logiken i theme-engine
-**Fil:** `src/hooks/useThemeEffect.ts`
+# Semantiska färgidentiteter för Energi, Klimat & Väder + Energi-redesign
 
-- Ta bort vit fallback (`0 0% 100%`) när `borderOpacity` används utan `borderColor`.
-- Använd istället aktivt temas border-bas som fallback (så Nordic/Dark behåller sin karaktär).
-- Låt `borderColor` styra:
-  - `--border`
-  - `--glass-border`
-  - `--sidebar-border`
-- Säkerställ att `textColor` endast påverkar textvariabler och aldrig border-variabler.
+## Översikt
 
-**Effekt:** “Text” och “Border” separeras tydligt i praktiken.
+Ingen ändring av temasystemet. Istället läggs tre lokala accentfärger ovanpå det aktiva temat via CSS-variabler och komponentuppdateringar.
 
-## 2) Justera Nordic Noir så den inte blir vit runt allt
-**Fil:** `src/hooks/useThemeEffect.ts`
+**Färgidentiteter:**
+- Energi: amber / warm gold (`36 75% 55%`)
+- Klimat: mossgrön / sval grön (`140 20% 45%`)
+- Väder: fjordblå / ice blue (`207 30% 55%`)
 
-- Byt Nordic Noir default för border-relaterade tokens från vit/transparent till mörkare, samma tonalitet som Mörkt (subtil mörk grafit istället för vit linje).
-- Finjustera `--glass-border` och `--sidebar-border` i Nordic Noir till mörk/subtil nivå.
+---
 
-**Effekt:** Nordic Noir får mörk premium-inramning i stället för vit “outline”.
+## 1. CSS-variabler i `src/index.css`
 
-## 3) Gör “Färger & ytor” alltid ifyllda med aktiva temafärger
-**Filer:**  
-- `src/hooks/useThemeEffect.ts`  
-- `src/components/home/cards/ThemeCard.tsx`
+Lägg till under `:root` (inom `@layer base`):
+```css
+--section-energy: 36 75% 55%;
+--section-climate: 140 20% 45%;
+--section-weather: 207 30% 55%;
+```
 
-- Inför en delad “theme defaults”-karta (hex) för visningsfärger per tema (button, slider, panel, meny, kort, text1, text2, border).
-- I `ThemeCard`: varje färgprick visar **effektiv färg** = `customColors[field] ?? themeDefaults[theme][field]`.
-- Därmed är pickers aldrig “tomma” vid temabyte.
+Dessa är fasta semantiska tokens — de påverkas inte av temabyte men fungerar ovanpå vilken bakgrund/panel som helst.
 
-**Effekt:** användaren ser direkt vilka färger temat faktiskt använder.
+---
 
-## 4) Tydlig logik vid temabyte
-**Fil:** `src/components/home/cards/ThemeCard.tsx`
+## 2. Energi-redesign (`EnergyDeviceList.tsx` + `EnergyWidget.tsx`)
 
-- Vid klick på bas-tema:
-  - sätt `theme`
-  - sätt temaets default-accent
-  - nollställ `customColors` (så temat verkligen laddas rent)
-- Sparade egna teman används för att återställa personliga varianter.
+**Nuläge:** Stor cirkulär ring som huvudfokus, sparkline sekundär.
 
-**Effekt:** temabyte blir logiskt och konsekvent; inga gamla overrides “läcker” in.
+**Nytt layout i `EnergyCategory` (DashboardGrid.tsx) / `EnergyDeviceList.tsx`:**
 
-## 5) Förtydliga UI i färgsektionen
-**Fil:** `src/components/home/cards/ThemeCard.tsx`
+### a) KPI-rad (4 kort i grid)
+- **Nu:** live watt med pulsande ikon
+- **Idag:** kWh förbrukning
+- **Kostnad:** kronor idag
+- **Peak:** högsta watt-värde idag
 
-- Byt etiketter till:
-  - `Text 1` (primär)
-  - `Text 2` (sekundär)
-  - `Border` (UI-linjer/ramar)
-- Lägg kort hjälprad under Border (ex: “Styr panelramar, sektionlinjer och sidolinjer”).
+Varje KPI-kort använder `border-[hsl(var(--section-energy))]` subtilt, och värdet i `text-[hsl(var(--section-energy))]`.
 
-**Effekt:** användaren förstår exakt vad varje kontroll ändrar.
+### b) Huvudgraf — area chart
+- Byt fokus från cirkelring till en `AreaChart` (recharts, redan installerat) som huvudvisual.
+- Amber gradient fill, amber linje, current-point markering.
+- 24h tidsaxel.
 
-## Tekniska detaljer (kort)
-- Behåll `CustomColors` som override-lager, men låt UI visa effektiva värden från tema-defaults när override saknas.
-- Återställningsknappen fortsätter att rensa custom overrides; eftersom UI nu har fallback syns ändå temafärger direkt.
-- Ingen backend/databasändring krävs.
+### c) Fördelning — enhetsranking
+- Befintliga ranking-bars i `EnergyDeviceList` — byt `bg-primary` till `bg-[hsl(var(--section-energy))]`.
+
+### d) Ring/gauge
+- Behåll som liten sekundär komponent (bredvid KPI-raden eller under grafen), inte som hero.
+- Byt `stroke: hsl(var(--primary))` → `hsl(var(--section-energy))`.
+
+### e) Sparkline (`EnergySparkline.tsx`)
+- Byt `hsl(var(--primary))` → `hsl(var(--section-energy))` för linje, fill-gradient och pulsande punkt.
+
+---
+
+## 3. Klimat-identitet (`ClimateTab.tsx`, `ClimateTrendLine.tsx`, `ClimateRoomComparison.tsx`)
+
+- **Hero-sektionen** (medeltemperatur): byt `text-primary` ikoner till `text-[hsl(var(--section-climate))]`.
+- **Komfortstatus** (`Activity` ikon, aktiva regler): `text-primary` → `text-[hsl(var(--section-climate))]`.
+- **Trendlinjer** (`ClimateTrendLine`): byt `stroke: hsl(var(--primary))` till `hsl(var(--section-climate))` för target-linjer och pulsande punkt.
+- **Rumsjämförelse** (`ClimateRoomComparison`): byt `bg-primary/60` standardbar → `bg-[hsl(var(--section-climate))]/60`. Behåll orange/blå för avvikelse.
+- **Regelkort** (`RuleCard`): aktiv-indikator `border-primary/20` → `border-[hsl(var(--section-climate))]/20`.
+
+---
+
+## 4. Väder-identitet (`WeatherWidget.tsx`, `WeatherHomeImpact.tsx`)
+
+- **Hero-temperatur**: behåll vit/foreground, men lägg till en subtil `border-l-2 border-[hsl(var(--section-weather))]` på vänsterkant eller ändra 24h-prognos highlight `bg-primary/10` → `bg-[hsl(var(--section-weather))]/10`.
+- **24h-prognos "Nu"**: markera med `bg-[hsl(var(--section-weather))]/10`.
+- **Dagsprognos "Idag"**: samma fjordblå accent.
+- **WeatherHomeImpact**: ikon `text-primary` → `text-[hsl(var(--section-weather))]` för rubrik-ikonen.
+- **SunWeatherPanel**: rubrikikon kan byta till `text-[hsl(var(--section-weather))]`.
+
+---
+
+## 5. DashboardGrid kategori-wrapper
+
+I `DashboardGrid.tsx`, ge varje kategoris wrapper en subtil top-accent:
+
+```tsx
+function EnergyCategory() {
+  return (
+    <div className="space-y-3" style={{ '--section-accent': 'var(--section-energy)' } as any}>
+      ...
+    </div>
+  );
+}
+```
+
+Detta gör det möjligt att i framtiden använda `var(--section-accent)` i delade widgets.
+
+---
 
 ## Filer som ändras
-- `src/hooks/useThemeEffect.ts`
-- `src/components/home/cards/ThemeCard.tsx`
-- (ev.) `src/store/types.ts` endast om vi behöver kompletterande display-fält, annars oförändrad
 
-## Verifiering efter implementation
-1. Byt mellan Mörkt/Midnatt/Ljust/Nordic Noir → “Färger & ytor” visar ifyllda färger direkt.
-2. I Nordic Noir: inga vita ramar runt sektioner/linjer.
-3. Ändra Text 1/Text 2 → text ändras, men border ligger kvar.
-4. Ändra Border → linjer/ramar ändras tydligt.
-5. Spara/ladda eget tema och kontrollera att logiken håller efter reload.
+| Fil | Ändring |
+|-----|---------|
+| `src/index.css` | 3 nya CSS-variabler (section-energy/climate/weather) |
+| `src/components/home/cards/EnergyDeviceList.tsx` | Ny layout: KPI-rad + area chart som hero, ring sekundär, amber accent |
+| `src/components/home/cards/EnergyWidget.tsx` | Amber accent på Zap-ikon och watt-display |
+| `src/components/home/cards/EnergySparkline.tsx` | Byt primary → section-energy |
+| `src/components/home/cards/ClimateTab.tsx` | Mossgrön accent på hero, status, regelkort |
+| `src/components/home/cards/ClimateTrendLine.tsx` | Mossgrön target-linje och pulse-punkt |
+| `src/components/home/cards/ClimateRoomComparison.tsx` | Mossgrön default-bar |
+| `src/components/home/cards/WeatherWidget.tsx` | Fjordblå accent på prognos-highlights |
+| `src/components/home/cards/WeatherHomeImpact.tsx` | Fjordblå rubrikikon |
+| `src/components/home/DashboardGrid.tsx` | Minimal: eventuellt section-accent CSS-variabel per kategori |
+
