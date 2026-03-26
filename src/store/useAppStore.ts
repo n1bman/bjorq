@@ -96,6 +96,7 @@ function syncProfileToServer() {
       savedScenes: s.savedScenes,
       wizard: s.wizard,
       dashboard: s.dashboard,
+      comfort: s.comfort,
     }).catch((err) => console.warn('[Sync] Failed to save profiles:', err));
   });
 }
@@ -1752,6 +1753,7 @@ export const useAppStore = create<AppState>()(
           environment: state.environment,
           activityLog: state.activityLog,
           profile: state.profile,
+          performance: state.performance,
           customCategories: state.customCategories,
           standby: { ...state.standby, phase: 'standby' as const },
           wifi: state.wifi,
@@ -1759,6 +1761,8 @@ export const useAppStore = create<AppState>()(
           calendar: state.calendar,
           automations: state.automations,
           savedScenes: state.savedScenes,
+          comfort: state.comfort,
+          dashboard: state.dashboard,
           wizard: {
             url: state.wizard.url,
             status: 'disconnected' as const,
@@ -1826,6 +1830,7 @@ export async function initHostedMode() {
       if (p.savedScenes) stateUpdate.savedScenes = p.savedScenes;
       if (p.wizard) stateUpdate.wizard = p.wizard;
       if (p.dashboard) stateUpdate.dashboard = normalizeDashboardState(p.dashboard);
+      if (p.comfort) stateUpdate.comfort = p.comfort;
     }
 
     // Apply project data
