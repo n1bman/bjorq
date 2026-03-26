@@ -853,7 +853,7 @@ export interface HomeViewState {
   markerSize: MarkerSize;
   customStartPos?: [number, number, number];
   customStartTarget?: [number, number, number];
-  widgetLayout: Record<HomeWidgetKey, WidgetOverlayConfig>;
+  widgetLayout: Record<string, WidgetOverlayConfig>;
   homeLayoutEditMode: boolean;
 }
 
@@ -1180,7 +1180,7 @@ export interface AppState {
   hideAllMarkers: () => void;
   saveHomeStartCamera: (pos: [number, number, number], target: [number, number, number]) => void;
   clearHomeStartCamera: () => void;
-  setWidgetLayout: (widget: HomeWidgetKey, config: Partial<WidgetOverlayConfig>) => void;
+  setWidgetLayout: (widget: string, config: Partial<WidgetOverlayConfig>) => void;
   toggleHomeLayoutEditMode: () => void;
 
   // Dashboard edit/density

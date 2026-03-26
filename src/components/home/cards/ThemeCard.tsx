@@ -366,7 +366,13 @@ export default function ThemeCard() {
                   max={50}
                   step={1}
                   value={[Math.round((custom.borderOpacity ?? 0.10) * 100)]}
-                  onValueChange={([v]) => updateCustom({ borderOpacity: v / 100 })}
+                  onValueChange={([v]) => {
+                    const changes: Partial<typeof custom> = { borderOpacity: v / 100 };
+                    if (!custom.borderColor) {
+                      changes.borderColor = '#1c2230';
+                    }
+                    updateCustom(changes);
+                  }}
                 />
               </div>
 
