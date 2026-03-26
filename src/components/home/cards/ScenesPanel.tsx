@@ -22,7 +22,7 @@ const sceneIconOptions = [
   { key: 'Film', icon: Film, label: 'Film' },
   { key: 'Snowflake', icon: Snowflake, label: 'Kyla' },
   { key: 'Flame', icon: Flame, label: 'Värme' },
-  { key: 'PartyPopper', icon: PartyPopper, label: 'Fest' },
+  { key: 'PartyPopper', icon: Sparkles, label: 'Fest' },
   { key: 'Sparkles', icon: Sparkles, label: 'Mysig' },
   { key: 'Home', icon: Home, label: 'Hem' },
   { key: 'Eye', icon: Eye, label: 'Fokus' },

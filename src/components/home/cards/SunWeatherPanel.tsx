@@ -109,7 +109,7 @@ export default function SunWeatherPanel() {
         <div className="flex items-center justify-between">
           <span className="text-xs text-muted-foreground">Aktuellt</span>
           <span className="text-xs font-medium text-foreground">
-            {weather.condition === 'clear' ? '☀️ Klart' : weather.condition === 'cloudy' ? '☁️ Mulet' : weather.condition === 'rain' ? '🌧️ Regn' : '❄️ Snö'}
+            {weather.condition === 'clear' ? 'Klart' : weather.condition === 'cloudy' ? 'Mulet' : weather.condition === 'rain' ? 'Regn' : 'Snö'}
             {weather.temperature !== undefined && ` · ${weather.temperature}°C`}
           </span>
         </div>
@@ -130,12 +130,12 @@ export default function SunWeatherPanel() {
         <div className="space-y-2">
           <span className="text-xs font-medium text-muted-foreground">Manuellt väder</span>
           <div className="flex gap-1">
-            {weatherOptions.map(({ key, label, emoji }) => (
+            {weatherOptions.map(({ key, label, icon: WIcon }) => (
               <Button key={key} size="sm"
                 variant={weather.condition === key ? 'default' : 'outline'}
-                className="flex-1 h-8 text-[10px] gap-1"
+                className="flex-1 h-9 text-xs gap-1.5"
                 onClick={() => setWeather(key)}>
-                <span>{emoji}</span>{label}
+                <WIcon size={14} />{label}
               </Button>
             ))}
           </div>
@@ -146,12 +146,12 @@ export default function SunWeatherPanel() {
       <div className="space-y-2">
         <span className="text-xs font-medium text-muted-foreground">Nederbördseffekt i 3D</span>
         <div className="flex gap-1">
-          {precipOptions.map(({ key, label, emoji }) => (
+          {precipOptions.map(({ key, label, icon: PIcon }) => (
             <Button key={key} size="sm"
               variant={precipOverride === key ? 'default' : 'outline'}
-              className="flex-1 h-8 text-[10px] gap-1"
+              className="flex-1 h-9 text-xs gap-1.5"
               onClick={() => setPrecipitationOverride(key)}>
-              <span>{emoji}</span>{label}
+              <PIcon size={14} />{label}
             </Button>
           ))}
         </div>
