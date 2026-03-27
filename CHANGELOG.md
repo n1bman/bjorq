@@ -10,6 +10,16 @@ Detailed release notes for each shipped version should also be added as
 
 ## [Unreleased]
 
+## [1.10.5] - 2026-03-27
+
+### Fixed
+- **Vit sida via Home Assistant-ingress** - frontend-bygget använder nu relativa asset-vägar i stället för rotbundna `/assets/...`, så appen kan starta under HA:s ingress-subpath.
+- **API-anrop under ingress** - hosted-klienten bygger nu API-, EventSource- och proxade mediavägar relativt appens faktiska bas-URL i stället för att slå mot fel rot-`/api`.
+
+### Verified
+- `npm test`
+- `npm run build`
+
 ## [1.10.4] - 2026-03-27
 
 ### Changed

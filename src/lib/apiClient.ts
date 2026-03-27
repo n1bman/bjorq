@@ -1,4 +1,5 @@
 import { toast } from 'sonner';
+import { resolveAppUrl } from './appUrl';
 
 type AppMode = 'HOSTED' | 'DEV';
 
@@ -24,7 +25,11 @@ async function parseJsonSafe(res: Response) {
 }
 
 async function requestJson(input: RequestInfo | URL, init?: RequestInit) {
-  const res = await fetch(input, init);
+  const finalInput =
+    typeof input === 'string' && input.startsWith('/')
+      ? resolveAppUrl(input)
+      : input;
+  const res = await fetch(finalInput, init);
   if (!res.ok) {
     const data = await parseJsonSafe(res);
     if (res.status === 401) {
@@ -58,7 +63,7 @@ export async function resolveMode(): Promise<AppMode> {
     try {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 1000);
-      const res = await fetch('/api/config', { signal: controller.signal });
+      const res = await fetch(resolveAppUrl('/api/config'), { signal: controller.signal });
       clearTimeout(timer);
       const contentType = res.headers.get('content-type') || '';
       _mode = res.ok && contentType.includes('application/json') ? 'HOSTED' : 'DEV';

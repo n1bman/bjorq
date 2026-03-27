@@ -4,6 +4,7 @@ import type { HAEntity } from '../store/types';
 import { isSuppressed } from './useHABridge';
 import { callHAService, fetchLiveSnapshot, isHostedSync } from '../lib/apiClient';
 import { createThrottledCaller } from '../lib/serviceThrottle';
+import { resolveAppUrl } from '../lib/appUrl';
 
 let msgId = 10;
 let ws: WebSocket | null = null;
@@ -288,7 +289,7 @@ export function useHomeAssistant() {
 
     const connectHostedStream = () => {
       source?.close();
-      source = new EventSource('/api/live/events');
+      source = new EventSource(resolveAppUrl('/api/live/events'));
       lastStreamMessageAt = Date.now();
       source.addEventListener('snapshot', (event) => {
         const snapshot = JSON.parse((event as MessageEvent).data);

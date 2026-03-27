@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAppStore } from '../store/useAppStore';
+import { resolveAppUrl } from '../lib/appUrl';
 
 /**
  * Reusable hook that polls a camera snapshot.
@@ -31,7 +32,7 @@ export function useCameraSnapshot(
   const fetchHostedSnapshot = useCallback(async () => {
     if (!entityId) return;
     try {
-      const url = `/api/live/camera/${entityId}?t=${Date.now()}`;
+      const url = resolveAppUrl(`/api/live/camera/${entityId}?t=${Date.now()}`);
       const res = await fetch(url);
       if (!res.ok) throw new Error(`${res.status}`);
       const blob = await res.blob();

@@ -2,7 +2,7 @@
 
 A 3D smart home dashboard for wall-mounted tablets and kiosks.
 
-![Version](https://img.shields.io/badge/version-1.10.4-blue)
+![Version](https://img.shields.io/badge/version-1.10.5-blue)
 
 ## Features
 
@@ -61,7 +61,7 @@ All data (config, projects, profiles, backups) is stored in `/data` and persists
 | [Installation](../../docs/02-installation.md) | Setup for all platforms |
 | [Using the Dashboard](../../docs/03-using-the-dashboard.md) | Features and settings |
 | [Troubleshooting](../../docs/07-troubleshooting.md) | Common issues and fixes |
-| [Patchnotes 1.10.4](../../docs/patchnotes-v1.10.4.md) | Home Assistant add-onen öppnar nu via riktig ingress för bättre extern åtkomst via app och Nabu Casa |
+| [Patchnotes 1.10.5](../../docs/patchnotes-v1.10.5.md) | Ingress-laddningen använder nu relativa asset- och API-vägar så dashboarden kan starta under HA-subpath |
 
 ## Support
 

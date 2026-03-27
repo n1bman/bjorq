@@ -9,6 +9,7 @@ import { readFileSync } from "fs";
 const pkg = JSON.parse(readFileSync('./package.json', 'utf-8'));
 
 export default defineConfig(({ mode }) => ({
+  base: './',
   server: {
     host: "::",
     port: 8080,

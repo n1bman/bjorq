@@ -12,6 +12,7 @@ import {
   resetHostedData,
   restoreHostedBackup,
 } from '../../../lib/apiClient';
+import { resolveAppUrl } from '../../../lib/appUrl';
 import { createDemoDevices, createDemoLayout } from '../../../lib/demoData';
 import {
   AlertDialog,
@@ -201,7 +202,7 @@ export default function DataBackupCard() {
 
       if (isHostedSync()) {
         try {
-          await fetch('/api/projects/demo', { method: 'DELETE' });
+          await fetch(resolveAppUrl('/api/projects/demo'), { method: 'DELETE' });
         } catch {
           // Local state is already cleared; this is non-critical.
         }

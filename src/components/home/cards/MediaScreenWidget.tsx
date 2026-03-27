@@ -4,6 +4,7 @@ import { Tv, Music, Play, Pause, Square, SkipBack, SkipForward, Volume2 } from '
 import { Button } from '../../ui/button';
 import { Slider } from '../../ui/slider';
 import { cn } from '../../../lib/utils';
+import { resolveAppUrl } from '../../../lib/appUrl';
 
 /**
  * Dashboard widget that shows media players with artwork, title, and controls.
@@ -38,7 +39,7 @@ export default function MediaScreenWidget() {
           if (pic) {
             const isHosted = useAppStore.getState()._hostedMode;
             if (isHosted) {
-              artworkUrl = `/api/ha${pic.startsWith('/') ? '' : '/'}${pic}`;
+              artworkUrl = resolveAppUrl(`/api/ha${pic.startsWith('/') ? '' : '/'}${pic}`);
             } else {
               const wsUrl = useAppStore.getState().homeAssistant.wsUrl;
               const baseUrl = wsUrl.replace(/^ws/, 'http').replace(/\/api\/websocket$/, '');
