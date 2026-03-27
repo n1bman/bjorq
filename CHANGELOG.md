@@ -10,6 +10,23 @@ Detailed release notes for each shipped version should also be added as
 
 ## [Unreleased]
 
+## [1.10.2] - 2026-03-27
+
+### Changed
+- **Hosted testbaseline for HA sync** - `1.10.2` samlar de senaste hardningarna for hosted Home, vacuumfloden och lokal hosted-mock sa release och add-on-testning utgar fran samma kodniva.
+- **Vacuumrum som huvudvag** - vakuummappning lutar nu tydligare mot byggda rum och stabil `roomId` i stallet for att fria robotzoner ska vara primar sync-kalla.
+
+### Fixed
+- **Hosted Home-persistens** - fria Home-widgets och `homeView` bootstrap beter sig robustare i hosted-laget, inklusive sakrare migration av aldre data.
+- **HA vacuum-sync i hosted och dev** - robotkommandon, room sync, segmentkartor och UI-only vacuumfalt beter sig stabilare mellan liveuppdateringar.
+- **Lokal hosted-verifiering mot riktig HA** - parsern for Roborock-kartor och lokal config-lasning hardades sa samma release kan verifieras mot riktig Home Assistant utan separat specialbygge.
+
+### Verified
+- `npm test`
+- `npm run build`
+- Real Home Assistant snapshot/bootstrap mot `vacuum.s5_max`
+- Segmentkarta inlast via `roborock.get_maps`
+
 ## [1.10.1] - 2026-03-26
 
 ### Fixed
