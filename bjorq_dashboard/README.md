@@ -2,7 +2,7 @@
 
 A 3D smart home dashboard for wall-mounted tablets and kiosks.
 
-![Version](https://img.shields.io/badge/version-1.9.1-blue)
+![Version](https://img.shields.io/badge/version-1.10.4-blue)
 
 ## Features
 
@@ -26,11 +26,11 @@ A 3D smart home dashboard for wall-mounted tablets and kiosks.
 2. Add: `https://github.com/n1bman/bjorq`
 3. Find and install **BJORQ Dashboard**
 4. Start the add-on
-5. Open at `http://<HA-IP>:3000`
+5. Open it from the Home Assistant sidebar or add-on panel
 
 ## Usage
 
-Point any tablet or kiosk browser to `http://<HA-IP>:3000` in fullscreen mode.
+For remote access, use the Home Assistant app or Nabu Casa ingress. Use `http://<HA-IP>:3000` only for direct local-network access if you explicitly need the raw port.
 
 ### Quick Setup
 
@@ -61,7 +61,7 @@ All data (config, projects, profiles, backups) is stored in `/data` and persists
 | [Installation](../../docs/02-installation.md) | Setup for all platforms |
 | [Using the Dashboard](../../docs/03-using-the-dashboard.md) | Features and settings |
 | [Troubleshooting](../../docs/07-troubleshooting.md) | Common issues and fixes |
-| [Patchnotes 1.9.1](../../docs/patchnotes-v1.9.1.md) | Robust Wizard-thumbnailflode med direkt endpoint, retry/fallback och lokal persistens efter import |
+| [Patchnotes 1.10.4](../../docs/patchnotes-v1.10.4.md) | Home Assistant add-onen öppnar nu via riktig ingress för bättre extern åtkomst via app och Nabu Casa |
 
 ## Support
 

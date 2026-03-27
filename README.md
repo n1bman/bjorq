@@ -2,7 +2,7 @@
 
 A 3D smart home dashboard for wall-mounted tablets and kiosks, powered by Home Assistant.
 
-![Version](https://img.shields.io/badge/version-1.10.3-blue)
+![Version](https://img.shields.io/badge/version-1.10.4-blue)
 
 ## Quick Start
 
@@ -28,9 +28,9 @@ A 3D smart home dashboard for wall-mounted tablets and kiosks, powered by Home A
 1. Go to **Settings → Add-ons → Add-on Store → ⋮ → Repositories**
 2. Add: `https://github.com/n1bman/bjorq`
 3. Install **BJORQ Dashboard**
-4. Start → Open at `http://<HA-IP>:3000`
+4. Start add-onen och öppna den via Home Assistant-panelen
 
-Tablet/kiosk: point the browser to the same URL in fullscreen mode.
+Tablet/kiosk utanför nätverket: öppna via Home Assistant-appen eller Nabu Casa-ingress, inte via rå `:3000`-port.
 
 ## Documentation
 

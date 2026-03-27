@@ -10,6 +10,19 @@ Detailed release notes for each shipped version should also be added as
 
 ## [Unreleased]
 
+## [1.10.4] - 2026-03-27
+
+### Changed
+- **Home Assistant-ingress som huvudväg** - add-onen är nu konfigurerad för riktig HA-ingress i stället för att primärt exponera en rå `webui`-länk till `:3000`.
+- **Tydligare add-on-onboarding** - README och add-on-dokumentation säger nu att extern åtkomst ska gå via Home Assistant-panelen eller appen/Nabu Casa-ingress.
+
+### Fixed
+- **Fel extern öppnings-URL** - Home Assistant försökte tidigare öppna dashboarden via `http://...ui.nabu.casa:3000`, vilket gjorde extern åtkomst långsam eller obrukbar.
+
+### Verified
+- `npm test`
+- `npm run build`
+
 ## [1.10.3] - 2026-03-27
 
 ### Changed

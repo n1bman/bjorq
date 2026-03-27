@@ -1,11 +1,15 @@
 name: BJORQ Dashboard
 slug: bjorq_dashboard
-version: "1.10.3"
+version: "1.10.4"
 description: "3D smart home dashboard for Home Assistant (tablet/kiosk ready)."
 url: "https://github.com/n1bman/bjorq"
 startup: services
 boot: auto
 init: false
+ingress: true
+ingress_port: 3000
+panel_title: BJORQ Dashboard
+panel_icon: mdi:home-analytics
 
 arch:
   - amd64
@@ -16,7 +20,5 @@ ports:
   3000/tcp: 3000
 ports_description:
   3000/tcp: "BJORQ Dashboard Web"
-
-webui: "http://[HOST]:[PORT:3000]"
 
 image: "ghcr.io/n1bman/bjorq-dashboard-{arch}"
