@@ -2,7 +2,7 @@
 
 A 3D smart home dashboard for wall-mounted tablets and kiosks.
 
-![Version](https://img.shields.io/badge/version-1.10.6-blue)
+![Version](https://img.shields.io/badge/version-1.10.7-blue)
 
 ## Features
 
@@ -61,7 +61,7 @@ All data (config, projects, profiles, backups) is stored in `/data` and persists
 | [Installation](../../docs/02-installation.md) | Setup for all platforms |
 | [Using the Dashboard](../../docs/03-using-the-dashboard.md) | Features and settings |
 | [Troubleshooting](../../docs/07-troubleshooting.md) | Common issues and fixes |
-| [Patchnotes 1.10.6](../../docs/patchnotes-v1.10.6.md) | BrowserRouter fångar nu HA-ingress-pathen i stället för att skicka appen till BJORQ:s egen 404-sida |
+| [Patchnotes 1.10.7](../../docs/patchnotes-v1.10.7.md) | Hosted-läget kan nu avbryta och återställa en fastnad HA-anslutning direkt från panelen |
 
 ## Support
 

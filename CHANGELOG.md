@@ -10,6 +10,16 @@ Detailed release notes for each shipped version should also be added as
 
 ## [Unreleased]
 
+## [1.10.7] - 2026-03-27
+
+### Fixed
+- **Fastnad HA-anslutning i hosted** - kopplingspanelen låser inte längre fälten i hosted-läget när status står på `Ansluter...`, och det går nu att avbryta eller återställa anslutningen direkt.
+- **Tydligare HA-url i UI** - fältet för anslutning förklarar nu att användaren ska ange Home Assistant-URL på `:8123` eller Nabu Casa-adressen, inte BJORQ-porten.
+
+### Verified
+- `npm test`
+- `npm run build`
+
 ## [1.10.6] - 2026-03-27
 
 ### Fixed
