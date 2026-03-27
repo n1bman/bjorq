@@ -16,7 +16,6 @@ import ActivityFeed from './cards/ActivityFeed';
 import SurveillancePanel from './cards/SurveillancePanel';
 import ProfilePanel from './cards/ProfilePanel';
 import ThemeCard from './cards/ThemeCard';
-import ThemeBackupCard from './cards/ThemeBackupCard';
 import DataBackupCard from './cards/DataBackupCard';
 import ProjectManagerPanel from './cards/ProjectManagerPanel';
 import SystemStatusCard from './cards/SystemStatusCard';
@@ -37,7 +36,6 @@ import ClimateTab from './cards/ClimateTab';
 import DashboardPreview3D from './DashboardPreview3D';
 import type { PreviewCameraState } from './DashboardPreview3D';
 import type { DeviceKind, DeviceMarker, StandbyCameraView } from '../../store/types';
-import { cameraRef } from '../../lib/cameraRef';
 import { getSceneEntityViews } from '../../lib/haMenuSelectors';
 import { haServiceCaller } from '../../hooks/useHomeAssistant';
 
@@ -479,6 +477,7 @@ function StandbySettingsPanel() {
   const standby = useAppStore((s) => s.standby);
   const setStandbySettings = useAppStore((s) => s.setStandbySettings);
   const enterStandby = useAppStore((s) => s.enterStandby);
+  const previewCamRef = useRef<PreviewCameraState>({ position: [10, 12, 10], target: [0, 0, 0] });
 
   const idleOptions = [
     { value: 0.5, label: '30 sek' },
@@ -577,15 +576,15 @@ function StandbySettingsPanel() {
 
       {/* 3D Camera preview */}
       <div className="rounded-xl overflow-hidden h-[200px] border border-border/40 bg-card">
-        <DashboardPreview3D />
+        <DashboardPreview3D cameraStateRef={previewCamRef} />
       </div>
 
       <Button
         variant="outline"
         className="w-full h-9 text-xs gap-2"
         onClick={() => {
-          const pos: [number, number, number] = [cameraRef.position.x, cameraRef.position.y, cameraRef.position.z];
-          const target: [number, number, number] = [cameraRef.target.x, cameraRef.target.y, cameraRef.target.z];
+          const pos = previewCamRef.current.position;
+          const target = previewCamRef.current.target;
           setStandbySettings({ customPos: pos, customTarget: target, cameraView: 'custom' });
         }}
       >
@@ -752,7 +751,6 @@ function ProfileWorkspaceCategory() {
         <div className="workspace-grid">
           <ProjectManagerPanel />
           <DataBackupCard />
-          <ThemeBackupCard />
         </div>
       </WorkspaceSection>
     </WorkspaceLayout>

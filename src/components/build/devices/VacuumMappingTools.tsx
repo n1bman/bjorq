@@ -1,11 +1,15 @@
 import { useState } from 'react';
 import { useAppStore } from '../../../store/useAppStore';
+import type { BuildTool } from '../../../store/types';
+import { cn } from '../../../lib/utils';
 import { MapPin, Trash2, Home as HomeIcon, Edit3, Hash, Bot, CheckCircle, Info } from 'lucide-react';
 
 export default function VacuumMappingTools() {
   const activeFloorId = useAppStore((s) => s.layout.activeFloorId);
   const floors = useAppStore((s) => s.layout.floors);
+  const activeTool = useAppStore((s) => s.build.activeTool);
   const markers = useAppStore((s) => s.devices.markers);
+  const setBuildTool = useAppStore((s) => s.setBuildTool);
   const removeVacuumZone = useAppStore((s) => s.removeVacuumZone);
   const renameVacuumZone = useAppStore((s) => s.renameVacuumZone);
   const renameRoom = useAppStore((s) => s.renameRoom);

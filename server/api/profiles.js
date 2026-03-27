@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import { profilesPath } from '../storage/paths.js';
 import { readJSON, writeJSON } from '../storage/readWrite.js';
-import { requireAdmin } from '../security/auth.js';
 
 const router = Router();
 
@@ -36,7 +35,7 @@ router.get('/profiles', async (_req, res) => {
   }
 });
 
-router.put('/profiles', requireAdmin, async (req, res) => {
+router.put('/profiles', async (req, res) => {
   try {
     await writeJSON(profilesPath(), req.body);
     res.json(req.body);

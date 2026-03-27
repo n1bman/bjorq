@@ -3,6 +3,8 @@ import { Camera, ArrowDown, RotateCcw, Square, Maximize, Save } from 'lucide-rea
 import { cn } from '../../lib/utils';
 import { useState } from 'react';
 import type { CameraPreset } from '../../store/types';
+import { cameraRef, flyTo } from '../../lib/cameraRef';
+import { toast } from 'sonner';
 
 const presets: { key: CameraPreset | 'saved'; label: string; icon: typeof Camera }[] = [
   { key: 'free', label: 'Fri', icon: RotateCcw },
@@ -32,12 +34,26 @@ export default function CameraFab({ style }: CameraFabProps) {
   const handleSelect = (key: CameraPreset | 'saved') => {
     if (key === 'saved' && customStartPos && customStartTarget) {
       setCameraPreset('free');
-      setTimeout(() => {
-        saveHomeStartCamera([...customStartPos], [...customStartTarget]);
-      }, 50);
+      flyTo([...customStartPos], [...customStartTarget]);
     } else if (key !== 'saved') {
       setCameraPreset(key);
     }
+    setOpen(false);
+  };
+
+  const handleSaveCurrentView = () => {
+    const pos: [number, number, number] = [
+      cameraRef.position.x,
+      cameraRef.position.y,
+      cameraRef.position.z,
+    ];
+    const target: [number, number, number] = [
+      cameraRef.target.x,
+      cameraRef.target.y,
+      cameraRef.target.z,
+    ];
+    saveHomeStartCamera(pos, target);
+    toast.success('Startvy sparad');
     setOpen(false);
   };
 
@@ -55,6 +71,13 @@ export default function CameraFab({ style }: CameraFabProps) {
 
       {open && (
         <div className="absolute bottom-full right-0 mb-2 glass-panel rounded-xl p-1.5 flex flex-col gap-1 animate-in fade-in slide-in-from-bottom-2 duration-200">
+          <button
+            onClick={handleSaveCurrentView}
+            className="flex items-center gap-2 px-4 py-3 rounded-lg text-xs font-medium transition-all min-w-[120px] text-foreground hover:bg-secondary/30"
+          >
+            <Save size={14} />
+            <span>Spara nu</span>
+          </button>
           {allPresets.map(({ key, label, icon: Icon }) => (
             <button
               key={key}

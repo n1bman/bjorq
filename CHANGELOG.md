@@ -10,6 +10,24 @@ Detailed release notes for each shipped version should also be added as
 
 ## [Unreleased]
 
+## [1.10.3] - 2026-03-27
+
+### Changed
+- **Profiler sparas utan adminlås** - UI-profiler som tema, standby och hemvy sparas nu i hosted-läget utan att blockeras av adminkrav på profilrouten.
+- **Renare profil-datayta** - separat import/export-kort för teman är borttaget från profilens databackup-yta för att minska förvirring i vardagsflödet.
+- **Tydligare home-widgets** - overlay-widgets har fått tätare material, tydligare kant och starkare kontrast mot 3D-scenen.
+
+### Fixed
+- **Tema som inte stannade kvar** - tema- och profiländringar överlever nu bättre i riktig hosted-testning.
+- **Standby-kameravy som sparade fel** - standby använder nu sin egen previewkamera när aktuell vy sparas.
+- **Hemvyns sparade startkamera** - kameramenyn kan nu spara nuvarande vy igen och återställa sparad vy på riktigt.
+- **Byggreset med stale innehåll** - `Rensa allt` tömmer nu även enheter, robotmappning, referensritning och relaterat byggstate för en renare nystart.
+- **Crash i design / inredning / enheter** - vacuum-mapping-ytan har åter rätt beroenden och ska inte längre falla på `cn is not defined`.
+
+### Verified
+- `npm test`
+- `npm run build`
+
 ## [1.10.2] - 2026-03-27
 
 ### Changed

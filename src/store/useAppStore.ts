@@ -1400,9 +1400,31 @@ const storeCreator = (set: any, get: any): AppState => ({
     set((s: any) => ({
       layout: {
         ...s.layout,
-        floors: s.layout.floors.map((f: any) => ({ ...f, walls: [], rooms: [], stairs: [] })),
+        floors: s.layout.floors.map((f: any) => ({
+          ...f,
+          walls: [],
+          rooms: [],
+          stairs: [],
+          kitchenFixtures: [],
+          vacuumMapping: undefined,
+          referenceDrawing: undefined,
+        })),
       },
+      build: {
+        ...s.build,
+        selection: { type: null, id: null, faceSide: null },
+        wallDrawing: { isDrawing: false, nodes: [] },
+        roomDrawing: { isDrawing: false, startPoint: null, endPoint: null },
+        pendingWallMount: null,
+      },
+      devices: { markers: [], deviceStates: {}, vacuumDebug: {} },
       props: { ...s.props, items: [] },
+      customCategories: s.customCategories.map((category: any) => ({ ...category, deviceIds: [] })),
+      homeView: {
+        ...s.homeView,
+        homeScreenDevices: [],
+        hiddenMarkerIds: [],
+      },
       homeGeometry: {
         source: 'procedural' as const,
         imported: {
