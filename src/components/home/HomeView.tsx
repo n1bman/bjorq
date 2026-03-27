@@ -46,6 +46,12 @@ const DEFAULT_POSITIONS: Record<HomeWidgetKey, { x: number; y: number }> = {
   rooms: { x: 82, y: 78 },
 };
 
+function getOverlayTransform(x: number, y: number) {
+  const translateX = x >= 72 ? '-100%' : x >= 38 && x <= 62 ? '-50%' : '0%';
+  const translateY = y >= 78 ? '-100%' : '0%';
+  return `translate(${translateX}, ${translateY})`;
+}
+
 interface HomeViewProps {
   longPressDeviceId?: string | null;
   onDismissLongPress?: () => void;
@@ -147,6 +153,7 @@ export default function HomeView({ longPressDeviceId, onDismissLongPress, fpsAct
             style={{
               left: `${pos.x}%`,
               top: `${pos.y}%`,
+              transform: getOverlayTransform(pos.x, pos.y),
             }}
           >
             {widgetComponents[key](size)}
@@ -161,7 +168,14 @@ export default function HomeView({ longPressDeviceId, onDismissLongPress, fpsAct
           y: Math.max(1, Math.min(92, widgetLayout['layoutButton']?.y ?? 2)),
         };
         return (
-          <div className="absolute z-20 pointer-events-auto" style={{ left: `${layoutBtnPos.x}%`, top: `${layoutBtnPos.y}%` }}>
+          <div
+            className="absolute z-20 pointer-events-auto"
+            style={{
+              left: `${layoutBtnPos.x}%`,
+              top: `${layoutBtnPos.y}%`,
+              transform: getOverlayTransform(layoutBtnPos.x, layoutBtnPos.y),
+            }}
+          >
             <button
               onClick={toggleHomeLayoutEditMode}
               className="w-10 h-10 rounded-full flex items-center justify-center transition-all
@@ -334,7 +348,15 @@ export default function HomeView({ longPressDeviceId, onDismissLongPress, fpsAct
         const hasControls = ['vacuum', 'media_screen', 'speaker', 'soundbar', 'light', 'climate', 'fan'].includes(m.kind);
 
         return (
-          <div key={m.id} className="absolute z-10 pointer-events-auto" style={{ left: `${devicePos.x}%`, top: `${devicePos.y}%` }}>
+          <div
+            key={m.id}
+            className="absolute z-10 pointer-events-auto"
+            style={{
+              left: `${devicePos.x}%`,
+              top: `${devicePos.y}%`,
+              transform: getOverlayTransform(devicePos.x, devicePos.y),
+            }}
+          >
             <div className={cn(
               'glass-panel rounded-2xl backdrop-blur-xl border border-[hsl(var(--glass-border)/0.15)] shadow-lg',
               hasControls ? 'min-w-[180px] max-w-[260px]' : 'min-w-[120px]',
@@ -379,7 +401,14 @@ export default function HomeView({ longPressDeviceId, onDismissLongPress, fpsAct
         };
 
         return (
-          <div className="absolute z-50 pointer-events-auto" style={{ left: `${markerPickerPos.x}%`, top: `${markerPickerPos.y}%` }}>
+          <div
+            className="absolute z-50 pointer-events-auto"
+            style={{
+              left: `${markerPickerPos.x}%`,
+              top: `${markerPickerPos.y}%`,
+              transform: getOverlayTransform(markerPickerPos.x, markerPickerPos.y),
+            }}
+          >
             <button
               onClick={() => setPickerOpen(!pickerOpen)}
               className={cn(
@@ -450,9 +479,9 @@ export default function HomeView({ longPressDeviceId, onDismissLongPress, fpsAct
 
       {!homeLayoutEditMode && (
         <>
-          <CameraFab style={{ position: 'absolute', left: `${cameraPos.x}%`, top: `${cameraPos.y}%` }} />
-          <RoomNavigator style={{ position: 'absolute', left: `${roomsPos.x}%`, top: `${roomsPos.y}%` }} />
-          <HomeNav style={{ position: 'absolute', left: `${navPos.x}%`, top: `${navPos.y}%` }} />
+          <CameraFab style={{ position: 'absolute', left: `${cameraPos.x}%`, top: `${cameraPos.y}%`, transform: getOverlayTransform(cameraPos.x, cameraPos.y) }} />
+          <RoomNavigator style={{ position: 'absolute', left: `${roomsPos.x}%`, top: `${roomsPos.y}%`, transform: getOverlayTransform(roomsPos.x, roomsPos.y) }} />
+          <HomeNav style={{ position: 'absolute', left: `${navPos.x}%`, top: `${navPos.y}%`, transform: getOverlayTransform(navPos.x, navPos.y) }} />
         </>
       )}
     </div>

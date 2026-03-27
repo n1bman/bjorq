@@ -1,4 +1,5 @@
 import { setTimeout as delay } from 'timers/promises';
+import { readFile } from 'fs/promises';
 import { WebSocket } from 'ws';
 import { getConfigWithSecurity } from '../security/auth.js';
 
@@ -25,7 +26,9 @@ function mapEntity(entity) {
 }
 
 export function parseVacuumSegmentMap(payload) {
-  const response = payload?.response ?? payload;
+  const response = payload?.service_response
+    ? Object.values(payload.service_response || {})[0]
+    : payload?.response ?? payload;
   const maps = response?.maps ?? response;
   const firstMap = Array.isArray(maps) ? maps[0] : maps;
   const rooms = firstMap?.rooms;
@@ -54,7 +57,65 @@ export function parseVacuumSegmentMap(payload) {
   return segmentMap;
 }
 
-class HALiveHub {
+export function findPrimaryVacuumEntityId(entities) {
+  if (!Array.isArray(entities)) return null;
+  const vacuum = entities.find((entity) => {
+    const entityId = entity?.entity_id ?? entity?.entityId;
+    return typeof entityId === 'string' && entityId.startsWith('vacuum.');
+  });
+  return vacuum?.entity_id ?? vacuum?.entityId ?? null;
+}
+
+function cloneJson(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+function getMockFixturePath() {
+  const fixturePath = process.env.BJORQ_MOCK_HA_FIXTURE?.trim();
+  return fixturePath ? fixturePath : null;
+}
+
+function buildLiveStatesFromEntities(entities) {
+  return Object.fromEntries(
+    (entities || []).map((entity) => [
+      entity.entityId ?? entity.entity_id,
+      { state: entity.state, attributes: entity.attributes || {} },
+    ])
+  );
+}
+
+function buildSegmentMapResponse(segmentMap) {
+  return {
+    response: {
+      maps: [
+        {
+          rooms: Object.fromEntries(
+            Object.entries(segmentMap || {}).map(([roomName, segmentId]) => [segmentId, { name: roomName }])
+          ),
+        },
+      ],
+    },
+  };
+}
+
+function findMockRoomSensorEntityId(fixture, entities, vacuumEntityId) {
+  const explicit = fixture?.vacuumRoomSensors?.[vacuumEntityId];
+  if (explicit) return explicit;
+  const stem = String(vacuumEntityId || '').split('.').slice(1).join('.');
+  if (!stem) return null;
+  const candidates = (entities || []).filter((entity) => entity.entityId?.startsWith('sensor.'));
+  return candidates.find((entity) => entity.entityId.includes(stem))?.entityId ?? null;
+}
+
+function resolveMockRoomName(fixture, segmentId, fallbackMap) {
+  if (segmentId === undefined || segmentId === null) return null;
+  const key = String(segmentId);
+  return fixture?.segmentRooms?.[key]
+    ?? Object.entries(fallbackMap || {}).find(([, value]) => String(value) === key)?.[0]
+    ?? null;
+}
+
+export class HALiveHub {
   constructor() {
     this.status = 'disconnected';
     this.entities = [];
@@ -69,6 +130,9 @@ class HALiveHub {
     this.msgId = 100;
     this.pendingMapsId = null;
     this.reconnectTimer = null;
+    this.primaryVacuumEntityId = null;
+    this.vacuumMapRefreshTimers = new Map();
+    this.mockFixture = null;
   }
 
   nextId() {
@@ -91,6 +155,9 @@ class HALiveHub {
   registerClient(res) {
     this.clients.add(res);
     this.sendEvent(res, 'snapshot', this.getSnapshot());
+    if (this.primaryVacuumEntityId) {
+      this.scheduleVacuumMapRefresh(this.primaryVacuumEntityId, 250);
+    }
     return () => {
       this.clients.delete(res);
     };
@@ -127,6 +194,10 @@ class HALiveHub {
     this.liveStates = Object.fromEntries(
       states.map((entity) => [entity.entity_id, { state: entity.state, attributes: entity.attributes || {} }])
     );
+    this.primaryVacuumEntityId = findPrimaryVacuumEntityId(states);
+    if (this.primaryVacuumEntityId) {
+      this.scheduleVacuumMapRefresh(this.primaryVacuumEntityId, 0);
+    }
     this.broadcast('snapshot', this.getSnapshot());
   }
 
@@ -140,7 +211,28 @@ class HALiveHub {
     } else {
       this.entities.push(mapped);
     }
+    if (entityId.startsWith('vacuum.')) {
+      if (!this.primaryVacuumEntityId) {
+        this.primaryVacuumEntityId = entityId;
+      }
+      if (entityId === this.primaryVacuumEntityId) {
+        this.scheduleVacuumMapRefresh(entityId);
+      }
+    }
     this.broadcast('entity-update', { entityId, state, attributes, entity: mapped });
+  }
+
+  scheduleVacuumMapRefresh(vacuumEntityId, delayMs = 1500) {
+    if (!vacuumEntityId) return;
+    const existingTimer = this.vacuumMapRefreshTimers.get(vacuumEntityId);
+    if (existingTimer) clearTimeout(existingTimer);
+    const timer = setTimeout(() => {
+      this.vacuumMapRefreshTimers.delete(vacuumEntityId);
+      this.refreshVacuumMap(vacuumEntityId).catch((err) => {
+        console.warn('[HALiveHub] Scheduled vacuum map refresh failed:', err.message);
+      });
+    }, delayMs);
+    this.vacuumMapRefreshTimers.set(vacuumEntityId, timer);
   }
 
   async refreshVacuumMap(vacuumEntityId) {
@@ -156,7 +248,111 @@ class HALiveHub {
     }
   }
 
+  async loadMockFixture(fixturePath) {
+    const raw = await readFile(fixturePath, 'utf8');
+    const fixture = JSON.parse(raw);
+    const entities = cloneJson(fixture.entities || []);
+    const liveStates = fixture.liveStates ? cloneJson(fixture.liveStates) : buildLiveStatesFromEntities(entities);
+
+    this.mockFixture = cloneJson(fixture);
+    this.entities = entities;
+    this.liveStates = liveStates;
+    this.vacuumSegmentMap = cloneJson(fixture.vacuumSegmentMap || {});
+    this.lastEventAt = new Date().toISOString();
+    this.lastSnapshotAt = this.lastEventAt;
+    this.reconnectAttempt = 0;
+    this.primaryVacuumEntityId = fixture.primaryVacuumEntityId || findPrimaryVacuumEntityId(entities);
+    this.setStatus(fixture.status || 'connected');
+    this.broadcast('snapshot', this.getSnapshot());
+  }
+
+  updateMockEntity(entityId, state, attributes = {}) {
+    const current = this.liveStates[entityId] || { state, attributes: {} };
+    this.applyEntityUpdate(entityId, state ?? current.state, { ...current.attributes, ...attributes });
+  }
+
+  updateMockVacuumRoom(vacuumEntityId, roomName) {
+    if (!roomName) return;
+    const sensorEntityId = findMockRoomSensorEntityId(this.mockFixture, this.entities, vacuumEntityId);
+    const vacuumState = this.liveStates[vacuumEntityId];
+    if (vacuumState) {
+      this.updateMockEntity(vacuumEntityId, vacuumState.state, { current_room: roomName });
+    }
+    if (sensorEntityId) {
+      const sensorState = this.liveStates[sensorEntityId];
+      this.updateMockEntity(sensorEntityId, roomName, { ...(sensorState?.attributes || {}), current_room: roomName });
+    }
+  }
+
+  async callMockService(domain, service, serviceData = {}, options = {}) {
+    if (domain === 'roborock' && service === 'get_maps') {
+      return buildSegmentMapResponse(this.vacuumSegmentMap);
+    }
+
+    if (domain !== 'vacuum') {
+      return { ok: true, mock: true, domain, service, data: serviceData, options };
+    }
+
+    const entityId = serviceData.entity_id;
+    if (!entityId) {
+      const err = new Error('Mock vacuum service requires entity_id');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    const current = this.liveStates[entityId] || { state: 'docked', attributes: {} };
+    const currentAttributes = current.attributes || {};
+
+    switch (service) {
+      case 'start':
+      case 'clean_spot':
+        this.updateMockEntity(entityId, 'cleaning', currentAttributes);
+        break;
+      case 'return_to_base':
+        this.updateMockEntity(entityId, 'returning', currentAttributes);
+        break;
+      case 'pause':
+        this.updateMockEntity(entityId, 'paused', currentAttributes);
+        break;
+      case 'stop':
+        this.updateMockEntity(entityId, 'idle', currentAttributes);
+        break;
+      case 'set_fan_speed':
+        this.updateMockEntity(entityId, current.state, { ...currentAttributes, fan_speed: serviceData.fan_speed });
+        break;
+      case 'send_command': {
+        const command = serviceData.command;
+        if (command === 'app_segment_clean') {
+          const segmentId = Array.isArray(serviceData.params) ? serviceData.params[0] : undefined;
+          const roomName = resolveMockRoomName(this.mockFixture, segmentId, this.vacuumSegmentMap);
+          this.updateMockEntity(entityId, 'cleaning', {
+            ...currentAttributes,
+            ...(roomName ? { current_room: roomName } : {}),
+          });
+          this.updateMockVacuumRoom(entityId, roomName);
+        }
+        break;
+      }
+      default:
+        break;
+    }
+
+    return { ok: true, mock: true, domain, service, data: serviceData, options };
+  }
+
   async connect() {
+    const mockFixturePath = getMockFixturePath();
+    if (mockFixturePath) {
+      this.manualDisconnect = false;
+      if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
+      this.ws?.close();
+      this.ws = null;
+      this.setStatus('connecting');
+      await this.loadMockFixture(mockFixturePath);
+      return;
+    }
+
+    this.mockFixture = null;
     const config = await getConfigWithSecurity();
     const baseUrl = config?.ha?.baseUrl;
     const token = config?.ha?.token;
@@ -211,10 +407,6 @@ class HALiveHub {
           case 'result':
             if (Array.isArray(msg.result)) {
               this.applyFullState(msg.result);
-              const vacuum = msg.result.find((entity) => entity.entity_id?.startsWith('vacuum.'));
-              if (vacuum) {
-                await this.refreshVacuumMap(vacuum.entity_id);
-              }
             }
             break;
           case 'event': {
@@ -260,6 +452,10 @@ class HALiveHub {
   }
 
   async callService(domain, service, serviceData = {}, options = {}) {
+    if (this.mockFixture) {
+      return this.callMockService(domain, service, serviceData, options);
+    }
+
     const config = await getConfigWithSecurity();
     const baseUrl = config?.ha?.baseUrl;
     const token = config?.ha?.token;

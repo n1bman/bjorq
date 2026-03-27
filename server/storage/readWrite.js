@@ -1,6 +1,10 @@
 import fs from 'fs/promises';
 import path from 'path';
 
+function stripUtf8Bom(raw) {
+  return raw.charCodeAt(0) === 0xfeff ? raw.slice(1) : raw;
+}
+
 export async function ensureDir(dirPath) {
   await fs.mkdir(dirPath, { recursive: true });
 }
@@ -8,7 +12,7 @@ export async function ensureDir(dirPath) {
 export async function readJSON(filePath) {
   try {
     const raw = await fs.readFile(filePath, 'utf-8');
-    return JSON.parse(raw);
+    return JSON.parse(stripUtf8Bom(raw));
   } catch (err) {
     if (err.code === 'ENOENT') return null;
     throw err;

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { AppState, AppMode, BuildState, LayoutState, WallSegment, Room, DeviceState, DeviceKind, ActivityEvent, UndoSnapshot } from './types';
-import { mapHAEntityToDeviceState } from '../lib/haMapping';
+import type { AppState, AppMode, BuildState, LayoutState, WallSegment, Room, DeviceState, DeviceKind, ActivityEvent, UndoSnapshot, HomeViewState, WidgetOverlayConfig } from './types';
+import { mapHAEntityToDeviceState, mergeHADeviceState } from '../lib/haMapping';
 import { setFromHA } from '../hooks/useHABridge';
 import { isHostedSync, debouncedSync, debouncedProjectSync, saveProfiles, saveProject, fetchBootstrap } from '../lib/apiClient';
 import { flyTo, cameraForPolygon } from '../lib/cameraRef';
@@ -74,6 +74,53 @@ const initialLayout: LayoutState = {
   activeFloorId: 'floor-1',
   scaleCalibrated: false,
 };
+
+const defaultHomeView: HomeViewState = {
+  cameraPreset: 'angle',
+  visibleWidgets: {
+    clock: true,
+    weather: true,
+    temperature: true,
+    energy: true,
+    calendar: true,
+    scenes: true,
+    devices: true,
+  },
+  homeScreenDevices: [],
+  showDeviceMarkers: true,
+  hiddenMarkerIds: [],
+  markerSize: 'medium',
+  widgetLayout: {
+    clock: { position: 'top-left', size: 'normal' },
+    weather: { position: 'top-left', size: 'normal' },
+    temperature: { position: 'top-right', size: 'normal' },
+    energy: { position: 'top-right', size: 'normal' },
+    nav: { position: 'top-left', size: 'normal' },
+    camera: { position: 'top-right', size: 'normal' },
+    rooms: { position: 'top-right', size: 'normal' },
+    scenes: { position: 'top-left', size: 'normal' },
+    devices: { position: 'top-left', size: 'normal' },
+  },
+  homeLayoutEditMode: false,
+};
+
+function reconcileVacuumZonesWithRooms(
+  zones: Array<{ roomId: string; polygon: [number, number][]; segmentId?: number }> | undefined,
+  rooms: Room[]
+) {
+  if (!zones?.length) return zones ?? [];
+
+  return zones.map((zone) => {
+    const matchingRoom = rooms.find((room) => room.id === zone.roomId || room.name === zone.roomId);
+    if (!matchingRoom) return zone;
+
+    return {
+      ...zone,
+      roomId: matchingRoom.id,
+      polygon: matchingRoom.polygon && matchingRoom.polygon.length >= 3 ? matchingRoom.polygon : zone.polygon,
+    };
+  });
+}
 
 // ── Hosted mode sync ──
 let _activeProjectId = 'home';
@@ -149,6 +196,54 @@ function normalizeDashboardState(dashboard: any) {
   };
 }
 
+function normalizeWidgetLayoutEntry(entry: unknown, fallback: WidgetOverlayConfig): WidgetOverlayConfig {
+  if (!entry || typeof entry !== 'object') return fallback;
+  const value = entry as Partial<WidgetOverlayConfig>;
+  return {
+    position: value.position ?? fallback.position,
+    size: value.size ?? fallback.size,
+    ...(typeof value.x === 'number' ? { x: value.x } : {}),
+    ...(typeof value.y === 'number' ? { y: value.y } : {}),
+  };
+}
+
+function normalizeHomeViewState(homeView: unknown): HomeViewState {
+  if (!homeView || typeof homeView !== 'object') return defaultHomeView;
+  const value = homeView as Partial<HomeViewState>;
+  const visibleWidgets = value.visibleWidgets && typeof value.visibleWidgets === 'object'
+    ? { ...defaultHomeView.visibleWidgets, ...value.visibleWidgets }
+    : defaultHomeView.visibleWidgets;
+  const widgetLayoutSource = value.widgetLayout && typeof value.widgetLayout === 'object'
+    ? value.widgetLayout
+    : {};
+  const widgetLayout = Object.fromEntries(
+    Object.entries({
+      ...defaultHomeView.widgetLayout,
+      ...(widgetLayoutSource as Record<string, unknown>),
+    }).map(([key, entry]) => {
+      const fallback = defaultHomeView.widgetLayout[key] ?? { position: 'top-left' as const, size: 'normal' as const };
+      return [key, normalizeWidgetLayoutEntry(entry, fallback)];
+    })
+  );
+
+  return {
+    ...defaultHomeView,
+    ...value,
+    visibleWidgets,
+    widgetLayout,
+    homeScreenDevices: Array.isArray(value.homeScreenDevices)
+      ? value.homeScreenDevices.filter((deviceId): deviceId is string => typeof deviceId === 'string')
+      : defaultHomeView.homeScreenDevices,
+    hiddenMarkerIds: Array.isArray(value.hiddenMarkerIds)
+      ? value.hiddenMarkerIds.filter((markerId): markerId is string => typeof markerId === 'string')
+      : defaultHomeView.hiddenMarkerIds,
+    showDeviceMarkers: typeof value.showDeviceMarkers === 'boolean'
+      ? value.showDeviceMarkers
+      : defaultHomeView.showDeviceMarkers,
+    homeLayoutEditMode: false,
+  };
+}
+
 function buildHostedProjectPayload() {
   const s = useAppStore.getState();
   const homeGeo = { ...s.homeGeometry };
@@ -201,26 +296,7 @@ const storeCreator = (set: any, get: any): AppState => ({
     build: { ...s.build, selection: { type: null, id: null, faceSide: null } },
   })),
 
-  homeView: {
-    cameraPreset: 'angle',
-    visibleWidgets: { clock: true, weather: true, temperature: true, energy: true, calendar: true, scenes: true, devices: true },
-    homeScreenDevices: [],
-    showDeviceMarkers: true,
-    hiddenMarkerIds: [],
-    markerSize: 'medium' as const,
-    widgetLayout: {
-      clock: { position: 'top-left', size: 'normal' },
-      weather: { position: 'top-left', size: 'normal' },
-      temperature: { position: 'top-right', size: 'normal' },
-      energy: { position: 'top-right', size: 'normal' },
-      nav: { position: 'top-left', size: 'normal' },
-      camera: { position: 'top-right', size: 'normal' },
-      rooms: { position: 'top-right', size: 'normal' },
-      scenes: { position: 'top-left', size: 'normal' },
-      devices: { position: 'top-left', size: 'normal' },
-    },
-    homeLayoutEditMode: false,
-  },
+  homeView: defaultHomeView,
   setCameraPreset: (preset) => { set((s: any) => ({ homeView: { ...s.homeView, cameraPreset: preset } })); syncProfileToServer(); },
   toggleHomeWidget: (widget) => { set((s: any) => ({
     homeView: {
@@ -758,7 +834,18 @@ const storeCreator = (set: any, get: any): AppState => ({
       layout: {
         ...s.layout,
         floors: s.layout.floors.map((f: any) =>
-          f.id === floorId ? { ...f, rooms } : f
+          f.id === floorId
+            ? {
+                ...f,
+                rooms,
+                vacuumMapping: f.vacuumMapping
+                  ? {
+                      ...f.vacuumMapping,
+                      zones: reconcileVacuumZonesWithRooms(f.vacuumMapping.zones, rooms),
+                    }
+                  : f.vacuumMapping,
+              }
+            : f
         ),
       },
     })),
@@ -768,7 +855,18 @@ const storeCreator = (set: any, get: any): AppState => ({
       layout: {
         ...s.layout,
         floors: s.layout.floors.map((f: any) =>
-          f.id === floorId ? { ...f, rooms: f.rooms.filter((r: any) => r.id !== roomId) } : f
+          f.id === floorId
+            ? {
+                ...f,
+                rooms: f.rooms.filter((r: any) => r.id !== roomId),
+                vacuumMapping: f.vacuumMapping
+                  ? {
+                      ...f.vacuumMapping,
+                      zones: (f.vacuumMapping.zones ?? []).filter((z: any) => z.roomId !== roomId),
+                    }
+                  : f.vacuumMapping,
+              }
+            : f
         ),
       },
     })),
@@ -777,11 +875,22 @@ const storeCreator = (set: any, get: any): AppState => ({
     set((s: any) => ({
       layout: {
         ...s.layout,
-        floors: s.layout.floors.map((f: any) =>
-          f.id === floorId
-            ? { ...f, rooms: f.rooms.map((r: any) => (r.id === roomId ? { ...r, name } : r)) }
-            : f
-        ),
+        floors: s.layout.floors.map((f: any) => {
+          if (f.id !== floorId) return f;
+          const oldRoom = f.rooms.find((r: any) => r.id === roomId);
+          return {
+            ...f,
+            rooms: f.rooms.map((r: any) => (r.id === roomId ? { ...r, name } : r)),
+            vacuumMapping: f.vacuumMapping
+              ? {
+                  ...f.vacuumMapping,
+                  zones: (f.vacuumMapping.zones ?? []).map((z: any) =>
+                    z.roomId === oldRoom?.name ? { ...z, roomId } : z
+                  ),
+                }
+              : f.vacuumMapping,
+          };
+        }),
       },
     })),
 
@@ -1447,14 +1556,17 @@ const storeCreator = (set: any, get: any): AppState => ({
       return { ...c, deviceIds: ids };
     }),
   })),
-  toggleHomeScreenDevice: (deviceId) => set((s: any) => ({
-    homeView: {
-      ...s.homeView,
-      homeScreenDevices: (s.homeView.homeScreenDevices ?? []).includes(deviceId)
-        ? (s.homeView.homeScreenDevices ?? []).filter((d: string) => d !== deviceId)
-        : [...(s.homeView.homeScreenDevices ?? []), deviceId],
-    },
-  })),
+  toggleHomeScreenDevice: (deviceId) => {
+    set((s: any) => ({
+      homeView: {
+        ...s.homeView,
+        homeScreenDevices: (s.homeView.homeScreenDevices ?? []).includes(deviceId)
+          ? (s.homeView.homeScreenDevices ?? []).filter((d: string) => d !== deviceId)
+          : [...(s.homeView.homeScreenDevices ?? []), deviceId],
+      },
+    }));
+    syncProfileToServer();
+  },
   reorderCategories: (fromIndex, toIndex) => set((s: any) => {
     const cats = [...s.customCategories];
     const [moved] = cats.splice(fromIndex, 1);
@@ -1577,10 +1689,11 @@ const storeCreator = (set: any, get: any): AppState => ({
         const mapped = mapHAEntityToDeviceState(domain, state, attributes, entityId);
         if (mapped) {
           const existing = newDeviceStates[marker.id];
-          if (existing && JSON.stringify(existing.data) === JSON.stringify(mapped.data)) {
+          const nextDeviceState = mergeHADeviceState(existing, mapped);
+          if (existing && JSON.stringify(existing.data) === JSON.stringify(nextDeviceState.data)) {
             // No change
           } else {
-            newDeviceStates = { ...newDeviceStates, [marker.id]: mapped };
+            newDeviceStates = { ...newDeviceStates, [marker.id]: nextDeviceState };
           }
         }
       }
@@ -1831,7 +1944,7 @@ export async function initHostedMode() {
       if (p.profile) stateUpdate.profile = p.profile;
       if (p.performance) stateUpdate.performance = p.performance;
       if (p.standby) stateUpdate.standby = p.standby;
-      if (p.homeView) stateUpdate.homeView = { ...useAppStore.getState().homeView, ...p.homeView };
+      if (p.homeView) stateUpdate.homeView = normalizeHomeViewState(p.homeView);
       if (p.environment) stateUpdate.environment = { ...useAppStore.getState().environment, ...p.environment };
       if (p.customCategories) stateUpdate.customCategories = p.customCategories;
       if (p.wifi) stateUpdate.wifi = p.wifi;

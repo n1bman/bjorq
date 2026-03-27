@@ -15,7 +15,7 @@ import { cn } from '../../../lib/utils';
 import { useEffect, useRef, useState } from 'react';
 import { Checkbox } from '../../ui/checkbox';
 import { getRobotEntityViews } from '../../../lib/haMenuSelectors';
-import { haServiceCaller } from '../../../hooks/useHomeAssistant';
+import { callHAServiceDirect, haServiceCaller } from '../../../hooks/useHomeAssistant';
 import { setFromHA } from '../../../hooks/useHABridge';
 import { callHAService, isHostedSync } from '../../../lib/apiClient';
 
@@ -56,9 +56,14 @@ function FanSpeedSelector({
   data: VacuumState;
   onChange: (presetName: string, speed: number) => void;
 }) {
+  const [draftSpeed, setDraftSpeed] = useState(data.fanSpeed ?? 50);
   const presets = data.fanSpeedList ?? ['Silent', 'Standard', 'Medium', 'Turbo', 'Max'];
   const presetSpeeds: Record<string, number> = {};
   presets.forEach((p, i) => { presetSpeeds[p.toLowerCase()] = Math.round(((i + 1) / presets.length) * 100); });
+
+  useEffect(() => {
+    setDraftSpeed(data.fanSpeed ?? 50);
+  }, [data.fanSpeed]);
 
   const resolvePreset = (speed: number) => {
     const idx = Math.round((speed / 100) * (presets.length - 1));
@@ -69,13 +74,16 @@ function FanSpeedSelector({
     <div className="space-y-2">
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
         <Wind size={14} />
-        <span>Sugeffekt {data.fanSpeedPreset ? `${data.fanSpeedPreset} (${data.fanSpeed ?? 0}%)` : `${data.fanSpeed ?? 0}%`}</span>
+        <span>Sugeffekt {data.fanSpeedPreset ? `${data.fanSpeedPreset} (${draftSpeed}%)` : `${draftSpeed}%`}</span>
       </div>
       <Slider
-        value={[data.fanSpeed ?? 50]}
+        value={[draftSpeed]}
         max={100}
         step={5}
         onValueChange={([v]) => {
+          setDraftSpeed(v);
+        }}
+        onValueCommit={([v]) => {
           const preset = resolvePreset(v);
           onChange(preset, v);
         }}
@@ -646,7 +654,7 @@ function VacuumCard({ marker, data, update }: { marker: DeviceMarker; data: Vacu
       if (isHostedSync()) {
         await callHAService('vacuum', service, { entity_id: entityId, ...serviceData });
       } else {
-        haServiceCaller.current?.('vacuum', service, { entity_id: entityId, ...serviceData });
+        await callHAServiceDirect('vacuum', service, { entity_id: entityId, ...serviceData });
       }
       if (successPatch) applyOptimisticUpdate(successPatch);
       return true;

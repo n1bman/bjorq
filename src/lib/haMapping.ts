@@ -1,5 +1,27 @@
 import type { DeviceState } from '../store/types';
 
+export function mergeHADeviceState(existing: DeviceState | undefined, mapped: DeviceState): DeviceState {
+  if (existing?.kind !== 'vacuum' || mapped.kind !== 'vacuum') {
+    return mapped;
+  }
+
+  const existingData = existing.data;
+  const mappedData = mapped.data;
+
+  return {
+    kind: 'vacuum',
+    data: {
+      ...mappedData,
+      ...(mappedData.currentRoom ? {} : existingData.currentRoom ? { currentRoom: existingData.currentRoom } : {}),
+      ...(existingData.targetRoom ? { targetRoom: existingData.targetRoom } : {}),
+      ...(existingData.cleaningLog ? { cleaningLog: existingData.cleaningLog } : {}),
+      ...(typeof existingData.showDustEffect === 'boolean' ? { showDustEffect: existingData.showDustEffect } : {}),
+      ...(typeof existingData.vacuumSpeed === 'number' ? { vacuumSpeed: existingData.vacuumSpeed } : {}),
+      ...(typeof existingData.showDebugOverlay === 'boolean' ? { showDebugOverlay: existingData.showDebugOverlay } : {}),
+    },
+  };
+}
+
 /**
  * Maps a Home Assistant entity state + attributes to our internal DeviceState format.
  */

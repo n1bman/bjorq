@@ -1,18 +1,14 @@
 import { useState } from 'react';
 import { useAppStore } from '../../../store/useAppStore';
-import { Button } from '../../ui/button';
-import { MapPin, Trash2, PenTool, Home as HomeIcon, Edit3, Hash, Bot, CheckCircle, Info } from 'lucide-react';
-import { cn } from '../../../lib/utils';
-import type { BuildTool } from '../../../store/types';
+import { MapPin, Trash2, Home as HomeIcon, Edit3, Hash, Bot, CheckCircle, Info } from 'lucide-react';
 
 export default function VacuumMappingTools() {
-  const activeTool = useAppStore((s) => s.build.activeTool);
-  const setBuildTool = useAppStore((s) => s.setBuildTool);
   const activeFloorId = useAppStore((s) => s.layout.activeFloorId);
   const floors = useAppStore((s) => s.layout.floors);
   const markers = useAppStore((s) => s.devices.markers);
   const removeVacuumZone = useAppStore((s) => s.removeVacuumZone);
   const renameVacuumZone = useAppStore((s) => s.renameVacuumZone);
+  const renameRoom = useAppStore((s) => s.renameRoom);
   const updateVacuumZoneSegmentId = useAppStore((s) => s.updateVacuumZoneSegmentId);
   const haEntities = useAppStore((s) => s.homeAssistant.entities);
   const vacuumSegmentMap = useAppStore((s) => s.homeAssistant.vacuumSegmentMap);
@@ -42,8 +38,10 @@ export default function VacuumMappingTools() {
     ...haRoomNames,
   ])).filter(Boolean);
 
+  const findLinkedRoom = (roomId: string) => rooms.find((r) => r.id === roomId || r.name === roomId);
+
   const getZoneRoomName = (roomId: string) => {
-    const room = rooms.find((r) => r.id === roomId || r.name === roomId);
+    const room = findLinkedRoom(roomId);
     return room?.name ?? roomId;
   };
 
@@ -64,7 +62,12 @@ export default function VacuumMappingTools() {
   const commitEdit = (oldRoomId: string) => {
     const newName = editValue.trim();
     if (newName && newName !== oldRoomId && activeFloorId) {
-      renameVacuumZone(activeFloorId, oldRoomId, newName);
+      const linkedRoom = findLinkedRoom(oldRoomId);
+      if (linkedRoom) {
+        renameRoom(activeFloorId, linkedRoom.id, newName);
+      } else {
+        renameVacuumZone(activeFloorId, oldRoomId, newName);
+      }
     }
     setEditingZone(null);
   };
@@ -90,19 +93,12 @@ export default function VacuumMappingTools() {
           <span className="hidden lg:inline">Placera docka</span>
         </button>
 
-        <button
-          onClick={() => setBuildTool('vacuum-zone' as BuildTool)}
-          className={cn(
-            'flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all',
-            'lg:justify-start justify-center',
-            activeTool === 'vacuum-zone'
-              ? 'bg-primary/20 text-primary'
-              : 'text-muted-foreground hover:text-foreground hover:bg-secondary/30'
-          )}
-        >
-          <PenTool size={16} />
-          <span className="hidden lg:inline">Rita robotzon</span>
-        </button>
+      </div>
+
+      <div className="mt-2 px-1 hidden lg:block">
+        <p className="text-[8px] text-muted-foreground/60">
+          Robotmappningen ska i första hand följa dina modellerade rum. Fria robotzoner är ett äldre spår och bör bara behållas för legacy-projekt.
+        </p>
       </div>
 
       {/* Use existing rooms as vacuum zones */}
@@ -112,7 +108,7 @@ export default function VacuumMappingTools() {
             Befintliga rum
           </p>
           {rooms.map((room) => {
-            const existingZone = mapping?.zones?.find((z) => z.roomId === room.id);
+            const existingZone = mapping?.zones?.find((z) => z.roomId === room.id || z.roomId === room.name);
             const isIncluded = !!existingZone;
             return (
               <div key={room.id} className="flex items-center gap-2 px-2 py-1.5 rounded text-[10px] hover:bg-secondary/20">

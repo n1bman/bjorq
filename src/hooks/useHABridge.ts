@@ -1,13 +1,15 @@
 import { useEffect, useRef } from 'react';
 import { useAppStore } from '../store/useAppStore';
 import { haServiceCaller } from './useHomeAssistant';
-import type { DeviceState } from '../store/types';
+import type { DeviceMarker, DeviceState, HAConnectionStatus, HAEntity } from '../store/types';
 
 /**
  * Set of entityIds currently suppressed (we just sent a command, ignore HA echo).
  */
 const suppressedEntities = new Set<string>();
 const suppressTimers: Record<string, ReturnType<typeof setTimeout>> = {};
+const vacuumRoomSensorPatterns = [/nuvarande[_\s.]?rum/i, /current[_\s.]?room/i];
+const genericVacuumTokens = new Set(['vacuum', 'robot', 'room', 'current', 'nuvarande', 'rum', 'sensor']);
 
 /**
  * Counter-based flag: >0 means changes originated from HA — bridge should NOT send commands back.
@@ -44,6 +46,112 @@ function suppressEntity(entityId: string, ms = 1500) {
     suppressedEntities.delete(entityId);
     delete suppressTimers[entityId];
   }, ms);
+}
+
+function normalizeMatchText(value: string): string {
+  return value
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+function tokenizeMatchText(...values: Array<string | undefined>): string[] {
+  return Array.from(new Set(
+    values
+      .flatMap((value) => normalizeMatchText(value ?? '').split(' '))
+      .filter((token) => token.length >= 3 && !genericVacuumTokens.has(token))
+  ));
+}
+
+function getEntityObjectId(entityId?: string): string {
+  if (!entityId) return '';
+  return entityId.split('.').slice(1).join('.');
+}
+
+export function sanitizeVacuumRoomName(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const roomName = value.trim();
+  if (!roomName) return null;
+  const normalized = roomName.toLowerCase();
+  if (normalized === 'unknown' || normalized === 'unavailable' || normalized === 'none' || normalized === 'null') {
+    return null;
+  }
+  return roomName;
+}
+
+export function readVacuumCurrentRoom(attributes?: Record<string, unknown>): string | null {
+  if (!attributes) return null;
+  return sanitizeVacuumRoomName(
+    attributes.current_room ??
+    attributes.currentRoom ??
+    attributes.room_name
+  );
+}
+
+export function isVacuumRoomSensorEntity(entity: HAEntity): boolean {
+  if (entity.domain !== 'sensor') return false;
+  return vacuumRoomSensorPatterns.some((pattern) => pattern.test(entity.entityId) || pattern.test(entity.friendlyName))
+    || Array.isArray(entity.attributes?.['room_list'])
+    || Array.isArray(entity.attributes?.['options'])
+    || typeof entity.attributes?.['current_room'] === 'string';
+}
+
+export function findVacuumRoomSensorId(marker: DeviceMarker, entities: HAEntity[]): string | null {
+  const candidates = entities.filter(isVacuumRoomSensorEntity);
+  if (candidates.length === 0) return null;
+  if (candidates.length === 1) return candidates[0].entityId;
+
+  const vacuumEntityId = marker.ha?.entityId;
+  const vacuumEntity = vacuumEntityId
+    ? entities.find((entity) => entity.entityId === vacuumEntityId)
+    : undefined;
+  const vacuumKeys = [
+    getEntityObjectId(vacuumEntityId),
+    vacuumEntity?.friendlyName,
+    marker.name,
+  ].filter((value): value is string => Boolean(value));
+  const vacuumTokens = tokenizeMatchText(...vacuumKeys);
+
+  let bestCandidate: HAEntity | null = null;
+  let bestScore = -1;
+
+  for (const candidate of candidates) {
+    const candidateText = `${candidate.entityId} ${candidate.friendlyName}`;
+    const normalizedCandidateText = normalizeMatchText(candidateText);
+    const candidateTokens = tokenizeMatchText(candidate.entityId, candidate.friendlyName);
+    let score = 0;
+
+    for (const key of vacuumKeys) {
+      const normalizedKey = normalizeMatchText(key);
+      if (!normalizedKey) continue;
+      if (normalizedCandidateText.includes(normalizedKey)) {
+        score += 60;
+      }
+    }
+
+    for (const token of vacuumTokens) {
+      if (candidateTokens.includes(token)) {
+        score += 15;
+      }
+    }
+
+    if (Array.isArray(candidate.attributes?.['room_list']) || Array.isArray(candidate.attributes?.['options'])) {
+      score += 5;
+    }
+
+    if (score > bestScore) {
+      bestScore = score;
+      bestCandidate = candidate;
+    }
+  }
+
+  return bestScore > 0 ? bestCandidate?.entityId ?? null : null;
+}
+
+export function canSendHACommands(status: HAConnectionStatus): boolean {
+  return status === 'connected' || status === 'degraded';
 }
 
 /**
@@ -425,7 +533,7 @@ export function useHABridge() {
       const markers = state.devices.markers;
       const haStatus = state.homeAssistant.status;
 
-      if (haStatus !== 'connected') {
+      if (!canSendHACommands(haStatus)) {
         prevStatesRef.current = { ...currentStates };
         return;
       }
@@ -458,38 +566,37 @@ export function useHABridge() {
  * vacuum device currentRoom in deviceState.
  */
 export function useVacuumRoomSync() {
-  const prevRoomRef = useRef<string>('');
-  const sensorIdRef = useRef<string | null>(null);
+  const prevRoomByMarkerRef = useRef<Record<string, string>>({});
+  const sensorIdByMarkerRef = useRef<Record<string, string>>({});
 
   useEffect(() => {
     const unsub = useAppStore.subscribe((state) => {
-      // Dynamically discover room sensor (matches *nuvarande_rum, *current_room, etc.)
-      if (!sensorIdRef.current) {
-        const candidates = Object.keys(state.homeAssistant.liveStates).filter(
-          (id) => id.startsWith('sensor.') && (/nuvarande.rum/i.test(id) || /current.room/i.test(id))
-        );
-        if (candidates.length > 0) sensorIdRef.current = candidates[0];
-        // Also check HA entities for sensors with 'options' attribute containing room names
-        if (!sensorIdRef.current) {
-          const entity = state.homeAssistant.entities.find(
-            (e) => e.domain === 'sensor' && (e.attributes?.['options'] || e.attributes?.['room_list'])
-              && (/nuvarande|current.room/i.test(e.entityId))
-          );
-          if (entity) sensorIdRef.current = entity.entityId;
-        }
-      }
-      if (!sensorIdRef.current) return;
-
-      const live = state.homeAssistant.liveStates[sensorIdRef.current];
-      if (!live) return;
-
-      const roomName = live.state;
-      if (roomName === prevRoomRef.current) return;
-      prevRoomRef.current = roomName;
-
-      // Find vacuum device markers and update their currentRoom
       const vacuumMarkers = state.devices.markers.filter((m) => m.kind === 'vacuum');
       for (const marker of vacuumMarkers) {
+        const entityId = marker.ha?.entityId;
+        const directRoom = entityId
+          ? readVacuumCurrentRoom(state.homeAssistant.liveStates[entityId]?.attributes)
+          : null;
+        let roomName = directRoom;
+
+        if (!roomName) {
+          let sensorId = sensorIdByMarkerRef.current[marker.id];
+          const liveSensor = sensorId ? state.homeAssistant.liveStates[sensorId] : undefined;
+          if (!liveSensor) {
+            sensorId = findVacuumRoomSensorId(marker, state.homeAssistant.entities) ?? undefined;
+            if (sensorId) {
+              sensorIdByMarkerRef.current[marker.id] = sensorId;
+            }
+          }
+          roomName = sensorId
+            ? sanitizeVacuumRoomName(state.homeAssistant.liveStates[sensorId]?.state)
+              ?? readVacuumCurrentRoom(state.homeAssistant.liveStates[sensorId]?.attributes)
+            : null;
+        }
+
+        if (!roomName || roomName === prevRoomByMarkerRef.current[marker.id]) continue;
+        prevRoomByMarkerRef.current[marker.id] = roomName;
+
         const ds = state.devices.deviceStates[marker.id];
         if (ds?.kind === 'vacuum') {
           setFromHA(true);

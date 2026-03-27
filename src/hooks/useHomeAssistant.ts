@@ -11,6 +11,7 @@ let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
 let manualDisconnect = false;
 let hasAutoConnected = false;
 let getMapsId: number | null = null;
+const pendingServiceCalls = new Map<number, { resolve: (value: unknown) => void; reject: (reason?: unknown) => void }>();
 
 function nextId() {
   return ++msgId;
@@ -55,6 +56,31 @@ function callService(domain: string, service: string, serviceData: Record<string
   }));
 }
 
+function rejectPendingServiceCalls(reason: string) {
+  for (const [, pending] of pendingServiceCalls) {
+    pending.reject(new Error(reason));
+  }
+  pendingServiceCalls.clear();
+}
+
+export function callHAServiceDirect(domain: string, service: string, serviceData: Record<string, unknown>) {
+  if (!ws || ws.readyState !== WebSocket.OPEN) {
+    return Promise.reject(new Error('Home Assistant websocket is not connected'));
+  }
+
+  const id = nextId();
+  return new Promise<unknown>((resolve, reject) => {
+    pendingServiceCalls.set(id, { resolve, reject });
+    ws?.send(JSON.stringify({
+      type: 'call_service',
+      domain,
+      service,
+      service_data: serviceData,
+      id,
+    }));
+  });
+}
+
 function connect(url: string, token: string) {
   manualDisconnect = false;
   ws?.close();
@@ -95,10 +121,22 @@ function connect(url: string, token: string) {
           socket.send(JSON.stringify({ type: 'subscribe_events', event_type: 'state_changed', id: nextId() }));
           break;
         case 'auth_invalid':
+          rejectPendingServiceCalls('Home Assistant auth failed');
           s.setHAStatus('error');
           socket.close();
           break;
         case 'result':
+          if (pendingServiceCalls.has(msg.id)) {
+            const pending = pendingServiceCalls.get(msg.id)!;
+            pendingServiceCalls.delete(msg.id);
+            if (msg.success) {
+              pending.resolve(msg.result);
+            } else {
+              const detail = msg.error?.message || msg.error?.code || 'Home Assistant rejected the service call';
+              pending.reject(new Error(detail));
+            }
+            break;
+          }
           if (msg.id === getMapsId && msg.success) {
             getMapsId = null;
             break;
@@ -135,15 +173,18 @@ function connect(url: string, token: string) {
     };
 
     socket.onclose = () => {
+      rejectPendingServiceCalls('Home Assistant websocket closed');
       if (manualDisconnect) return;
       useAppStore.getState().setHAStatus('connecting');
       reconnectTimer = setTimeout(() => connect(url, token), 5000);
     };
 
     socket.onerror = () => {
+      rejectPendingServiceCalls('Home Assistant websocket error');
       useAppStore.getState().setHAStatus('error');
     };
   } catch {
+    rejectPendingServiceCalls('Failed to open Home Assistant websocket');
     useAppStore.getState().setHAStatus('error');
   }
 }
@@ -151,6 +192,7 @@ function connect(url: string, token: string) {
 function disconnect() {
   manualDisconnect = true;
   clearTimeout(reconnectTimer);
+  rejectPendingServiceCalls('Home Assistant websocket disconnected');
   haServiceCaller.current = null;
   useAppStore.getState().setHAStatus('disconnected');
   ws?.close();

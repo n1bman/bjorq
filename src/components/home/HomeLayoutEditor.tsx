@@ -44,6 +44,12 @@ const DEFAULT_POSITIONS: Record<string, { x: number; y: number }> = {
   markerPicker: { x: 92, y: 2 },
 };
 
+function getOverlayTransform(x: number, y: number) {
+  const translateX = x >= 72 ? '-100%' : x >= 38 && x <= 62 ? '-50%' : '0%';
+  const translateY = y >= 78 ? '-100%' : '0%';
+  return `translate(${translateX}, ${translateY})`;
+}
+
 const widgetRenderers: Partial<Record<HomeWidgetKey, (size: WidgetOverlaySize) => React.ReactNode>> = {
   clock: (size) => <ClockWidget size={size} />,
   weather: (size) => <WeatherWidget size={size} />,
@@ -149,6 +155,7 @@ export default function HomeLayoutEditor() {
   const selectedMarkers = markers.filter((m) => homeScreenDevices.includes(m.id));
 
   const [dragging, setDragging] = useState<string | null>(null);
+  const [draftPositions, setDraftPositions] = useState<Record<string, { x: number; y: number }>>({});
   const containerRef = useRef<HTMLDivElement>(null);
   const dragStartRef = useRef<{ startX: number; startY: number; origX: number; origY: number }>({
     startX: 0, startY: 0, origX: 0, origY: 0,
@@ -161,18 +168,27 @@ export default function HomeLayoutEditor() {
     return { x: 3 + i * 12, y: 82 };
   };
 
+  const getPosition = useCallback((key: string, idx?: number) => {
+    const draft = draftPositions[key];
+    if (draft) return draft;
+    const config = widgetLayout[key];
+    const defPos = getDefaultPos(key, idx);
+    return {
+      x: config?.x ?? defPos.x,
+      y: config?.y ?? defPos.y,
+    };
+  }, [draftPositions, widgetLayout]);
+
   const handlePointerDown = useCallback((key: string, e: React.PointerEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setDragging(key);
-    const config = widgetLayout[key];
-    // Use getDefaultPos which handles both widget and device defaults
     const defIdx = selectedMarkers.findIndex((m) => m.id === key);
-    const defPos = getDefaultPos(key, defIdx >= 0 ? defIdx : 0);
-    const pos = { x: config?.x ?? defPos.x, y: config?.y ?? defPos.y };
+    const pos = getPosition(key, defIdx >= 0 ? defIdx : 0);
+    setDraftPositions((prev) => ({ ...prev, [key]: pos }));
     dragStartRef.current = { startX: e.clientX, startY: e.clientY, origX: pos.x, origY: pos.y };
     containerRef.current?.setPointerCapture(e.pointerId);
-  }, [widgetLayout, selectedMarkers]);
+  }, [getPosition, selectedMarkers]);
 
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
     if (!dragging || !containerRef.current) return;
@@ -181,12 +197,25 @@ export default function HomeLayoutEditor() {
     const dy = ((e.clientY - dragStartRef.current.startY) / rect.height) * 100;
     const newX = Math.max(1, Math.min(95, dragStartRef.current.origX + dx));
     const newY = Math.max(1, Math.min(95, dragStartRef.current.origY + dy));
-    setWidgetLayout(dragging, { x: Math.round(newX * 10) / 10, y: Math.round(newY * 10) / 10 });
-  }, [dragging, setWidgetLayout]);
+    setDraftPositions((prev) => ({
+      ...prev,
+      [dragging]: { x: Math.round(newX * 10) / 10, y: Math.round(newY * 10) / 10 },
+    }));
+  }, [dragging]);
 
   const handlePointerUp = useCallback(() => {
+    if (dragging) {
+      const nextPos = draftPositions[dragging];
+      if (nextPos) {
+        setWidgetLayout(dragging, nextPos);
+      }
+      setDraftPositions((prev) => {
+        const { [dragging]: _removed, ...rest } = prev;
+        return rest;
+      });
+    }
     setDragging(null);
-  }, []);
+  }, [draftPositions, dragging, setWidgetLayout]);
 
   const isVisible = (key: HomeWidgetKey) => ALWAYS_VISIBLE.has(key) || visibleWidgets[key];
 
@@ -212,10 +241,7 @@ export default function HomeLayoutEditor() {
         if (!isVisible(key)) return null;
         const config = widgetLayout[key];
         const size = config?.size ?? 'normal';
-        const pos = {
-          x: config?.x ?? DEFAULT_POSITIONS[key]?.x ?? 50,
-          y: config?.y ?? DEFAULT_POSITIONS[key]?.y ?? 50,
-        };
+        const pos = getPosition(key);
         const isDragging = dragging === key;
 
         return (
@@ -225,7 +251,7 @@ export default function HomeLayoutEditor() {
               'absolute z-20 group transition-shadow select-none',
               isDragging ? 'cursor-grabbing z-[55]' : 'cursor-grab',
             )}
-            style={{ left: `${pos.x}%`, top: `${pos.y}%`, touchAction: 'none' }}
+            style={{ left: `${pos.x}%`, top: `${pos.y}%`, transform: getOverlayTransform(pos.x, pos.y), touchAction: 'none' }}
             onPointerDown={(e) => handlePointerDown(key, e)}
           >
             <div
@@ -263,12 +289,7 @@ export default function HomeLayoutEditor() {
 
       {/* Draggable device widgets — real size cards */}
       {selectedMarkers.map((m, idx) => {
-        const defPos = getDefaultPos(m.id, idx);
-        const config = widgetLayout[m.id];
-        const pos = {
-          x: config?.x ?? defPos.x,
-          y: config?.y ?? defPos.y,
-        };
+        const pos = getPosition(m.id, idx);
         const isDragging = dragging === m.id;
         const Icon = KIND_ICONS[m.kind] || Power;
         const mockControls = DEVICE_MOCK_CONTROLS[m.kind as DeviceKind] ?? null;
@@ -281,7 +302,7 @@ export default function HomeLayoutEditor() {
               'absolute z-20 group transition-shadow select-none',
               isDragging ? 'cursor-grabbing z-[55]' : 'cursor-grab',
             )}
-            style={{ left: `${pos.x}%`, top: `${pos.y}%`, touchAction: 'none' }}
+            style={{ left: `${pos.x}%`, top: `${pos.y}%`, transform: getOverlayTransform(pos.x, pos.y), touchAction: 'none' }}
             onPointerDown={(e) => handlePointerDown(m.id, e)}
           >
             <div
@@ -326,11 +347,7 @@ export default function HomeLayoutEditor() {
 
       {/* Draggable utility buttons (Anpassa + Markörer) */}
       {UTILITY_WIDGETS.map(({ key, label, icon: UtilIcon }) => {
-        const config = widgetLayout[key];
-        const pos = {
-          x: config?.x ?? DEFAULT_POSITIONS[key]?.x ?? 50,
-          y: config?.y ?? DEFAULT_POSITIONS[key]?.y ?? 50,
-        };
+        const pos = getPosition(key);
         const isDragging = dragging === key;
 
         return (
@@ -340,7 +357,7 @@ export default function HomeLayoutEditor() {
               'absolute z-20 group transition-shadow select-none',
               isDragging ? 'cursor-grabbing z-[55]' : 'cursor-grab',
             )}
-            style={{ left: `${pos.x}%`, top: `${pos.y}%`, touchAction: 'none' }}
+            style={{ left: `${pos.x}%`, top: `${pos.y}%`, transform: getOverlayTransform(pos.x, pos.y), touchAction: 'none' }}
             onPointerDown={(e) => handlePointerDown(key, e)}
           >
             <div
@@ -388,6 +405,7 @@ export default function HomeLayoutEditor() {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => {
+                  setDraftPositions({});
                   Object.entries(DEFAULT_POSITIONS).forEach(([k, pos]) => {
                     setWidgetLayout(k, { x: pos.x, y: pos.y });
                   });

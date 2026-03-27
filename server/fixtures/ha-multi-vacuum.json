@@ -1,0 +1,68 @@
+{
+  "status": "connected",
+  "primaryVacuumEntityId": "vacuum.roborock_s8",
+  "vacuumSegmentMap": {
+    "Kok": 16,
+    "Hall": 17,
+    "Vardagsrum": 21,
+    "Kontor": 22
+  },
+  "segmentRooms": {
+    "16": "Kok",
+    "17": "Hall",
+    "21": "Vardagsrum",
+    "22": "Kontor"
+  },
+  "vacuumRoomSensors": {
+    "vacuum.roborock_s8": "sensor.roborock_s8_current_room",
+    "vacuum.roborock_qrevo": "sensor.roborock_qrevo_current_room"
+  },
+  "entities": [
+    {
+      "entityId": "vacuum.roborock_s8",
+      "domain": "vacuum",
+      "friendlyName": "Roborock S8",
+      "state": "docked",
+      "attributes": {
+        "friendly_name": "Roborock S8",
+        "battery_level": 87,
+        "fan_speed": "balanced",
+        "fan_speed_list": ["gentle", "balanced", "turbo"],
+        "current_room": "Kok"
+      }
+    },
+    {
+      "entityId": "sensor.roborock_s8_current_room",
+      "domain": "sensor",
+      "friendlyName": "Roborock S8 Current Room",
+      "state": "Kok",
+      "attributes": {
+        "friendly_name": "Roborock S8 Current Room",
+        "options": ["Kok", "Hall"]
+      }
+    },
+    {
+      "entityId": "vacuum.roborock_qrevo",
+      "domain": "vacuum",
+      "friendlyName": "Roborock Q Revo",
+      "state": "docked",
+      "attributes": {
+        "friendly_name": "Roborock Q Revo",
+        "battery_level": 79,
+        "fan_speed": "balanced",
+        "fan_speed_list": ["gentle", "balanced", "turbo"],
+        "current_room": "Kontor"
+      }
+    },
+    {
+      "entityId": "sensor.roborock_qrevo_current_room",
+      "domain": "sensor",
+      "friendlyName": "Roborock Q Revo Current Room",
+      "state": "Kontor",
+      "attributes": {
+        "friendly_name": "Roborock Q Revo Current Room",
+        "options": ["Vardagsrum", "Kontor"]
+      }
+    }
+  ]
+}
