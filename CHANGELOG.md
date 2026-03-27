@@ -10,6 +10,15 @@ Detailed release notes for each shipped version should also be added as
 
 ## [Unreleased]
 
+## [1.10.6] - 2026-03-27
+
+### Fixed
+- **404 via Home Assistant-ingress** - appen renderar nu huvudvyn även när den öppnas under Home Assistants ingress-path `/app/...` i stället för att hamna på BJORQ:s egen 404-sida.
+
+### Verified
+- `npm test`
+- `npm run build`
+
 ## [1.10.5] - 2026-03-27
 
 ### Fixed

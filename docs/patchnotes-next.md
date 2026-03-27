@@ -4,4 +4,4 @@ Detta dokument samlar pagande andringar som annu inte har fatt en slappt version
 
 ## Nu pagar
 
-- Inga oslappta patchnotes finns just nu. Senaste version ar `1.10.5`. Nasta arbete dokumenteras har innan nasta release skapas.
+- Inga oslappta patchnotes finns just nu. Senaste version ar `1.10.6`. Nasta arbete dokumenteras har innan nasta release skapas.
