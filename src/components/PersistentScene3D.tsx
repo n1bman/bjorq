@@ -51,6 +51,34 @@ function FrameThrottle() {
   return null;
 }
 
+function DashboardFrameDriver() {
+  const { invalidate } = useThree();
+  const appMode = useAppStore((s) => s.appMode);
+  const quality = useAppStore((s) => s.performance.quality);
+  const tabletMode = useAppStore((s) => s.performance.tabletMode);
+
+  useEffect(() => {
+    if (appMode !== 'dashboard') return;
+
+    const intervalMs = tabletMode
+      ? 120
+      : quality === 'low'
+        ? 100
+        : quality === 'medium'
+          ? 66
+          : 50;
+
+    invalidate();
+    const timer = window.setInterval(() => {
+      invalidate();
+    }, intervalMs);
+
+    return () => window.clearInterval(timer);
+  }, [appMode, invalidate, quality, tabletMode]);
+
+  return null;
+}
+
 // Export cache stats getter for PerformanceHUD
 export { getCacheStats };
 
@@ -782,6 +810,7 @@ function UnifiedSceneContent({ onDeviceLongPress, fpsActive, fpsSpawn, onFpsExit
   const sunElevation = useAppStore((s) => s.environment.sunElevation);
   const profile = useAppStore((s) => s.environment.profile);
   const perf = useAppStore((s) => s.performance);
+  const isDashboard = appMode === 'dashboard';
 
   const sunPos = useMemo(() => {
     const azRad = (sunAzimuth * Math.PI) / 180;
@@ -794,20 +823,45 @@ function UnifiedSceneContent({ onDeviceLongPress, fpsActive, fpsSpawn, onFpsExit
     ] as [number, number, number];
   }, [sunAzimuth, sunElevation]);
 
-  const shadowMapSize = perf.quality === 'low' ? 512 : perf.quality === 'medium' ? 1024 : 2048;
-  const enableShadows = perf.shadows && profile.shadowEnabled;
+  const isLiteTier = perf.tabletMode || perf.quality === 'low';
+  const isStandardTier = !isLiteTier && perf.quality === 'medium';
+  const shadowMapSize = isDashboard
+    ? isLiteTier
+      ? 512
+      : isStandardTier
+        ? 512
+        : 1024
+    : perf.quality === 'low'
+      ? 512
+      : perf.quality === 'medium'
+        ? 1024
+        : 2048;
+  const enableShadows = perf.shadows
+    && profile.shadowEnabled
+    && !(isDashboard && isLiteTier);
   const isBuild = appMode === 'build';
+  const showWeatherEffects = !isDashboard || (!isLiteTier && perf.quality === 'high');
+  const showEnvironment = !isDashboard || perf.quality === 'high';
+  const ambientIntensity = isDashboard && isLiteTier
+    ? profile.ambientIntensity * 0.9
+    : profile.ambientIntensity;
+  const sunIntensity = isDashboard && isLiteTier
+    ? profile.sunIntensity * 0.9
+    : profile.sunIntensity;
+  const hemisphereIntensity = isDashboard && isLiteTier
+    ? profile.hemisphereIntensity * 0.85
+    : profile.hemisphereIntensity;
 
   return (
     <>
       {/* Shared lighting */}
       <ambientLight
-        intensity={profile.ambientIntensity}
+        intensity={ambientIntensity}
         color={new THREE.Color(profile.ambientColor[0], profile.ambientColor[1], profile.ambientColor[2])}
       />
       <directionalLight
         position={sunPos}
-        intensity={profile.sunIntensity}
+        intensity={sunIntensity}
         color={new THREE.Color(profile.sunColor[0], profile.sunColor[1], profile.sunColor[2])}
         castShadow={enableShadows}
         shadow-mapSize-width={shadowMapSize}
@@ -824,7 +878,7 @@ function UnifiedSceneContent({ onDeviceLongPress, fpsActive, fpsSpawn, onFpsExit
         args={[
           new THREE.Color(profile.hemisphereSkyColor[0], profile.hemisphereSkyColor[1], profile.hemisphereSkyColor[2]),
           new THREE.Color(profile.hemisphereGroundColor[0], profile.hemisphereGroundColor[1], profile.hemisphereGroundColor[2]),
-          profile.hemisphereIntensity,
+          hemisphereIntensity,
         ]}
       />
 
@@ -845,7 +899,7 @@ function UnifiedSceneContent({ onDeviceLongPress, fpsActive, fpsSpawn, onFpsExit
       <Stairs3D />
       <ImportedHome3D />
       <Props3D />
-      <WeatherEffects3D />
+      {showWeatherEffects && <WeatherEffects3D />}
       <InlineTerrainEnvironment3D />
 
       {/* Mode-specific scene elements */}
@@ -867,8 +921,9 @@ function UnifiedSceneContent({ onDeviceLongPress, fpsActive, fpsSpawn, onFpsExit
         <DeviceMarkers3D onLongPress={onDeviceLongPress} />
       )}
 
-      <Environment preset="night" />
+      {showEnvironment && <Environment preset="night" />}
       <CameraController fpsActive={fpsActive} fpsSpawn={fpsSpawn} onFpsExit={onFpsExit} />
+      <DashboardFrameDriver />
       <FrameThrottle />
     </>
   );
@@ -962,6 +1017,7 @@ export default function PersistentScene3D({ onDeviceLongPress, onFpsStateChange 
   }, [appMode, activeTool, wallDrawing, activeFloorId, activeFloor, pushUndo, addWall, setWallDrawing]);
 
   const dpr = tabletMode ? 0.75 : quality === 'low' ? 1 : quality === 'medium' ? 1.5 : undefined;
+  const frameLoopMode = appMode === 'dashboard' ? 'demand' : 'always';
 
   const [recoveryCount, setRecoveryCount] = useState(0);
   const [recovering, setRecovering] = useState(false);
@@ -1027,6 +1083,7 @@ export default function PersistentScene3D({ onDeviceLongPress, onFpsStateChange 
       <Canvas
         key={`persistent-${recoveryCount}-${quality}-${shadows}-${antialiasing ? 'aa' : 'noaa'}-${toneMapping ? 'tm' : 'notm'}`}
         shadows={shadows}
+        frameloop={frameLoopMode}
         camera={{ position: [8, 7, 8], fov: 45, near: 0.1, far: 500 }}
         style={{ background: 'transparent' }}
         gl={{

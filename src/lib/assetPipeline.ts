@@ -30,6 +30,15 @@ export interface OptimizationResult {
   };
 }
 
+export type AssetTierBudget = 'lite' | 'standard' | 'high';
+
+export interface AssetBudgetRule {
+  triangles: number;
+  materials: number;
+  maxTextureRes: number;
+  fileSizeKB: number;
+}
+
 // ─── Validation ───
 
 export function validateFormat(file: File): string | null {
@@ -43,6 +52,12 @@ export function validateFormat(file: File): string | null {
 // ─── Shared constants ───
 
 const TEX_PROPS = ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'aoMap', 'emissiveMap'] as const;
+
+export const ASSET_BUDGETS: Record<AssetTierBudget, AssetBudgetRule> = {
+  lite: { triangles: 50_000, materials: 8, maxTextureRes: 1024, fileSizeKB: 4 * 1024 },
+  standard: { triangles: 150_000, materials: 16, maxTextureRes: 2048, fileSizeKB: 8 * 1024 },
+  high: { triangles: 500_000, materials: 32, maxTextureRes: 4096, fileSizeKB: 16 * 1024 },
+};
 
 // ─── Texture helpers ───
 
@@ -203,6 +218,8 @@ export async function processModel(file: File, _options?: { maxTextureRes?: numb
     maxTextureRes: analysis.maxTexRes,
   };
 
+  warnings.push(...getAssetBudgetWarnings(stats));
+
   const dimensions: AssetDimensions = {
     width: parseFloat(size.x.toFixed(2)),
     depth: parseFloat(size.z.toFixed(2)),
@@ -222,6 +239,42 @@ export function getOptimizationLevel(stats: AssetPerformanceStats): Optimization
   if (stats.triangles > 500000 || sizeKB > 10240 || tex > 4096) return 'strongly-recommended';
   if (stats.triangles > 150000 || sizeKB > 5120 || tex > 2048) return 'recommended';
   return 'ok';
+}
+
+export function getAssetBudgetStatus(stats: AssetPerformanceStats, tier: AssetTierBudget): 'ok' | 'warn' | 'block' {
+  const budget = ASSET_BUDGETS[tier];
+  const ratios = [
+    stats.triangles / budget.triangles,
+    stats.materials / budget.materials,
+    (stats.maxTextureRes ?? 0) / budget.maxTextureRes,
+    stats.fileSizeKB / budget.fileSizeKB,
+  ];
+  const worstRatio = Math.max(...ratios);
+
+  if (worstRatio > 2) return 'block';
+  if (worstRatio > 1) return 'warn';
+  return 'ok';
+}
+
+export function getAssetBudgetWarnings(stats: AssetPerformanceStats): string[] {
+  const warnings: string[] = [];
+
+  (Object.entries(ASSET_BUDGETS) as Array<[AssetTierBudget, AssetBudgetRule]>).forEach(([tier, budget]) => {
+    const status = getAssetBudgetStatus(stats, tier);
+    if (status === 'ok') return;
+
+    const label = tier === 'lite' ? 'Lite' : tier === 'standard' ? 'Standard' : 'High';
+    const parts: string[] = [];
+
+    if (stats.triangles > budget.triangles) parts.push(`${Math.round(stats.triangles / 1000)}k trianglar`);
+    if (stats.materials > budget.materials) parts.push(`${stats.materials} material`);
+    if ((stats.maxTextureRes ?? 0) > budget.maxTextureRes) parts.push(`${stats.maxTextureRes}px texturer`);
+    if (stats.fileSizeKB > budget.fileSizeKB) parts.push(formatSize(stats.fileSizeKB));
+
+    warnings.push(`${status === 'block' ? 'För tung för' : 'Över budget för'} ${label}: ${parts.join(', ')}`);
+  });
+
+  return warnings;
 }
 
 // ─── V1 Optimize ───
@@ -492,8 +545,20 @@ export function formatStats(stats: AssetPerformanceStats): string {
 }
 
 export function ratePerformance(stats: AssetPerformanceStats): 'ok' | 'heavy' | 'too-heavy' {
-  if (stats.triangles > 500000 || stats.fileSizeKB > 10240) return 'too-heavy';
-  if (stats.triangles > 150000 || stats.fileSizeKB > 5120) return 'heavy';
+  if (
+    stats.triangles > ASSET_BUDGETS.high.triangles
+    || stats.fileSizeKB > ASSET_BUDGETS.high.fileSizeKB
+    || stats.materials > ASSET_BUDGETS.high.materials
+    || (stats.maxTextureRes ?? 0) > ASSET_BUDGETS.high.maxTextureRes
+  ) return 'too-heavy';
+
+  if (
+    stats.triangles > ASSET_BUDGETS.standard.triangles
+    || stats.fileSizeKB > ASSET_BUDGETS.standard.fileSizeKB
+    || stats.materials > ASSET_BUDGETS.standard.materials
+    || (stats.maxTextureRes ?? 0) > ASSET_BUDGETS.standard.maxTextureRes
+  ) return 'heavy';
+
   return 'ok';
 }
 

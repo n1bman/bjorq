@@ -1,9 +1,13 @@
 # BJORQ Issues And Fixes
 
-Last updated: 2026-03-27
+Last updated: 2026-03-31
 
 ## Open High-Risk Areas
 
+- The app currently lacks a formal runtime-tier contract even though low/medium/high toggles and tablet mode already exist.
+- `dashboard` appears to spend too much of the same 3D budget as `home`, which makes it a likely first performance fix target.
+- User-imported assets still carry performance risk because asset metadata exists, but enforcement/budget policy is not yet a real product rule.
+- Raspberry Pi and old-device support remain at risk if they are treated as full-fidelity targets instead of constrained modes.
 - Vacuum sync remains a high-risk integration seam until re-verified end to end.
 - Hosted persistence can still drift from UI expectations because multiple product surfaces write state differently.
 - Documentation can drift because product behavior, handoff notes, and release notes evolve in parallel.
@@ -26,6 +30,9 @@ Last updated: 2026-03-27
 
 ## Confirmed Recent Fixes
 
+- 2026-03-31: Added a stepwise product plan under `01 - BjorQ dashboard/plan.md`.
+- 2026-03-31: Updated product docs to lock BJORQ as `3D-first` with adaptive fidelity rather than same-fidelity-everywhere.
+- 2026-03-31: Added a first-pass runtime tier specification under `01 - BjorQ dashboard/runtime-tiers.md`.
 - 2026-03-27: Local repo fast-forward synced to `origin/main` at `5213dd9`.
 - 2026-03-27: Added project-specific Codex operating structure under `codex/`.
 - 2026-03-27: Confirmed local baseline is now BJORQ `1.10.1`.

@@ -14,6 +14,8 @@ interface MarkerProps {
   onSelect?: (id: string) => void;
   onDragStart?: (id: string, e: ThreeEvent<PointerEvent>) => void;
   selected?: boolean;
+  lightEnabled?: boolean;
+  shadowEnabled?: boolean;
 }
 
 function SelectionRing({ radius }: { radius: number }) {
@@ -33,7 +35,7 @@ function miredsToColor(mireds: number): THREE.Color {
   return new THREE.Color(r / 255, g / 255, b / 255);
 }
 
-function LightMarker({ position, id, onSelect, onDragStart, selected }: MarkerProps) {
+function LightMarker({ position, id, onSelect, onDragStart, selected, lightEnabled = true, shadowEnabled = true }: MarkerProps) {
   const state = useAppStore((s) => s.devices.deviceStates[id]);
   const marker = useAppStore((s) => s.devices.markers.find((m) => m.id === id));
   const hasState = state?.kind === 'light';
@@ -88,7 +90,7 @@ function LightMarker({ position, id, onSelect, onDragStart, selected }: MarkerPr
     return { ...d, ...marker?.lightConfig };
   }, [lightType, marker?.lightConfig]);
 
-  const intensity = isOn ? brightness * cfg.intensity : 0;
+  const intensity = lightEnabled && isOn ? brightness * cfg.intensity : 0;
 
   return (
     <group position={position} onClick={handleClick} onPointerDown={handlePointerDown}>
@@ -118,7 +120,7 @@ function LightMarker({ position, id, onSelect, onDragStart, selected }: MarkerPr
             angle={cfg.angle}
             penumbra={cfg.penumbra}
             decay={2}
-            castShadow
+            castShadow={shadowEnabled}
             shadow-mapSize-width={512}
             shadow-mapSize-height={512}
           />
@@ -139,7 +141,7 @@ function LightMarker({ position, id, onSelect, onDragStart, selected }: MarkerPr
             angle={cfg.angle}
             penumbra={cfg.penumbra}
             decay={2}
-            castShadow
+            castShadow={shadowEnabled}
             shadow-mapSize-width={512}
             shadow-mapSize-height={512}
           />
@@ -160,7 +162,7 @@ function LightMarker({ position, id, onSelect, onDragStart, selected }: MarkerPr
             angle={cfg.angle}
             penumbra={cfg.penumbra}
             decay={2}
-            castShadow
+            castShadow={shadowEnabled}
             shadow-mapSize-width={512}
             shadow-mapSize-height={512}
           />
@@ -1203,7 +1205,7 @@ function SoundbarMarker3D({ position, id, onSelect, onDragStart, selected }: Mar
 }
 
 // ─── Light Fixture Marker ───
-function LightFixtureMarker({ position, id, onSelect, onDragStart, selected }: MarkerProps) {
+function LightFixtureMarker({ position, id, onSelect, onDragStart, selected, lightEnabled = true, shadowEnabled = true }: MarkerProps) {
   const appMode = useAppStore((s) => s.appMode);
   const state = useAppStore((s) => s.devices.deviceStates[id]);
   const marker = useAppStore((s) => s.devices.markers.find((m) => m.id === id));
@@ -1263,7 +1265,7 @@ function LightFixtureMarker({ position, id, onSelect, onDragStart, selected }: M
             <sphereGeometry args={[0.03, 16, 16]} />
             <meshStandardMaterial color={lightColor} emissive={lightColor} emissiveIntensity={isOn ? brightness * 3 : 0.1} transparent opacity={isOn ? 0.95 : 0.5} />
           </mesh>
-          <pointLight color={lightColor} intensity={isOn ? brightness * cfg.intensity : 0} distance={cfg.distance} decay={2} />
+          <pointLight color={lightColor} intensity={lightEnabled && isOn ? brightness * cfg.intensity : 0} distance={cfg.distance} decay={2} />
         </>
       )}
       {fixtureModel === 'led-bar' && (
@@ -1277,7 +1279,7 @@ function LightFixtureMarker({ position, id, onSelect, onDragStart, selected }: M
             <boxGeometry args={[0.56, 0.005, 0.025]} />
             <meshStandardMaterial color={lightColor} emissive={lightColor} emissiveIntensity={isOn ? brightness * 2 : 0.1} transparent opacity={isOn ? 0.85 : 0.3} />
           </mesh>
-          <spotLight ref={spotLightRef} color={lightColor} intensity={isOn ? brightness * cfg.intensity : 0} distance={cfg.distance} angle={cfg.angle} penumbra={cfg.penumbra ?? 0.7} decay={2} position={[0, -0.012, 0]} />
+          <spotLight ref={spotLightRef} color={lightColor} intensity={lightEnabled && isOn ? brightness * cfg.intensity : 0} distance={cfg.distance} angle={cfg.angle} penumbra={cfg.penumbra ?? 0.7} decay={2} castShadow={shadowEnabled} position={[0, -0.012, 0]} />
           <object3D ref={spotTargetRef} position={[0, -3, 0]} />
         </>
       )}
@@ -1293,7 +1295,7 @@ function LightFixtureMarker({ position, id, onSelect, onDragStart, selected }: M
             <cylinderGeometry args={[0.025, 0.025, 0.003, 24]} />
             <meshStandardMaterial color={lightColor} emissive={lightColor} emissiveIntensity={isOn ? brightness * 2.5 : 0.1} transparent opacity={isOn ? 0.9 : 0.3} />
           </mesh>
-          <spotLight ref={spotLightRef} color={lightColor} intensity={isOn ? brightness * cfg.intensity : 0} distance={cfg.distance} angle={cfg.angle} penumbra={cfg.penumbra ?? 0.3} decay={2} position={[0, -0.008, 0]} />
+          <spotLight ref={spotLightRef} color={lightColor} intensity={lightEnabled && isOn ? brightness * cfg.intensity : 0} distance={cfg.distance} angle={cfg.angle} penumbra={cfg.penumbra ?? 0.3} decay={2} castShadow={shadowEnabled} position={[0, -0.008, 0]} />
           <object3D ref={spotTargetRef} position={[0, -3, 0]} />
         </>
       )}
@@ -1319,7 +1321,7 @@ function LightFixtureMarker({ position, id, onSelect, onDragStart, selected }: M
             <cylinderGeometry args={[0.0015, 0.0015, 0.012, 8]} />
             <meshStandardMaterial color="#aaa" roughness={0.2} metalness={0.9} />
           </mesh>
-          <spotLight ref={spotLightRef} color={lightColor} intensity={isOn ? brightness * cfg.intensity : 0} distance={cfg.distance} angle={cfg.angle} penumbra={cfg.penumbra ?? 0.4} decay={2} position={[0, -0.024, 0]} />
+          <spotLight ref={spotLightRef} color={lightColor} intensity={lightEnabled && isOn ? brightness * cfg.intensity : 0} distance={cfg.distance} angle={cfg.angle} penumbra={cfg.penumbra ?? 0.4} decay={2} castShadow={shadowEnabled} position={[0, -0.024, 0]} />
           <object3D ref={spotTargetRef} position={[0, -3, 0]} />
         </>
       )}
@@ -1414,10 +1416,13 @@ interface DeviceMarkers3DProps {
 
 export default function DeviceMarkers3D({ buildMode, onLongPress }: DeviceMarkers3DProps) {
   const markers = useAppStore((s) => s.devices.markers);
+  const deviceStates = useAppStore((s) => s.devices.deviceStates);
   const floors = useAppStore((s) => s.layout.floors);
   const showDeviceMarkers = useAppStore((s) => s.homeView.showDeviceMarkers ?? true);
   const hiddenMarkerIds = useAppStore((s) => s.homeView.hiddenMarkerIds ?? []);
   const markerSize = useAppStore((s) => s.homeView.markerSize ?? 'medium');
+  const appMode = useAppStore((s) => s.appMode);
+  const perf = useAppStore((s) => s.performance);
   const markerScale = markerSize === 'small' ? 0.7 : markerSize === 'large' ? 1.4 : 1.0;
   const setSelection = useAppStore((s) => s.setSelection);
   const updateDevice = useAppStore((s) => s.updateDevice);
@@ -1550,6 +1555,21 @@ export default function DeviceMarkers3D({ buildMode, onLongPress }: DeviceMarker
   if (markers.length === 0) return null;
   // When not in build mode and markers hidden: only render lights (for pointLight effect)
   const hideVisuals = !buildMode && !showDeviceMarkers;
+  const activeLightIds = useMemo(() => {
+    const onLights = markers.filter((marker) => {
+      if (marker.kind !== 'light' && marker.kind !== 'light-fixture') return false;
+      const state = deviceStates[marker.id];
+      if (!state || state.kind !== 'light') return true;
+      return state.data.on;
+    });
+
+    if (perf.maxLights === 0 || onLights.length <= perf.maxLights) {
+      return new Set(onLights.map((marker) => marker.id));
+    }
+
+    return new Set(onLights.slice(0, perf.maxLights).map((marker) => marker.id));
+  }, [deviceStates, markers, perf.maxLights]);
+  const allowLightShadows = perf.shadows && appMode !== 'dashboard' && !perf.tabletMode;
 
   return (
     <group>
@@ -1562,7 +1582,16 @@ export default function DeviceMarkers3D({ buildMode, onLongPress }: DeviceMarker
         // When hiding visuals globally or per-device, render invisible click targets + light sources
         if (hideVisuals || isMarkerHidden) {
           if (marker.kind === 'light' || marker.kind === 'light-fixture') {
-            return <LightMarkerLightOnly key={marker.id} position={marker.position} id={marker.id} onSelect={() => handleSelect(marker.id)} />;
+            return (
+              <LightMarkerLightOnly
+                key={marker.id}
+                position={marker.position}
+                id={marker.id}
+                onSelect={() => handleSelect(marker.id)}
+                lightEnabled={activeLightIds.has(marker.id)}
+                shadowEnabled={allowLightShadows}
+              />
+            );
           }
           // Invisible click sphere for all other marker types
           return (
@@ -1600,6 +1629,8 @@ export default function DeviceMarkers3D({ buildMode, onLongPress }: DeviceMarker
               onSelect={handleSelect}
               onDragStart={buildMode ? handleDragStart : undefined}
               selected={!!isSelected}
+              lightEnabled={activeLightIds.has(marker.id)}
+              shadowEnabled={allowLightShadows}
             />
           </group>
         );
@@ -1645,7 +1676,7 @@ function InvisibleClickTarget({ position, onSelect }: { position: [number, numbe
 }
 
 /** Light-only marker: renders just the light source without any visible mesh + invisible click target */
-function LightMarkerLightOnly({ position, id, onSelect }: { position: [number, number, number]; id: string; onSelect?: () => void }) {
+function LightMarkerLightOnly({ position, id, onSelect, lightEnabled = true, shadowEnabled = true }: { position: [number, number, number]; id: string; onSelect?: () => void; lightEnabled?: boolean; shadowEnabled?: boolean }) {
   const state = useAppStore((s) => s.devices.deviceStates[id]);
   const marker = useAppStore((s) => s.devices.markers.find((m) => m.id === id));
   const hasState = state?.kind === 'light';
@@ -1681,7 +1712,7 @@ function LightMarkerLightOnly({ position, id, onSelect }: { position: [number, n
   }, [lightType, marker?.lightConfig]);
 
   const brightness = isOn ? (lightData?.brightness ?? 200) / 255 : 0;
-  const intensity = isOn ? brightness * cfg.intensity : 0;
+  const intensity = lightEnabled && isOn ? brightness * cfg.intensity : 0;
   const rot = marker?.rotation ?? [0, 0, 0];
 
   useFrame(() => {
@@ -1708,13 +1739,13 @@ function LightMarkerLightOnly({ position, id, onSelect }: { position: [number, n
       )}
       {lightType === 'lightbar' && (
         <>
-          <spotLight ref={spotLightRef} color={lightColor} intensity={intensity} distance={cfg.distance} angle={cfg.angle} penumbra={cfg.penumbra} decay={2} castShadow />
+          <spotLight ref={spotLightRef} color={lightColor} intensity={intensity} distance={cfg.distance} angle={cfg.angle} penumbra={cfg.penumbra} decay={2} castShadow={shadowEnabled} />
           <object3D ref={spotTargetRef} position={[0, -3, 0]} />
         </>
       )}
       {(lightType === 'spot' || lightType === 'wall') && (
         <>
-          <spotLight ref={spotLightRef} color={lightColor} intensity={intensity} distance={cfg.distance} angle={cfg.angle} penumbra={cfg.penumbra} decay={2} castShadow />
+          <spotLight ref={spotLightRef} color={lightColor} intensity={intensity} distance={cfg.distance} angle={cfg.angle} penumbra={cfg.penumbra} decay={2} castShadow={shadowEnabled} />
           <object3D ref={spotTargetRef} position={lightType === 'spot' ? [0, -3, 0] : [0, -1, 1]} />
         </>
       )}

@@ -1,13 +1,15 @@
 # BJORQ Master Plan
 
-Last updated: 2026-03-27
+Last updated: 2026-03-31
 
 ## Product Direction
 
 - BJORQ is a 3D smart home dashboard.
 - `Home` remains `3D-first`.
+- BJORQ should not chase identical scene fidelity across all devices; adaptive runtime tiers are part of the product direction.
 - The product must stay viable for web now, without blocking tablet and phone later.
 - Home Assistant is the primary integration path today through the hosted/add-on model.
+- Raspberry Pi class hardware is a constrained target, not the reference target for the full 3D experience.
 - Future optional integrations, including IKEA hub ideas, should be additive rather than breaking the HA-first architecture.
 - Asset Wizard is a side project to BJORQ, not the main app. Its role is to help optimize 3D models and sync 3D model catalogs into the dashboard ecosystem.
 - Build mode should remain the source of truth for room modeling: BJORQ rooms can be named freely, vacuum placement should bind the robot to those modeled rooms, and Home Assistant segment ids should be mapped onto those rooms so 3D visualization and room-clean commands stay aligned.
@@ -21,11 +23,11 @@ Last updated: 2026-03-27
 
 ## Immediate Focus Areas
 
-- harden Home layout persistence and responsive behavior after `1.10.x`
-- harden HA/vacuum flows with explicit DEV vs HOSTED parity
-- verify hosted persistence across product surfaces
-- keep product UX aligned with the Nordic Noir and 3D-first direction
-- reduce drift between code, docs, and handoff material
+- define and implement runtime tiers: `Lite`, `Standard`, `High`
+- separate render budgets for `dashboard`, `home`, and `build`
+- harden the biggest confirmed 3D/runtime risks before further feature spread
+- keep HA/vacuum and hosted persistence seams stable while performance work proceeds
+- reduce drift between code, docs, planning, and handoff material
 
 ## Verified Impact After GitHub Sync
 
@@ -46,12 +48,12 @@ The sync to `5213dd9` changed what matters most right now:
 
 ## Next Recommended Work Order
 
-1. Verify Home layout editor and free widgets on tablet and phone widths with real interaction passes.
-2. Finish browser-level hosted runtime verification on the local real-HA sandbox now that the real vacuum segment map is loading correctly.
-3. Run a dedicated fallback/degraded verification pass before expanding robot features.
-4. Investigate chained room-clean flows where a second room command after the first clean appears to desync or fail for the current Roborock path.
-5. Keep tightening `DEV` vs `HOSTED` robot-command semantics only where product-facing behavior still drifts.
-6. Continue hosted persistence verification across product surfaces after the latest Home fixes.
+1. Lock the runtime-tier matrix and mode budgets in docs so implementation has a fixed target.
+2. Implement low-cost `dashboard` behavior first because it is a confirmed current risk.
+3. Tighten the graphics/performance settings so they reflect product tiers instead of loose toggles.
+4. Define first-pass asset budgets and validation expectations for imported models.
+5. Continue runtime verification of HA/vacuum and hosted persistence while the render strategy changes.
+6. Revisit tablet/phone interaction verification after the first performance pass lands.
 
 ## Relevant GitHub Updates Since Previous Local Baseline
 

@@ -11,6 +11,8 @@ import { toast } from 'sonner';
 import type { QualityLevel } from '../../../store/types';
 import { getStats as getCacheStats } from '../../../lib/modelCache';
 
+type RuntimeTier = 'lite' | 'standard' | 'high';
+
 const qualityOptions: { value: QualityLevel; label: string; desc: string }[] = [
   { value: 'low', label: 'Låg', desc: 'Minimal – bra för surfplatta/RPi' },
   { value: 'medium', label: 'Medium', desc: 'Balanserad prestanda' },
@@ -114,6 +116,62 @@ function getRecommendation(score: number, cores: number, memGB: number | null) {
   return null;
 }
 
+function getRuntimeTier(perf: {
+  quality: QualityLevel;
+  tabletMode: boolean;
+}) : RuntimeTier {
+  if (perf.tabletMode || perf.quality === 'low') return 'lite';
+  if (perf.quality === 'high') return 'high';
+  return 'standard';
+}
+
+function applyRuntimeTier(
+  tier: RuntimeTier,
+  setPerformance: (changes: Record<string, unknown>) => void,
+) {
+  if (tier === 'lite') {
+    setPerformance({
+      quality: 'low',
+      shadows: false,
+      postprocessing: false,
+      tabletMode: true,
+      antialiasing: false,
+      toneMapping: true,
+      exposure: 1.0,
+      environmentLight: false,
+      maxLights: 3,
+    });
+    return;
+  }
+
+  if (tier === 'standard') {
+    setPerformance({
+      quality: 'medium',
+      shadows: true,
+      postprocessing: false,
+      tabletMode: false,
+      antialiasing: true,
+      toneMapping: true,
+      exposure: 1.0,
+      environmentLight: false,
+      maxLights: 6,
+    });
+    return;
+  }
+
+  setPerformance({
+    quality: 'high',
+    shadows: true,
+    postprocessing: false,
+    tabletMode: false,
+    antialiasing: true,
+    toneMapping: true,
+    exposure: 1.0,
+    environmentLight: true,
+    maxLights: 0,
+  });
+}
+
 export default function GraphicsSettings() {
   const perf = useAppStore((s) => s.performance);
   const setPerformance = useAppStore((s) => s.setPerformance);
@@ -125,6 +183,7 @@ export default function GraphicsSettings() {
   const dpr = getDprForQuality(perf.quality, perf.tabletMode);
   const shadowRes = getShadowMapRes(perf.quality);
   const recommendation = getRecommendation(score, device.cores, device.memGB);
+  const runtimeTier = getRuntimeTier(perf);
 
   const applyTabletMode = (on: boolean) => {
     if (on) {
@@ -203,6 +262,33 @@ export default function GraphicsSettings() {
           </div>
         </div>
         <Switch checked={perf.tabletMode} onCheckedChange={applyTabletMode} />
+      </div>
+
+      <div className="space-y-1.5">
+        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Driftläge</span>
+        <div className="flex gap-2">
+          <OptionButton
+            active={runtimeTier === 'lite'}
+            onClick={() => { applyRuntimeTier('lite', setPerformance as any); notify(); }}
+            label="Lite"
+            description="Billigast för äldre enheter och Pi"
+          />
+          <OptionButton
+            active={runtimeTier === 'standard'}
+            onClick={() => { applyRuntimeTier('standard', setPerformance as any); notify(); }}
+            label="Standard"
+            description="Balanserad vardagsnivå"
+          />
+          <OptionButton
+            active={runtimeTier === 'high'}
+            onClick={() => { applyRuntimeTier('high', setPerformance as any); notify(); }}
+            label="High"
+            description="Mest 3D-känsla lokalt"
+          />
+        </div>
+        <p className="text-[10px] text-muted-foreground">
+          Driftläge sätter rekommenderade värden för kvalitet, skuggor, ljusbudget och miljöljus. Avancerade inställningar kan fortfarande finjusteras manuellt.
+        </p>
       </div>
 
       {/* Quality */}

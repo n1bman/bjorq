@@ -64,6 +64,7 @@ function PropModel({ id, url: rawUrl, position, rotation, scale, colorOverride, 
 }) {
   const url = rawUrl;
   const appMode = useAppStore((s) => s.appMode);
+  const performance = useAppStore((s) => s.performance);
   const selection = useAppStore((s) => s.build.selection);
   const setSelection = useAppStore((s) => s.setSelection);
   const activeTool = useAppStore((s) => s.build.activeTool);
@@ -95,6 +96,14 @@ function PropModel({ id, url: rawUrl, position, rotation, scale, colorOverride, 
   const items = useAppStore((s) => s.props.items);
   const propItem = items.find((p) => p.id === id);
   const modelName = propItem?.name || 'Modell';
+  const runtimeTier = performance.tabletMode || performance.quality === 'low'
+    ? 'lite'
+    : performance.quality === 'high' && performance.environmentLight && performance.shadows
+      ? 'high'
+      : 'standard';
+  const propTriangles = propItem?.modelStats?.triangles ?? 0;
+  const simplifyMaterials = runtimeTier === 'lite' || propTriangles > 100_000;
+  const ultraSimpleMaterials = runtimeTier === 'lite' && propTriangles > 50_000;
 
   // Dismiss quick menu on deselect or escape
   useEffect(() => {
@@ -369,7 +378,7 @@ function PropModel({ id, url: rawUrl, position, rotation, scale, colorOverride, 
     clone.traverse((child: any) => {
       if (child.isMesh) {
         child.castShadow = false;
-        child.receiveShadow = true;
+        child.receiveShadow = !simplifyMaterials;
         child.material = child.material.clone();
 
         // Fix extreme PBR values that cause models to appear black
@@ -379,7 +388,21 @@ function PropModel({ id, url: rawUrl, position, rotation, scale, colorOverride, 
         if (child.material.roughness < 0.05 && roughnessOverride === undefined) {
           child.material.roughness = 0.3;
         }
-        child.material.envMapIntensity = 1.0;
+        child.material.envMapIntensity = simplifyMaterials ? 0.2 : 1.0;
+
+        if (simplifyMaterials) {
+          child.material.normalMap = null;
+          child.material.roughnessMap = null;
+          child.material.metalnessMap = null;
+          child.material.aoMap = null;
+          child.material.emissiveMap = null;
+        }
+
+        if (ultraSimpleMaterials) {
+          child.material.flatShading = true;
+          child.material.metalness = 0;
+          child.material.roughness = 1;
+        }
 
         if (colorOverride) {
           child.material.color = new THREE.Color(colorOverride);
@@ -400,7 +423,7 @@ function PropModel({ id, url: rawUrl, position, rotation, scale, colorOverride, 
       }
     });
     return clone;
-  }, [scene, colorOverride, textureOverride, textureScale, roughnessOverride, metalnessOverride]);
+  }, [scene, colorOverride, textureOverride, textureScale, roughnessOverride, metalnessOverride, simplifyMaterials, ultraSimpleMaterials]);
 
   // ─── Bounding-box selection indicator — uses scene directly (read-only bbox) ───
   const selectionBox = useMemo(() => {

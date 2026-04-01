@@ -9,7 +9,7 @@ import { openingPresets } from '../../lib/openingPresets';
 import { getAllMaterials, getMaterialById, wallSurfaceCategories, floorSurfaceCategories, surfaceCategoryLabels, floorCategoryLabels, getMaterialsByCategory } from '../../lib/materials';
 import { loadCuratedCatalog, clearCatalogCache } from '../../lib/catalogLoader';
 import { isWallMountable } from '../../lib/wallMountPlacement';
-import { processModel, validateFormat, formatStats, ratePerformance, formatSize, getOptimizationLevel, optimizeModel } from '../../lib/assetPipeline';
+import { processModel, validateFormat, formatStats, ratePerformance, formatSize, getOptimizationLevel, optimizeModel, getAssetBudgetStatus } from '../../lib/assetPipeline';
 import type { OptimizationResult, OptimizationLevel } from '../../lib/assetPipeline';
 import { Progress } from '../ui/progress';
 import {
@@ -33,7 +33,7 @@ import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import { Label } from '../ui/label';
 import { Badge } from '../ui/badge';
-import type { CatalogAssetMeta, PropCatalogItem, AssetCategory } from '../../store/types';
+import type { CatalogAssetMeta, PropCatalogItem, AssetCategory, AssetPerformanceStats } from '../../store/types';
 import type { PipelineResult } from '../../lib/assetPipeline';
 import {
   downloadWizardModel,
@@ -72,6 +72,109 @@ function getCatalogEntryThumbnail(item: PropCatalogItem): string | undefined {
   if (!item.wizardAssetId) return item.thumbnail;
   if (isPersistentLocalThumbnail(item.thumbnail)) return item.thumbnail;
   return getWizardThumbnailFallbackUrl(item.wizardAssetId) ?? item.thumbnail;
+}
+
+function getBudgetBadgeClass(status: 'ok' | 'warn' | 'block'): string {
+  if (status === 'ok') return 'border-primary/30 bg-primary/10 text-primary';
+  if (status === 'warn') return 'border-yellow-500/30 bg-yellow-500/10 text-yellow-700 dark:text-yellow-300';
+  return 'border-destructive/30 bg-destructive/10 text-destructive';
+}
+
+function getBudgetLabel(status: 'ok' | 'warn' | 'block'): string {
+  if (status === 'ok') return 'OK';
+  if (status === 'warn') return 'Tung';
+  return 'Blockerad';
+}
+
+function getTierCompatibilityMessage(stats: AssetPerformanceStats): string {
+  const lite = getAssetBudgetStatus(stats, 'lite');
+  const standard = getAssetBudgetStatus(stats, 'standard');
+  const high = getAssetBudgetStatus(stats, 'high');
+
+  if (lite === 'ok') return 'Fungerar i alla driftlägen, inklusive Lite.';
+  if (standard === 'ok') return 'Passar Standard och High. Lite-läget kan behöva enklare scen.';
+  if (high === 'ok') return 'Bör användas i High-läget. För tung för Lite och Standard.';
+  return 'För tung även för High-läget. Modellen behöver förenklas innan import.';
+}
+
+function BudgetCompatibilityPanel({ stats }: { stats: AssetPerformanceStats }) {
+  const tiers: Array<{ key: 'lite' | 'standard' | 'high'; label: string }> = [
+    { key: 'lite', label: 'Lite' },
+    { key: 'standard', label: 'Standard' },
+    { key: 'high', label: 'High' },
+  ];
+
+  return (
+    <div className="rounded-lg border border-border/50 bg-secondary/20 p-2.5 space-y-2">
+      <div className="flex items-center gap-2">
+        <ShieldAlert size={13} className="text-muted-foreground" />
+        <div>
+          <p className="text-[10px] font-medium text-foreground">Kompatibilitet per driftläge</p>
+          <p className="text-[10px] text-muted-foreground">{getTierCompatibilityMessage(stats)}</p>
+        </div>
+      </div>
+      <div className="flex flex-wrap gap-1.5">
+        {tiers.map((tier) => {
+          const status = getAssetBudgetStatus(stats, tier.key);
+          return (
+            <Badge
+              key={tier.key}
+              variant="outline"
+              className={cn('text-[10px] border', getBudgetBadgeClass(status))}
+            >
+              {tier.label}: {getBudgetLabel(status)}
+            </Badge>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function CatalogTierBadge({ stats }: { stats?: AssetPerformanceStats | null }) {
+  if (!stats) return null;
+
+  const lite = getAssetBudgetStatus(stats, 'lite');
+  const standard = getAssetBudgetStatus(stats, 'standard');
+  const high = getAssetBudgetStatus(stats, 'high');
+
+  let label = 'High';
+  let status: 'ok' | 'warn' | 'block' = high;
+
+  if (lite === 'ok') {
+    label = 'Lite';
+    status = 'ok';
+  } else if (standard === 'ok') {
+    label = 'Standard';
+    status = 'ok';
+  } else if (high === 'ok') {
+    label = 'High';
+    status = 'warn';
+  } else {
+    label = 'Block';
+    status = 'block';
+  }
+
+  return (
+    <Badge
+      variant="outline"
+      className={cn('text-[8px] h-4 px-1.5 border', getBudgetBadgeClass(status))}
+    >
+      {label}
+    </Badge>
+  );
+}
+
+function getCurrentRuntimeTier(performance: { quality: 'low' | 'medium' | 'high'; tabletMode: boolean; environmentLight: boolean; shadows: boolean }): 'lite' | 'standard' | 'high' {
+  if (performance.tabletMode || performance.quality === 'low') return 'lite';
+  if (performance.quality === 'high' && performance.environmentLight && performance.shadows && !performance.tabletMode) return 'high';
+  return 'standard';
+}
+
+function getRuntimeTierLabel(tier: 'lite' | 'standard' | 'high'): string {
+  if (tier === 'lite') return 'Lite';
+  if (tier === 'standard') return 'Standard';
+  return 'High';
 }
 
 function useWizardThumbnailBackfill(catalog: PropCatalogItem[]) {
@@ -350,6 +453,7 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
   ), [catalog]);
 
   const addKitchenFixture = useAppStore((s) => s.addKitchenFixture);
+  const runtimePerformance = useAppStore((s) => s.performance);
 
   const allEntries: ACEntry[] = [
     // Built-in procedural kitchen
@@ -447,10 +551,26 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
   const placePropFn = useCallback((catalogId: string, url: string) => {
     if (!activeFloorId) return;
 
-    const catItem = useAppStore.getState().props.catalog.find((c: any) => c.id === catalogId);
+    const storeState = useAppStore.getState();
+    const catItem = storeState.props.catalog.find((c: any) => c.id === catalogId);
     const curatedMeta = curatedAssets?.find?.((c: any) => c.id === catalogId);
     const placement = catItem?.placement || curatedMeta?.placement;
     const category = catItem?.category || curatedMeta?.category;
+    const name = catItem?.name || curatedMeta?.name || 'Modell';
+    const assetStats = (catItem?.performance || curatedMeta?.performance) as AssetPerformanceStats | undefined;
+    const runtimeTier = getCurrentRuntimeTier(storeState.performance);
+    const runtimeLabel = getRuntimeTierLabel(runtimeTier);
+
+    if (assetStats) {
+      const budgetStatus = getAssetBudgetStatus(assetStats, runtimeTier);
+      if (budgetStatus === 'block') {
+        toast.error(`"${name}" är för tung för ${runtimeLabel}-läget. Byt till High eller välj en lättare modell.`);
+        return;
+      }
+      if (budgetStatus === 'warn') {
+        toast.warning(`"${name}" är tung för ${runtimeLabel}-läget och kan påverka flytet.`);
+      }
+    }
 
     // 'free' placement skips wall mount entirely
     if (placement !== 'free' && isWallMountable({ placement, category })) {
@@ -464,7 +584,7 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
     const existing = floorProps.filter((p: any) => p.catalogId === catalogId);
     const offset = existing.length * 0.5;
     addProp({ id: generateId(), catalogId, floorId: activeFloorId, url, position: [tx + offset, 0, tz + offset], rotation: [0,0,0], scale: [1,1,1], freePlacement: true });
-  }, [activeFloorId, addProp, floorProps, setPendingWallMount]);
+  }, [activeFloorId, addProp, floorProps, setPendingWallMount, curatedAssets, runtimePerformance]);
 
   const handleImportConfirm = useCallback(async () => {
     if (!importFile || !importResult || !activeFloorId || !importName.trim()) return;
@@ -474,6 +594,10 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
       : importFile;
     const finalStats = optimizedResult ? optimizedResult.stats : importResult.stats;
     const finalThumbnail = optimizedResult ? optimizedResult.thumbnail : importResult.thumbnail;
+    if (getAssetBudgetStatus(finalStats, 'high') === 'block') {
+      toast.error('Modellen är för tung även för High-läget. Optimera eller förenkla modellen innan import.');
+      return;
+    }
 
     const wizId = wizardSourceMeta?.id;
     const catalogId = wizId ? `wizard-imp-${wizId}` : (() => { const b = generateId(); return (catalog.find(c => c.id === b) || curatedAssets.find(c => c.id === b)) ? b + generateId().slice(0,4) : b; })();
@@ -806,6 +930,7 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
                   <div className="flex items-center gap-1">
                     {entry.dimensions && <span className="text-[8px] text-muted-foreground">{entry.dimensions.width}×{entry.dimensions.depth}×{entry.dimensions.height}m</span>}
                     {getPerfColor(entry.performance) && <span className={`inline-block w-1.5 h-1.5 rounded-full ${getPerfColor(entry.performance)}`} />}
+                    <CatalogTierBadge stats={entry.performance as AssetPerformanceStats | undefined} />
                     {placementLabel && <span className="text-[8px] bg-muted/40 rounded px-1 py-0.5 text-muted-foreground">{placementLabel}</span>}
                   </div>
                 </div>
@@ -834,6 +959,7 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
               <div className="flex items-center gap-1 w-full justify-center flex-wrap">
                 {entry.dimensions && <span className="text-[8px] text-muted-foreground">{entry.dimensions.width}×{entry.dimensions.depth}×{entry.dimensions.height}m</span>}
                 {getPerfColor(entry.performance) && <span className={`inline-block w-1.5 h-1.5 rounded-full ${getPerfColor(entry.performance)}`} />}
+                <CatalogTierBadge stats={entry.performance as AssetPerformanceStats | undefined} />
                 {entry.subcategory && entry.subcategory !== entry.category && <span className="text-[8px] text-muted-foreground/60">{entry.subcategory}</span>}
                 {placementLabel && <span className="text-[8px] bg-muted/40 rounded px-1 py-0.5 text-muted-foreground">{placementLabel}</span>}
               </div>
@@ -978,6 +1104,7 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
               <div className="space-y-1"><Label className="text-[10px]">Namn</Label><Input value={importName} onChange={(e) => setImportName(e.target.value)} className="h-7 text-xs" /></div>
               <div className="space-y-1"><Label className="text-[10px]">Kategori</Label><select value={importCategory} onChange={(e) => setImportCategory(e.target.value as AssetCategory)} className="w-full h-7 text-xs bg-secondary text-foreground rounded-md px-2 border border-border">{Object.entries(AC_CATEGORY_LABELS).map(([k,v]) => <option key={k} value={k}>{v}</option>)}</select></div>
               <div className="space-y-1"><Label className="text-[10px]">Underkategori</Label><Input value={importSubcategory} onChange={(e) => setImportSubcategory(e.target.value)} placeholder="t.ex. soffbord..." className="h-7 text-xs" /></div>
+              <BudgetCompatibilityPanel stats={optimizedResult.stats} />
               {isHostedSync() && <label className="flex items-center gap-2 text-[10px] text-muted-foreground cursor-pointer"><input type="checkbox" checked={saveToCatalog} onChange={(e) => setSaveToCatalog(e.target.checked)} className="rounded border-border" /><FolderPlus size={12} />Spara i permanent katalog</label>}
             </div>
           ) : importResult ? (
@@ -993,6 +1120,7 @@ function AssetCatalog({ initialSourceFilter }: { initialSourceFilter?: ACSourceF
               <div className="space-y-1"><Label className="text-[10px]">Namn</Label><Input value={importName} onChange={(e) => setImportName(e.target.value)} className="h-7 text-xs" /></div>
               <div className="space-y-1"><Label className="text-[10px]">Kategori</Label><select value={importCategory} onChange={(e) => setImportCategory(e.target.value as AssetCategory)} className="w-full h-7 text-xs bg-secondary text-foreground rounded-md px-2 border border-border">{Object.entries(AC_CATEGORY_LABELS).map(([k,v]) => <option key={k} value={k}>{v}</option>)}</select></div>
               <div className="space-y-1"><Label className="text-[10px]">Underkategori</Label><Input value={importSubcategory} onChange={(e) => setImportSubcategory(e.target.value)} placeholder="t.ex. soffbord..." className="h-7 text-xs" /></div>
+              <BudgetCompatibilityPanel stats={importResult.stats} />
 
               {isHostedSync() && <label className="flex items-center gap-2 text-[10px] text-muted-foreground cursor-pointer"><input type="checkbox" checked={saveToCatalog} onChange={(e) => setSaveToCatalog(e.target.checked)} className="rounded border-border" /><FolderPlus size={12} />Spara i permanent katalog</label>}
               {importResult.warnings.length > 0 && <div className="space-y-1">{importResult.warnings.map((w,i) => <p key={i} className="text-[10px] text-accent-foreground flex items-center gap-1"><AlertTriangle size={10} /> {w}</p>)}</div>}
@@ -1990,6 +2118,10 @@ function BibliotekWorkspace() {
       : bibImportFile;
     const finalStats = bibOptimizedResult ? bibOptimizedResult.stats : bibImportResult.stats;
     const finalThumbnail = bibOptimizedResult?.thumbnail || bibImportResult.thumbnail;
+    if (getAssetBudgetStatus(finalStats, 'high') === 'block') {
+      toast.error('Modellen är för tung även för High-läget. Optimera eller förenkla modellen innan import.');
+      return;
+    }
     setBibProcessing(true);
     try {
       if (isHostedSync()) {
@@ -2463,6 +2595,7 @@ function BibliotekWorkspace() {
               <div className="space-y-1"><Label className="text-[10px]">Namn</Label><Input value={bibImportName} onChange={(e) => setBibImportName(e.target.value)} className="h-7 text-xs" /></div>
               <div className="space-y-1"><Label className="text-[10px]">Kategori</Label><select value={bibImportCat} onChange={(e) => setBibImportCat(e.target.value as AssetCategory)} className="w-full h-7 text-xs bg-secondary text-foreground rounded-md px-2 border border-border">{Object.entries(BIB_CAT_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></div>
               <div className="space-y-1"><Label className="text-[10px]">Underkategori</Label><Input value={bibImportSub} onChange={(e) => setBibImportSub(e.target.value)} placeholder="t.ex. soffbord..." className="h-7 text-xs" /></div>
+              <BudgetCompatibilityPanel stats={bibOptimizedResult.stats} />
             </div>
           ) : bibImportResult && !bibProcessing && !bibIsOptimizing ? (
             <div className="space-y-3">
@@ -2485,6 +2618,7 @@ function BibliotekWorkspace() {
 
               {/* Warnings */}
               {bibImportResult.warnings.length > 0 && <div className="space-y-1">{bibImportResult.warnings.map((w, i) => <p key={i} className="text-[10px] text-accent-foreground flex items-center gap-1"><AlertTriangle size={10} /> {w}</p>)}</div>}
+              <BudgetCompatibilityPanel stats={bibImportResult.stats} />
 
               {/* Optimization recommendation panel */}
               {(() => {

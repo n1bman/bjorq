@@ -1,9 +1,12 @@
 # BJORQ Backlog
 
-Last updated: 2026-03-27
+Last updated: 2026-03-31
 
 ## Need To Have
 
+- Translate `Lite` / `Standard` / `High` into actual app presets and per-mode runtime rules
+- Implement explicit low-cost `dashboard` runtime behavior separate from `home`
+- Define and enforce first-pass asset budgets for imported 3D content
 - Fix `HOSTED` persistence for Home free device widgets (`homeScreenDevices`)
 - Add safe migration/merge behavior for older `homeView` payloads after `1.10.x`
 - End-to-end verification of HA live sync in DEV and HOSTED
@@ -28,6 +31,7 @@ Last updated: 2026-03-27
 - Stronger release hardening checklist before tags and patchnotes
 - Cleaner workspace conventions around handoffs, logs, and labs
 - Better mobile and tablet verification flow for the 3D-first UI
+- Replace current loose graphics toggles with clearer product-facing tier UX
 - Define a future integration strategy note for optional non-HA backends such as IKEA hub, without coupling current delivery to that work
 - Decide what part of Asset Wizard should be treated as contract-critical versus optional enrichment
 - Align per-device widget config with the newer free Home card model, or remove dead configuration paths
